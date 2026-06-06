@@ -120,6 +120,7 @@
 
         /* ===== TABS ===== */
         .tab-content { display: none; }
+        .tab-content.hidden { display: none !important; }
         .tab-content.active { display: block; }
 
         /* ===== LAYOUT ===== */
@@ -540,13 +541,53 @@
     </div>
 
     <!-- =================== TAB 2: STORICO PLURIMENSILE =================== -->
-    <div id="history-tab" class="tab-content">
+    <div id="history-tab" class="tab-content hidden">
         <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
             <h2 class="collapsible" onclick="toggleSection('iaHistorySection', this)">🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
                 <button class="btn-ia" id="btnHistoryIA" onclick="runHistoryAnalysisIA()">🔍 Genera Resoconto Storico</button>
                 <div id="iaHistoryResponse" class="ia-response-box"></div>
+            </div>
+        </div>
+
+        <div class="card" id="recordsHubContainer">
+            <h2>🏆 Hub dei Record Personali</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
+                <div style="background: #fdfaff; border: 1px solid #e9d5ff; padding: 10px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Mese d'Oro</div>
+                    <div id="recordBestMonth" style="font-size: 16px; font-weight: bold; color: #10b981; margin-top: 4px;">-</div>
+                </div>
+                <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Spesa Record</div>
+                    <div id="recordHighestExp" style="font-size: 16px; font-weight: bold; color: #ef4444; margin-top: 4px;">-</div>
+                </div>
+                <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Categoria Peggiore</div>
+                    <div id="recordWorstCat" style="font-size: 16px; font-weight: bold; color: #ef4444; margin-top: 4px;">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🐷 Obiettivi di Risparmio</h2>
+            <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Crea i tuoi salvadanai e deposita manualmente l'importo risparmiato in ciascun obiettivo.</p>
+            <div id="savingsGoalsList" style="margin-bottom: 16px;"></div>
+            <div id="depositManagement" style="display:grid; gap: 12px; margin-bottom: 16px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc;">
+                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                    <label for="depositSavingsSelect" style="font-size:13px; font-weight:700; color:#475569; min-width:120px;">Seleziona salvadanaio:</label>
+                    <select id="depositSavingsSelect" style="flex:1; min-width:220px; padding:12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff;"></select>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                    <input type="number" id="depositAmount" placeholder="Importo da depositare €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:14px; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;">
+                    <button class="btn-spesa" style="background:#059669; margin:0; padding: 12px 18px; font-size:14px;" onclick="depositToSavingsGoal()">Deposita</button>
+                </div>
+                <div id="depositFeedback" style="font-size:13px; color:#047857; min-height:18px; margin-top:8px;"></div>
+            </div>
+            <div class="grid-inputs" style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                <input type="text" id="sgName" placeholder="Es. Auto Nuova" style="width: 100%; min-width: 250px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
+                <input type="number" id="sgAmount" placeholder="Target €" style="width: 160px; min-width: 160px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
+                <button class="btn-spesa" style="background:#8b5cf6; margin:0; padding: 12px 16px; font-size:14px;" onclick="addSavingsGoal()">Aggiungi</button>
             </div>
         </div>
 
@@ -573,7 +614,7 @@
     </div>
 
     <!-- =================== TAB 3: BILANCIO ANNUALE & SCADENZE =================== -->
-    <div id="annual-tab" class="tab-content">
+    <div id="annual-tab" class="tab-content hidden">
         <div class="card">
             <h2>📈 Grafico Monitoraggio Continuo</h2>
             <p style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
@@ -608,7 +649,7 @@
     </div>
 
     <!-- =================== TAB 4: E NEL FUTURO COME STO MESSO? =================== -->
-    <div id="future-tab" class="tab-content">
+    <div id="future-tab" class="tab-content hidden">
 
         <div class="card">
             <h2>🔮 E nel futuro come sto messo?</h2>
@@ -616,6 +657,17 @@
                 Proiezione matematica lineare basata sulla media reale delle tue entrate e uscite nel database.
                 Se il trend rimane costante, ecco quanto risparmio potresti accumulare nel tempo.
             </p>
+
+            <div class="card" style="background:#f1f5f9; border:1px solid #cbd5e1; margin-bottom: 16px; box-shadow: none; padding: 12px;">
+                <h3 style="margin-top:0; font-size: 14px;">🤔 Simulatore "Che succede se...?"</h3>
+                <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <input type="number" id="simulatedExpense" placeholder="Spesa mensile fissa €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:15px; margin:0; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;" oninput="renderFutureProjections(true)">
+                    <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
+                    <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="document.getElementById('simulatedExpense').value=''; renderFutureProjections()">Reset</button>
+                </div>
+            </div>
+
             <div id="futureAccuracyWarning" class="proj-info-box" style="display:none;"></div>
             <div id="futureProjectionsList" style="display:flex; flex-direction:column; gap:10px;"></div>
             <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
@@ -633,14 +685,14 @@
     </div>
 
     <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
-    <div id="settings-tab" class="tab-content">
+    <div id="settings-tab" class="tab-content hidden">
         <div class="card">
             <h2>📱 App &amp; Notifiche</h2>
             <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                 <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
                 <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
             </div>
-            <button id="btnInstallApp" class="btn-ia" style="display: none; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa l'App sul Telefono</button>
+            <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa l'App sul Telefono</button>
         </div>
         <div class="card">
             <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
@@ -680,60 +732,7 @@
 <!-- FAB MOBILE -->
 <button class="fab-button" onclick="scrollToAddExpense()" aria-label="Aggiungi spesa rapida">+</button>
 
-<!-- PDF CONTAINER (invisibile, fuori schermo) -->
-<div id="pdfExportContainer" style="
-    position: fixed;
-    left: -9999px;
-    top: 0;
-    width: 794px;
-    min-height: 200px;
-    padding: 40px;
-    background: white;
-    color: #1e293b;
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
-    z-index: -1;
-    visibility: hidden;
-">
-    <div style="text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 18px; margin-bottom: 24px;">
-        <h1 style="font-size: 26px; margin: 0; color: #1e293b; font-weight: 800;">Resoconto Finanziario</h1>
-        <h2 id="pdfMonthTitle" style="font-size: 16px; color: #64748b; font-weight: 400; margin-top: 6px;"></h2>
-    </div>
 
-    <div style="display: table; width: 100%; margin-bottom: 28px; background: #f8fafc; padding: 16px; border-radius: 10px; box-sizing: border-box;">
-        <div style="display: table-cell; text-align: center; width:33%;">
-            <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom:6px;">Entrate Totali</div>
-            <div id="pdfSumEntrate" style="font-size: 22px; font-weight: 800; color: #10b981;"></div>
-        </div>
-        <div style="display: table-cell; text-align: center; width:33%;">
-            <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom:6px;">Spese Sostenute</div>
-            <div id="pdfSumSostenuto" style="font-size: 22px; font-weight: 800; color: #ef4444;"></div>
-        </div>
-        <div style="display: table-cell; text-align: center; width:33%;">
-            <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom:6px;">Risparmio Netto</div>
-            <div id="pdfNetSavings" style="font-size: 22px; font-weight: 800;"></div>
-        </div>
-    </div>
-
-    <h3 style="font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; color:#1e293b;">Dettaglio per Categoria</h3>
-    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 24px;">
-        <thead>
-            <tr style="background: #f1f5f9;">
-                <th style="padding: 9px 12px; text-align: left; border-bottom: 1px solid #cbd5e1; color:#334155;">Categoria</th>
-                <th style="padding: 9px 12px; text-align: left; border-bottom: 1px solid #cbd5e1; color:#334155;">Note</th>
-                <th style="padding: 9px 12px; text-align: right; border-bottom: 1px solid #cbd5e1; color:#334155;">Pianificato</th>
-                <th style="padding: 9px 12px; text-align: right; border-bottom: 1px solid #cbd5e1; color:#334155;">Sostenuto</th>
-            </tr>
-        </thead>
-        <tbody id="pdfExpenseTableBody"></tbody>
-    </table>
-
-    <div id="pdfIaContainer" style="margin-bottom: 24px; display: none;">
-        <h3 style="font-size: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; color: #8b5cf6;">Analisi I.A. del Mese</h3>
-        <div id="pdfIaText" style="background: #fdfaff; border: 1px solid #e9d5ff; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; color: #581c87; white-space: pre-line;"></div>
-    </div>
-</div>
 
 <script>
 // =====================================================================
@@ -762,6 +761,9 @@ db.version(1).stores({
     categories:      'name',
     settings:        'key'
 });
+db.version(2).stores({
+    savingsGoals: '++id, name, targetAmount, createdAt'
+}).upgrade(tx => {});
 
 // =====================================================================
 // GOOGLE DRIVE OAUTH2
@@ -878,9 +880,11 @@ async function migrateFromLocalStorage() {
 // NAVIGAZIONE TABS
 // =====================================================================
 function switchTab(tabId, buttonEl) {
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
+    const target = document.getElementById(tabId);
+    target.classList.remove('hidden');
+    target.classList.add('active');
     buttonEl.classList.add('active');
     if (tabId === 'history-tab') renderGlobalHistory();
     if (tabId === 'annual-tab') { renderAnnualDeadlines(); renderTradingChart(); }
@@ -1050,7 +1054,11 @@ async function saveNotes() {
     const notes = document.getElementById('userNotes').value;
     const iaNotes = document.getElementById('iaNotes').value;
     let mData = await db.months.get(month);
-    if (mData) await db.months.update(month, {notes, iaNotes});
+    if (mData) {
+        await db.months.update(month, {notes, iaNotes});
+    } else {
+        await db.months.put({month, totalIncome:0, totalPlanned:0, totalActual:0, notes, iaNotes});
+    }
 }
 
 // =====================================================================
@@ -1058,7 +1066,8 @@ async function saveNotes() {
 // =====================================================================
 async function loadAnnualDeadlines() {
     annualDeadlines = await db.annualDeadlines.toArray();
-    renderAnnualDeadlines(); checkAnnualAlertForCurrentMonth();
+    await renderAnnualDeadlines();
+    checkAnnualAlertForCurrentMonth();
 }
 async function addAnnualDeadline() {
     const month = document.getElementById('annDeadlineMonth').value;
@@ -1079,8 +1088,8 @@ async function deleteAnnualDeadline(id) {
 async function toggleDeadlinePaid(id, isPaid) {
     await db.annualDeadlines.update(id, {isPaid}); loadAnnualDeadlines();
 }
-function renderAnnualDeadlines() {
-    loadAnnualDeadlines_db();
+async function renderAnnualDeadlines() {
+    await loadAnnualDeadlines_db();
 }
 async function loadAnnualDeadlines_db() {
     annualDeadlines = await db.annualDeadlines.toArray();
@@ -1108,6 +1117,7 @@ async function loadAnnualDeadlines_db() {
             </span>`;
         container.appendChild(row);
     });
+    if (localStorage.getItem('push_notifications_enabled') === 'true') checkPushNotifications();
 }
 function checkAnnualAlertForCurrentMonth() {
     const currentMonthVal = document.getElementById('currentMonth').value;
@@ -1246,10 +1256,99 @@ function scrollToAddExpense() { switchTab('current-month-tab', document.getEleme
 function toggleSection(id, el) { document.getElementById(id).classList.toggle('show'); el.classList.toggle('active'); }
 
 // =====================================================================
-// STORICO PLURIMENSILE
+// STORICO PLURIMENSILE & RECORDS & SALVADANAI
 // =====================================================================
+async function renderRecordsHub(monthsArray) {
+    if (monthsArray.length === 0) return;
+    let bestMonth = monthsArray.reduce((prev, curr) => (curr.totalIncome - curr.totalActual) > (prev.totalIncome - prev.totalActual) ? curr : prev);
+    document.getElementById('recordBestMonth').innerHTML = `${bestMonth.month.split('-').reverse().join('/')}<br>${fmtE(bestMonth.totalIncome - bestMonth.totalActual)}`;
+
+    let allExpenses = await db.expenses.toArray();
+    if (allExpenses.length > 0) {
+        let maxExp = allExpenses.reduce((prev, curr) => curr.actual > prev.actual ? curr : prev);
+        document.getElementById('recordHighestExp').innerHTML = `${fmtE(maxExp.actual)}<br>${maxExp.category}`;
+
+        let catSums = {};
+        allExpenses.forEach(e => { catSums[e.category] = (catSums[e.category] || 0) + e.actual; });
+        let worstCat = Object.entries(catSums).reduce((prev, curr) => curr[1] > prev[1] ? curr : prev);
+        document.getElementById('recordWorstCat').innerHTML = `${worstCat[0]}<br>${fmtE(worstCat[1])}`;
+    }
+}
+
+async function renderSavingsGoals() {
+    const goals = await db.savingsGoals.toArray();
+    const container = document.getElementById('savingsGoalsList');
+    const depositSelect = document.getElementById('depositSavingsSelect');
+    container.innerHTML = '';
+    if (!goals || goals.length === 0) {
+        container.innerHTML = '<p style="color:#94a3b8;font-size:12px;">Nessun salvadanio creato.</p>';
+        if (depositSelect) {
+            depositSelect.innerHTML = '<option value="">Nessun salvadanaio disponibile</option>';
+            depositSelect.disabled = true;
+        }
+        return;
+    }
+    if (depositSelect) {
+        depositSelect.disabled = false;
+        depositSelect.innerHTML = goals.map(g => `<option value="${g.id}">${g.name} (${fmtEPlain(g.importo_accumulato||0)} / ${fmtEPlain(g.targetAmount)})</option>`).join('');
+    }
+    
+    goals.forEach(g => {
+        const accumulated = g.importo_accumulato || 0;
+        const pct = g.targetAmount > 0 ? Math.min(100, Math.max(0, (accumulated / g.targetAmount) * 100)) : 0;
+        const isComplete = pct >= 100;
+        container.innerHTML += `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+                <span style="font-weight:bold; font-size:15px; color:#1e293b; flex:1; min-width:160px;">${g.name} ${isComplete ? '🎉' : ''}</span>
+                <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
+            </div>
+            <div style="height: 12px; background: #e2e8f0; border-radius: 10px; overflow:hidden; margin-bottom:8px;">
+                <div style="width: ${pct}%; height: 100%; background: ${isComplete ? '#10b981' : '#3b82f6'}; transition: width 0.3s;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px; font-size:13px; color:#334155;">
+                <span>Avanzamento: <strong>${pct.toFixed(1)}%</strong></span>
+                ${isComplete ? '<span style="color:#10b981; font-weight:700;">Obiettivo raggiunto</span>' : ''}
+            </div>
+        </div>`;
+    });
+}
+async function addSavingsGoal() {
+    const name = document.getElementById('sgName').value.trim();
+    const amount = parseFloat(document.getElementById('sgAmount').value) || 0;
+    if (!name || amount <= 0) { alert('Inserisci un nome e un target valido.'); return; }
+    await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
+    document.getElementById('sgName').value = ''; document.getElementById('sgAmount').value = '';
+    renderSavingsGoals();
+}
+async function deleteSavingsGoal(id) {
+    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id); renderSavingsGoals(); }
+}
+
+async function depositToSavingsGoal() {
+    const select = document.getElementById('depositSavingsSelect');
+    const amountInput = document.getElementById('depositAmount');
+    if (!select || !amountInput) return;
+    const id = parseInt(select.value, 10);
+    const amount = parseFloat(amountInput.value) || 0;
+    if (!id || amount <= 0) { alert('Inserisci un importo valido da depositare.'); return; }
+    const goal = await db.savingsGoals.get(id);
+    if (!goal) { alert('Salvadanaio non trovato.'); return; }
+    const newTotal = (goal.importo_accumulato || 0) + amount;
+    await db.savingsGoals.update(id, {importo_accumulato: newTotal});
+    amountInput.value = '';
+    const feedback = document.getElementById('depositFeedback');
+    if (feedback) {
+        feedback.innerText = `✅ Deposito di ${fmtEPlain(amount)} eseguito su "${goal.name}".`;
+        setTimeout(() => { if (feedback) feedback.innerText = ''; }, 4000);
+    }
+    renderSavingsGoals();
+}
+
 async function renderGlobalHistory() {
     let months = await db.months.toArray();
+    renderRecordsHub(months);
+    renderSavingsGoals();
     let hd = months.map(m => ({month:m.month, income:m.totalIncome, planned:m.totalPlanned, actual:m.totalActual, savings:m.totalIncome-m.totalActual}));
     hd.sort((a,b) => a.month.localeCompare(b.month));
     const tbody = document.getElementById('historyTableBody'); tbody.innerHTML = '';
@@ -1294,13 +1393,18 @@ async function renderTradingChart() {
 // =====================================================================
 // PROIEZIONI FUTURE (Matematiche)
 // =====================================================================
-async function renderFutureProjections() {
+async function renderFutureProjections(isSimulated = false) {
+    let simAmount = 0;
+    if (isSimulated) {
+        simAmount = parseFloat(document.getElementById('simulatedExpense').value) || 0;
+    }
+
     let months = await db.months.toArray();
     let numMonths = months.length;
     let totalIncome = months.reduce((s,m) => s+m.totalIncome,0);
     let totalActual = months.reduce((s,m) => s+m.totalActual,0);
     let avgIncome = numMonths > 0 ? totalIncome / numMonths : 0;
-    let avgActual = numMonths > 0 ? totalActual / numMonths : 0;
+    let avgActual = numMonths > 0 ? (totalActual / numMonths) + simAmount : simAmount;
     let avgSavings = avgIncome - avgActual;
 
     // Avviso accuratezza
@@ -1309,7 +1413,10 @@ async function renderFutureProjections() {
     if (numMonths === 0) {
         warnBox.innerHTML = `⚠️ <strong>Nessun dato registrato.</strong> Inizia ad inserire entrate e spese per ottenere le proiezioni.`;
         warnBox.style.display = 'block';
-        document.getElementById('futureProjectionsBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;">Inserisci dati per attivare le proiezioni.</td></tr>';
+        const listContainer = document.getElementById('futureProjectionsList');
+        if (listContainer) {
+            listContainer.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;">Inserisci dati per attivare le proiezioni.</div>`;
+        }
         return;
     } else if (numMonths < 3) {
         warnBox.innerHTML = `⚠️ <strong>Precisione limitata:</strong> I calcoli si basano su ${numMonths} mese${numMonths>1?'i':''}. Con più dati storici le proiezioni a lungo termine saranno molto più accurate.`;
@@ -1446,66 +1553,74 @@ async function exportPDF() {
     let fileName = prompt("Nome del file PDF:", `Report_${month}`);
     if (!fileName) return;
 
-    // 1) Popola il template con i dati REALI
     let totalIncome = currentData.income.reduce((s,i)=>s+i.amount,0);
     let totalActual = currentData.expenses.reduce((s,i)=>s+i.actual,0);
     let net = totalIncome - totalActual;
-
-    document.getElementById('pdfMonthTitle').innerText = `Periodo: ${month}`;
-    document.getElementById('pdfSumEntrate').innerText = fmtE(totalIncome);
-    document.getElementById('pdfSumSostenuto').innerText = fmtE(totalActual);
-    document.getElementById('pdfNetSavings').innerText = fmtE(net);
-    document.getElementById('pdfNetSavings').style.color = net >= 0 ? '#10b981' : '#ef4444';
-
-    // 2) Tabella spese dettagliata
-    const tbody = document.getElementById('pdfExpenseTableBody'); tbody.innerHTML = '';
     const sorted = [...currentData.expenses].sort((a,b) => a.category.localeCompare(b.category));
-    sorted.forEach(exp => {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${exp.category}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${exp.desc}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtE(exp.planned)}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:bold;">${exp.actual>0?fmtE(exp.actual):'Da pagare'}</td>`;
-        tbody.appendChild(tr);
-    });
 
-    // 3) Note IA
+    let htmlString = `
+    <div style="padding: 40px; background: white; color: #1e293b; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5; width: 794px;">
+        <div style="text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 18px; margin-bottom: 24px;">
+            <h1 style="font-size: 26px; margin: 0; color: #1e293b; font-weight: 800;">Resoconto Finanziario</h1>
+            <h2 style="font-size: 16px; color: #64748b; font-weight: 400; margin-top: 6px;">Periodo: ${month}</h2>
+        </div>
+        <div style="display: table; width: 100%; margin-bottom: 28px; background: #f8fafc; padding: 16px; border-radius: 10px; box-sizing: border-box;">
+            <div style="display: table-cell; text-align: center; width:33%;">
+                <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom:6px;">Entrate Totali</div>
+                <div style="font-size: 22px; font-weight: 800; color: #10b981;">${fmtE(totalIncome)}</div>
+            </div>
+            <div style="display: table-cell; text-align: center; width:33%;">
+                <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom:6px;">Spese Sostenute</div>
+                <div style="font-size: 22px; font-weight: 800; color: #ef4444;">${fmtE(totalActual)}</div>
+            </div>
+            <div style="display: table-cell; text-align: center; width:33%;">
+                <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom:6px;">Risparmio Netto</div>
+                <div style="font-size: 22px; font-weight: 800; color: ${net >= 0 ? '#10b981' : '#ef4444'};">${fmtE(net)}</div>
+            </div>
+        </div>
+        <h3 style="font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; color:#1e293b;">Dettaglio per Categoria</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 24px;">
+            <thead>
+                <tr style="background: #f1f5f9;">
+                    <th style="padding: 9px 12px; text-align: left; border-bottom: 1px solid #cbd5e1; color:#334155;">Categoria</th>
+                    <th style="padding: 9px 12px; text-align: left; border-bottom: 1px solid #cbd5e1; color:#334155;">Note</th>
+                    <th style="padding: 9px 12px; text-align: right; border-bottom: 1px solid #cbd5e1; color:#334155;">Pianificato</th>
+                    <th style="padding: 9px 12px; text-align: right; border-bottom: 1px solid #cbd5e1; color:#334155;">Sostenuto</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${sorted.map(exp => `
+                <tr>
+                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${exp.category}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${exp.desc}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtE(exp.planned).replace(/<[^>]*>?/gm, '')}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:bold;">${exp.actual>0?fmtE(exp.actual).replace(/<[^>]*>?/gm, ''):'Da pagare'}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+    `;
     const iaNotes = document.getElementById('iaNotes').value;
     if (iaNotes.trim()) {
-        document.getElementById('pdfIaContainer').style.display = 'block';
-        document.getElementById('pdfIaText').innerText = iaNotes;
-    } else { document.getElementById('pdfIaContainer').style.display = 'none'; }
+        htmlString += `
+        <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; color: #8b5cf6;">Analisi I.A. del Mese</h3>
+            <div style="background: #fdfaff; border: 1px solid #e9d5ff; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; color: #581c87; white-space: pre-line;">${iaNotes}</div>
+        </div>`;
+    }
+    htmlString += `</div>`;
 
-    // 4) Rendi il container visibile fuori schermo (FIX PDF bianco)
-    const element = document.getElementById('pdfExportContainer');
-    element.style.visibility = 'visible';
-    element.style.left = '-9999px';
-    element.style.position = 'fixed';
-
-    // 5) Attendi 2 frame di rendering (FIX critico per html2pdf)
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    await new Promise(r => setTimeout(r, 200));
+    const element = document.createElement('div');
+    element.innerHTML = htmlString;
 
     const opt = {
         margin: [10,10,10,10],
         filename: `${fileName}.pdf`,
         image: {type:'jpeg', quality:0.95},
-        html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            windowWidth: 794
-        },
+        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
         jsPDF: {unit:'mm', format:'a4', orientation:'portrait'}
     };
 
-    setTimeout(() => {
-        html2pdf().set(opt).from(element).save().then(() => {
-            element.style.visibility = 'hidden';
-            element.style.left = '-9999px';
-        });
-    }, 400);
+    html2pdf().set(opt).from(element).save();
 }
 
 // =====================================================================
@@ -1624,6 +1739,12 @@ function fmtE(n, decimals=2) {
     const parts = abs.toFixed(decimals).split('.');
     return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')}<span class="hide-mobile">,${parts[1]}</span> €`;
 }
+function fmtEPlain(n, decimals = 2) {
+    const abs = Math.abs(n||0);
+    if (decimals === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+    const parts = abs.toFixed(decimals).split('.');
+    return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')},${parts[1]} €`;
+}
 function fmtN(n) { return fmtE(n); }
 
 // =====================================================================
@@ -1643,6 +1764,8 @@ async function installPWA() {
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') { document.getElementById('btnInstallApp').style.display = 'none'; }
         deferredPrompt = null;
+    } else {
+        alert('Per installare l\'app, usa il menu del browser e seleziona "Aggiungi a Home" o "Installa app".');
     }
 }
 function togglePushNotifications() {
@@ -1671,7 +1794,7 @@ function togglePushNotifications() {
 function checkPushNotifications() {
     if (Notification.permission !== "granted") return;
     const today = new Date();
-    const alertDays = 2; // Avvisa 48 ore prima
+    const alertDays = 1; // Avvisa 24 ore prima
     annualDeadlines.forEach(item => {
         if (item.isPaid) return;
         const targetDate = new Date(item.month + '-' + (item.day ? String(item.day).padStart(2,'0') : '01'));
