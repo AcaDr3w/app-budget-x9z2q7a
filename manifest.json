@@ -2,7 +2,7 @@
   "name": "Dashboard Amministrazione Personale",
   "short_name": "Bilancio Pro",
   "description": "Gestione Finanziaria Avanzata con Scadenziario Integrato e Stime IA",
-  "start_url": "./Dashboard%20%20Conteggio%20Spese.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1e293b",
   "theme_color": "#1e293b",
