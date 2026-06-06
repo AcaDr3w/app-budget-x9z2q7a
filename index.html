@@ -33,36 +33,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 100px; transition: background-color 0.3s, color 0.3s; }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #0f172a;
-                --panel: #1e293b;
-                --text: #f8fafc;
-                --primary: #334155;
-            }
-            .header { background: #0f172a; }
-            .card { border-color: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-            input, select { background-color: #334155; color: #f8fafc; border-color: #475569; }
-            input:focus, select:focus { background-color: #1e293b; }
-            .calendar-day { background: #334155; border-color: #475569; color: #cbd5e1; }
-            .calendar-day.has-deadline { background: #9a3412; border-color: #ea580c; color: #fff; }
-            th { background-color: #334155; color: #cbd5e1; border-bottom-color: #475569; }
-            td { border-bottom-color: #475569; }
-            .item-row { border-bottom-color: #475569; }
-            .config-bar { background: #1e293b; border-color: #334155; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
-            .month-selector, .day-selector { border-color: #475569; background: #334155; color: #f8fafc; }
-            .cat-tag { background: #334155; color: #cbd5e1; }
-            .import-checkbox-list { background: #334155; border-color: #475569; }
-            .search-input { background: #334155; border-color: #475569; color: #f8fafc; }
-            .notes-textarea { background: #334155; border-color: #475569; color: #f8fafc; }
-            .ia-response-box { background: #2e1065; border-color: #4c1d95; color: #ddd6fe; }
-            .clickable-row:hover { background-color: #475569 !important; }
-            .pdfExportContainer { background: #fff !important; color: #1e293b !important; } /* PDF always light */
-            .annual-deadline-box { background: #1e3a8a; color: #bfdbfe; border-color: #1d4ed8; }
-            .deadline-alert { background: #78350f; color: #fde68a; border-color: #b45309; }
-            .table-responsive { border-color: #475569; }
-            .row-savings { background-color: #064e3b !important; color: #34d399; border-top-color: #059669; }
-        }
+        /* Dark mode removed: keep light theme always */
 
         /* ===== HEADER / NAVBAR ===== */
         .header {
@@ -234,7 +205,7 @@
         .text-right { text-align: right; }
         .diff-plus { color: #10b981; font-weight: bold; }
         .diff-minus { color: #ef4444; font-weight: bold; }
-        .row-savings { background-color: #ecfdf5 !important; border-top: 2px solid #10b981; font-size: 13px; color: #065f46; }
+        .row-savings { background-color: #ecfdf5 !important; border-top: 2px solid #10b981; font-size: 13px; color: #065f46; width: 100%; box-sizing: border-box; }
         .clickable-row { cursor: pointer; transition: background 0.2s; }
         .clickable-row:hover { background-color: #f1f5f9 !important; }
 
@@ -297,22 +268,25 @@
             .fab-button { display: flex; }
             .val-p { display: none; }
             
-            /* Bottom Nav */
+            /* Bottom Nav converted to floating pill with central notch for FAB */
             .navigation-tabs {
                 position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 65px;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+                left: 16px;
+                right: 16px;
+                height: 64px;
                 background: var(--primary);
                 z-index: 1000;
-                justify-content: space-around;
-                padding-bottom: env(safe-area-inset-bottom);
-                border-top: 1px solid rgba(255,255,255,0.1);
+                padding: 0 12px;
+                border-radius: 28px;
+                display: grid;
+                grid-template-columns: repeat(6, 1fr); /* reserve center column (3) for FAB notch */
+                align-items: center;
+                justify-items: center;
+                box-shadow: none; /* flat */
+                overflow: visible;
             }
-            @media (prefers-color-scheme: dark) { .navigation-tabs { background: #0f172a; } }
             .tab-button {
-                flex: 1;
                 border-radius: 0;
                 padding: 0;
                 font-size: 14px;
@@ -324,12 +298,45 @@
                 border-bottom: none;
                 border-top: 3px solid transparent;
                 height: 100%;
+                width: 100%;
+                box-sizing: border-box;
             }
+
+            /* Place each tab into its grid slot: keep column 3 empty for the FAB notch */
+            .navigation-tabs .tab-button:nth-child(1) { grid-column: 1; }
+            .navigation-tabs .tab-button:nth-child(2) { grid-column: 2; }
+            .navigation-tabs .tab-button:nth-child(3) { grid-column: 4; } /* Scadenze placed immediately right of FAB */
+            .navigation-tabs .tab-button:nth-child(4) { grid-column: 5; }
+            .navigation-tabs .tab-button:nth-child(5) { grid-column: 6; }
+
+            /* Add bottom padding to visible tab content so FAB does not visually overlap icons/text */
+            .navigation-tabs .tab-button { padding-bottom: 6px; }
             .tab-button.active {
                 border-bottom-color: transparent;
                 border-top-color: var(--accent);
                 background: rgba(255,255,255,0.05);
             }
+
+            /* Docked FAB styles (mobile only) - flat, centered and ringed */
+            .fab-button {
+                position: fixed;
+                left: 50%;
+                transform: translateX(-50%) translateY(-8px);
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1100;
+                background: var(--accent); /* bright blue */
+                color: white;
+                border: 4px solid var(--bg); /* ring of page background to simulate notch */
+                box-shadow: none; /* flat */
+            }
+
+            /* Removed circular pseudo-element to avoid occluding nav text; FAB uses border ring for notch effect */
             
             .grid-inputs { display: flex; flex-direction: column; gap: 10px; }
             .hide-mobile { display: none !important; }
@@ -338,7 +345,7 @@
             table, thead, tbody, th, td, tr { display: block; }
             thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-            @media (prefers-color-scheme: dark) { tr { border-bottom-color: #334155; } }
+            /* Dark mode removed: keep table border styling light */
             td { border: none; padding: 0; position: relative; text-align: right; font-size: 13px; }
             td:first-child { text-align: left; font-weight: bold; flex: 1; font-size: 14px; }
             td.text-right { text-align: right; }
@@ -356,8 +363,13 @@
             #historyTableBody td:nth-child(4) { font-size: 15px; margin-top: 6px; width: 100%; text-align: left; }
             #historyTableBody td:nth-child(5) { font-size: 15px; width: 100%; text-align: left; margin-top: 4px; }
             
-            .row-savings { flex-direction: column; align-items: center; gap: 8px; }
-            .row-savings td { text-align: center; font-size: 16px; width: 100% !important; display: block; }
+            /* Ensure the RISPARMIO NETTO row occupies full width on mobile */
+            .row-savings { display: block !important; width: 100% !important; box-sizing: border-box; margin: 0; }
+            #overviewTableFoot, #overviewTableFoot tr { display: block; width: 100%; }
+            #overviewTableFoot td { display: block; width: 100% !important; box-sizing: border-box; padding: 10px 12px; text-align: left; }
+            .row-savings td { text-align: left; font-size: 16px; width: 100% !important; display: block; box-sizing: border-box; }
+            .row-savings td.text-right { text-align: right; }
+            .table-responsive { padding: 0; }
             
             .projections-table-wrap tr { flex-wrap: nowrap; }
             .projections-table-wrap td:nth-child(3), .projections-table-wrap td:nth-child(4) { display: none; } /* Hide est income/actual */
@@ -570,24 +582,26 @@
         </div>
 
         <div class="card">
-            <h2>🐷 Obiettivi di Risparmio</h2>
-            <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Crea i tuoi salvadanai e deposita manualmente l'importo risparmiato in ciascun obiettivo.</p>
-            <div id="savingsGoalsList" style="margin-bottom: 16px;"></div>
-            <div id="depositManagement" style="display:grid; gap: 12px; margin-bottom: 16px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc;">
-                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                    <label for="depositSavingsSelect" style="font-size:13px; font-weight:700; color:#475569; min-width:120px;">Seleziona salvadanaio:</label>
-                    <select id="depositSavingsSelect" style="flex:1; min-width:220px; padding:12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff;"></select>
+            <h2 class="collapsible" onclick="toggleSection('savingsSection', this)">🐷 Obiettivi di Risparmio</h2>
+            <div class="collapsible-content" id="savingsSection">
+                <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Crea i tuoi salvadanai e deposita manualmente l'importo risparmiato in ciascun obiettivo.</p>
+                <div id="savingsGoalsList" style="margin-bottom: 16px;"></div>
+                <div id="depositManagement" style="display:grid; gap: 12px; margin-bottom: 16px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc;">
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <label for="depositSavingsSelect" style="font-size:13px; font-weight:700; color:#475569; min-width:120px;">Seleziona salvadanaio:</label>
+                        <select id="depositSavingsSelect" style="flex:1; min-width:220px; padding:12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff;"></select>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <input type="number" id="depositAmount" placeholder="Importo da depositare €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:14px; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;">
+                        <button id="depositButton" class="btn-spesa" style="background:#059669; margin:0; padding: 12px 18px; font-size:14px;" onclick="depositToSavingsGoal()">Inserisci i soldini</button>
+                    </div>
+                    <div id="depositFeedback" style="font-size:13px; color:#047857; min-height:18px; margin-top:8px;"></div>
                 </div>
-                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                    <input type="number" id="depositAmount" placeholder="Importo da depositare €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:14px; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;">
-                    <button class="btn-spesa" style="background:#059669; margin:0; padding: 12px 18px; font-size:14px;" onclick="depositToSavingsGoal()">Deposita</button>
+                <div class="grid-inputs" style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                    <input type="text" id="sgName" placeholder="Es. Auto Nuova" style="width: 100%; min-width: 250px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
+                    <input type="number" id="sgAmount" placeholder="Target €" style="width: 160px; min-width: 160px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
+                    <button class="btn-spesa" style="background:#8b5cf6; margin:0; padding: 12px 16px; font-size:14px;" onclick="addSavingsGoal()">Aggiungi</button>
                 </div>
-                <div id="depositFeedback" style="font-size:13px; color:#047857; min-height:18px; margin-top:8px;"></div>
-            </div>
-            <div class="grid-inputs" style="display:flex; flex-direction:row; gap:8px; align-items:center;">
-                <input type="text" id="sgName" placeholder="Es. Auto Nuova" style="width: 100%; min-width: 250px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
-                <input type="number" id="sgAmount" placeholder="Target €" style="width: 160px; min-width: 160px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
-                <button class="btn-spesa" style="background:#8b5cf6; margin:0; padding: 12px 16px; font-size:14px;" onclick="addSavingsGoal()">Aggiungi</button>
             </div>
         </div>
 
@@ -662,9 +676,9 @@
                 <h3 style="margin-top:0; font-size: 14px;">🤔 Simulatore "Che succede se...?"</h3>
                 <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <input type="number" id="simulatedExpense" placeholder="Spesa mensile fissa €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:15px; margin:0; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;" oninput="renderFutureProjections(true)">
+                    <input type="number" id="simulatedExpense" placeholder="Spesa mensile fissa €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:15px; margin:0; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;">
                     <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
-                    <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="document.getElementById('simulatedExpense').value=''; renderFutureProjections()">Reset</button>
+                    <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="resetFutureSimulation()">Reset</button>
                 </div>
             </div>
 
@@ -1290,7 +1304,8 @@ async function renderSavingsGoals() {
     }
     if (depositSelect) {
         depositSelect.disabled = false;
-        depositSelect.innerHTML = goals.map(g => `<option value="${g.id}">${g.name} (${fmtEPlain(g.importo_accumulato||0)} / ${fmtEPlain(g.targetAmount)})</option>`).join('');
+        // Show only the name of the savings goal in the dropdown
+        depositSelect.innerHTML = goals.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
     }
     
     goals.forEach(g => {
@@ -1298,10 +1313,17 @@ async function renderSavingsGoals() {
         const pct = g.targetAmount > 0 ? Math.min(100, Math.max(0, (accumulated / g.targetAmount) * 100)) : 0;
         const isComplete = pct >= 100;
         container.innerHTML += `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
-                <span style="font-weight:bold; font-size:15px; color:#1e293b; flex:1; min-width:160px;">${g.name} ${isComplete ? '🎉' : ''}</span>
-                <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:10px; position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:8px; font-weight:bold; font-size:15px; color:#1e293b; min-width:160px;">
+                    <span>${g.name} ${isComplete ? '🎉' : ''}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
+                    <button onclick="deleteSavingsGoal(${g.id})" title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
+                        🗑️
+                    </button>
+                </div>
             </div>
             <div style="height: 12px; background: #e2e8f0; border-radius: 10px; overflow:hidden; margin-bottom:8px;">
                 <div style="width: ${pct}%; height: 100%; background: ${isComplete ? '#10b981' : '#3b82f6'}; transition: width 0.3s;"></div>
@@ -1438,6 +1460,13 @@ async function renderFutureProjections(isSimulated = false) {
         row.innerHTML = `<span style="font-weight:bold; font-size:14px; color:var(--primary);">${p.label}</span><span class="text-right" style="font-size:16px;">${fmtE(estSavings)}</span>`;
         listContainer.appendChild(row);
     });
+}
+
+function resetFutureSimulation() {
+    const input = document.getElementById('simulatedExpense');
+    if (input) input.value = '';
+    // Ricalcola e ripristina i valori di default senza simulazione
+    renderFutureProjections();
 }
 
 // =====================================================================
@@ -1647,7 +1676,9 @@ async function getCompiledBackupData() {
         annual_deadlines: await db.annualDeadlines.toArray(),
         income: await db.income.toArray(),
         expenses: await db.expenses.toArray(),
-        months: await db.months.toArray()
+        months: await db.months.toArray(),
+        savingsGoals: await db.savingsGoals.toArray(),
+        settings: await db.settings.toArray()
     }, null, 2);
 }
 async function exportBackupJSON() {
@@ -1694,21 +1725,45 @@ function importBackupJSON(event) {
 async function syncToDrive() {
     try {
         const content = await getCompiledBackupData();
-        const meta = {'name':'backup_bilancio.json','parents':['appDataFolder']};
+        const meta = {name:'budget_pwa_backup.json'};
         let existId = null;
-        const r = await gapi.client.drive.files.list({spaces:'appDataFolder',fields:'files(id,name)',pageSize:10});
-        const found = r.result.files?.filter(f => f.name==='backup_bilancio.json');
+
+        const r = await gapi.client.drive.files.list({
+            q: "name='budget_pwa_backup.json' and trashed=false",
+            fields: 'files(id,name)',
+            pageSize: 10,
+            spaces: 'drive'
+        });
+
+        const found = r.result.files?.filter(f => f.name === 'budget_pwa_backup.json');
         if (found?.length > 0) existId = found[0].id;
+
         const boundary = '-------314159265358979323846';
         const body = `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+
         if (existId) {
-            await gapi.client.request({path:`/upload/drive/v3/files/${existId}`,method:'PATCH',params:{uploadType:'multipart'},headers:{'Content-Type':`multipart/related; boundary="${boundary}"`},body});
+            await gapi.client.request({
+                path: `/upload/drive/v3/files/${existId}`,
+                method: 'PATCH',
+                params: {uploadType: 'multipart'},
+                headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
+                body
+            });
             alert('✅ Sincronizzazione Drive completata (aggiornato)!');
         } else {
-            await gapi.client.request({path:'/upload/drive/v3/files',method:'POST',params:{uploadType:'multipart'},headers:{'Content-Type':`multipart/related; boundary="${boundary}"`},body});
+            await gapi.client.request({
+                path: '/upload/drive/v3/files',
+                method: 'POST',
+                params: {uploadType: 'multipart'},
+                headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
+                body
+            });
             alert('✅ Sincronizzazione Drive completata (nuovo file)!');
         }
-    } catch(err) { console.error(err); alert("❌ Errore Drive."); }
+    } catch(err) {
+        console.error('Drive sync failed:', err);
+        alert("❌ Errore Drive. Controlla la console per i dettagli.");
+    }
 }
 
 // =====================================================================
