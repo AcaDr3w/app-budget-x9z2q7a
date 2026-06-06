@@ -302,6 +302,7 @@
                 bottom: 0;
                 left: 0;
                 right: 0;
+                height: 65px;
                 background: var(--primary);
                 z-index: 1000;
                 justify-content: space-around;
@@ -312,20 +313,25 @@
             .tab-button {
                 flex: 1;
                 border-radius: 0;
-                padding: 12px 0;
-                font-size: 10px;
+                padding: 0;
+                font-size: 14px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 4px;
+                justify-content: center;
+                gap: 2px;
                 border-bottom: none;
                 border-top: 3px solid transparent;
+                height: 100%;
             }
             .tab-button.active {
                 border-bottom-color: transparent;
                 border-top-color: var(--accent);
                 background: rgba(255,255,255,0.05);
             }
+            
+            .grid-inputs { display: flex; flex-direction: column; gap: 10px; }
+            .hide-mobile { display: none !important; }
             
             /* Flexbox Tables for Mobile */
             table, thead, tbody, th, td, tr { display: block; }
@@ -338,15 +344,19 @@
             
             /* Specific Table Adjustments */
             #overviewTableBody td:nth-child(2) { display: none; } /* Hide 'Previsto' */
-            #overviewTableBody td:nth-child(3) { font-size: 14px; margin-right: 10px; } /* Sostenuto */
-            #overviewTableBody td:nth-child(4) { font-size: 14px; } /* Margine */
+            #overviewTableBody td:nth-child(3)::before { content: 'Sostenuto: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
+            #overviewTableBody td:nth-child(4)::before { content: 'Scostamento: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
+            #overviewTableBody td:nth-child(3) { font-size: 15px; margin-top: 6px; width: 100%; text-align: left; }
+            #overviewTableBody td:nth-child(4) { font-size: 15px; width: 100%; text-align: left; margin-top: 4px; }
             
             #historyTableBody td:nth-child(2), #historyTableBody td:nth-child(3) { display: none; } /* Hide Entrate/Budget */
-            #historyTableBody td:nth-child(4) { font-size: 14px; margin-right: 10px; } /* Speso */
-            #historyTableBody td:nth-child(5) { font-size: 14px; } /* Risparmio */
+            #historyTableBody td:nth-child(4)::before { content: 'Speso: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
+            #historyTableBody td:nth-child(5)::before { content: 'Risparmio: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
+            #historyTableBody td:nth-child(4) { font-size: 15px; margin-top: 6px; width: 100%; text-align: left; }
+            #historyTableBody td:nth-child(5) { font-size: 15px; width: 100%; text-align: left; margin-top: 4px; }
             
             .row-savings { flex-direction: column; align-items: center; gap: 8px; }
-            .row-savings td { text-align: center; font-size: 16px; }
+            .row-savings td { text-align: center; font-size: 16px; width: 100% !important; display: block; }
             
             .projections-table-wrap tr { flex-wrap: nowrap; }
             .projections-table-wrap td:nth-child(3), .projections-table-wrap td:nth-child(4) { display: none; } /* Hide est income/actual */
@@ -607,17 +617,7 @@
                 Se il trend rimane costante, ecco quanto risparmio potresti accumulare nel tempo.
             </p>
             <div id="futureAccuracyWarning" class="proj-info-box" style="display:none;"></div>
-            <div class="projections-table-wrap">
-                <table>
-                    <thead><tr>
-                        <th>Arco Temporale</th>
-                        <th class="text-right">Risparmio Stimato</th>
-                        <th class="text-right">Entrate Stimate</th>
-                        <th class="text-right">Uscite Stimate</th>
-                    </tr></thead>
-                    <tbody id="futureProjectionsBody"></tbody>
-                </table>
-            </div>
+            <div id="futureProjectionsList" style="display:flex; flex-direction:column; gap:10px;"></div>
             <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
         </div>
 
@@ -634,6 +634,14 @@
 
     <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
     <div id="settings-tab" class="tab-content">
+        <div class="card">
+            <h2>📱 App &amp; Notifiche</h2>
+            <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+                <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
+                <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
+            </div>
+            <button id="btnInstallApp" class="btn-ia" style="display: none; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa l'App sul Telefono</button>
+        </div>
         <div class="card">
             <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
             <div class="collapsible-content show" id="categoriesSection">
@@ -822,6 +830,11 @@ async function initApp() {
     await loadMonthData();
     toggleIaProviderFields();
     checkDatabaseHealth();
+    initPWA();
+    if (localStorage.getItem('push_notifications_enabled') === 'true') {
+        document.getElementById('pushNotifToggle').checked = true;
+        checkPushNotifications();
+    }
 }
 
 async function migrateFromLocalStorage() {
@@ -1309,15 +1322,14 @@ async function renderFutureProjections() {
         {label:'3 Mesi', m:3}, {label:'6 Mesi', m:6}, {label:'1 Anno', m:12},
         {label:'2 Anni', m:24}, {label:'5 Anni', m:60}, {label:'10 Anni', m:120}
     ];
-    const tbody = document.getElementById('futureProjectionsBody'); tbody.innerHTML = '';
+    const listContainer = document.getElementById('futureProjectionsList'); listContainer.innerHTML = '';
     periods.forEach(p => {
         let estSavings = avgSavings * p.m;
-        let estIncome = avgIncome * p.m;
-        let estActual = avgActual * p.m;
-        let tr = document.createElement('tr');
-        tr.className = estSavings >= 0 ? 'proj-row-positive' : 'proj-row-negative';
-        tr.innerHTML = `<td><strong>${p.label}</strong></td><td class="text-right">${fmtE(estSavings)}</td><td class="text-right" style="color:#64748b;">${fmtE(estIncome)}</td><td class="text-right" style="color:#64748b;">${fmtE(estActual)}</td>`;
-        tbody.appendChild(tr);
+        let row = document.createElement('div');
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding: 14px; background: var(--panel); border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid " + (estSavings>=0?'#10b981':'#ef4444') + ";";
+        row.className = estSavings >= 0 ? 'proj-row-positive' : 'proj-row-negative';
+        row.innerHTML = `<span style="font-weight:bold; font-size:14px; color:var(--primary);">${p.label}</span><span class="text-right" style="font-size:16px;">${fmtE(estSavings)}</span>`;
+        listContainer.appendChild(row);
     });
 }
 
@@ -1475,23 +1487,25 @@ async function exportPDF() {
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     await new Promise(r => setTimeout(r, 200));
 
-    try {
-        await html2pdf().set({
-            margin: [10,10,10,10],
-            filename: `${fileName}.pdf`,
-            image: {type:'jpeg', quality:0.95},
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                windowWidth: 794
-            },
-            jsPDF: {unit:'mm', format:'a4', orientation:'portrait'}
-        }).from(element).save();
-    } finally {
-        element.style.visibility = 'hidden';
-        element.style.left = '-9999px';
-    }
+    const opt = {
+        margin: [10,10,10,10],
+        filename: `${fileName}.pdf`,
+        image: {type:'jpeg', quality:0.95},
+        html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            windowWidth: 794
+        },
+        jsPDF: {unit:'mm', format:'a4', orientation:'portrait'}
+    };
+
+    setTimeout(() => {
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.style.visibility = 'hidden';
+            element.style.left = '-9999px';
+        });
+    }, 400);
 }
 
 // =====================================================================
@@ -1606,10 +1620,73 @@ async function resetTotalDB() {
 // =====================================================================
 function fmtE(n, decimals=2) {
     const abs = Math.abs(n||0);
-    const formatted = decimals === 0 ? Math.round(abs).toLocaleString('it-IT') : abs.toFixed(decimals);
-    return `${n < 0 ? '-' : ''}${formatted} €`;
+    if (decimals === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+    const parts = abs.toFixed(decimals).split('.');
+    return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')}<span class="hide-mobile">,${parts[1]}</span> €`;
 }
 function fmtN(n) { return fmtE(n); }
+
+// =====================================================================
+// PWA & PUSH NOTIFICATIONS
+// =====================================================================
+let deferredPrompt;
+function initPWA() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('btnInstallApp').style.display = 'block';
+    });
+}
+async function installPWA() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') { document.getElementById('btnInstallApp').style.display = 'none'; }
+        deferredPrompt = null;
+    }
+}
+function togglePushNotifications() {
+    const isEnabled = document.getElementById('pushNotifToggle').checked;
+    if (isEnabled) {
+        if (!("Notification" in window)) {
+            alert("Il tuo browser non supporta le notifiche push.");
+            document.getElementById('pushNotifToggle').checked = false;
+            return;
+        }
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                localStorage.setItem('push_notifications_enabled', 'true');
+                checkPushNotifications();
+                alert("🔔 Notifiche attivate con successo!");
+            } else {
+                document.getElementById('pushNotifToggle').checked = false;
+                localStorage.setItem('push_notifications_enabled', 'false');
+                alert("Permesso negato per le notifiche.");
+            }
+        });
+    } else {
+        localStorage.setItem('push_notifications_enabled', 'false');
+    }
+}
+function checkPushNotifications() {
+    if (Notification.permission !== "granted") return;
+    const today = new Date();
+    const alertDays = 2; // Avvisa 48 ore prima
+    annualDeadlines.forEach(item => {
+        if (item.isPaid) return;
+        const targetDate = new Date(item.month + '-' + (item.day ? String(item.day).padStart(2,'0') : '01'));
+        const diffTime = targetDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const notifKey = `notif_sent_${item.id}_${item.month}`;
+        if (diffDays >= 0 && diffDays <= alertDays && !localStorage.getItem(notifKey)) {
+            const n = new Notification("🔔 Scadenza in Arrivo", {
+                body: `${item.desc} scade tra ${diffDays} giorn${diffDays===1?'o':'i'}. Importo: ${fmtE(item.amount).replace(/<[^>]*>?/gm, '')}`,
+                icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%231e293b'/><text y='120' x='96' font-size='100' text-anchor='middle'>📊</text></svg>"
+            });
+            localStorage.setItem(notifKey, 'true');
+        }
+    });
+}
 
 // =====================================================================
 // INIT
