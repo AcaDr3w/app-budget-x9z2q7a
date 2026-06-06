@@ -2,7 +2,7 @@
 const CACHE_NAME = 'bilancio-pwa-v1';
 const URLS_TO_CACHE = [
   './',
-  './Dashboard  Conteggio Spese.html',
+  './index.html',
   './manifest.json'
 ];
 
@@ -56,7 +56,7 @@ self.addEventListener('fetch', event => {
         return caches.match(event.request).then(cached => {
           if (cached) return cached;
           // Fallback HTML per navigazione offline
-          return caches.match('./Dashboard  Conteggio Spese.html');
+          return caches.match('./index.html');
         });
       })
   );

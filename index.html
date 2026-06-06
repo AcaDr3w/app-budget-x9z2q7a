@@ -31,7 +31,38 @@
             --nav-h: 130px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 90px; }
+        body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 100px; transition: background-color 0.3s, color 0.3s; }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --panel: #1e293b;
+                --text: #f8fafc;
+                --primary: #334155;
+            }
+            .header { background: #0f172a; }
+            .card { border-color: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+            input, select { background-color: #334155; color: #f8fafc; border-color: #475569; }
+            input:focus, select:focus { background-color: #1e293b; }
+            .calendar-day { background: #334155; border-color: #475569; color: #cbd5e1; }
+            .calendar-day.has-deadline { background: #9a3412; border-color: #ea580c; color: #fff; }
+            th { background-color: #334155; color: #cbd5e1; border-bottom-color: #475569; }
+            td { border-bottom-color: #475569; }
+            .item-row { border-bottom-color: #475569; }
+            .config-bar { background: #1e293b; border-color: #334155; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+            .month-selector, .day-selector { border-color: #475569; background: #334155; color: #f8fafc; }
+            .cat-tag { background: #334155; color: #cbd5e1; }
+            .import-checkbox-list { background: #334155; border-color: #475569; }
+            .search-input { background: #334155; border-color: #475569; color: #f8fafc; }
+            .notes-textarea { background: #334155; border-color: #475569; color: #f8fafc; }
+            .ia-response-box { background: #2e1065; border-color: #4c1d95; color: #ddd6fe; }
+            .clickable-row:hover { background-color: #475569 !important; }
+            .pdfExportContainer { background: #fff !important; color: #1e293b !important; } /* PDF always light */
+            .annual-deadline-box { background: #1e3a8a; color: #bfdbfe; border-color: #1d4ed8; }
+            .deadline-alert { background: #78350f; color: #fde68a; border-color: #b45309; }
+            .table-responsive { border-color: #475569; }
+            .row-savings { background-color: #064e3b !important; color: #34d399; border-top-color: #059669; }
+        }
 
         /* ===== HEADER / NAVBAR ===== */
         .header {
@@ -163,7 +194,7 @@
         .calendar-day-header { font-size: 10px; font-weight: bold; color: #94a3b8; padding: 4px 0; }
         .calendar-day { padding: 8px 0; font-size: 11px; background: #f8fafc; border-radius: 7px; cursor: pointer; border: 1px solid #e2e8f0; font-weight: 600; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .calendar-day span { font-size: 8px; opacity: 0.6; font-weight: normal; }
-        .calendar-day.has-spend { background: #fef08a; border-color: #facc15; color: #854d0e; }
+        .calendar-day.has-deadline { background: #ffedd5; border-color: #f97316; color: #c2410c; }
         .calendar-day.selected { background: var(--accent) !important; color: white !important; border-color: var(--accent); }
         .calendar-day.empty { background: transparent; border: none; cursor: default; }
 
@@ -264,8 +295,61 @@
         @media (max-width: 767px) {
             .fab-button { display: flex; }
             .val-p { display: none; }
-            table { font-size: 12px; }
-            th, td { padding: 8px 10px; }
+            
+            /* Bottom Nav */
+            .navigation-tabs {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: var(--primary);
+                z-index: 1000;
+                justify-content: space-around;
+                padding-bottom: env(safe-area-inset-bottom);
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+            @media (prefers-color-scheme: dark) { .navigation-tabs { background: #0f172a; } }
+            .tab-button {
+                flex: 1;
+                border-radius: 0;
+                padding: 12px 0;
+                font-size: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                border-bottom: none;
+                border-top: 3px solid transparent;
+            }
+            .tab-button.active {
+                border-bottom-color: transparent;
+                border-top-color: var(--accent);
+                background: rgba(255,255,255,0.05);
+            }
+            
+            /* Flexbox Tables for Mobile */
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+            @media (prefers-color-scheme: dark) { tr { border-bottom-color: #334155; } }
+            td { border: none; padding: 0; position: relative; text-align: right; font-size: 13px; }
+            td:first-child { text-align: left; font-weight: bold; flex: 1; font-size: 14px; }
+            td.text-right { text-align: right; }
+            
+            /* Specific Table Adjustments */
+            #overviewTableBody td:nth-child(2) { display: none; } /* Hide 'Previsto' */
+            #overviewTableBody td:nth-child(3) { font-size: 14px; margin-right: 10px; } /* Sostenuto */
+            #overviewTableBody td:nth-child(4) { font-size: 14px; } /* Margine */
+            
+            #historyTableBody td:nth-child(2), #historyTableBody td:nth-child(3) { display: none; } /* Hide Entrate/Budget */
+            #historyTableBody td:nth-child(4) { font-size: 14px; margin-right: 10px; } /* Speso */
+            #historyTableBody td:nth-child(5) { font-size: 14px; } /* Risparmio */
+            
+            .row-savings { flex-direction: column; align-items: center; gap: 8px; }
+            .row-savings td { text-align: center; font-size: 16px; }
+            
+            .projections-table-wrap tr { flex-wrap: nowrap; }
+            .projections-table-wrap td:nth-child(3), .projections-table-wrap td:nth-child(4) { display: none; } /* Hide est income/actual */
         }
     </style>
 </head>
@@ -277,11 +361,12 @@
         <h1>📊 Dashboard Amministrazione</h1>
     </div>
     <p>Gestione Finanziaria Avanzata · IA · Scadenziario · Proiezioni</p>
-    <nav class="navigation-tabs">
+    <nav class="navigation-tabs" id="mainNav">
         <button class="tab-button active" id="tab-btn-current" onclick="switchTab('current-month-tab', this)">📅 Mese</button>
         <button class="tab-button" id="tab-btn-history" onclick="switchTab('history-tab', this)">📈 Storico</button>
         <button class="tab-button" id="tab-btn-annual" onclick="switchTab('annual-tab', this)">🏛️ Scadenze</button>
         <button class="tab-button" id="tab-btn-future" onclick="switchTab('future-tab', this)">🔮 Futuro</button>
+        <button class="tab-button" id="tab-btn-settings" onclick="switchTab('settings-tab', this)">⚙️ Impostazioni</button>
     </nav>
 </div>
 
@@ -355,38 +440,6 @@
                     <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
                 </div>
 
-                <div class="card">
-                    <h2 class="collapsible" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
-                    <div class="collapsible-content" id="categoriesSection">
-                        <div id="categoriesAdminList" style="margin-bottom: 12px;"></div>
-                        <div class="grid-inputs">
-                            <input type="text" id="newCatName" placeholder="Nuova categoria...">
-                            <button class="btn-spesa" onclick="addNewCategory()" style="margin:0;">Aggiungi</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2 class="collapsible" onclick="toggleSection('backupSection', this)">💾 Backup &amp; Sync</h2>
-                    <div class="collapsible-content" id="backupSection">
-                        <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Sincronizza sul tuo Google Drive personale.</p>
-                        <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()" disabled>☁️ Connetti Google Drive</button>
-                        <button class="btn-gdrive" id="btnGDriveSync" style="display:none; background:#34a853;" onclick="syncToDrive()">🔄 Sincronizza su Drive</button>
-                        <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
-                        <div class="grid-inputs">
-                            <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Backup JSON</button>
-                            <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
-                        </div>
-                        <button class="btn-share" onclick="shareBackupJSON()">📲 Condividi Backup</button>
-                        <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
-                        <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
-                        <div class="grid-inputs">
-                            <button style="background:#f59e0b;" onclick="resetCurrentMonth()">⚠️ Reset Mese</button>
-                            <button style="background:#dc2626;" onclick="resetTotalDB()">🚨 Reset DB</button>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
             <!-- RIGHT PANEL -->
@@ -449,13 +502,13 @@
 
                 <!-- VOCI DEL PERIODO -->
                 <div class="card">
-                    <h2 id="listTitle">📅 Distribuzione &amp; Voci del Periodo</h2>
+                    <h2 id="listTitle">📅 Distribuzione &amp; Registro Spese</h2>
                     <div class="calendar-grid" id="calendarGrid"></div>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()">
                         <button class="btn-clear-filters" id="btnClearAllFilters" onclick="clearAllFilters()">✕ Filtri</button>
                     </div>
-                    <h3 style="margin-top: 14px; font-size:13px; font-weight:700; color:#475569;">📋 Voci del Periodo</h3>
+                    <h3 style="margin-top: 14px; font-size:13px; font-weight:700; color:#475569;">📋 Registro Spese</h3>
                     <div id="entriesList" style="margin-top: 8px; padding-bottom: 10px;"></div>
                     <div class="grid-inputs" style="margin-top: 14px;">
                         <button class="btn-csv" onclick="exportCSV()">📥 CSV</button>
@@ -577,6 +630,41 @@
             <div id="iaFutureResponse" class="ia-response-box"></div>
         </div>
 
+    </div>
+
+    <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
+    <div id="settings-tab" class="tab-content">
+        <div class="card">
+            <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
+            <div class="collapsible-content show" id="categoriesSection">
+                <div id="categoriesAdminList" style="margin-bottom: 12px;"></div>
+                <div class="grid-inputs">
+                    <input type="text" id="newCatName" placeholder="Nuova categoria...">
+                    <button class="btn-spesa" onclick="addNewCategory()" style="margin:0;">Aggiungi</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="collapsible show" onclick="toggleSection('backupSection', this)">💾 Backup &amp; Sync</h2>
+            <div class="collapsible-content show" id="backupSection">
+                <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Sincronizza sul tuo Google Drive personale.</p>
+                <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()" disabled>☁️ Connetti Google Drive</button>
+                <button class="btn-gdrive" id="btnGDriveSync" style="display:none; background:#34a853;" onclick="syncToDrive()">🔄 Sincronizza su Drive</button>
+                <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
+                <div class="grid-inputs">
+                    <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Backup JSON</button>
+                    <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
+                </div>
+                <button class="btn-share" onclick="shareBackupJSON()">📲 Condividi Backup</button>
+                <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
+                <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
+                <div class="grid-inputs">
+                    <button style="background:#f59e0b;" onclick="resetCurrentMonth()">⚠️ Reset Mese</button>
+                    <button style="background:#dc2626;" onclick="resetTotalDB()">🚨 Reset DB</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div><!-- /container -->
@@ -1123,8 +1211,11 @@ function renderCalendar() {
     let cursor = new Date(range.start);
     while (cursor <= range.end) {
         const ds = cursor.toISOString().slice(0,10);
-        const hasSpend = currentData.expenses.some(e => e.date === ds);
-        let d = document.createElement('div'); d.className = `calendar-day${hasSpend?' has-spend':''}${selectedFilterDate===ds?' selected':''}`;
+        const dayNum = cursor.getDate();
+        const hasPlanned = currentData.expenses.some(e => e.date === ds && e.planned > 0);
+        const hasDeadline = annualDeadlines.some(a => a.month === monthVal && (!a.day || parseInt(a.day) === dayNum) && !a.isPaid);
+        const isHighlight = hasPlanned || hasDeadline;
+        let d = document.createElement('div'); d.className = `calendar-day${isHighlight?' has-deadline':''}${selectedFilterDate===ds?' selected':''}`;
         d.innerHTML = `${cursor.getDate()}<span>${cursor.getMonth()+1}/${cursor.getFullYear().toString().slice(-2)}</span>`;
         const td = ds; d.onclick = () => filterByDate(td);
         grid.appendChild(d); cursor.setDate(cursor.getDate()+1);
@@ -1138,7 +1229,7 @@ function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDat
 function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); updateUI(); }
 function handleSearch() { searchQuery = document.getElementById('searchInput').value.toLowerCase(); updateUI(); }
 function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; updateUI(); }
-function scrollToAddExpense() { document.getElementById('addExpenseCard').scrollIntoView({behavior:'smooth',block:'start'}); }
+function scrollToAddExpense() { switchTab('current-month-tab', document.getElementById('tab-btn-current')); setTimeout(() => { document.getElementById('addExpenseCard').scrollIntoView({behavior:'smooth',block:'start'}); }, 100); }
 function toggleSection(id, el) { document.getElementById(id).classList.toggle('show'); el.classList.toggle('active'); }
 
 // =====================================================================
