@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Bilancio Pro">
     <meta name="description" content="Dashboard di gestione finanziaria personale con IA, scadenziario e proiezioni a lungo termine">
     <link rel="manifest" href="manifest.json">
-    <title>📊 Dashboard Amministrazione Personale</title>
+    <title>📊 EcoBilancio Digitale</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -39,15 +39,15 @@
         .header {
             background: var(--primary);
             color: white;
-            padding: 16px 20px 0;
+            padding: 18px 20px 12px;
             position: sticky;
             top: 0;
             z-index: 200;
             box-shadow: 0 4px 20px rgba(0,0,0,0.25);
         }
-        .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .header p { font-size: 11px; opacity: 0.65; display: none; }
+        .header p { font-size: 14px; opacity: 0.85; margin-top: 4px; line-height: 1.35; display: none; }
 
         .navigation-tabs {
             display: flex;
@@ -74,6 +74,21 @@
             width: auto;
             margin-top: 0;
         }
+        .tab-button.add-button {
+            width: 55px;
+            min-width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            padding: 0;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background: #10b981;
+            color: white;
+            box-shadow: 0 14px 28px rgba(16,185,129,0.2);
+        }
+        .tab-button.add-button:hover { background: #0f766e; }
+        .tab-button.add-button:active { transform: scale(0.95); }
         .tab-button:hover { color: white; background: rgba(255,255,255,0.08); }
         .tab-button.active {
             background: rgba(59,130,246,0.2);
@@ -83,6 +98,11 @@
 
         /* ===== CONTAINER ===== */
         .container { max-width: 1300px; margin: 0 auto; padding: 16px; }
+        .settings-grid { display: grid; gap: 20px; }
+        .settings-col-right { display: grid; gap: 20px; }
+        .backup-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .backup-action-grid button { width: 100%; }
+        #btnInstallApp { max-width: 300px; width: 100%; }
 
         /* Responsive form controls */
         .responsive-input, .responsive-select { width: 100%; max-width: 100%; padding: 12px 14px; font-size: 14px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; box-sizing: border-box; }
@@ -151,11 +171,30 @@
         .day-selector-group { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text); }
         .day-selector { width: 65px; padding: 9px; font-size: 15px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: bold; text-align: center; }
         .summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 10px; }
-        .summary-box { padding: 14px 10px; border-radius: 12px; color: white; font-weight: 600; text-align: center; font-size: 12px; line-height: 1.3; }
+        .summary-box { padding: 14px 10px; border-radius: 12px; color: white; font-weight: 600; text-align: center; font-size: 12px; line-height: 1.3; cursor: default; transition: transform 0.18s ease, box-shadow 0.18s ease; }
+        .summary-box.clickable { cursor: pointer; transform: translateZ(0); }
+        .summary-box.clickable:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
         .box-entrate { background: linear-gradient(135deg, #10b981, #059669); }
         .box-previsto { background: linear-gradient(135deg, #f97316, #ea580c); }
         .box-sostenuto { background: linear-gradient(135deg, #ef4444, #dc2626); }
         .summary-val { display: block; font-size: 18px; margin-top: 4px; font-weight: 800; }
+        .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(2px); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
+        .popup-overlay.active { display: flex; }
+        .popup-panel { position: relative; width: min(500px, 100%); max-height: calc(90vh - 32px); background: white; border-radius: 20px; padding: 18px 18px 16px; box-shadow: 0 20px 60px rgba(15,23,42,0.25); overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+        .popup-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border: none; border-radius: 999px; background: rgba(15,23,42,0.08); color: #334155; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .popup-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .popup-legend { font-size: 11px; color: #64748b; text-align: center; padding-top: 8px; }
+        .popup-bar-zebra { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(15,23,42,0.14) 0, rgba(15,23,42,0.14) 6px, transparent 6px, transparent 12px); }
+        .popup-header h3 { font-size: 16px; margin: 0; color: #0f172a; }
+        .popup-header p { font-size: 12px; margin: 2px 0 0; color: #475569; }
+        .popup-bars { display: grid; gap: 12px; overflow-y: auto; padding-right: 4px; }
+        .popup-bar-row { display: grid; gap: 8px; }
+        .popup-bar-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #263238; font-weight: 700; }
+        .popup-bar-visual { position: relative; height: 18px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+        .popup-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #60a5fa); position: relative; }
+        .popup-bar-previous { position: absolute; top: 0; bottom: 0; width: 2px; background: #0f172a; opacity: 0.85; transform: translateX(-50%); }
+        .popup-bar-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; color: #475569; }
+        .popup-note { font-size: 11px; color: #64748b; text-align: center; padding-top: 4px; }
         @media (max-width: 400px) {
             .summary-val { font-size: 15px; }
             .summary-box { font-size: 11px; padding: 12px 6px; }
@@ -220,29 +259,6 @@
         /* ===== BADGES ===== */
         .savings-badge { background: #10b981; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-left: 8px; display: inline-block; }
 
-        /* ===== FAB ===== */
-        .fab-button {
-            display: none;
-            position: fixed;
-            bottom: 24px;
-            right: 20px;
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: white;
-            font-size: 28px;
-            box-shadow: 0 6px 20px rgba(59,130,246,0.45);
-            border: none;
-            cursor: pointer;
-            z-index: 900;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            padding: 0;
-            width: 58px;
-        }
-
         /* ===== FUTURE SECTION ===== */
         .projections-table-wrap { overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 16px; }
         .projections-table-wrap table { min-width: unset; }
@@ -254,7 +270,6 @@
         @media (min-width: 768px) {
             body { padding: 0; padding-bottom: 20px; }
             .header h1 { font-size: 22px; }
-            .header p { display: block; }
             .tab-button { font-size: 14px; padding: 12px 18px; }
             .container { padding: 20px 24px; }
             .main-layout { flex-direction: row; align-items: flex-start; }
@@ -265,14 +280,14 @@
             .summary-grid { grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
             .annual-layout { display: grid; grid-template-columns: 4fr 6fr; gap: 16px; align-items: flex-start; }
             .fab-button { display: none !important; }
+            .tab-button.add-button { display: none !important; }
         }
 
         /* ===== RESPONSIVE: Mobile ===== */
         @media (max-width: 767px) {
-            .fab-button { display: flex; }
             .val-p { display: none; }
             
-            /* Bottom Nav converted to floating pill with central notch for FAB */
+            /* Bottom Nav converted to a compact floating pill */
             .navigation-tabs {
                 position: fixed;
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
@@ -283,66 +298,59 @@
                 z-index: 1000;
                 padding: 0 12px;
                 border-radius: 28px;
-                display: grid;
-                /* reserve a narrower central column as a spacer so the FAB can sit visually centered without overlapping labels */
-                grid-template-columns: 1fr 1fr 0.6fr 1fr 1fr;
+                display: flex;
+                justify-content: space-between;
                 align-items: center;
-                justify-items: center;
+                gap: 8px;
                 box-shadow: none; /* flat */
                 overflow: visible;
             }
             .tab-button {
-                border-radius: 0;
-                padding: 0;
+                border-radius: 18px;
+                padding: 15px 0;
                 font-size: 14px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 gap: 2px;
-                border-bottom: none;
+                border: none;
                 border-top: 3px solid transparent;
                 height: 100%;
-                width: 100%;
+                flex: 1;
+                min-width: 0;
                 box-sizing: border-box;
+                background: transparent;
+                color: #94a3b8;
             }
-
-
-            /* Place each tab into its grid slot using explicit slot classes */
-            .navigation-tabs .nav-slot-1 { grid-column: 1; }
-            .navigation-tabs .nav-slot-2 { grid-column: 2; }
-            .navigation-tabs .nav-spacer { grid-column: 3; pointer-events: none; display: block; }
-            .navigation-tabs .nav-slot-3 { grid-column: 4; }
-            .navigation-tabs .nav-slot-4 { grid-column: 5; }
-
-            /* Add bottom padding to visible tab content so FAB does not visually overlap icons/text */
-            .navigation-tabs .tab-button { padding-bottom: 6px; }
+            .tab-button:hover { background: rgba(255,255,255,0.08); }
+            .tab-button .tab-label {
+                display: none;
+            }
+            .tab-button .tab-icon { font-size: 20px; line-height: 1; }
             .tab-button.active {
-                border-bottom-color: transparent;
                 border-top-color: var(--accent);
-                background: rgba(255,255,255,0.05);
-            }
-
-            /* Docked FAB styles (mobile only) - flat, centered and ringed */
-            .fab-button {
-                position: fixed;
-                left: 50%;
-                transform: translateX(-50%) translateY(-8px);
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1100;
-                background: var(--accent); /* bright blue */
+                background: rgba(255,255,255,0.08);
                 color: white;
-                border: 4px solid var(--bg); /* ring of page background to simulate notch */
-                box-shadow: none; /* flat */
             }
-
-            /* Removed circular pseudo-element to avoid occluding nav text; FAB uses border ring for notch effect */
+            .tab-button.add-button {
+                width: 55px;
+                min-width: 55px;
+                height: 55px;
+                border-radius: 50%;
+                background: #10b981;
+                color: white;
+                justify-content: center;
+                align-items: center;
+                padding: 0;
+                box-shadow: 0 12px 24px rgba(16,185,129,0.22);
+                transition: transform 0.18s ease, background 0.1s ease, box-shadow 0.18s ease;
+            }
+            .tab-button.add-button:hover { background: #0f766e; }
+            .tab-button.add-button:active {
+                transform: scale(0.92);
+            }
+            .header p { display: block; }
             
             .grid-inputs { display: flex; flex-direction: column; gap: 10px; }
             .hide-mobile { display: none !important; }
@@ -376,15 +384,15 @@
 <!-- STICKY HEADER + NAV -->
 <div class="header">
     <div class="header-top">
-        <h1>📊 Dashboard Amministrazione</h1>
+        <h1>📊 EcoBilancio Digitale</h1>
     </div>
-    <p>Gestione Finanziaria Avanzata · IA · Scadenziario · Proiezioni</p>
+    <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button nav-slot-1 active" id="tab-btn-current" onclick="switchTab('current-month-tab', this)">📅 Mese</button>
-        <button class="tab-button nav-slot-2" id="tab-btn-history" onclick="switchTab('history-tab', this)">📈 Storico</button>
-        <div class="nav-spacer" aria-hidden="true"></div>
-        <button class="tab-button nav-slot-3" id="tab-btn-future" onclick="switchTab('future-tab', this)">🔮 Futuro</button>
-        <button class="tab-button nav-slot-4" id="tab-btn-settings" onclick="switchTab('settings-tab', this)">⚙️ Impostazioni</button>
+        <button class="tab-button active" id="tab-btn-current" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📊</span><span class="tab-label">Mese</span></button>
+        <button class="tab-button" id="tab-btn-history" aria-label="Storico" onclick="switchTab('history-tab', this)"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
+        <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
+        <button class="tab-button" id="tab-btn-future" aria-label="Futuro" onclick="switchTab('future-tab', this)"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
+        <button class="tab-button" id="tab-btn-settings" aria-label="Impostazioni" onclick="switchTab('settings-tab', this)"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
     </nav>
 </div>
 
@@ -411,9 +419,23 @@
         <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
 
         <div class="summary-grid">
-            <div class="summary-box box-entrate">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-            <div class="summary-box box-previsto">Budget<span id="sumPrevisto" class="summary-val">0 €</span></div>
-            <div class="summary-box box-sostenuto">Speso<span id="sumSostenuto" class="summary-val">0 €</span></div>
+            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
+            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
+            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
+        </div>
+
+        <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" onclick="event.stopPropagation();">
+                <button class="popup-close" onclick="closeRendicontoPopup(event)" aria-label="Chiudi popup">×</button>
+                <div class="popup-header">
+                    <div>
+                        <h3 id="popupTitle">Confronto rendiconto</h3>
+                        <p id="popupSubtitle">Mese corrente vs mese precedente</p>
+                    </div>
+                </div>
+                <div id="popupBars" class="popup-bars"></div>
+                <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
+            </div>
         </div>
 
         <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
@@ -657,42 +679,47 @@
 
     <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
     <div id="settings-tab" class="tab-content hidden">
-        <div class="card">
-            <h2>📱 App &amp; Notifiche</h2>
-            <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
-                <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
-                <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
-            </div>
-            <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa l'App sul Telefono</button>
-        </div>
-        <div class="card">
-            <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
-            <div class="collapsible-content show" id="categoriesSection">
-                <div id="categoriesAdminList" style="margin-bottom: 12px;"></div>
-                <div class="grid-inputs">
-                    <input type="text" id="newCatName" placeholder="Nuova categoria...">
-                    <button class="btn-spesa" onclick="addNewCategory()" style="margin:0;">Aggiungi</button>
+        <div class="settings-grid">
+            <div class="settings-col-left">
+                <div class="card">
+                    <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
+                    <div class="collapsible-content show" id="categoriesSection">
+                        <div id="categoriesAdminList" style="margin-bottom: 12px;"></div>
+                        <div class="grid-inputs">
+                            <input type="text" id="newCatName" placeholder="Nuova categoria...">
+                            <button class="btn-spesa" onclick="addNewCategory()" style="margin:0;">Aggiungi</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="card">
-            <h2 class="collapsible show" onclick="toggleSection('backupSection', this)">💾 Backup &amp; Sync</h2>
-            <div class="collapsible-content show" id="backupSection">
-                <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Sincronizza sul tuo Google Drive personale.</p>
-                <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()" disabled>☁️ Connetti Google Drive</button>
-                <button class="btn-gdrive" id="btnGDriveSync" style="display:none; background:#34a853;" onclick="syncToDrive()">🔄 Sincronizza su Drive</button>
-                <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
-                <div class="grid-inputs">
-                    <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Backup JSON</button>
-                    <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
+            <div class="settings-col-right">
+                <div class="card">
+                    <h2>📱 App &amp; Notifiche</h2>
+                    <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+                        <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
+                        <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
+                    </div>
+                    <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa l'App sul Telefono</button>
                 </div>
-                <button class="btn-share" onclick="shareBackupJSON()">📲 Condividi Backup</button>
-                <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
-                <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
-                <div class="grid-inputs">
-                    <button style="background:#f59e0b;" onclick="resetCurrentMonth()">⚠️ Reset Mese</button>
-                    <button style="background:#dc2626;" onclick="resetTotalDB()">🚨 Reset DB</button>
+                <div class="card">
+                    <h2 class="collapsible show" onclick="toggleSection('backupSection', this)">💾 Backup &amp; Sync</h2>
+                    <div class="collapsible-content show" id="backupSection">
+                        <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Sincronizza sul tuo Google Drive personale.</p>
+                        <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()" disabled>☁️ Connetti Google Drive</button>
+                        <button class="btn-gdrive" id="btnGDriveSync" style="display:none; background:#34a853;" onclick="syncToDrive()">🔄 Sincronizza su Drive</button>
+                        <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
+                        <div class="backup-action-grid">
+                            <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Backup JSON</button>
+                            <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
+                        </div>
+                        <button class="btn-share" onclick="shareBackupJSON()">📲 Condividi Backup</button>
+                        <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
+                        <hr style="margin: 12px 0; border:0; border-top: 1px solid #e2e8f0;">
+                        <div class="backup-action-grid">
+                            <button style="background:#f59e0b;" onclick="resetCurrentMonth()">⚠️ Reset Mese</button>
+                            <button style="background:#dc2626;" onclick="resetTotalDB()">🚨 Reset DB</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -700,8 +727,6 @@
 
 </div><!-- /container -->
 
-<!-- FAB MOBILE -->
-<button class="fab-button" onclick="scrollToAddExpense()" aria-label="Aggiungi spesa rapida">+</button>
 
 
 
@@ -850,6 +875,17 @@ async function migrateFromLocalStorage() {
 // =====================================================================
 // NAVIGAZIONE TABS
 // =====================================================================
+const TAB_TITLES = {
+    'current-month-tab': 'Mese',
+    'history-tab': 'Storico',
+    'future-tab': 'Futuro',
+    'settings-tab': 'Impostazioni'
+};
+function updateActivePageSubtitle(tabId) {
+    const subtitle = document.getElementById('activePageSubtitle');
+    if (!subtitle) return;
+    subtitle.textContent = TAB_TITLES[tabId] || 'Dashboard';
+}
 function switchTab(tabId, buttonEl) {
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
@@ -857,10 +893,18 @@ function switchTab(tabId, buttonEl) {
     target.classList.remove('hidden');
     target.classList.add('active');
     buttonEl.classList.add('active');
+    updateActivePageSubtitle(tabId);
     if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); }
     if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
     window.scrollTo(0, 0);
 }
+
+// Mobile FAB click listener
+(function() {
+    const addBtn = document.getElementById('nav-btn-add');
+    if (!addBtn) return;
+    addBtn.addEventListener('click', scrollToAddExpense);
+})();
 
 // =====================================================================
 // IMPOSTAZIONI CICLO
@@ -1180,7 +1224,7 @@ async function updateUI() {
     // Grafici
     if (chartB) chartB.destroy();
     chartB = new Chart(document.getElementById('budgetChart').getContext('2d'), {
-        type:'bar', data:{labels:['Entrate','Budget','Speso'],datasets:[{data:[totalIncome,totalPlanned,totalActual],backgroundColor:['#10b981','#f97316','#ef4444'],borderRadius:6}]},
+        type:'bar', data:{labels:['Entrate','Spese Previste','Spese Sostenute'],datasets:[{data:[totalIncome,totalPlanned,totalActual],backgroundColor:['#10b981','#f97316','#ef4444'],borderRadius:6}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
     });
     if (chartC) chartC.destroy();
@@ -1224,6 +1268,96 @@ function handleSearch() { searchQuery = document.getElementById('searchInput').v
 function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; updateUI(); }
 function scrollToAddExpense() { switchTab('current-month-tab', document.getElementById('tab-btn-current')); setTimeout(() => { document.getElementById('addExpenseCard').scrollIntoView({behavior:'smooth',block:'start'}); }, 100); }
 function toggleSection(id, el) { document.getElementById(id).classList.toggle('show'); el.classList.toggle('active'); }
+
+async function openRendicontoPopup(type) {
+    const month = document.getElementById('currentMonth').value;
+    if (!month) return;
+    const prevMonth = getPreviousMonthStrings(month, 1)[0];
+    const barsContainer = document.getElementById('popupBars');
+    const title = document.getElementById('popupTitle');
+    const subtitle = document.getElementById('popupSubtitle');
+    const overlay = document.getElementById('popup-rendiconto');
+    const currentTitle = type === 'entrate' ? 'Entrate' : type === 'previsto' ? 'Spese Previste' : 'Spese Sostenute';
+    title.innerText = 'Panoramica del mese corrente';
+    subtitle.innerText = `${currentTitle} · ${month.split('-').reverse().join('/')} vs ${prevMonth.split('-').reverse().join('/')}`;
+    const rows = await buildRendicontoRows(type, month, prevMonth);
+    if (!barsContainer) return;
+    if (rows.length === 0) {
+        barsContainer.innerHTML = `<div style="font-size:13px;color:#64748b;padding:18px 0;text-align:center;">Nessun dato disponibile per questa panoramica.</div>`;
+    } else {
+        const maxValue = Math.max(...rows.map(r => Math.max(r.currentValue, r.previousValue)), 1);
+        const legendHtml = `<div class="popup-legend">La linea o la zebratura rappresentano il mese scorso.</div>`;
+        const rowsHtml = rows.map(row => {
+            const currentPct = Math.round((row.currentValue / maxValue) * 100);
+            const previousPct = Math.round((row.previousValue / maxValue) * 100);
+            const variation = row.previousValue === 0 ? (row.currentValue === 0 ? '0%' : '+100%') : `${row.currentValue === row.previousValue ? '0%' : (row.currentValue > row.previousValue ? '+' : '') + Math.round(((row.currentValue - row.previousValue) / row.previousValue) * 100) + '%'}`;
+            const previousLeft = `${Math.min(100, previousPct)}%`;
+            const zebraHtml = previousPct > currentPct ? `<div class="popup-bar-zebra" style="left:${currentPct}%; width:${Math.min(100, previousPct - currentPct)}%;"></div>` : '';
+            return `
+                <div class="popup-bar-row">
+                    <div class="popup-bar-title"><span>${row.label}</span><span>${variation}</span></div>
+                    <div class="popup-bar-visual">
+                        <div class="popup-bar-fill" style="width:${Math.min(100, currentPct)}%; background:${row.color};"></div>
+                        ${zebraHtml}
+                        <div class="popup-bar-previous" style="left:${previousLeft};"></div>
+                    </div>
+                    <div class="popup-bar-meta"><span>${fmtEPlain(row.currentValue, 2)}</span><span>Prev: ${fmtEPlain(row.previousValue, 2)}</span></div>
+                </div>`;
+        }).join('');
+        barsContainer.innerHTML = rowsHtml + legendHtml;
+    }
+    overlay.classList.add('active');
+}
+
+function closeRendicontoPopup(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('popup-rendiconto').classList.remove('active');
+}
+
+async function buildRendicontoRows(type, month, prevMonth) {
+    const currentMap = {};
+    const previousMap = {};
+    if (type === 'entrate') {
+        const currentIncome = await db.income.where('month').equals(month).toArray();
+        const prevIncome = await db.income.where('month').equals(prevMonth).toArray();
+        const currentTotal = currentIncome.reduce((sum, item) => sum + item.amount, 0);
+        const previousTotal = prevIncome.reduce((sum, item) => sum + item.amount, 0);
+        return [{ label: 'Entrate', currentValue: currentTotal, previousValue: previousTotal, color: '#10b981' }];
+    }
+    if (type === 'previsto') {
+        const currentExpenses = await db.expenses.where('month').equals(month).toArray();
+        const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
+        currentExpenses.forEach(item => {
+            if ((item.planned || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + item.planned;
+        });
+        prevExpenses.forEach(item => {
+            if ((item.planned || 0) > 0) previousMap[item.category] = (previousMap[item.category] || 0) + item.planned;
+        });
+        const rows = Object.keys(currentMap).map(key => ({
+            label: key,
+            currentValue: currentMap[key] || 0,
+            previousValue: previousMap[key] || 0,
+            color: '#f97316'
+        }));
+        return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
+    }
+    const currentExpenses = await db.expenses.where('month').equals(month).toArray();
+    const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
+    currentExpenses.forEach(item => {
+        if ((item.actual || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + item.actual;
+    });
+    prevExpenses.forEach(item => {
+        if ((item.actual || 0) > 0) previousMap[item.category] = (previousMap[item.category] || 0) + item.actual;
+    });
+    const rows = Object.keys(currentMap).map(key => ({
+        label: key,
+        currentValue: currentMap[key] || 0,
+        previousValue: previousMap[key] || 0,
+        color: '#ef4444'
+    }));
+    return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
+}
 
 // =====================================================================
 // STORICO PLURIMENSILE & RECORDS & SALVADANAI
