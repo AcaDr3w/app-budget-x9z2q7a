@@ -84,6 +84,10 @@
         /* ===== CONTAINER ===== */
         .container { max-width: 1300px; margin: 0 auto; padding: 16px; }
 
+        /* Responsive form controls */
+        .responsive-input, .responsive-select { width: 100%; max-width: 100%; padding: 12px 14px; font-size: 14px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; box-sizing: border-box; }
+        .nav-spacer { display: none; }
+
         /* ===== ALERT BOX ===== */
         .recovery-alert-box { background: #fee2e2; color: #991b1b; border: 2px dashed var(--sostenuto); padding: 16px; border-radius: 12px; font-size: 14px; text-align: center; margin-bottom: 15px; display: none; }
         .recovery-alert-box p { font-weight: bold; margin-bottom: 10px; }
@@ -280,7 +284,8 @@
                 padding: 0 12px;
                 border-radius: 28px;
                 display: grid;
-                grid-template-columns: repeat(6, 1fr); /* reserve center column (3) for FAB notch */
+                /* reserve a narrower central column as a spacer so the FAB can sit visually centered without overlapping labels */
+                grid-template-columns: 1fr 1fr 0.6fr 1fr 1fr;
                 align-items: center;
                 justify-items: center;
                 box-shadow: none; /* flat */
@@ -302,12 +307,13 @@
                 box-sizing: border-box;
             }
 
-            /* Place each tab into its grid slot: keep column 3 empty for the FAB notch */
-            .navigation-tabs .tab-button:nth-child(1) { grid-column: 1; }
-            .navigation-tabs .tab-button:nth-child(2) { grid-column: 2; }
-            .navigation-tabs .tab-button:nth-child(3) { grid-column: 4; } /* Scadenze placed immediately right of FAB */
-            .navigation-tabs .tab-button:nth-child(4) { grid-column: 5; }
-            .navigation-tabs .tab-button:nth-child(5) { grid-column: 6; }
+
+            /* Place each tab into its grid slot using explicit slot classes */
+            .navigation-tabs .nav-slot-1 { grid-column: 1; }
+            .navigation-tabs .nav-slot-2 { grid-column: 2; }
+            .navigation-tabs .nav-spacer { grid-column: 3; pointer-events: none; display: block; }
+            .navigation-tabs .nav-slot-3 { grid-column: 4; }
+            .navigation-tabs .nav-slot-4 { grid-column: 5; }
 
             /* Add bottom padding to visible tab content so FAB does not visually overlap icons/text */
             .navigation-tabs .tab-button { padding-bottom: 6px; }
@@ -340,28 +346,17 @@
             
             .grid-inputs { display: flex; flex-direction: column; gap: 10px; }
             .hide-mobile { display: none !important; }
+
+            /* Ensure responsive inputs don't overflow on very small screens */
+            .responsive-input, .responsive-select { max-width: 100%; }
+            .month-selector { width: 100%; max-width: 360px; }
+            .day-selector { width: 100%; max-width: 120px; }
             
-            /* Flexbox Tables for Mobile */
-            table, thead, tbody, th, td, tr { display: block; }
-            thead tr { position: absolute; top: -9999px; left: -9999px; }
-            tr { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-            /* Dark mode removed: keep table border styling light */
-            td { border: none; padding: 0; position: relative; text-align: right; font-size: 13px; }
-            td:first-child { text-align: left; font-weight: bold; flex: 1; font-size: 14px; }
-            td.text-right { text-align: right; }
-            
-            /* Specific Table Adjustments */
-            #overviewTableBody td:nth-child(2) { display: none; } /* Hide 'Previsto' */
-            #overviewTableBody td:nth-child(3)::before { content: 'Sostenuto: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
-            #overviewTableBody td:nth-child(4)::before { content: 'Scostamento: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
-            #overviewTableBody td:nth-child(3) { font-size: 15px; margin-top: 6px; width: 100%; text-align: left; }
-            #overviewTableBody td:nth-child(4) { font-size: 15px; width: 100%; text-align: left; margin-top: 4px; }
-            
-            #historyTableBody td:nth-child(2), #historyTableBody td:nth-child(3) { display: none; } /* Hide Entrate/Budget */
-            #historyTableBody td:nth-child(4)::before { content: 'Speso: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
-            #historyTableBody td:nth-child(5)::before { content: 'Risparmio: '; color: #64748b; font-size: 11px; font-weight: normal; margin-right: 4px; }
-            #historyTableBody td:nth-child(4) { font-size: 15px; margin-top: 6px; width: 100%; text-align: left; }
-            #historyTableBody td:nth-child(5) { font-size: 15px; width: 100%; text-align: left; margin-top: 4px; }
+            /* Keep tables as tables on mobile, allow horizontal scroll instead of fragile DOM transforms */
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .table-responsive table { width: 100%; min-width: 640px; border-collapse: collapse; }
+            .table-responsive th, .table-responsive td { white-space: nowrap; }
+            /* If required, hide less-important columns using classes on TD/TH instead of nth-child selectors */
             
             /* Ensure the RISPARMIO NETTO row occupies full width on mobile */
             .row-savings { display: block !important; width: 100% !important; box-sizing: border-box; margin: 0; }
@@ -385,11 +380,11 @@
     </div>
     <p>Gestione Finanziaria Avanzata · IA · Scadenziario · Proiezioni</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" onclick="switchTab('current-month-tab', this)">📅 Mese</button>
-        <button class="tab-button" id="tab-btn-history" onclick="switchTab('history-tab', this)">📈 Storico</button>
-        <button class="tab-button" id="tab-btn-annual" onclick="switchTab('annual-tab', this)">🏛️ Scadenze</button>
-        <button class="tab-button" id="tab-btn-future" onclick="switchTab('future-tab', this)">🔮 Futuro</button>
-        <button class="tab-button" id="tab-btn-settings" onclick="switchTab('settings-tab', this)">⚙️ Impostazioni</button>
+        <button class="tab-button nav-slot-1 active" id="tab-btn-current" onclick="switchTab('current-month-tab', this)">📅 Mese</button>
+        <button class="tab-button nav-slot-2" id="tab-btn-history" onclick="switchTab('history-tab', this)">📈 Storico</button>
+        <div class="nav-spacer" aria-hidden="true"></div>
+        <button class="tab-button nav-slot-3" id="tab-btn-future" onclick="switchTab('future-tab', this)">🔮 Futuro</button>
+        <button class="tab-button nav-slot-4" id="tab-btn-settings" onclick="switchTab('settings-tab', this)">⚙️ Impostazioni</button>
     </nav>
 </div>
 
@@ -582,27 +577,9 @@
         </div>
 
         <div class="card">
-            <h2 class="collapsible" onclick="toggleSection('savingsSection', this)">🐷 Obiettivi di Risparmio</h2>
-            <div class="collapsible-content" id="savingsSection">
-                <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Crea i tuoi salvadanai e deposita manualmente l'importo risparmiato in ciascun obiettivo.</p>
-                <div id="savingsGoalsList" style="margin-bottom: 16px;"></div>
-                <div id="depositManagement" style="display:grid; gap: 12px; margin-bottom: 16px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc;">
-                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                        <label for="depositSavingsSelect" style="font-size:13px; font-weight:700; color:#475569; min-width:120px;">Seleziona salvadanaio:</label>
-                        <select id="depositSavingsSelect" style="flex:1; min-width:220px; padding:12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff;"></select>
-                    </div>
-                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                        <input type="number" id="depositAmount" placeholder="Importo da depositare €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:14px; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;">
-                        <button id="depositButton" class="btn-spesa" style="background:#059669; margin:0; padding: 12px 18px; font-size:14px;" onclick="depositToSavingsGoal()">Inserisci i soldini</button>
-                    </div>
-                    <div id="depositFeedback" style="font-size:13px; color:#047857; min-height:18px; margin-top:8px;"></div>
-                </div>
-                <div class="grid-inputs" style="display:flex; flex-direction:row; gap:8px; align-items:center;">
-                    <input type="text" id="sgName" placeholder="Es. Auto Nuova" style="width: 100%; min-width: 250px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
-                    <input type="number" id="sgAmount" placeholder="Target €" style="width: 160px; min-width: 160px; padding: 12px 14px; font-size:14px; border-radius:10px; border:1px solid #cbd5e1;">
-                    <button class="btn-spesa" style="background:#8b5cf6; margin:0; padding: 12px 16px; font-size:14px;" onclick="addSavingsGoal()">Aggiungi</button>
-                </div>
-            </div>
+            <h2>📈 Grafico Monitoraggio Continuo</h2>
+            <p style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
+            <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
         </div>
 
         <div class="card">
@@ -627,42 +604,7 @@
         </div>
     </div>
 
-    <!-- =================== TAB 3: BILANCIO ANNUALE & SCADENZE =================== -->
-    <div id="annual-tab" class="tab-content hidden">
-        <div class="card">
-            <h2>📈 Grafico Monitoraggio Continuo</h2>
-            <p style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
-            <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
-        </div>
-
-        <div class="card" id="iaAnnualCard" style="border: 2px solid var(--ia-color); background: #fdfaff;">
-            <h2 class="collapsible" onclick="toggleSection('iaAnnualSection', this)">🤖 Panoramica Annuale I.A.</h2>
-            <div class="collapsible-content" id="iaAnnualSection">
-                <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Analisi macroscopica dell'andamento dell'anno con indicazione delle anomalie critiche.</p>
-                <button class="btn-ia" id="btnAnnualIA" onclick="runAnnualPredictionIA()">🧠 Elabora Analisi Annuale</button>
-                <div id="iaAnnualResponse" class="ia-response-box"></div>
-            </div>
-        </div>
-
-        <div class="annual-layout" style="display:flex; flex-direction:column; gap:16px;">
-            <div class="card">
-                <h2>📅 Aggiungi Scadenza Futura</h2>
-                <div class="grid-inputs">
-                    <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
-                    <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
-                </div>
-                <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
-                <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
-                <button class="btn-spesa" onclick="addAnnualDeadline()" style="background: var(--warning);">Salva Scadenza</button>
-            </div>
-            <div class="card">
-                <h2>📋 Scadenziario Programmato</h2>
-                <div id="annualDeadlinesList"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- =================== TAB 4: E NEL FUTURO COME STO MESSO? =================== -->
+    <!-- =================== TAB 3: FUTURO =================== -->
     <div id="future-tab" class="tab-content hidden">
 
         <div class="card">
@@ -676,7 +618,7 @@
                 <h3 style="margin-top:0; font-size: 14px;">🤔 Simulatore "Che succede se...?"</h3>
                 <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <input type="number" id="simulatedExpense" placeholder="Spesa mensile fissa €" style="width: 220px; min-width: 180px; padding: 14px 16px; font-size:15px; margin:0; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#1f2937;">
+                    <input type="number" id="simulatedExpense" class="responsive-input" placeholder="Spesa mensile fissa €">
                     <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
                     <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="resetFutureSimulation()">Reset</button>
                 </div>
@@ -685,6 +627,21 @@
             <div id="futureAccuracyWarning" class="proj-info-box" style="display:none;"></div>
             <div id="futureProjectionsList" style="display:flex; flex-direction:column; gap:10px;"></div>
             <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
+        </div>
+
+        <div class="card">
+            <h2>📅 Aggiungi Scadenza Futura</h2>
+            <div class="grid-inputs">
+                <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
+                <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
+            </div>
+            <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
+            <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
+            <button class="btn-spesa" onclick="addAnnualDeadline()" style="background: var(--warning);">Salva Scadenza</button>
+        </div>
+        <div class="card">
+            <h2>📋 Scadenziario Programmato</h2>
+            <div id="annualDeadlinesList"></div>
         </div>
 
         <div class="card" style="border: 2px solid var(--ia-color); background: #fdfaff;">
@@ -900,9 +857,8 @@ function switchTab(tabId, buttonEl) {
     target.classList.remove('hidden');
     target.classList.add('active');
     buttonEl.classList.add('active');
-    if (tabId === 'history-tab') renderGlobalHistory();
-    if (tabId === 'annual-tab') { renderAnnualDeadlines(); renderTradingChart(); }
-    if (tabId === 'future-tab') renderFutureProjections();
+    if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); }
+    if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
     window.scrollTo(0, 0);
 }
 
@@ -1293,6 +1249,7 @@ async function renderSavingsGoals() {
     const goals = await db.savingsGoals.toArray();
     const container = document.getElementById('savingsGoalsList');
     const depositSelect = document.getElementById('depositSavingsSelect');
+    if (!container) return; // element not present in minimal UI -> nothing to render
     container.innerHTML = '';
     if (!goals || goals.length === 0) {
         container.innerHTML = '<p style="color:#94a3b8;font-size:12px;">Nessun salvadanio creato.</p>';
@@ -1336,11 +1293,14 @@ async function renderSavingsGoals() {
     });
 }
 async function addSavingsGoal() {
-    const name = document.getElementById('sgName').value.trim();
-    const amount = parseFloat(document.getElementById('sgAmount').value) || 0;
+    const nameEl = document.getElementById('sgName');
+    const amountEl = document.getElementById('sgAmount');
+    if (!nameEl || !amountEl) return; // UI not present
+    const name = nameEl.value.trim();
+    const amount = parseFloat(amountEl.value) || 0;
     if (!name || amount <= 0) { alert('Inserisci un nome e un target valido.'); return; }
     await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
-    document.getElementById('sgName').value = ''; document.getElementById('sgAmount').value = '';
+    nameEl.value = ''; amountEl.value = '';
     renderSavingsGoals();
 }
 async function deleteSavingsGoal(id) {
@@ -1370,7 +1330,6 @@ async function depositToSavingsGoal() {
 async function renderGlobalHistory() {
     let months = await db.months.toArray();
     renderRecordsHub(months);
-    renderSavingsGoals();
     let hd = months.map(m => ({month:m.month, income:m.totalIncome, planned:m.totalPlanned, actual:m.totalActual, savings:m.totalIncome-m.totalActual}));
     hd.sort((a,b) => a.month.localeCompare(b.month));
     const tbody = document.getElementById('historyTableBody'); tbody.innerHTML = '';
@@ -1382,12 +1341,13 @@ async function renderGlobalHistory() {
         });
     }
     if (historyBarChart) historyBarChart.destroy();
-    const labels = hd.map(d => d.month.split('-').reverse().join('/'));
+    const filtered = hd.slice(-6);
+    const labels = filtered.map(d => d.month.split('-').reverse().join('/'));
     historyBarChart = new Chart(document.getElementById('historyBarChart').getContext('2d'), {
         type:'bar', data:{labels, datasets:[
-            {label:'Entrate', data:hd.map(d=>d.income), backgroundColor:'#10b981', borderRadius:4},
-            {label:'Budget Previsto', data:hd.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
-            {label:'Spesa Effettiva', data:hd.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
+            {label:'Entrate', data:filtered.map(d=>d.income), backgroundColor:'#10b981', borderRadius:4},
+            {label:'Budget Previsto', data:filtered.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
+            {label:'Spesa Effettiva', data:filtered.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
         ]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.05)'}}}}
     });
@@ -1400,13 +1360,14 @@ async function renderTradingChart() {
     let months = await db.months.toArray();
     let hd = months.map(m => ({month:m.month, income:m.totalIncome, planned:m.totalPlanned, actual:m.totalActual}));
     hd.sort((a,b) => a.month.localeCompare(b.month));
-    const labels = hd.map(d => d.month.split('-').reverse().join('/'));
+    const filtered = hd.slice(-6);
+    const labels = filtered.map(d => d.month.split('-').reverse().join('/'));
     if (tradingChart) tradingChart.destroy();
     tradingChart = new Chart(document.getElementById('annualTradingChart').getContext('2d'), {
         type:'line', data:{labels, datasets:[
-            {label:'Entrate', data:hd.map(d=>d.income), borderColor:'#10b981', backgroundColor:'transparent', borderWidth:3, tension:0.2, pointRadius:4},
-            {label:'Budget', data:hd.map(d=>d.planned), borderColor:'#f97316', backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], tension:0.2, pointRadius:2},
-            {label:'Speso', data:hd.map(d=>d.actual), borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:3, tension:0.1, pointRadius:4}
+            {label:'Entrate', data:filtered.map(d=>d.income), borderColor:'#10b981', backgroundColor:'transparent', borderWidth:3, tension:0.2, pointRadius:4},
+            {label:'Budget', data:filtered.map(d=>d.planned), borderColor:'#f97316', backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], tension:0.2, pointRadius:2},
+            {label:'Speso', data:filtered.map(d=>d.actual), borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:3, tension:0.1, pointRadius:4}
         ]},
         options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'}},y:{grid:{color:'rgba(0,0,0,0.04)'}}},plugins:{legend:{position:'top',labels:{font:{weight:'bold'}}}}}
     });
@@ -1505,7 +1466,6 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     const provider = document.getElementById('iaProviderSelect').value;
     const box = document.getElementById(responseBoxId);
     const btn = document.getElementById(btnId);
-    promptText += "\n\nRISPONDI SEMPRE E SOLO IN ITALIANO. Sii conciso e pratico.";
     box.style.display = 'block'; box.innerText = '🤖 Elaborazione in corso...';
     if (btn) btn.disabled = true;
     try {
@@ -1530,48 +1490,65 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     finally { if (btn) btn.disabled = false; }
 }
 
+function getPreviousMonthStrings(month, count) {
+    const [year, mon] = month.split('-').map(Number);
+    const months = [];
+    for (let i = 1; i <= count; i++) {
+        const date = new Date(year, mon - 1 - i, 1);
+        months.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return months;
+}
+
 async function runFinancialAnalysisIA() {
-    let ti = currentData.income.reduce((s,i)=>s+i.amount,0);
-    let ta = currentData.expenses.reduce((s,i)=>s+i.actual,0);
-    let p = `Sei un consulente finanziario. Mese: Entrate ${fmtE(ti)}, Spese ${fmtE(ta)}.\nDettaglio:\n`;
-    currentData.expenses.forEach(e => { p += `- [${e.category}] Stima: ${fmtE(e.planned)}, Pagato: ${fmtE(e.actual)} (${e.desc})\n`; });
-    p += `\nAnalizza brevemente gli sforamenti, le categorie più dispendiose e suggerisci una sfida pratica per il prossimo mese.`;
-    await callAIEndpoint(p, 'iaResponse', 'btnAnalyseIA');
+    const currentMonth = document.getElementById('currentMonth').value;
+    if (!currentMonth) { document.getElementById('iaResponse').innerText = '❌ Mese corrente non selezionato.'; return; }
+    const prevMonths = getPreviousMonthStrings(currentMonth, 2);
+    const categories = [...new Set(currentData.expenses.map(e => e.category))].sort();
+    const historicalExpenses = await db.expenses.where('month').anyOf(prevMonths).toArray();
+    const historyMap = {};
+    historicalExpenses.forEach(e => {
+        const key = `${e.category}|${e.month}`;
+        historyMap[key] = (historyMap[key] || 0) + e.actual;
+    });
+    let dataText = `Dati:\n- Mese corrente: ${currentMonth}\n- Spese per categoria:\n`;
+    categories.forEach(cat => {
+        const currentTotal = currentData.expenses.filter(e => e.category === cat).reduce((s, e) => s + e.actual, 0);
+        const prev1 = historyMap[`${cat}|${prevMonths[0]}`] || 0;
+        const prev2 = historyMap[`${cat}|${prevMonths[1]}`] || 0;
+        dataText += `  - ${cat}: corrente ${fmtE(currentTotal)}; ${prevMonths[0]} ${fmtE(prev1)}; ${prevMonths[1]} ${fmtE(prev2)}\n`;
+    });
+    const prompt = `Agisci come un consulente finanziario cinico e conciso. Lingua: Italiano. Analizza i seguenti dati di spesa del mese corrente e il confronto con i due mesi passati: ${dataText}Identifica le 2 categorie meno importanti (es. svago, abbonamenti, extra) dove l'utente sta spendendo di più rispetto al solito o in assoluto. Scrivi un resoconto di massimo 3 frasi indicando quanto si potrebbe risparmiare e un consiglio pratico per tagliare subito quelle spese.`;
+    await callAIEndpoint(prompt, 'iaResponse', 'btnAnalyseIA');
     const txt = document.getElementById('iaResponse').innerText;
     document.getElementById('iaNotes').value = txt; await saveNotes();
 }
 async function runHistoryAnalysisIA() {
-    let months = await db.months.toArray();
-    let log = "STORICO MESI:\n";
-    months.forEach(m => { log += `* ${m.month}: Entrate ${fmtE(m.totalIncome)} | Budget ${fmtE(m.totalPlanned)} | Speso ${fmtE(m.totalActual)}\n`; });
-    log += "\nAnalizza concisamente i mesi con sforamento e indica i punti deboli ricorrenti.";
-    callAIEndpoint(log, 'iaHistoryResponse', 'btnHistoryIA');
-}
-async function runAnnualPredictionIA() {
-    let months = await db.months.toArray();
-    let log = "ANNO FINANZIARIO:\n";
-    months.forEach(m => { log += `- ${m.month}: Ricevuti ${fmtE(m.totalIncome)}, Spesi ${fmtE(m.totalActual)}\n`; });
-    let p = `Esamina l'andamento annuale:\n\n${log}\n\nFornisci un'analisi macroscopica sintetica evidenziando anomalie critiche.`;
-    callAIEndpoint(p, 'iaAnnualResponse', 'btnAnnualIA');
+    const months = await db.months.orderBy('month').toArray();
+    if (!months.length) { document.getElementById('iaHistoryResponse').innerText = '❌ Nessun mese archiviato.'; return; }
+    let dataText = 'Dati:\n';
+    months.forEach(m => {
+        const savings = m.totalIncome - m.totalActual;
+        dataText += `- ${m.month}: Entrate ${fmtE(m.totalIncome)}, Uscite ${fmtE(m.totalActual)}, Risparmio ${fmtE(savings)}\n`;
+    });
+    const prompt = `Agisci come un analista finanziario. Lingua: Italiano. Analizza questo storico plurimensile dei saldi: ${dataText}Fornisci un quadro generale sull'andamento del patrimonio (sta crescendo, è stabile o sta calando?). Evidenzia se c'è un mese record (positivo o negativo) e scrivi una conclusione concisa (max 4 righe) sullo stato di salute generale delle finanze.`;
+    await callAIEndpoint(prompt, 'iaHistoryResponse', 'btnHistoryIA');
 }
 async function runFuturePredictionIA() {
-    let months = await db.months.toArray();
-    let numM = months.length;
-    let ti = months.reduce((s,m)=>s+m.totalIncome,0);
-    let ta = months.reduce((s,m)=>s+m.totalActual,0);
-    let avgI = numM > 0 ? ti/numM : 0;
-    let avgA = numM > 0 ? ta/numM : 0;
-    let avgS = avgI - avgA;
-    // Prendi anche le categorie più costose dal mese corrente
-    let catLog = "Categorie di spesa attuali:\n";
-    let catSums = {}; currentData.expenses.forEach(e => { catSums[e.category] = (catSums[e.category]||0)+e.actual; });
-    Object.entries(catSums).sort((a,b)=>b[1]-a[1]).slice(0,6).forEach(([cat,val]) => { catLog += `- ${cat}: ${fmtE(val)}/mese\n`; });
-    let p = `DATI REALI: ${numM} mes${numM===1?'e':'i'} analizzati.\n`;
-    p += `- Media entrate: ${fmtE(avgI)}/mese · Media uscite: ${fmtE(avgA)}/mese · Risparmio medio: ${fmtE(avgS)}/mese\n\n`;
-    p += `PROIEZIONI MATEMATICHE (trend costante):\n- 3 Mesi: ${fmtE(avgS*3)}\n- 6 Mesi: ${fmtE(avgS*6)}\n- 1 Anno: ${fmtE(avgS*12)}\n- 2 Anni: ${fmtE(avgS*24)}\n- 5 Anni: ${fmtE(avgS*60)}\n- 10 Anni: ${fmtE(avgS*120)}\n\n`;
-    p += catLog;
-    p += `\nAnalizza se il risparmio accumulato porterà a sicurezza finanziaria nel tempo. Indica SPECIFICATAMENTE quali categorie di spesa tagliare o ottimizzare per migliorare le proiezioni. Sii pratico, diretto e conciso.`;
-    callAIEndpoint(p, 'iaFutureResponse', 'btnFutureIA');
+    const months = await db.months.toArray();
+    const numM = months.length;
+    const totalIncome = months.reduce((s, m) => s + m.totalIncome, 0);
+    const totalActual = months.reduce((s, m) => s + m.totalActual, 0);
+    const avgSavings = numM > 0 ? (totalIncome - totalActual) / numM : 0;
+    const projected1 = avgSavings * 12;
+    const projected5 = avgSavings * 60;
+    const projected10 = avgSavings * 120;
+    const categoryTotals = {};
+    currentData.expenses.forEach(e => { categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.actual; });
+    const categoryLines = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([cat, val]) => `- ${cat}: ${fmtE(val)}/mese`).join('\n');
+    const dataText = `Dati Proiezioni 10 anni:\n- Risparmio medio mensile: ${fmtE(avgSavings)}\n- Patrimonio stimato a 1 anno: ${fmtE(projected1)}\n- Patrimonio stimato a 5 anni: ${fmtE(projected5)}\n- Patrimonio stimato a 10 anni: ${fmtE(projected10)}\nCategorie di spesa attuali:\n${categoryLines}`;
+    const prompt = `Agisci come un pianificatore finanziario lungimirante. Lingua: Italiano. Esamina questa proiezione matematica basata sui dati attuali: ${dataText}. Fai una considerazione critica sul risultato a lungo termine (il traguardo a 10 anni è realistico o rischioso?). Indica quali categorie di spesa attuali potrebbero minacciare questa proiezione a causa dell'inflazione o di spese impreviste. Massimo 4 frasi, stile diretto e motivazionale.`;
+    await callAIEndpoint(prompt, 'iaFutureResponse', 'btnFutureIA');
 }
 
 // =====================================================================
