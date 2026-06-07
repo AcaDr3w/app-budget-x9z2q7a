@@ -735,10 +735,43 @@
 // SERVICE WORKER (PWA)
 // =====================================================================
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-            .then(reg => console.log('[PWA] Service Worker registrato:', reg.scope))
-            .catch(err => console.warn('[PWA] SW non registrato:', err));
+    const refreshOnControllerChange = () => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (window.__swReloading) return;
+            window.__swReloading = true;
+            console.log('[PWA] Nuovo service worker attivo, ricarico la pagina.');
+            window.location.reload();
+        });
+    };
+
+    const registerServiceWorker = async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('./service-worker.js');
+            console.log('[PWA] Service Worker registrato:', registration.scope);
+            await registration.update();
+            if (document.visibilityState === 'visible') {
+                await registration.update();
+            }
+            return registration;
+        } catch (err) {
+            console.warn('[PWA] SW non registrato:', err);
+            return null;
+        }
+    };
+
+    window.addEventListener('load', async () => {
+        await registerServiceWorker();
+        refreshOnControllerChange();
+    });
+
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                console.log('[PWA] Visibilità ripristinata, controllo aggiornamenti service worker.');
+                await registration.update();
+            }
+        }
     });
 }
 
