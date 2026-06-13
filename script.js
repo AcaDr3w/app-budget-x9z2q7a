@@ -212,7 +212,15 @@ async function startupCloudCompare() {
 async function processSilentRestore(data, cloudCounter) {
     try {
         if (data.categories && data.months) {
-            await Promise.all(db.tables.map(t => t.clear()));
+            db.close();
+            await new Promise((resolve, reject) => {
+                const req = indexedDB.deleteDatabase('BilancioDB');
+                req.onsuccess = resolve;
+                req.onerror = reject;
+                req.onblocked = resolve;
+            });
+            await db.open();
+
             await db.categories.bulkPut(data.categories);
             if (data.annual_deadlines) await db.annualDeadlines.bulkPut(data.annual_deadlines);
             if (data.income) await db.income.bulkPut(data.income);
@@ -220,8 +228,9 @@ async function processSilentRestore(data, cloudCounter) {
             if (data.months) await db.months.bulkPut(data.months);
             if (data.savingsGoals) await db.savingsGoals.bulkPut(data.savingsGoals);
             if (data.settings) await db.settings.bulkPut(data.settings);
-            // Aggiorna il contatore locale al valore cloud per evitare loop
+            
             await db.syncState.put({ id: 'versionData', counter: cloudCounter || 0, deviceId: getDeviceId(), lastUpdated: Date.now() });
+            
             console.log('[SYNC] Svuotamento DB e Ripristino da Drive completato. Riavvio...');
             window.location.reload();
         }
@@ -739,7 +748,7 @@ async function updateUI() {
         const sharedTxt = exp.sharedPercentage > 0 ? ` <span style="font-size:9px;color:#3b82f6;">(${exp.sharedPercentage}%)</span>` : '';
         const row = document.createElement('div'); row.className = 'item-row';
         row.innerHTML = `
-            <span class="item-name">${isPending ? '⏳' : '✅'} <strong>${getCatIcon(exp.category)} ${exp.category}</strong>${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
+            <span class="item-name">${isPending ? '⏳ ' : ''}${getCatIcon(exp.category)} <strong>${exp.category}</strong>${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
             <span class="item-vals">
                 <div><span class="val-p">Stima: ${fmtE(exp.planned)}</span><span class="val-s">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</span></div>
                 ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}

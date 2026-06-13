@@ -559,8 +559,8 @@
             .projections-table-wrap td:nth-child(3), .projections-table-wrap td:nth-child(4) { display: none; } /* Hide est income/actual */
 
             /* Color-coding rendiconto mobile */
-            .val-previsto { color: #ff9800 !important; font-weight: bold; }
-            .val-sostenuto { color: #e53935 !important; font-weight: bold; }
+            span.flat-subtitle.val-previsto { color: #ff9800 !important; font-weight: bold; }
+            span.flat-actual.val-sostenuto { color: #e53935 !important; font-weight: bold; }
         }
         
         /* ADDED STYLES FOR FLAT UI */
