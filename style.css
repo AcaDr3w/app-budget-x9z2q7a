@@ -81,9 +81,13 @@
         /* ===== CONTAINER ===== */
         .container { max-width: 1300px; margin: 0 auto; padding: 16px; }
         .settings-grid { display: grid; gap: 20px; }
+        @media (min-width: 768px) {
+            .settings-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+            #nav-btn-add { display: none !important; }
+        }
         .settings-col-right { display: grid; gap: 20px; }
         .backup-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        .backup-action-grid button { width: 100%; }
+        .backup-action-grid button { width: 100%; margin: 0; }
         #btnInstallApp { max-width: 300px; width: 100%; }
 
         /* Responsive form controls */
@@ -359,3 +363,65 @@
             .projections-table-wrap tr { flex-wrap: nowrap; }
             .projections-table-wrap td:nth-child(3), .projections-table-wrap td:nth-child(4) { display: none; } /* Hide est income/actual */
         }
+        
+        /* ADDED STYLES FOR FLAT UI */
+        .popup-close { display: flex !important; align-items: center; justify-content: center; }
+
+        .popup-bar-zebra {
+            position: absolute;
+            top: 0; bottom: 0;
+            background: repeating-linear-gradient(45deg, #ccc, #ccc 10px, #e0e0e0 10px, #e0e0e0 20px);
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        /* Mobile Splitwise Rendiconto Flat List */
+        .flat-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .flat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 4px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+        .flat-row:hover { background-color: #f8fafc; }
+        .flat-row.selected { background-color: #e0f2fe; }
+        .flat-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .flat-icon {
+            width: 36px; height: 36px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 16px;
+        }
+        .flat-title-group {
+            display: flex; flex-direction: column;
+        }
+        .flat-title { font-weight: bold; font-size: 14px; color: #1e293b; }
+        .flat-subtitle { font-size: 11px; color: #64748b; }
+        .flat-right {
+            display: flex; flex-direction: column; align-items: flex-end;
+        }
+        .flat-actual { font-weight: bold; font-size: 15px; color: #1e293b; }
+        .flat-margin { font-size: 12px; font-weight: bold; }
+        .diff-plus { color: #10b981; }
+        .diff-minus { color: #ef4444; }
+
+        .flat-footer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 4px;
+        }
+        .flat-footer-title { font-weight: bold; font-size: 14px; color: #1e293b; }
+        .flat-footer-actual { font-weight: 900; font-size: 16px; color: #1e293b; }
+    </style>

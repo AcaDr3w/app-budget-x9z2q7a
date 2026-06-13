@@ -26,7 +26,7 @@
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📊</span><span class="tab-label">Mese</span></button>
+        <button class="tab-button active" id="tab-btn-current" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
         <button class="tab-button" id="tab-btn-history" aria-label="Storico" onclick="switchTab('history-tab', this)"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
         <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
         <button class="tab-button" id="tab-btn-future" aria-label="Futuro" onclick="switchTab('future-tab', this)"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
@@ -165,16 +165,10 @@
                     <h2>📋 Rendiconto Ciclo Corrente</h2>
                     <p style="font-size: 11px; color:#64748b; margin-bottom:10px;">Tocca una riga per filtrare le voci.</p>
                     <div class="table-responsive">
-                        <table>
-                            <thead><tr>
-                                <th>Categoria</th>
-                                <th class="text-right">Previsto</th>
-                                <th class="text-right">Sostenuto</th>
-                                <th class="text-right">Δ Margine</th>
-                            </tr></thead>
-                            <tbody id="overviewTableBody"></tbody>
-                            <tfoot id="overviewTableFoot"></tfoot>
-                        </table>
+                    <div class="table-responsive" style="overflow: visible;">
+                        <div id="overviewTableBody" class="flat-list-container"></div>
+                        <div id="overviewTableFoot" class="flat-list-footer" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;"></div>
+                    </div>
                     </div>
                 </div>
 

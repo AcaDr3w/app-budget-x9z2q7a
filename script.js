@@ -195,7 +195,7 @@ async function startupCloudCompare() {
 async function processSilentRestore(data) {
     try {
         if (data.categories && data.months) {
-            await db.categories.clear(); await db.annualDeadlines.clear(); await db.income.clear(); await db.expenses.clear(); await db.months.clear(); await db.savingsGoals.clear();
+            await Promise.all(db.tables.map(t => t.clear()));
             await db.categories.bulkPut(data.categories);
             if (data.annual_deadlines) await db.annualDeadlines.bulkPut(data.annual_deadlines);
             if (data.income) await db.income.bulkPut(data.income);
@@ -204,9 +204,8 @@ async function processSilentRestore(data) {
             if (data.savingsGoals) await db.savingsGoals.bulkPut(data.savingsGoals);
             if (data.settings) await db.settings.bulkPut(data.settings);
             if (data.syncState) await db.syncState.bulkPut(data.syncState);
-            await initCategories(); await loadAnnualDeadlines(); await loadMonthData(); checkDatabaseHealth();
-            console.log("Ripristino silenzioso completato.");
-            updateUI();
+            console.log("Svuotamento DB e Ripristino da Drive completato. Riavvio...");
+            window.location.reload();
         }
     } catch(err) {
         console.warn("Errore ripristino silenzioso", err);
@@ -602,18 +601,37 @@ async function updateUI() {
     const tableBody = document.getElementById('overviewTableBody'); tableBody.innerHTML = '';
     userCategories.sort().forEach(cat => {
         const pVal = catSums[cat].planned, aVal = catSums[cat].actual, diff = pVal - aVal;
-        let diffClass = '', diffText = '-';
-        if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtN(diff)}`; }
-        let tr = document.createElement('tr');
-        if (pVal > 0 || aVal > 0) { tr.className = 'clickable-row'; if (selectedFilterCategory === cat) tr.style.backgroundColor = '#e0f2fe'; tr.onclick = () => filterByCategory(cat); }
-        tr.innerHTML = `<td><strong>${cat}</strong></td><td class="text-right" style="color:#64748b;">${fmtN(pVal)}</td><td class="text-right" style="font-weight:bold;">${fmtN(aVal)}</td><td class="text-right ${diffClass}">${diffText}</td>`;
-        tableBody.appendChild(tr);
+        let diffClass = '', diffText = '';
+        if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtE(diff)}`; }
+        if (pVal > 0 || aVal > 0) {
+            let row = document.createElement('div');
+            row.className = 'flat-row';
+            if (selectedFilterCategory === cat) row.classList.add('selected');
+            row.onclick = () => filterByCategory(cat);
+            row.innerHTML = `
+                <div class="flat-left">
+                    <div class="flat-icon">🏷️</div>
+                    <div class="flat-title-group">
+                        <span class="flat-title">${cat}</span>
+                        <span class="flat-subtitle">Prev: ${fmtE(pVal)}</span>
+                    </div>
+                </div>
+                <div class="flat-right">
+                    <span class="flat-actual">${fmtE(aVal)}</span>
+                    <span class="flat-margin ${diffClass}">${diffText}</span>
+                </div>
+            `;
+            tableBody.appendChild(row);
+        }
     });
 
     const tableFoot = document.getElementById('overviewTableFoot'); tableFoot.innerHTML = '';
-    let savingsTr = document.createElement('tr'); savingsTr.className = 'row-savings';
-    savingsTr.innerHTML = `<td colspan="2"><strong>💰 RISPARMIO NETTO</strong> <span class="savings-badge">${savingsPercent}%</span></td><td colspan="2" class="text-right" style="font-weight:800;">${fmtE(netSavings)}</td>`;
-    tableFoot.appendChild(savingsTr);
+    let savingsDiv = document.createElement('div'); savingsDiv.className = 'flat-footer-row';
+    savingsDiv.innerHTML = `
+        <div class="flat-footer-title">💰 RISPARMIO NETTO <span class="savings-badge">${savingsPercent}%</span></div>
+        <div class="flat-footer-actual">${fmtE(netSavings)}</div>
+    `;
+    tableFoot.appendChild(savingsDiv);
 
     renderCalendar();
 
@@ -767,7 +785,7 @@ async function buildRendicontoRows(type, month, prevMonth) {
             currentValue: currentMap[key] || 0,
             previousValue: previousMap[key] || 0,
             color: '#f97316'
-        }));
+        })).filter(r => r.currentValue > 0 || r.previousValue > 0);
         return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
     }
     const currentExpenses = await db.expenses.where('month').equals(month).toArray();
@@ -783,7 +801,7 @@ async function buildRendicontoRows(type, month, prevMonth) {
         currentValue: currentMap[key] || 0,
         previousValue: previousMap[key] || 0,
         color: '#ef4444'
-    }));
+    })).filter(r => r.currentValue > 0 || r.previousValue > 0);
     return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
 }
 
@@ -1340,13 +1358,13 @@ async function resetTotalDB() {
 // =====================================================================
 function fmtE(n, decimals=2) {
     const abs = Math.abs(n||0);
-    if (decimals === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+    if (decimals === 0 || abs % 1 === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
     const parts = abs.toFixed(decimals).split('.');
     return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')}<span class="hide-mobile">,${parts[1]}</span> €`;
 }
 function fmtEPlain(n, decimals = 2) {
     const abs = Math.abs(n||0);
-    if (decimals === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+    if (decimals === 0 || abs % 1 === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
     const parts = abs.toFixed(decimals).split('.');
     return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')},${parts[1]} €`;
 }
