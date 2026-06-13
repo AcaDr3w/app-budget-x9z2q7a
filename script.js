@@ -72,6 +72,26 @@ async function updateGlobalTimestamp() {
 }
 
 // =====================================================================
+// TOAST NOTIFICATIONS
+// =====================================================================
+function showToast(msg, isError = false) {
+    const toast = document.createElement('div');
+    toast.innerText = msg;
+    toast.style.cssText = `
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: ${isError ? '#ef4444' : '#10b981'}; color: white;
+        padding: 10px 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        font-size: 14px; z-index: 10000; font-weight: bold; opacity: 0; transition: opacity 0.3s;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.style.opacity = '1', 10);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// =====================================================================
 // GOOGLE DRIVE OAUTH2
 // =====================================================================
 const CLIENT_ID = '216749813771-25voe4c21bu5m56u5viauk99jbcp8qop.apps.googleusercontent.com';
@@ -86,10 +106,14 @@ function gisLoaded() {
         callback: (resp) => {
             if (resp.error) throw resp;
             localStorage.setItem('gdrive_connected', 'true');
+            localStorage.setItem('gdrive_access_token', resp.access_token);
+            localStorage.setItem('gdrive_token_expires', (Date.now() + resp.expires_in * 1000).toString());
+            
             document.getElementById('btnGDriveAuth').style.display = 'none';
             document.getElementById('btnGDriveSync').style.display = 'flex';
+            
             if (!window._silentLoginAttempting) {
-                alert('Connesso a Google Drive!');
+                showToast('Connesso a Google Drive!', false);
                 startupCloudCompare();
             }
         }
@@ -100,8 +124,19 @@ function maybeEnableDriveButtons() {
     if (gapiInited && gisInited) {
         document.getElementById('btnGDriveAuth').disabled = false;
         if (localStorage.getItem('gdrive_connected') === 'true') {
-            window._silentLoginAttempting = true;
-            tokenClient.requestAccessToken({ prompt: '' });
+            const token = localStorage.getItem('gdrive_access_token');
+            const expires = parseInt(localStorage.getItem('gdrive_token_expires') || '0', 10);
+            
+            document.getElementById('btnGDriveAuth').style.display = 'none';
+            document.getElementById('btnGDriveSync').style.display = 'flex';
+
+            if (token && Date.now() < expires) {
+                gapi.client.setToken({ access_token: token });
+                startupCloudCompare();
+            } else {
+                window._silentLoginAttempting = true;
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
         }
     }
 }
@@ -124,23 +159,30 @@ async function startupCloudCompare() {
     try {
         const r = await gapi.client.drive.files.list({
             q: "name='budget_pwa_backup.json' and trashed=false",
-            fields: 'files(id,name,appProperties)',
+            fields: 'files(id,name)',
             pageSize: 1, spaces: 'drive'
         });
         const found = r.result.files;
         if (found?.length > 0) {
             const cloudFile = found[0];
-            const cloudTimestamp = cloudFile.appProperties?.lastUpdated ? parseInt(cloudFile.appProperties.lastUpdated, 10) : 0;
+            
+            const fData = await gapi.client.drive.files.get({ fileId: cloudFile.id, alt: 'media' });
+            if (!fData.body) return;
+            
+            const cloudJson = typeof fData.body === 'string' ? JSON.parse(fData.body) : fData.body;
+            const cloudTimestamp = cloudJson.lastUpdated || 0;
+            
             const localState = await db.syncState.get('lastUpdated');
             const localTimestamp = localState ? localState.timestamp : 0;
 
             if (cloudTimestamp > localTimestamp) {
-                console.log("Cloud più recente: Ripristino silenzioso...");
-                const fData = await gapi.client.drive.files.get({ fileId: cloudFile.id, alt: 'media' });
-                await processSilentRestore(fData.body);
+                console.log(`Cloud (${cloudTimestamp}) > Locale (${localTimestamp}): Ripristino...`);
+                await processSilentRestore(cloudJson);
+                showToast("☁️ Dati aggiornati da Drive", false);
             } else if (localTimestamp > cloudTimestamp) {
-                console.log("Locale più recente: Caricamento su Drive...");
+                console.log(`Locale (${localTimestamp}) > Cloud (${cloudTimestamp}): Caricamento su Drive...`);
                 syncToDrive(true);
+                showToast("📤 Backup inviato a Drive", false);
             } else {
                 console.log("Sincronizzazione allineata.");
             }
@@ -150,9 +192,8 @@ async function startupCloudCompare() {
     }
 }
 
-async function processSilentRestore(jsonString) {
+async function processSilentRestore(data) {
     try {
-        const data = JSON.parse(jsonString);
         if (data.categories && data.months) {
             await db.categories.clear(); await db.annualDeadlines.clear(); await db.income.clear(); await db.expenses.clear(); await db.months.clear(); await db.savingsGoals.clear();
             await db.categories.bulkPut(data.categories);
@@ -165,6 +206,7 @@ async function processSilentRestore(jsonString) {
             if (data.syncState) await db.syncState.bulkPut(data.syncState);
             await initCategories(); await loadAnnualDeadlines(); await loadMonthData(); checkDatabaseHealth();
             console.log("Ripristino silenzioso completato.");
+            updateUI();
         }
     } catch(err) {
         console.warn("Errore ripristino silenzioso", err);
@@ -1170,7 +1212,10 @@ async function exportCSV() {
 // BACKUP & RESTORE
 // =====================================================================
 async function getCompiledBackupData() {
+    const localState = await db.syncState.get('lastUpdated');
+    const ts = localState ? localState.timestamp : 0;
     return JSON.stringify({
+        lastUpdated: ts,
         categories: await db.categories.toArray(),
         annual_deadlines: await db.annualDeadlines.toArray(),
         income: await db.income.toArray(),
@@ -1254,7 +1299,7 @@ async function syncToDrive(silent = false) {
                 headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
                 body
             });
-            if (!silent) alert('✅ Sincronizzazione Drive completata (aggiornato)!');
+            if (!silent) showToast('✅ Sincronizzazione Drive completata', false);
         } else {
             await gapi.client.request({
                 path: '/upload/drive/v3/files',
@@ -1263,11 +1308,11 @@ async function syncToDrive(silent = false) {
                 headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
                 body
             });
-            if (!silent) alert('✅ Sincronizzazione Drive completata (nuovo file)!');
+            if (!silent) showToast('✅ Sincronizzazione Drive completata (nuovo file)', false);
         }
     } catch(err) {
         console.error('Drive sync failed:', err);
-        if (!silent) alert("❌ Errore Drive. Controlla la console per i dettagli.");
+        if (!silent) showToast("❌ Errore Drive. Controlla la console per i dettagli.", true);
     }
 }
 
