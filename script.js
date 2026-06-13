@@ -64,10 +64,23 @@ db.version(3).stores({
     syncState: 'id'
 }).upgrade(tx => {});
 
-// Aggiorna il timestamp globale ad ogni modifica
-async function updateGlobalTimestamp() {
-    const now = Date.now();
-    await db.syncState.put({ id: 'lastUpdated', timestamp: now });
+// Device ID univoco (generato una sola volta per installazione)
+function getDeviceId() {
+    let id = localStorage.getItem('app_device_id');
+    if (!id) {
+        id = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+        localStorage.setItem('app_device_id', id);
+    }
+    return id;
+}
+
+// Progressive Versioning: incrementa il contatore ad ogni modifica
+async function updateGlobalVersion() {
+    const state = await db.syncState.get('versionData');
+    const currentCounter = state ? (state.counter || 0) : 0;
+    const newCounter = currentCounter + 1;
+    await db.syncState.put({ id: 'versionData', counter: newCounter, deviceId: getDeviceId(), lastUpdated: Date.now() });
+    console.log(`[SYNC] Version counter incrementato: ${currentCounter} → ${newCounter}`);
     debouncedAutoSync();
 }
 
@@ -165,34 +178,38 @@ async function startupCloudCompare() {
         const found = r.result.files;
         if (found?.length > 0) {
             const cloudFile = found[0];
-            
+
             const fData = await gapi.client.drive.files.get({ fileId: cloudFile.id, alt: 'media' });
             if (!fData.body) return;
-            
-            const cloudJson = typeof fData.body === 'string' ? JSON.parse(fData.body) : fData.body;
-            const cloudTimestamp = cloudJson.lastUpdated || 0;
-            
-            const localState = await db.syncState.get('lastUpdated');
-            const localTimestamp = localState ? localState.timestamp : 0;
 
-            if (cloudTimestamp > localTimestamp) {
-                console.log(`Cloud (${cloudTimestamp}) > Locale (${localTimestamp}): Ripristino...`);
-                await processSilentRestore(cloudJson);
-                showToast("☁️ Dati aggiornati da Drive", false);
-            } else if (localTimestamp > cloudTimestamp) {
-                console.log(`Locale (${localTimestamp}) > Cloud (${cloudTimestamp}): Caricamento su Drive...`);
+            const cloudJson = typeof fData.body === 'string' ? JSON.parse(fData.body) : fData.body;
+            const cloudCounter = cloudJson.db_version_counter || 0;
+            const cloudDeviceId = cloudJson.last_device_id || '';
+
+            const localState = await db.syncState.get('versionData');
+            const localCounter = localState ? (localState.counter || 0) : 0;
+            const localDeviceId = getDeviceId();
+
+            console.log(`[SYNC] Confronto versioni — Cloud: v${cloudCounter} (${cloudDeviceId}) | Locale: v${localCounter} (${localDeviceId})`);
+
+            if (cloudCounter > localCounter) {
+                console.log(`[SYNC] Cloud v${cloudCounter} > Locale v${localCounter}: RIPRISTINO DISTRUTTIVO...`);
+                await processSilentRestore(cloudJson, cloudCounter);
+                showToast('☁️ Dati aggiornati da Drive', false);
+            } else if (localCounter > cloudCounter) {
+                console.log(`[SYNC] Locale v${localCounter} > Cloud v${cloudCounter}: PUSH su Drive...`);
                 syncToDrive(true);
-                showToast("📤 Backup inviato a Drive", false);
+                showToast('📤 Backup inviato a Drive', false);
             } else {
-                console.log("Sincronizzazione allineata.");
+                console.log('[SYNC] Sincronizzazione allineata (stessa versione).');
             }
         }
     } catch (e) {
-        console.warn("Errore durante il confronto startup cloud:", e);
+        console.warn('[SYNC] Errore durante il confronto startup cloud:', e);
     }
 }
 
-async function processSilentRestore(data) {
+async function processSilentRestore(data, cloudCounter) {
     try {
         if (data.categories && data.months) {
             await Promise.all(db.tables.map(t => t.clear()));
@@ -203,24 +220,27 @@ async function processSilentRestore(data) {
             if (data.months) await db.months.bulkPut(data.months);
             if (data.savingsGoals) await db.savingsGoals.bulkPut(data.savingsGoals);
             if (data.settings) await db.settings.bulkPut(data.settings);
-            if (data.syncState) await db.syncState.bulkPut(data.syncState);
-            console.log("Svuotamento DB e Ripristino da Drive completato. Riavvio...");
+            // Aggiorna il contatore locale al valore cloud per evitare loop
+            await db.syncState.put({ id: 'versionData', counter: cloudCounter || 0, deviceId: getDeviceId(), lastUpdated: Date.now() });
+            console.log('[SYNC] Svuotamento DB e Ripristino da Drive completato. Riavvio...');
             window.location.reload();
         }
     } catch(err) {
-        console.warn("Errore ripristino silenzioso", err);
+        console.warn('[SYNC] Errore ripristino silenzioso', err);
     }
 }
 
 const DEFAULT_CATEGORIES = [
-    "Alimentari","Igiene e Pulizia","Carburante Auto","Carburante Moto",
-    "Sanitarie","Bolletta Acqua","Bolletta Luce","Bolletta Gas",
-    "Bolletta Rifiuti","Bolletta Condominio","Bolletta Telefonia","Mutuo",
-    "Tasse Auto (Assicurazione/Bollo)","Tasse Moto (Assicurazione/Bollo)",
-    "Manutenzioni Programmate","Imprevisti e Svago","Formazione",
-    "Abbigliamento","Varie"
+    {name: "Alimentari", icon: "🍔"}, {name: "Igiene e Pulizia", icon: "🧴"}, {name: "Carburante Auto", icon: "🚗"}, {name: "Carburante Moto", icon: "🏍️"},
+    {name: "Sanitarie", icon: "🏥"}, {name: "Bolletta Acqua", icon: "💧"}, {name: "Bolletta Luce", icon: "💡"}, {name: "Bolletta Gas", icon: "🔥"},
+    {name: "Bolletta Rifiuti", icon: "♻️"}, {name: "Bolletta Condominio", icon: "🏢"}, {name: "Bolletta Telefonia", icon: "📱"}, {name: "Mutuo", icon: "🏠"},
+    {name: "Tasse Auto (Assicurazione/Bollo)", icon: "🚗"}, {name: "Tasse Moto (Assicurazione/Bollo)", icon: "🏍️"},
+    {name: "Manutenzioni Programmate", icon: "🔧"}, {name: "Imprevisti e Svago", icon: "🎉"}, {name: "Formazione", icon: "📚"},
+    {name: "Abbigliamento", icon: "👕"}, {name: "Varie", icon: "📦"}
 ];
+const ICON_OPTIONS = ['🏠','🚗','🏍️','🍔','🛍️','🏥','✈️','📚','💡','💧','🔥','📱','🏢','♻️','🧴','🔧','🎉','👕','📦','💰','📈','🎮','🐾','👶','💄','🎵','🏋️','🍕'];
 let userCategories = [];
+let categoryIconMap = {}; // { 'Alimentari': '🍔', ... }
 let currentData = { income: [], expenses: [] };
 let annualDeadlines = [];
 let selectedFilterDate = null;
@@ -381,30 +401,89 @@ async function loadMonthData() {
 // =====================================================================
 async function initCategories() {
     let storedCats = await db.categories.toArray();
-    userCategories = storedCats.length > 0 ? storedCats.map(c => c.name) : [...DEFAULT_CATEGORIES];
-    if (storedCats.length === 0) await db.categories.bulkPut(userCategories.map(c => ({name: c})));
+    if (storedCats.length > 0) {
+        userCategories = storedCats.map(c => c.name);
+        categoryIconMap = {};
+        storedCats.forEach(c => { categoryIconMap[c.name] = c.icon || '🏷️'; });
+    } else {
+        userCategories = DEFAULT_CATEGORIES.map(c => c.name);
+        categoryIconMap = {};
+        DEFAULT_CATEGORIES.forEach(c => { categoryIconMap[c.name] = c.icon; });
+        await db.categories.bulkPut(DEFAULT_CATEGORIES);
+    }
     renderCategoriesDropdown();
 }
+function getCatIcon(catName) {
+    return categoryIconMap[catName] || '🏷️';
+}
+let categoryToEdit = null;
+
 function renderCategoriesDropdown() {
     const select = document.getElementById('expenseCategory');
     const adminList = document.getElementById('categoriesAdminList');
     select.innerHTML = ''; adminList.innerHTML = '';
     userCategories.sort().forEach(cat => {
-        let opt = document.createElement('option'); opt.value = cat; opt.innerText = cat; select.appendChild(opt);
+        const icon = getCatIcon(cat);
+        let opt = document.createElement('option'); opt.value = cat; opt.innerText = `${icon} ${cat}`; select.appendChild(opt);
         let tag = document.createElement('span'); tag.className = 'cat-tag';
-        tag.innerHTML = `${cat} <button onclick="deleteCategory('${cat.replace(/'/g,"\\'")}')">×</button>`;
+        tag.innerHTML = `${icon} ${cat} <button onclick="editCategory('${cat.replace(/'/g,"\\'")}')" style="color:#f59e0b; margin-right:4px;">✏️</button><button onclick="deleteCategory('${cat.replace(/'/g,"\\'")}')">×</button>`;
         adminList.appendChild(tag);
     });
 }
-async function addNewCategory() {
+
+function editCategory(cat) {
+    categoryToEdit = cat;
+    document.getElementById('newCatName').value = cat;
+    document.getElementById('newCatIcon').value = getCatIcon(cat) || '🏷️';
+    const btn = document.getElementById('btnSaveCategory');
+    if(btn) {
+        btn.innerText = 'Salva';
+        btn.style.background = '#f59e0b';
+    }
+}
+
+async function saveCategory() {
     const input = document.getElementById('newCatName'); const name = input.value.trim();
-    if (!name || userCategories.includes(name)) return;
-    userCategories.push(name); await db.categories.put({name});
-    input.value = ''; renderCategoriesDropdown(); renderImportCheckboxList(); updateUI();
+    if (!name) return;
+    const iconSelect = document.getElementById('newCatIcon');
+    const icon = iconSelect ? iconSelect.value : '🏷️';
+    
+    if (categoryToEdit) {
+        if (name !== categoryToEdit && userCategories.includes(name)) {
+            alert('Categoria già esistente.'); return;
+        }
+        if (name !== categoryToEdit) {
+            const allExp = await db.expenses.where('category').equals(categoryToEdit).toArray();
+            for (let e of allExp) { await db.expenses.update(e.id, {category: name}); }
+            currentData.expenses.forEach(e => { if (e.category === categoryToEdit) e.category = name; });
+            userCategories = userCategories.filter(c => c !== categoryToEdit);
+            delete categoryIconMap[categoryToEdit];
+            await db.categories.delete(categoryToEdit);
+        }
+        if (!userCategories.includes(name)) userCategories.push(name);
+        categoryIconMap[name] = icon;
+        await db.categories.put({name, icon});
+        
+        categoryToEdit = null;
+        const btn = document.getElementById('btnSaveCategory');
+        if(btn) {
+            btn.innerText = 'Aggiungi';
+            btn.style.background = 'var(--accent)';
+        }
+    } else {
+        if (userCategories.includes(name)) return;
+        userCategories.push(name);
+        categoryIconMap[name] = icon;
+        await db.categories.put({name, icon});
+    }
+    await updateGlobalVersion();
+    input.value = '';
+    renderCategoriesDropdown(); renderImportCheckboxList(); updateUI();
 }
 async function deleteCategory(cat) {
     if (!confirm(`Eliminare "${cat}"?`)) return;
     userCategories = userCategories.filter(c => c !== cat);
+    delete categoryIconMap[cat];
     await db.categories.delete(cat);
     renderCategoriesDropdown(); renderImportCheckboxList(); updateUI();
 }
@@ -413,8 +492,9 @@ function renderImportCheckboxList() {
     if (!container) return; container.innerHTML = '';
     const autoChecked = ["Alimentari","Carburante Auto","Mutuo","Bolletta Luce","Varie"];
     userCategories.sort().forEach(cat => {
+        const icon = getCatIcon(cat);
         const label = document.createElement('label'); label.className = 'import-checkbox-item';
-        label.innerHTML = `<input type="checkbox" value="${cat}" ${autoChecked.includes(cat)?'checked':''}> ${cat}`;
+        label.innerHTML = `<input type="checkbox" value="${cat}" ${autoChecked.includes(cat)?'checked':''}> ${icon} ${cat}`;
         container.appendChild(label);
     });
 }
@@ -497,7 +577,7 @@ async function saveNotes() {
     } else {
         await db.months.put({month, totalIncome:0, totalPlanned:0, totalActual:0, notes, iaNotes});
     }
-    await updateGlobalTimestamp();
+    await updateGlobalVersion();
 }
 
 // =====================================================================
@@ -516,17 +596,17 @@ async function addAnnualDeadline() {
     if (!month || !desc || amount <= 0) { alert("Compila mese, descrizione e importo."); return; }
     let item = {id: Date.now(), month, day, desc, amount, isPaid: false};
     await db.annualDeadlines.put(item);
-    await updateGlobalTimestamp();
+    await updateGlobalVersion();
     document.getElementById('annDeadlineDesc').value = '';
     document.getElementById('annDeadlineAmount').value = '';
     document.getElementById('annDeadlineDay').value = '';
     loadAnnualDeadlines();
 }
 async function deleteAnnualDeadline(id) {
-    if (confirm("Eliminare questa scadenza?")) { await db.annualDeadlines.delete(id); await updateGlobalTimestamp(); loadAnnualDeadlines(); }
+    if (confirm("Eliminare questa scadenza?")) { await db.annualDeadlines.delete(id); await updateGlobalVersion(); loadAnnualDeadlines(); }
 }
 async function toggleDeadlinePaid(id, isPaid) {
-    await db.annualDeadlines.update(id, {isPaid}); await updateGlobalTimestamp(); loadAnnualDeadlines();
+    await db.annualDeadlines.update(id, {isPaid}); await updateGlobalVersion(); loadAnnualDeadlines();
 }
 async function renderAnnualDeadlines() {
     await loadAnnualDeadlines_db();
@@ -589,7 +669,7 @@ async function updateUI() {
     const month = document.getElementById('currentMonth').value;
     let mData = await db.months.get(month);
     await db.months.put({month, totalIncome, totalPlanned, totalActual, notes: mData?.notes||"", iaNotes: mData?.iaNotes||""});
-    await updateGlobalTimestamp();
+    await updateGlobalVersion();
 
     let pending = currentData.expenses.filter(e => e.planned > 0 && e.actual === 0).length;
     const alertBox = document.getElementById('deadlineAlert');
@@ -604,20 +684,21 @@ async function updateUI() {
         let diffClass = '', diffText = '';
         if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtE(diff)}`; }
         if (pVal > 0 || aVal > 0) {
+            const icon = getCatIcon(cat);
             let row = document.createElement('div');
             row.className = 'flat-row';
             if (selectedFilterCategory === cat) row.classList.add('selected');
             row.onclick = () => filterByCategory(cat);
             row.innerHTML = `
                 <div class="flat-left">
-                    <div class="flat-icon">🏷️</div>
+                    <div class="flat-icon">${icon}</div>
                     <div class="flat-title-group">
                         <span class="flat-title">${cat}</span>
-                        <span class="flat-subtitle">Prev: ${fmtE(pVal)}</span>
+                        <span class="flat-subtitle val-previsto">Prev: ${fmtE(pVal)}</span>
                     </div>
                 </div>
                 <div class="flat-right">
-                    <span class="flat-actual">${fmtE(aVal)}</span>
+                    <span class="flat-actual val-sostenuto">${fmtE(aVal)}</span>
                     <span class="flat-margin ${diffClass}">${diffText}</span>
                 </div>
             `;
@@ -658,7 +739,7 @@ async function updateUI() {
         const sharedTxt = exp.sharedPercentage > 0 ? ` <span style="font-size:9px;color:#3b82f6;">(${exp.sharedPercentage}%)</span>` : '';
         const row = document.createElement('div'); row.className = 'item-row';
         row.innerHTML = `
-            <span class="item-name">${isPending ? '⏳' : '✅'} <strong>${exp.category}</strong>${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
+            <span class="item-name">${isPending ? '⏳' : '✅'} <strong>${getCatIcon(exp.category)} ${exp.category}</strong>${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
             <span class="item-vals">
                 <div><span class="val-p">Stima: ${fmtE(exp.planned)}</span><span class="val-s">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</span></div>
                 ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}
@@ -880,12 +961,12 @@ async function addSavingsGoal() {
     const amount = parseFloat(amountEl.value) || 0;
     if (!name || amount <= 0) { alert('Inserisci un nome e un target valido.'); return; }
     await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
-    await updateGlobalTimestamp();
+    await updateGlobalVersion();
     nameEl.value = ''; amountEl.value = '';
     renderSavingsGoals();
 }
 async function deleteSavingsGoal(id) {
-    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id); await updateGlobalTimestamp(); renderSavingsGoals(); }
+    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id); await updateGlobalVersion(); renderSavingsGoals(); }
 }
 
 async function depositToSavingsGoal() {
@@ -899,7 +980,7 @@ async function depositToSavingsGoal() {
     if (!goal) { alert('Salvadanaio non trovato.'); return; }
     const newTotal = (goal.importo_accumulato || 0) + amount;
     await db.savingsGoals.update(id, {importo_accumulato: newTotal});
-    await updateGlobalTimestamp();
+    await updateGlobalVersion();
     amountInput.value = '';
     const feedback = document.getElementById('depositFeedback');
     if (feedback) {
@@ -1230,10 +1311,12 @@ async function exportCSV() {
 // BACKUP & RESTORE
 // =====================================================================
 async function getCompiledBackupData() {
-    const localState = await db.syncState.get('lastUpdated');
-    const ts = localState ? localState.timestamp : 0;
+    const versionState = await db.syncState.get('versionData');
+    const counter = versionState ? (versionState.counter || 0) : 0;
     return JSON.stringify({
-        lastUpdated: ts,
+        db_version_counter: counter,
+        last_device_id: getDeviceId(),
+        lastUpdated: Date.now(),
         categories: await db.categories.toArray(),
         annual_deadlines: await db.annualDeadlines.toArray(),
         income: await db.income.toArray(),
@@ -1288,11 +1371,11 @@ function importBackupJSON(event) {
 async function syncToDrive(silent = false) {
     try {
         const content = await getCompiledBackupData();
-        const localState = await db.syncState.get('lastUpdated');
-        const ts = localState ? localState.timestamp.toString() : Date.now().toString();
+        const versionState = await db.syncState.get('versionData');
+        const counter = versionState ? (versionState.counter || 0).toString() : '0';
         const meta = {
             name: 'budget_pwa_backup.json',
-            appProperties: { lastUpdated: ts }
+            appProperties: { db_version_counter: counter, last_device_id: getDeviceId() }
         };
         let existId = null;
 
