@@ -144,6 +144,8 @@
         .btn-action { border: none; padding: 5px 9px; border-radius: 6px; font-size: 11px; font-weight: bold; color: white; cursor: pointer; width: auto; margin: 0; }
         .btn-pay { background: #d97706; }
         .btn-pay:hover { opacity: 0.85; }
+        .btn-auth { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 0; width: auto; transition: background 0.2s; }
+        .btn-auth:hover { background: rgba(255,255,255,0.25); }
 
         /* ===== IA ===== */
         .ia-response-box { background: #f3e8ff; border: 1px solid #e9d5ff; padding: 16px; border-radius: 10px; margin-top: 14px; font-size: 13px; line-height: 1.7; color: #581c87; display: none; white-space: pre-line; }
@@ -462,6 +464,15 @@
             .annual-layout { display: grid; grid-template-columns: 4fr 6fr; gap: 16px; align-items: flex-start; }
             .fab-button { display: none !important; }
             .tab-button.add-button { display: none !important; }
+            
+            /* Linear Desktop Rendiconto */
+            .flat-row { display: grid !important; grid-template-columns: 2fr 1fr 1fr 1fr; align-items: center; gap: 12px; }
+            .flat-left { display: flex; align-items: center; gap: 12px; }
+            .flat-title-group { display: block !important; }
+            .flat-right { display: contents !important; }
+            .val-previsto { color: #f97316 !important; font-weight: bold; font-size: 14px; text-align: right; }
+            .val-sostenuto { color: #ef4444 !important; font-weight: bold; font-size: 14px; text-align: right; }
+            .flat-margin { text-align: right; }
         }
 
         /* ===== RESPONSIVE: Mobile ===== */
@@ -608,10 +619,10 @@
         .flat-title { font-weight: bold; font-size: 14px; color: #1e293b; }
         .flat-subtitle { font-size: 11px; color: #64748b; }
         .flat-right {
-            display: flex; flex-direction: column; align-items: flex-end;
+            display: flex; align-items: center; gap: 12px;
         }
         .flat-actual { font-weight: bold; font-size: 15px; color: #1e293b; }
-        .flat-margin { font-size: 12px; font-weight: bold; }
+        .flat-margin { font-size: 12px; font-weight: bold; min-width: 50px; text-align: right; }
         .diff-plus { color: #10b981; }
         .diff-minus { color: #ef4444; }
 

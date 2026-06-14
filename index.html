@@ -12,9 +12,7 @@
     <title>📊 EcoBilancio Digitale</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
-    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,6 +21,9 @@
 <div class="header">
     <div class="header-top">
         <h1>📊 EcoBilancio Digitale</h1>
+        <div id="authContainer" class="auth-container">
+            <button id="btnAuthAction" class="btn-auth" onclick="openAuthModal()">Accedi / Registrati</button>
+        </div>
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
@@ -41,6 +42,32 @@
         <p>⚠️ Database vuoto o nuovo dispositivo rilevato.</p>
         <span style="display:block; margin-bottom:10px; font-size:12px; color:#7f1d1d;">Carica un backup .json per ripristinare i dati, oppure inizia ad inserire le tue spese.</span>
         <button class="btn-recovery-trigger" onclick="document.getElementById('importFileInput').click()">📥 Carica Backup (.json)</button>
+    </div>
+
+    <!-- MODAL AUTH -->
+    <div id="authModal" class="popup-overlay" onclick="closeAuthModal(event)">
+        <div class="popup-panel" style="max-width: 400px; padding: 24px;" role="dialog" aria-modal="true" onclick="event.stopPropagation();">
+            <button class="popup-close" onclick="closeAuthModal(event)">×</button>
+            <h3 style="margin-top:0; color:var(--primary); font-size:18px;">Autenticazione Cloud</h3>
+            <p style="font-size:13px; color:#64748b; margin-bottom:18px;">Accedi per attivare il salvataggio automatico sicuro su Supabase.</p>
+            
+            <button class="btn-gdrive" id="btnGoogleAuth" onclick="signInWithGoogle()" style="width:100%; margin-bottom: 16px; background:#4285F4; border-radius:10px; padding:12px; font-size:15px; border:none; color:white; cursor:pointer; font-weight:bold;"> Continua con Google</button>
+            
+            <div style="text-align: center; margin-bottom: 16px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Oppure usa email</div>
+            
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="authEmail" placeholder="La tua email">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="authPassword" placeholder="La tua password">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn-spesa" style="flex:1; margin-top:0;" onclick="signInWithEmail()">Accedi</button>
+                <button class="btn-action" style="flex:1; background:#0f766e; font-size:14px; padding:13px; border-radius:10px; margin-top:0;" onclick="signUpWithEmail()">Registrati</button>
+            </div>
+        </div>
     </div>
 
     <!-- =================== TAB 1: MESE CORRENTE =================== -->
@@ -353,11 +380,11 @@
                     </div>
                     <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
                 </div>
-                <div class="card">
+                <div class="card" id="cloudSyncCard">
                     <h2>☁️ Sincronizzazione Cloud</h2>
-                    <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Salva una copia sicura su Google Drive.</p>
-                    <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()">🔑 Connetti a Google Drive</button>
-                    <button class="btn-gdrive" id="btnGDriveSync" onclick="syncToDrive()" style="display: none;">☁️ Sincronizza ora</button>
+                    <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Salva una copia sicura su Supabase.</p>
+                    <p id="authStatusText" style="font-size: 13px; font-weight: bold; color: #10b981; display: none;">✅ Connesso a Supabase</p>
+                    <button class="btn-ia" id="btnSettingsAuth" onclick="openAuthModal()">🔑 Accedi al Cloud</button>
                 </div>
                 <div class="card" style="border: 2px solid #ef4444; background: #fef2f2;">
                     <h2 style="color: #ef4444; border-left-color: #ef4444;">⚠️ Zona Pericolo</h2>

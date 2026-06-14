@@ -27,8 +27,19 @@ if ('serviceWorker' in navigator) {
     };
 
     window.addEventListener('load', async () => {
-        await registerServiceWorker();
+        const reg = await registerServiceWorker();
         refreshOnControllerChange();
+        if (reg) {
+            reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('[PWA] Nuovo aggiornamento, ricarico la pagina.');
+                        window.location.reload();
+                    }
+                };
+            };
+        }
     });
 
     document.addEventListener('visibilitychange', async () => {
@@ -45,6 +56,77 @@ if ('serviceWorker' in navigator) {
 // =====================================================================
 // COSTANTI E DATABASE
 // =====================================================================
+
+const SUPABASE_URL = 'https://bkvludpqlwtntswzrhpm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_bPVweV54mHiYuQSTZd7e-A_2DGbZr-j';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
+// =====================================================================
+// SUPABASE AUTH & SYNC
+// =====================================================================
+function openAuthModal() { document.getElementById('authModal').classList.add('active'); }
+function closeAuthModal(event) { if(event){event.preventDefault(); event.stopPropagation();} document.getElementById('authModal').classList.remove('active'); }
+
+async function signInWithGoogle() { await supabase.auth.signInWithOAuth({ provider: 'google' }); }
+async function signInWithEmail() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    if (!email || !password) return alert("Inserisci email e password");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) alert("Errore login: " + error.message);
+    else { closeAuthModal(); showToast("Login effettuato!", false); }
+}
+async function signUpWithEmail() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    if (!email || !password) return alert("Inserisci email e password");
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) alert("Errore registrazione: " + error.message);
+    else { closeAuthModal(); alert("Controlla la tua email per confermare la registrazione!"); }
+}
+async function signOut() { await supabase.auth.signOut(); }
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+    currentUser = session?.user || null;
+    const btn = document.getElementById('btnAuthAction');
+    const syncCardText = document.getElementById('authStatusText');
+    const syncCardBtn = document.getElementById('btnSettingsAuth');
+    if (currentUser) {
+        if (btn) { btn.innerText = "Disconnetti"; btn.onclick = signOut; }
+        if (syncCardText) syncCardText.style.display = 'block';
+        if (syncCardBtn) syncCardBtn.style.display = 'none';
+        
+        const hasSyncedBefore = localStorage.getItem('supabase_first_sync_done');
+        if (!hasSyncedBefore) {
+            await syncLocalToSupabaseFirstTime();
+            localStorage.setItem('supabase_first_sync_done', 'true');
+        }
+    } else {
+        if (btn) { btn.innerText = "Accedi / Registrati"; btn.onclick = openAuthModal; }
+        if (syncCardText) syncCardText.style.display = 'none';
+        if (syncCardBtn) { syncCardBtn.style.display = 'block'; syncCardBtn.innerText = "🔑 Accedi al Cloud"; syncCardBtn.onclick = openAuthModal; }
+    }
+});
+
+async function syncLocalToSupabaseFirstTime() {
+    console.log('[SYNC] Sincronizzazione iniziale verso Supabase...');
+    const incomes = await db.income.toArray();
+    const expenses = await db.expenses.toArray();
+    const categories = await db.categories.toArray();
+    const months = await db.months.toArray();
+    const annualDeadlines = await db.annualDeadlines.toArray();
+    const savingsGoals = await db.savingsGoals.toArray();
+    
+    if (categories.length > 0) await supabase.from('categories').upsert(categories.map(c => ({ name: c.name, icon: c.icon, user_id: currentUser.id })));
+    if (months.length > 0) await supabase.from('months').upsert(months.map(m => ({ month: m.month, total_income: m.totalIncome, total_planned: m.totalPlanned, total_actual: m.totalActual, notes: m.notes, ia_notes: m.iaNotes, user_id: currentUser.id })));
+    if (incomes.length > 0) await supabase.from('income').upsert(incomes.map(i => ({ id: i.id, month: i.month, descrizione: i.desc, amount: i.amount, user_id: currentUser.id })));
+    if (expenses.length > 0) await supabase.from('expenses').upsert(expenses.map(e => ({ id: e.id, month: e.month, date: e.date, category: e.category, descrizione: e.desc, planned: e.planned, actual: e.actual, shared_percentage: e.sharedPercentage, user_id: currentUser.id })));
+    if (annualDeadlines.length > 0) await supabase.from('annual_deadlines').upsert(annualDeadlines.map(d => ({ id: d.id, month: d.month, day: d.day, descrizione: d.desc, amount: d.amount, is_paid: d.isPaid, user_id: currentUser.id })));
+    if (savingsGoals.length > 0) await supabase.from('savings_goals').upsert(savingsGoals.map(s => ({ id: s.id, name: s.name, target_amount: s.targetAmount, importo_accumulato: s.importo_accumulato, created_at: s.createdAt, user_id: currentUser.id })));
+    showToast('✅ Primo backup su Cloud completato', false);
+}
+
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
 
@@ -74,15 +156,7 @@ function getDeviceId() {
     return id;
 }
 
-// Progressive Versioning: incrementa il contatore ad ogni modifica
-async function updateGlobalVersion() {
-    const state = await db.syncState.get('versionData');
-    const currentCounter = state ? (state.counter || 0) : 0;
-    const newCounter = currentCounter + 1;
-    await db.syncState.put({ id: 'versionData', counter: newCounter, deviceId: getDeviceId(), lastUpdated: Date.now() });
-    console.log(`[SYNC] Version counter incrementato: ${currentCounter} → ${newCounter}`);
-    debouncedAutoSync();
-}
+async function updateGlobalVersion() { /* Local-first: removed debouncedAutoSync */ }
 
 // =====================================================================
 // TOAST NOTIFICATIONS
@@ -105,139 +179,8 @@ function showToast(msg, isError = false) {
 }
 
 // =====================================================================
-// GOOGLE DRIVE OAUTH2
-// =====================================================================
-const CLIENT_ID = '216749813771-25voe4c21bu5m56u5viauk99jbcp8qop.apps.googleusercontent.com';
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-let tokenClient, gapiInited = false, gisInited = false;
-
-function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] }); gapiInited = true; maybeEnableDriveButtons(); }); }
-function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID, scope: SCOPES,
-        callback: (resp) => {
-            if (resp.error) throw resp;
-            localStorage.setItem('gdrive_connected', 'true');
-            localStorage.setItem('gdrive_access_token', resp.access_token);
-            localStorage.setItem('gdrive_token_expires', (Date.now() + resp.expires_in * 1000).toString());
-            
-            document.getElementById('btnGDriveAuth').style.display = 'none';
-            document.getElementById('btnGDriveSync').style.display = 'flex';
-            
-            if (!window._silentLoginAttempting) {
-                showToast('Connesso a Google Drive!', false);
-                startupCloudCompare();
-            }
-        }
-    });
-    gisInited = true; maybeEnableDriveButtons();
-}
-function maybeEnableDriveButtons() {
-    if (gapiInited && gisInited) {
-        document.getElementById('btnGDriveAuth').disabled = false;
-        if (localStorage.getItem('gdrive_connected') === 'true') {
-            const token = localStorage.getItem('gdrive_access_token');
-            const expires = parseInt(localStorage.getItem('gdrive_token_expires') || '0', 10);
-            
-            document.getElementById('btnGDriveAuth').style.display = 'none';
-            document.getElementById('btnGDriveSync').style.display = 'flex';
-
-            if (token && Date.now() < expires) {
-                gapi.client.setToken({ access_token: token });
-                startupCloudCompare();
-            } else {
-                window._silentLoginAttempting = true;
-                tokenClient.requestAccessToken({ prompt: '' });
-            }
-        }
-    }
-}
-function handleAuthClick() { window._silentLoginAttempting = false; tokenClient.requestAccessToken({ prompt: 'consent' }); }
-
-// =====================================================================
 // VARIABILI GLOBALI E SYNC
 // =====================================================================
-let autoSyncTimeout = null;
-function debouncedAutoSync() {
-    if (localStorage.getItem('gdrive_connected') === 'true') {
-        clearTimeout(autoSyncTimeout);
-        autoSyncTimeout = setTimeout(() => {
-            syncToDrive(true);
-        }, 1500);
-    }
-}
-
-async function startupCloudCompare() {
-    try {
-        const r = await gapi.client.drive.files.list({
-            q: "name='budget_pwa_backup.json' and trashed=false",
-            fields: 'files(id,name)',
-            pageSize: 1, spaces: 'drive'
-        });
-        const found = r.result.files;
-        if (found?.length > 0) {
-            const cloudFile = found[0];
-
-            const fData = await gapi.client.drive.files.get({ fileId: cloudFile.id, alt: 'media' });
-            if (!fData.body) return;
-
-            const cloudJson = typeof fData.body === 'string' ? JSON.parse(fData.body) : fData.body;
-            const cloudCounter = cloudJson.db_version_counter || 0;
-            const cloudDeviceId = cloudJson.last_device_id || '';
-
-            const localState = await db.syncState.get('versionData');
-            const localCounter = localState ? (localState.counter || 0) : 0;
-            const localDeviceId = getDeviceId();
-
-            console.log(`[SYNC] Confronto versioni — Cloud: v${cloudCounter} (${cloudDeviceId}) | Locale: v${localCounter} (${localDeviceId})`);
-
-            if (cloudCounter > localCounter) {
-                console.log(`[SYNC] Cloud v${cloudCounter} > Locale v${localCounter}: RIPRISTINO DISTRUTTIVO...`);
-                await processSilentRestore(cloudJson, cloudCounter);
-                showToast('☁️ Dati aggiornati da Drive', false);
-            } else if (localCounter > cloudCounter) {
-                console.log(`[SYNC] Locale v${localCounter} > Cloud v${cloudCounter}: PUSH su Drive...`);
-                syncToDrive(true);
-                showToast('📤 Backup inviato a Drive', false);
-            } else {
-                console.log('[SYNC] Sincronizzazione allineata (stessa versione).');
-            }
-        }
-    } catch (e) {
-        console.warn('[SYNC] Errore durante il confronto startup cloud:', e);
-    }
-}
-
-async function processSilentRestore(data, cloudCounter) {
-    try {
-        if (data.categories && data.months) {
-            db.close();
-            await new Promise((resolve, reject) => {
-                const req = indexedDB.deleteDatabase('BilancioDB');
-                req.onsuccess = resolve;
-                req.onerror = reject;
-                req.onblocked = resolve;
-            });
-            await db.open();
-
-            await db.categories.bulkPut(data.categories);
-            if (data.annual_deadlines) await db.annualDeadlines.bulkPut(data.annual_deadlines);
-            if (data.income) await db.income.bulkPut(data.income);
-            if (data.expenses) await db.expenses.bulkPut(data.expenses);
-            if (data.months) await db.months.bulkPut(data.months);
-            if (data.savingsGoals) await db.savingsGoals.bulkPut(data.savingsGoals);
-            if (data.settings) await db.settings.bulkPut(data.settings);
-            
-            await db.syncState.put({ id: 'versionData', counter: cloudCounter || 0, deviceId: getDeviceId(), lastUpdated: Date.now() });
-            
-            console.log('[SYNC] Svuotamento DB e Ripristino da Drive completato. Riavvio...');
-            window.location.reload();
-        }
-    } catch(err) {
-        console.warn('[SYNC] Errore ripristino silenzioso', err);
-    }
-}
 
 const DEFAULT_CATEGORIES = [
     {name: "Alimentari", icon: "🍔"}, {name: "Igiene e Pulizia", icon: "🧴"}, {name: "Carburante Auto", icon: "🚗"}, {name: "Carburante Moto", icon: "🏍️"},
@@ -247,7 +190,7 @@ const DEFAULT_CATEGORIES = [
     {name: "Manutenzioni Programmate", icon: "🔧"}, {name: "Imprevisti e Svago", icon: "🎉"}, {name: "Formazione", icon: "📚"},
     {name: "Abbigliamento", icon: "👕"}, {name: "Varie", icon: "📦"}
 ];
-const ICON_OPTIONS = ['🏠','🚗','🏍️','🍔','🛍️','🏥','✈️','📚','💡','💧','🔥','📱','🏢','♻️','🧴','🔧','🎉','👕','📦','💰','📈','🎮','🐾','👶','💄','🎵','🏋️','🍕'];
+const ICON_OPTIONS = ['🏠','🚗','🍔','🛍️','🏥','✈️','📈','📄'];
 let userCategories = [];
 let categoryIconMap = {}; // { 'Alimentari': '🍔', ... }
 let currentData = { income: [], expenses: [] };
@@ -485,7 +428,7 @@ async function saveCategory() {
         categoryIconMap[name] = icon;
         await db.categories.put({name, icon});
     }
-    await updateGlobalVersion();
+    
     input.value = '';
     renderCategoriesDropdown(); renderImportCheckboxList(); updateUI();
 }
@@ -545,7 +488,8 @@ async function payExpense(id) {
     }
 }
 async function deleteEntry(type, id) {
-    if (type === 'income') { currentData.income = currentData.income.filter(i => i.id !== id); await db.income.delete(id); }
+    if (type === 'income') { currentData.income = currentData.income.filter(i => i.id !== id); await db.income.delete(id);
+    if (currentUser) await supabase.from('income').delete().eq('id', id); }
     else { currentData.expenses = currentData.expenses.filter(i => i.id !== id); await db.expenses.delete(id); }
     updateUI(); checkDatabaseHealth();
 }
@@ -586,7 +530,7 @@ async function saveNotes() {
     } else {
         await db.months.put({month, totalIncome:0, totalPlanned:0, totalActual:0, notes, iaNotes});
     }
-    await updateGlobalVersion();
+    
 }
 
 // =====================================================================
@@ -605,17 +549,18 @@ async function addAnnualDeadline() {
     if (!month || !desc || amount <= 0) { alert("Compila mese, descrizione e importo."); return; }
     let item = {id: Date.now(), month, day, desc, amount, isPaid: false};
     await db.annualDeadlines.put(item);
-    await updateGlobalVersion();
+    
     document.getElementById('annDeadlineDesc').value = '';
     document.getElementById('annDeadlineAmount').value = '';
     document.getElementById('annDeadlineDay').value = '';
     loadAnnualDeadlines();
 }
 async function deleteAnnualDeadline(id) {
-    if (confirm("Eliminare questa scadenza?")) { await db.annualDeadlines.delete(id); await updateGlobalVersion(); loadAnnualDeadlines(); }
+    if (confirm("Eliminare questa scadenza?")) { await db.annualDeadlines.delete(id);
+    if (currentUser) await supabase.from('annual_deadlines').delete().eq('id', id);  loadAnnualDeadlines(); }
 }
 async function toggleDeadlinePaid(id, isPaid) {
-    await db.annualDeadlines.update(id, {isPaid}); await updateGlobalVersion(); loadAnnualDeadlines();
+    await db.annualDeadlines.update(id, {isPaid});  loadAnnualDeadlines();
 }
 async function renderAnnualDeadlines() {
     await loadAnnualDeadlines_db();
@@ -678,7 +623,7 @@ async function updateUI() {
     const month = document.getElementById('currentMonth').value;
     let mData = await db.months.get(month);
     await db.months.put({month, totalIncome, totalPlanned, totalActual, notes: mData?.notes||"", iaNotes: mData?.iaNotes||""});
-    await updateGlobalVersion();
+    
 
     let pending = currentData.expenses.filter(e => e.planned > 0 && e.actual === 0).length;
     const alertBox = document.getElementById('deadlineAlert');
@@ -703,7 +648,7 @@ async function updateUI() {
                     <div class="flat-icon">${icon}</div>
                     <div class="flat-title-group">
                         <span class="flat-title">${cat}</span>
-                        <span class="flat-subtitle val-previsto">Prev: ${fmtE(pVal)}</span>
+                        <span class="flat-subtitle val-previsto">${fmtE(pVal)}</span>
                     </div>
                 </div>
                 <div class="flat-right">
@@ -969,13 +914,15 @@ async function addSavingsGoal() {
     const name = nameEl.value.trim();
     const amount = parseFloat(amountEl.value) || 0;
     if (!name || amount <= 0) { alert('Inserisci un nome e un target valido.'); return; }
-    await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
-    await updateGlobalVersion();
+    const sgId = await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
+    if (currentUser) await supabase.from('savings_goals').insert({ id: sgId, name, target_amount: amount, importo_accumulato: 0, created_at: Date.now(), user_id: currentUser.id });
+    
     nameEl.value = ''; amountEl.value = '';
     renderSavingsGoals();
 }
 async function deleteSavingsGoal(id) {
-    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id); await updateGlobalVersion(); renderSavingsGoals(); }
+    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id);
+    if (currentUser) await supabase.from('savings_goals').delete().eq('id', id);  renderSavingsGoals(); }
 }
 
 async function depositToSavingsGoal() {
@@ -989,7 +936,7 @@ async function depositToSavingsGoal() {
     if (!goal) { alert('Salvadanaio non trovato.'); return; }
     const newTotal = (goal.importo_accumulato || 0) + amount;
     await db.savingsGoals.update(id, {importo_accumulato: newTotal});
-    await updateGlobalVersion();
+    
     amountInput.value = '';
     const feedback = document.getElementById('depositFeedback');
     if (feedback) {
@@ -1375,58 +1322,6 @@ function importBackupJSON(event) {
 }
 
 // =====================================================================
-// GOOGLE DRIVE SYNC
-// =====================================================================
-async function syncToDrive(silent = false) {
-    try {
-        const content = await getCompiledBackupData();
-        const versionState = await db.syncState.get('versionData');
-        const counter = versionState ? (versionState.counter || 0).toString() : '0';
-        const meta = {
-            name: 'budget_pwa_backup.json',
-            appProperties: { db_version_counter: counter, last_device_id: getDeviceId() }
-        };
-        let existId = null;
-
-        const r = await gapi.client.drive.files.list({
-            q: "name='budget_pwa_backup.json' and trashed=false",
-            fields: 'files(id,name)',
-            pageSize: 10,
-            spaces: 'drive'
-        });
-
-        const found = r.result.files?.filter(f => f.name === 'budget_pwa_backup.json');
-        if (found?.length > 0) existId = found[0].id;
-
-        const boundary = '-------314159265358979323846';
-        const body = `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
-
-        if (existId) {
-            await gapi.client.request({
-                path: `/upload/drive/v3/files/${existId}`,
-                method: 'PATCH',
-                params: {uploadType: 'multipart'},
-                headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
-                body
-            });
-            if (!silent) showToast('✅ Sincronizzazione Drive completata', false);
-        } else {
-            await gapi.client.request({
-                path: '/upload/drive/v3/files',
-                method: 'POST',
-                params: {uploadType: 'multipart'},
-                headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
-                body
-            });
-            if (!silent) showToast('✅ Sincronizzazione Drive completata (nuovo file)', false);
-        }
-    } catch(err) {
-        console.error('Drive sync failed:', err);
-        if (!silent) showToast("❌ Errore Drive. Controlla la console per i dettagli.", true);
-    }
-}
-
-// =====================================================================
 // RESET FUNCTIONS
 // =====================================================================
 async function resetCurrentMonth() {
@@ -1448,15 +1343,17 @@ async function resetTotalDB() {
 // =====================================================================
 // UTILITÀ FORMATTAZIONE
 // =====================================================================
-function fmtE(n, decimals=2) {
+function fmtE(n, decimals=0) {
     const abs = Math.abs(n||0);
-    if (decimals === 0 || abs % 1 === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+    return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+}${Math.round(abs).toLocaleString('it-IT')} €`;
     const parts = abs.toFixed(decimals).split('.');
     return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')}<span class="hide-mobile">,${parts[1]}</span> €`;
 }
-function fmtEPlain(n, decimals = 2) {
+function fmtEPlain(n, decimals = 0) {
     const abs = Math.abs(n||0);
-    if (decimals === 0 || abs % 1 === 0) return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+    return `${n < 0 ? '-' : ''}${Math.round(abs).toLocaleString('it-IT')} €`;
+}${Math.round(abs).toLocaleString('it-IT')} €`;
     const parts = abs.toFixed(decimals).split('.');
     return `${n < 0 ? '-' : ''}${Math.floor(abs).toLocaleString('it-IT')},${parts[1]} €`;
 }
