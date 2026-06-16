@@ -615,7 +615,17 @@ function scrollToAddExpense() {
 }
 
 // =====================================================================
-// 10. CICLO / MESE
+// 10. HELPER: toggleSection (mancava!)
+// =====================================================================
+function toggleSection(id, headerEl) {
+    const content = $(id);
+    if (!content) return;
+    const isOpen = content.classList.toggle('show');
+    if (headerEl) headerEl.classList.toggle('show', isOpen);
+}
+
+// =====================================================================
+// 11. CICLO / MESE
 // =====================================================================
 function getMonthRange(monthStr) {
     const year = parseInt(monthStr.split('-')[0], 10);
@@ -659,7 +669,7 @@ async function checkDatabaseHealth() {
 }
 
 // =====================================================================
-// 11. CATEGORIE
+// 12. CATEGORIE
 // =====================================================================
 function getCategoryDefaultIcon(name) {
     const found = DEFAULT_CATEGORIES.find(cat => cat.name === name);
@@ -807,7 +817,7 @@ function renderImportCheckboxList() {
 }
 
 // =====================================================================
-// 12. DATI MESE
+// 13. DATI MESE
 // =====================================================================
 async function loadMonthData() {
     const monthInput = $('currentMonth');
@@ -953,7 +963,7 @@ async function copyFromPreviousMonth() {
 }
 
 // =====================================================================
-// 13. NOTE
+// 14. NOTE
 // =====================================================================
 async function saveNotes() {
     const month = $('currentMonth').value;
@@ -972,7 +982,7 @@ async function saveNotes() {
 }
 
 // =====================================================================
-// 14. SCADENZARIO
+// 15. SCADENZARIO
 // =====================================================================
 async function loadAnnualDeadlines() {
     annualDeadlines = await db.annualDeadlines.toArray();
@@ -1066,7 +1076,7 @@ function checkAnnualAlertForCurrentMonth() {
 }
 
 // =====================================================================
-// 15. UI PRINCIPALE
+// 16. UI PRINCIPALE
 // =====================================================================
 async function updateUI() {
     const totalIncome = currentData.income.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -1299,7 +1309,7 @@ function renderCharts(totalIncome, totalPlanned, totalActual, catSums) {
 }
 
 // =====================================================================
-// 16. RENDICONTO
+// 17. RENDICONTO
 // =====================================================================
 async function openRendicontoPopup(type) {
     const month = $('currentMonth').value;
@@ -1389,7 +1399,7 @@ async function buildRendicontoRows(type, month, prevMonth) {
 }
 
 // =====================================================================
-// 17. STORICO / SALVADANAI / PROIEZIONI
+// 18. STORICO / SALVADANAI / PROIEZIONI
 // =====================================================================
 async function renderRecordsHub(monthsArray) {
     if (!monthsArray.length) return;
@@ -1627,7 +1637,7 @@ function resetFutureSimulation() {
 }
 
 // =====================================================================
-// 18. IA
+// 19. IA
 // =====================================================================
 function toggleIaProviderFields() {
     const provider = $('iaProviderSelect').value;
@@ -1809,7 +1819,7 @@ async function runFuturePredictionIA() {
 }
 
 // =====================================================================
-// 19. EXPORT / BACKUP / RESET
+// 20. EXPORT / BACKUP / RESET
 // =====================================================================
 async function exportPDF() {
     if (typeof html2pdf === 'undefined') {
@@ -1843,7 +1853,7 @@ async function exportPDF() {
                 <th style="padding:9px 12px;text-align:left;border-bottom:1px solid #cbd5e1;color:#334155;">Categoria</th>
                 <th style="padding:9px 12px;text-align:left;border-bottom:1px solid #cbd5e1;color:#334155;">Note</th>
                 <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e1;color:#334155;">Pianificato</th>
-                <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e1;color:#334155;">Sostenuto</th>
+                <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e2e8f1;color:#334155;">Sostenuto</th>
             </tr></thead>
             <tbody>${sorted.map(exp => `<tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${escapeHtml(exp.category)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${escapeHtml(exp.desc)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtE(exp.planned)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:bold;">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</td></tr>`).join('')}</tbody>
         </table>
@@ -2005,7 +2015,7 @@ async function resetTotalDB() {
 }
 
 // =====================================================================
-// 20. NOTIFICHE
+// 21. NOTIFICHE
 // =====================================================================
 function togglePushNotifications() {
     const toggle = $('pushNotifToggle');
@@ -2052,7 +2062,7 @@ function checkPushNotifications() {
 }
 
 // =====================================================================
-// 21. EVENT LISTENER UI - SOLO ALLA FINE
+// 22. EVENT LISTENER UI - SOLO ALLA FINE
 // =====================================================================
 document.addEventListener('DOMContentLoaded', async () => {
     setupInitialUI();
