@@ -575,398 +575,7 @@ async function migrateFromLocalStorage() {
 }
 
 // =====================================================================
-// 9. NAVIGAZIONE TAB
-// =====================================================================
-function updateActivePageSubtitle(tabId) {
-    const subtitle = $('activePageSubtitle');
-    if (subtitle) subtitle.textContent = TAB_TITLES[tabId] || 'Dashboard';
-}
-
-function switchTab(tabId, buttonEl) {
-    document.querySelectorAll('.tab-content').forEach(panel => {
-        panel.classList.remove('active');
-        panel.classList.add('hidden');
-    });
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-
-    const target = $(tabId);
-    if (!target) return;
-
-    target.classList.remove('hidden');
-    target.classList.add('active');
-    if (buttonEl) buttonEl.classList.add('active');
-
-    updateActivePageSubtitle(tabId);
-    if (tabId === 'history-tab') {
-        renderGlobalHistory();
-        renderTradingChart();
-    }
-    if (tabId === 'future-tab') {
-        renderFutureProjections();
-        renderSavingsGoals();
-        renderAnnualDeadlines();
-    }
-    window.scrollTo(0, 0);
-}
-
-function scrollToAddExpense() {
-    switchTab('current-month-tab', $('tab-btn-current'));
-    setTimeout(() => {
-        const card = $('addExpenseCard');
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-}
-
-// =====================================================================
-// 10. HELPER: toggleSection (mancava!)
-// =====================================================================
-function toggleSection(id, headerEl) {
-    const content = $(id);
-    if (!content) return;
-    const isOpen = content.classList.toggle('show');
-    if (headerEl) headerEl.classList.toggle('show', isOpen);
-}
-
-// =====================================================================
-// 11. CICLO / MESE
-// =====================================================================
-function getMonthRange(monthStr) {
-    const year = parseInt(monthStr.split('-')[0], 10);
-    const month = parseInt(monthStr.split('-')[1], 10);
-    const startMonth = month - 1;
-    let startYear = year;
-    const realStartMonth = startMonth === 0 ? 12 : startMonth;
-    if (startMonth === 0) startYear -= 1;
-
-    const endDay = startCycleDay - 1;
-    if (endDay === 0) {
-        const prevMonthDays = new Date(year, month - 1, 0).getDate();
-        return {
-            start: new Date(startYear, realStartMonth - 1, 1),
-            end: new Date(startYear, realStartMonth - 1, prevMonthDays)
-        };
-    }
-    return {
-        start: new Date(startYear, realStartMonth - 1, startCycleDay),
-        end: new Date(year, month - 1, endDay)
-    };
-}
-
-function changeStartCycleDay() {
-    const input = $('startCycleDay');
-    const val = parseInt(input.value, 10);
-    if (Number.isNaN(val) || val < 1 || val > 28) {
-        alert('Inserisci un giorno tra 1 e 28.');
-        input.value = startCycleDay;
-        return;
-    }
-    startCycleDay = val;
-    localStorage.setItem('global_start_cycle_day', String(startCycleDay));
-    loadMonthData();
-}
-
-async function checkDatabaseHealth() {
-    const count = await db.months.count();
-    const box = $('recoveryAlertBox');
-    if (box) box.style.display = (count === 0 && annualDeadlines.length === 0) ? 'block' : 'none';
-}
-
-// =====================================================================
-// 12. CATEGORIE
-// =====================================================================
-function getCategoryDefaultIcon(name) {
-    const found = DEFAULT_CATEGORIES.find(cat => cat.name === name);
-    return found ? found.icon : '🏷️';
-}
-
-async function initCategories() {
-    const storedCats = await db.categories.toArray();
-    if (storedCats.length > 0) {
-        userCategories = storedCats.map(c => c.name);
-        categoryIconMap = {};
-        storedCats.forEach(c => { categoryIconMap[c.name] = c.icon || getCategoryDefaultIcon(c.name); });
-    } else {
-        userCategories = DEFAULT_CATEGORIES.map(c => c.name);
-        categoryIconMap = {};
-        DEFAULT_CATEGORIES.forEach(c => { categoryIconMap[c.name] = c.icon; });
-        await db.categories.bulkPut(DEFAULT_CATEGORIES);
-    }
-    renderCategoriesDropdown();
-}
-
-function getCatIcon(catName) {
-    return categoryIconMap[catName] || getCategoryDefaultIcon(catName);
-}
-
-function renderCategoriesDropdown() {
-    const select = $('expenseCategory');
-    const adminList = $('categoriesAdminList');
-    if (!select || !adminList) return;
-
-    select.innerHTML = '';
-    adminList.innerHTML = '';
-    [...userCategories].sort((a, b) => a.localeCompare(b)).forEach(cat => {
-        const icon = getCatIcon(cat);
-
-        const opt = document.createElement('option');
-        opt.value = cat;
-        opt.innerText = `${icon} ${cat}`;
-        select.appendChild(opt);
-
-        const tag = document.createElement('span');
-        tag.className = 'cat-tag';
-        tag.innerHTML = `<span>${icon} ${escapeHtml(cat)}</span>`;
-
-        const editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.innerText = '✏️';
-        editBtn.addEventListener('click', () => editCategory(cat));
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.innerText = '×';
-        deleteBtn.addEventListener('click', () => deleteCategory(cat));
-
-        tag.appendChild(editBtn);
-        tag.appendChild(deleteBtn);
-        adminList.appendChild(tag);
-    });
-}
-
-function editCategory(cat) {
-    const nameInput = $('newCatName');
-    const iconSelect = $('newCatIcon');
-    const saveBtn = $('btnSaveCategory');
-    if (!nameInput || !iconSelect || !saveBtn) return;
-
-    categoryToEdit = cat;
-    nameInput.value = cat;
-    iconSelect.value = getCatIcon(cat);
-    saveBtn.innerText = 'Salva';
-    saveBtn.style.background = '#f59e0b';
-}
-
-async function saveCategory() {
-    const input = $('newCatName');
-    const iconSelect = $('newCatIcon');
-    const saveBtn = ('btnSaveCategory');
-    if (!input || !iconSelect || !saveBtn) return;
-
-    const name = input.value.trim();
-    if (!name) return;
-    const icon = iconSelect.value || '🏷️';
-
-    if (categoryToEdit) {
-        const oldName = categoryToEdit;
-        if (name !== oldName && userCategories.includes(name)) {
-            alert('Categoria già esistente.');
-            return;
-        }
-        if (name !== oldName) {
-            const allExpenses = await db.expenses.where('category').equals(oldName).toArray();
-            for (const expense of allExpenses) await db.expenses.update(expense.id, { category: name });
-            currentData.expenses.forEach(e => { if (e.category === oldName) e.category = name; });
-            userCategories = userCategories.filter(c => c !== oldName);
-            delete categoryIconMap[oldName];
-            await db.categories.delete(oldName);
-        }
-        if (!userCategories.includes(name)) userCategories.push(name);
-        categoryIconMap[name] = icon;
-        await db.categories.put({ name, icon });
-        categoryToEdit = null;
-        saveBtn.innerText = 'Aggiungi';
-        saveBtn.style.background = 'var(--accent)';
-    } else {
-        if (userCategories.includes(name)) return;
-        userCategories.push(name);
-        categoryIconMap[name] = icon;
-        await db.categories.put({ name, icon });
-    }
-
-    input.value = '';
-    await renderCategoriesDropdown();
-    renderImportCheckboxList();
-    await updateUI();
-    await safeCloudCall('salvataggio categoria', syncLocalToSupabaseFirstTime);
-}
-
-async function deleteCategory(cat) {
-    if (!confirm(`Eliminare "${cat}"?`)) return;
-    userCategories = userCategories.filter(c => c !== cat);
-    delete categoryIconMap[cat];
-    await db.categories.delete(cat);
-    await renderCategoriesDropdown();
-    renderImportCheckboxList();
-    await updateUI();
-    await safeCloudCall('eliminazione categoria', syncLocalToSupabaseFirstTime);
-}
-
-function renderImportCheckboxList() {
-    const container = $('importCategoriesList');
-    if (!container) return;
-    container.innerHTML = '';
-    const autoChecked = ['Alimentari', 'Carburante Auto', 'Mutuo', 'Bolletta Luce', 'Varie'];
-    [...userCategories].sort((a, b) => a.localeCompare(b)).forEach(cat => {
-        const label = document.createElement('label');
-        label.className = 'import-checkbox-item';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = cat;
-        checkbox.checked = autoChecked.includes(cat);
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(` ${getCatIcon(cat)} ${cat}`));
-        container.appendChild(label);
-    });
-}
-
-// =====================================================================
-// 13. DATI MESE
-// =====================================================================
-async function loadMonthData() {
-    const monthInput = $('currentMonth');
-    const month = monthInput?.value;
-    if (!month) return;
-
-    const incomes = await db.income.where('month').equals(month).toArray();
-    const expenses = await db.expenses.where('month').equals(month).toArray();
-    currentData = { income: incomes, expenses };
-
-    const mData = await db.months.get(month);
-    const userNotes = $('userNotes');
-    const iaNotes = $('iaNotes');
-    if (userNotes) userNotes.value = mData?.notes || '';
-    if (iaNotes) iaNotes.value = mData?.iaNotes || '';
-
-    clearAllFilters(false);
-    checkAnnualAlertForCurrentMonth();
-    renderImportCheckboxList();
-    await updateUI();
-}
-
-async function addIncome() {
-    const month = $('currentMonth').value;
-    const desc = $('incDesc').value.trim() || 'Entrata';
-    const amount = Number($('incAmount').value) || 0;
-    if (amount <= 0) return;
-
-    const inc = { id: Date.now(), month, desc, amount };
-    currentData.income.push(inc);
-    await db.income.put(inc);
-
-    $('incDesc').value = '';
-    $('incAmount').value = '';
-    await updateUI();
-    await checkDatabaseHealth();
-    await safeCloudCall('backup entrata', syncLocalToSupabaseFirstTime);
-}
-
-async function addExpense() {
-    const month = $('currentMonth').value;
-    const date = $('expDate').value;
-    const cat = $('expenseCategory').value;
-    const desc = $('expDesc').value.trim() || 'Spesa';
-    let planned = Number($('expPlanned').value) || 0;
-    let actual = Number($('expActual').value) || 0;
-    const shared = Number($('expShared').value) || 0;
-
-    if (planned === 0 && actual === 0) return;
-    if (shared > 0 && shared < 100) {
-        planned *= shared / 100;
-        actual *= shared / 100;
-    }
-
-    const exp = { id: Date.now(), month, date, category: cat, desc, planned, actual, sharedPercentage: shared };
-    currentData.expenses.push(exp);
-    await db.expenses.put(exp);
-
-    $('expDesc').value = '';
-    $('expPlanned').value = '';
-    $('expActual').value = '';
-    $('expShared').value = '';
-    await updateUI();
-    await checkDatabaseHealth();
-    await safeCloudCall('backup spesa', syncLocalToSupabaseFirstTime);
-}
-
-async function payExpense(id) {
-    const exp = currentData.expenses.find(item => item.id === id);
-    if (!exp) return;
-    const val = prompt('Importo effettivo pagato (€):', fmtEPlain(exp.planned).replace(' €', ''));
-    if (val === null) return;
-    const paid = Number(val.replace(',', '.'));
-    if (!Number.isNaN(paid)) {
-        exp.actual = paid;
-        await db.expenses.update(id, { actual: paid });
-        await updateUI();
-        await safeCloudCall('pagamento spesa', syncLocalToSupabaseFirstTime);
-    }
-}
-
-async function deleteEntry(type, id) {
-    if (type === 'income') {
-        currentData.income = currentData.income.filter(item => item.id !== id);
-        await db.income.delete(id);
-        await safeCloudCall('delete entrata cloud', () => supabase.from('income').delete().eq('id', id));
-    } else {
-        currentData.expenses = currentData.expenses.filter(item => item.id !== id);
-        await db.expenses.delete(id);
-        await safeCloudCall('delete spesa cloud', () => supabase.from('expenses').delete().eq('id', id));
-    }
-    await updateUI();
-    await checkDatabaseHealth();
-}
-
-async function copyFromPreviousMonth() {
-    const currentMonthVal = $('currentMonth').value;
-    const [yearRaw, monthRaw] = currentMonthVal.split('-').map(Number);
-    let year = yearRaw;
-    let month = monthRaw - 1;
-    if (month === 0) {
-        month = 12;
-        year -= 1;
-    }
-    const prevMonthStr = `${year}-${String(month).padStart(2, '0')}`;
-    const prevExpenses = await db.expenses.where('month').equals(prevMonthStr).toArray();
-    if (!prevExpenses.length) {
-        alert('Nessun dato nel ciclo precedente.');
-        return;
-    }
-
-    const selected = [...document.querySelectorAll('#importCategoriesList input[type="checkbox"]')]
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-    if (!selected.length) {
-        alert('Seleziona almeno una categoria.');
-        return;
-    }
-
-    const range = getMonthRange(currentMonthVal);
-    let count = 0;
-    for (const exp of prevExpenses) {
-        if (selected.includes(exp.category) && !currentData.expenses.some(item => item.category === exp.category)) {
-            const newExp = {
-                id: Date.now() + count,
-                month: currentMonthVal,
-                date: range.start.toISOString().slice(0, 10),
-                category: exp.category,
-                desc: 'Stima ereditata',
-                planned: exp.planned || exp.actual,
-                actual: 0,
-                sharedPercentage: 0
-            };
-            currentData.expenses.push(newExp);
-            await db.expenses.put(newExp);
-            count += 1;
-        }
-    }
-    await updateUI();
-    await checkDatabaseHealth();
-    alert(`${count} voci ereditate.`);
-    await safeCloudCall('backup stime', syncLocalToSupabaseFirstTime);
-}
-
-// =====================================================================
-// 14. NOTE
+// 9. NOTE
 // =====================================================================
 async function saveNotes() {
     const month = $('currentMonth').value;
@@ -985,7 +594,7 @@ async function saveNotes() {
 }
 
 // =====================================================================
-// 15. SCADENZARIO
+// 10. SCADENZARIO
 // =====================================================================
 async function loadAnnualDeadlines() {
     annualDeadlines = await db.annualDeadlines.toArray();
@@ -1080,7 +689,7 @@ function checkAnnualAlertForCurrentMonth() {
 }
 
 // =====================================================================
-// 16. UI PRINCIPALE
+// 11. UI PRINCIPALE
 // =====================================================================
 async function updateUI() {
     const totalIncome = currentData.income.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -1313,7 +922,7 @@ function renderCharts(totalIncome, totalPlanned, totalActual, catSums) {
 }
 
 // =====================================================================
-// 17. RENDICONTO
+// 12. RENDICONTO
 // =====================================================================
 async function openRendicontoPopup(type) {
     const month = $('currentMonth').value;
@@ -1370,7 +979,7 @@ function closeRendicontoPopup(event) {
 }
 
 // =====================================================================
-// 18. STORICO / SALVADANAI / PROIEZIONI
+// 13. STORICO / SALVADANAI / PROIEZIONI
 // =====================================================================
 async function renderRecordsHub(monthsArray) {
     if (!monthsArray.length) return;
@@ -1608,7 +1217,7 @@ function resetFutureSimulation() {
 }
 
 // =====================================================================
-// 19. IA
+// 14. IA
 // =====================================================================
 function toggleIaProviderFields() {
     const provider = $('iaProviderSelect').value;
@@ -1790,7 +1399,7 @@ async function runFuturePredictionIA() {
 }
 
 // =====================================================================
-// 20. EXPORT / BACKUP / RESET
+// 15. EXPORT / BACKUP / RESET
 // =====================================================================
 async function exportPDF() {
     if (typeof html2pdf === 'undefined') {
@@ -1986,7 +1595,7 @@ async function resetTotalDB() {
 }
 
 // =====================================================================
-// 21. NOTIFICHE
+// 16. NOTIFICHE
 // =====================================================================
 function togglePushNotifications() {
     const toggle = $('pushNotifToggle');
@@ -2033,86 +1642,49 @@ function checkPushNotifications() {
 }
 
 // =====================================================================
-// 22. EVENT LISTENER UI - SOLO ALLA FINE
+// 17. EVENT LISTENER UI - SOLO ALLA FINE
 // =====================================================================
-document.addEventListener('DOMContentLoaded', async () => {
-    setupInitialUI();
-    setupServiceWorkerUpdates();
-    setupNavigationListeners();
-    setupAuthModalListeners();
-    setupFormListeners();
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Inizializzazione Event Listeners...");
 
-    try {
-        await initApp();
-    } catch (err) {
-        console.error('[INIT] Errore avvio app, ma la navigazione resta attiva.', err);
-    }
+    // SBLOCCO TAB NAVIGAZIONE
+    const navItems = document.querySelectorAll(".nav-item");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+    
+    if(navItems.length === 0) console.error("ATTENZIONE: Nessun .nav-item trovato in HTML!");
 
-    setupSupabaseAuth().catch(err => {
-        console.warn('[SUPABASE] Avvio cloud fallito. App locale attiva.', err);
-    });
-});
-
-function setupNavigationListeners() {
-    document.querySelectorAll('.tab-button[data-tab]').forEach(button => {
-        button.addEventListener('click', () => switchTab(button.dataset.tab, button));
-    });
-    const addBtn = $('nav-btn-add');
-    if (addBtn) addBtn.addEventListener('click', scrollToAddExpense);
-}
-
-function setupAuthModalListeners() {
-    ['btn-open-auth', 'btn-settings-auth', 'btnAuthAction'].forEach(id => {
-        const btn = $(id);
-        if (btn) btn.addEventListener('click', openAuthModal);
+    navItems.forEach(item => {
+        item.addEventListener("click", () => {
+            const targetTab = item.getAttribute("data-tab");
+            console.log("Cambio tab verso:", targetTab);
+            
+            navItems.forEach(nav => nav.classList.remove("active"));
+            tabPanels.forEach(panel => panel.classList.remove("active"));
+            
+            item.classList.add("active");
+            document.getElementById(targetTab)?.classList.add("active");
+        });
     });
 
-    const closeBtn = $('btn-close-auth');
-    if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
+    // SBLOCCO MODALE AUTH
+    const btnOpenAuth = document.getElementById("btn-open-auth");
+    const modalAuth = document.getElementById("modal-auth");
+    const btnCloseAuth = document.getElementById("btn-close-auth");
 
-    const modal = $('modal-auth') || $('authModal');
-    if (modal) {
-        modal.addEventListener('click', event => {
-            if (event.target === modal) closeAuthModal(event);
+    if (btnOpenAuth && modalAuth) {
+        btnOpenAuth.addEventListener("click", () => {
+            modalAuth.classList.remove("hidden");
+            modalAuth.style.display = "flex"; // Forzatura visiva in caso di conflitti CSS
         });
     }
 
-    const googleBtn = $('btn-google-auth');
-    if (googleBtn) googleBtn.addEventListener('click', signInWithGoogle);
+    if (btnCloseAuth && modalAuth) {
+        btnCloseAuth.addEventListener("click", () => {
+            modalAuth.classList.add("hidden");
+            modalAuth.style.display = "none";
+        });
+    }
 
-    const signInBtn = $('btn-signin-email');
-    if (signInBtn) signInBtn.addEventListener('click', signInWithEmail);
-
-    const signUpBtn = $('btn-signup-email');
-    if (signUpBtn) signUpBtn.addEventListener('click', signUpWithEmail);
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-            closeAuthModal(event);
-            closeRendicontoPopup(event);
-        }
-    });
-}
-
-function setupFormListeners() {
-    const startDay = $('startCycleDay');
-    if (startDay) startDay.addEventListener('change', changeStartCycleDay);
-
-    const month = $('currentMonth');
-    if (month) month.addEventListener('change', loadMonthData);
-
-    const search = $('searchInput');
-    if (search) search.addEventListener('input', handleSearch);
-
-    const clearBtn = $('btnClearAllFilters');
-    if (clearBtn) clearBtn.addEventListener('click', () => clearAllFilters());
-
-    const provider = $('iaProviderSelect');
-    if (provider) provider.addEventListener('change', toggleIaProviderFields);
-
-    const geminiKey = $('geminiApiKeyInput');
-    if (geminiKey) geminiKey.addEventListener('change', saveGeminiKey);
-
-    const pushToggle = $('pushNotifToggle');
-    if (pushToggle) pushToggle.addEventListener('change', togglePushNotifications);
-}
+    // Inizializza i dati
+    initApp();
+});

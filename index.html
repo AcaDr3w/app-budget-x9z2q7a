@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Bilancio Pro">
-    <meta name="description" content="Dashboard di gestione finanziaria personale con IA, scadenziario e proiezioni a lungo termine">
     <link rel="manifest" href="manifest.json">
     <title>📊 EcoBilancio Digitale</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,16 +21,16 @@
     <div class="header-top">
         <h1>📊 EcoBilancio Digitale</h1>
         <div id="authContainer" class="auth-container">
-            <button id="btnAuthAction" class="btn-auth">Accedi / Registrati</button>
+            <button id="btn-open-auth" class="btn-auth">Accedi / Registrati</button>
         </div>
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
-        <button class="tab-button" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
-        <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
-        <button class="tab-button" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
-        <button class="tab-button" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
+        <button class="nav-item active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
+        <button class="nav-item" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
+        <button class="nav-item add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
+        <button class="nav-item" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
+        <button class="nav-item" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
     </nav>
 </div>
 
@@ -45,9 +44,9 @@
     </div>
 
     <!-- MODAL AUTH -->
-    <div id="authModal" class="popup-overlay">
+    <div id="modal-auth" class="popup-overlay">
         <div class="popup-panel" style="max-width: 400px; padding: 24px;" role="dialog" aria-modal="true">
-            <button class="popup-close">×</button>
+            <button id="btn-close-auth" class="popup-close">×</button>
             <h3 style="margin-top:0; color:var(--primary); font-size:18px;">Autenticazione Cloud</h3>
             <p style="font-size:13px; color:#64748b; margin-bottom:18px;">Accedi per attivare il salvataggio automatico sicuro su Supabase.</p>
 
@@ -71,7 +70,7 @@
     </div>
 
     <!-- TAB 1: MESE CORRENTE -->
-    <div id="current-month-tab" class="tab-content active">
+    <div id="current-month-tab" class="tab-panel active">
 
         <div class="config-bar">
             <div class="day-selector-group">
@@ -119,7 +118,7 @@
                 </div>
 
                 <div class="card">
-                    <h2>💰 Nuova Entrata</h2>
+                    <h2>💰 Nuova Entrata</h>
                     <div class="grid-inputs">
                         <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
                         <div class="input-group"><label>Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
@@ -224,7 +223,7 @@
     </div>
 
     <!-- TAB 2: STORICO -->
-    <div id="history-tab" class="tab-content hidden">
+    <div id="history-tab" class="tab-panel hidden">
         <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
             <h2 class="collapsible" data-target="iaHistorySection">🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
@@ -281,7 +280,7 @@
     </div>
 
     <!-- TAB 3: FUTURO -->
-    <div id="future-tab" class="tab-content hidden">
+    <div id="future-tab" class="tab-panel hidden">
 
         <div class="card">
             <h2>🔮 E nel futuro come sto messo?</h2>
@@ -333,7 +332,7 @@
     </div>
 
     <!-- TAB 5: IMPOSTAZIONI -->
-    <div id="settings-tab" class="tab-content hidden">
+    <div id="settings-tab" class="tab-panel hidden">
         <div class="settings-grid">
             <div class="settings-col-left">
                 <div class="card">
