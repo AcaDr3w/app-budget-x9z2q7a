@@ -320,7 +320,7 @@ async function signOut() {
 function updateAuthUI() {
     const headerBtn = $('btn-open-auth') || $('btnAuthAction');
     const statusText = $('authStatusText');
-    const settingsBtn = $('btn-settings-auth') || $('btnSettingsAuth');
+    const settingsBtn = $('btn-settings-auth') || ($('btnSettingsAuth'));
 
     if (headerBtn) {
         if (currentUser) {
@@ -746,7 +746,7 @@ function editCategory(cat) {
 async function saveCategory() {
     const input = $('newCatName');
     const iconSelect = $('newCatIcon');
-    const saveBtn = $('btnSaveCategory');
+    const saveBtn = ('btnSaveCategory');
     if (!input || !iconSelect || !saveBtn) return;
 
     const name = input.value.trim();
@@ -999,6 +999,7 @@ async function addAnnualDeadline() {
         alert('Compila mese, descrizione e importo.');
         return;
     }
+
     await db.annualDeadlines.put({ id: Date.now(), month, day, desc, amount, isPaid: false });
     $('annDeadlineDesc').value = '';
     $('annDeadlineAmount').value = '';
@@ -1363,39 +1364,6 @@ function closeRendicontoPopup(event) {
     }
     const overlay = $('popup-rendiconto');
     if (overlay) overlay.classList.remove('active');
-}
-
-async function buildRendicontoRows(type, month, prevMonth) {
-    const currentMap = {};
-    const previousMap = {};
-    if (type === 'entrate') {
-        const currentIncome = await db.income.where('month').equals(month).toArray();
-        const prevIncome = await db.income.where('month').equals(prevMonth).toArray();
-        return [{
-            label: 'Entrate',
-            currentValue: currentIncome.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-            previousValue: prevIncome.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-            color: '#10b981'
-        }];
-    }
-
-    const currentExpenses = await db.expenses.where('month').equals(month).toArray();
-    const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
-    const field = type === 'previsto' ? 'planned' : 'actual';
-    currentExpenses.forEach(item => {
-        if ((item[field] || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + Number(item[field] || 0);
-    });
-    prevExpenses.forEach(item => {
-        if ((item[field] || 0) > 0) previousMap[item.category] = (previousMap[item.category] || 0) + Number(item[field] || 0);
-    });
-
-    return Object.keys(currentMap).map(key => ({
-        label: key,
-        currentValue: currentMap[key] || 0,
-        previousValue: previousMap[key] || 0,
-        color: type === 'previsto' ? '#ff9800' : '#e53935'
-    })).filter(row => row.currentValue > 0 || row.previousValue > 0)
-      .sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
 }
 
 // =====================================================================
@@ -1853,7 +1821,7 @@ async function exportPDF() {
                 <th style="padding:9px 12px;text-align:left;border-bottom:1px solid #cbd5e1;color:#334155;">Categoria</th>
                 <th style="padding:9px 12px;text-align:left;border-bottom:1px solid #cbd5e1;color:#334155;">Note</th>
                 <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e1;color:#334155;">Pianificato</th>
-                <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e2e8f1;color:#334155;">Sostenuto</th>
+                <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e1;color:#334155;">Sostenuto</th>
             </tr></thead>
             <tbody>${sorted.map(exp => `<tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${escapeHtml(exp.category)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${escapeHtml(exp.desc)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtE(exp.planned)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:bold;">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</td></tr>`).join('')}</tbody>
         </table>

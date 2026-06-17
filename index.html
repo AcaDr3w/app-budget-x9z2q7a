@@ -22,16 +22,16 @@
     <div class="header-top">
         <h1>📊 EcoBilancio Digitale</h1>
         <div id="authContainer" class="auth-container">
-            <button id="btnAuthAction" class="btn-auth" onclick="openAuthModal()">Accedi / Registrati</button>
+            <button id="btnAuthAction" class="btn-auth">Accedi / Registrati</button>
         </div>
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
-        <button class="tab-button" id="tab-btn-history" data-tab="history-tab" aria-label="Storico" onclick="switchTab('history-tab', this)"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
+        <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
+        <button class="tab-button" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
         <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
-        <button class="tab-button" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro" onclick="switchTab('future-tab', this)"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
-        <button class="tab-button" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni" onclick="switchTab('settings-tab', this)"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
+        <button class="tab-button" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
+        <button class="tab-button" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
     </nav>
 </div>
 
@@ -41,20 +41,20 @@
     <div id="recoveryAlertBox" class="recovery-alert-box">
         <p>⚠️ Database vuoto o nuovo dispositivo rilevato.</p>
         <span style="display:block; margin-bottom:10px; font-size:12px; color:#7f1d1d;">Carica un backup .json per ripristinare i dati, oppure inizia ad inserire le tue spese.</span>
-        <button class="btn-recovery-trigger" onclick="document.getElementById('importFileInput').click()">📥 Carica Backup (.json)</button>
+        <button class="btn-recovery-trigger">📥 Carica Backup (.json)</button>
     </div>
 
     <!-- MODAL AUTH -->
-    <div id="authModal" class="popup-overlay" onclick="closeAuthModal(event)">
-        <div class="popup-panel" style="max-width: 400px; padding: 24px;" role="dialog" aria-modal="true" onclick="event.stopPropagation();">
-            <button class="popup-close" onclick="closeAuthModal(event)">×</button>
+    <div id="authModal" class="popup-overlay">
+        <div class="popup-panel" style="max-width: 400px; padding: 24px;" role="dialog" aria-modal="true">
+            <button class="popup-close">×</button>
             <h3 style="margin-top:0; color:var(--primary); font-size:18px;">Autenticazione Cloud</h3>
             <p style="font-size:13px; color:#64748b; margin-bottom:18px;">Accedi per attivare il salvataggio automatico sicuro su Supabase.</p>
-            
-            <button class="btn-gdrive" id="btnGoogleAuth" onclick="signInWithGoogle()" style="width:100%; margin-bottom: 16px; background:#4285F4; border-radius:10px; padding:12px; font-size:15px; border:none; color:white; cursor:pointer; font-weight:bold;"> Continua con Google</button>
-            
+
+            <button class="btn-gdrive" id="btnGoogleAuth" style="width:100%; margin-bottom: 16px; background:#4285F4; border-radius:10px; padding:12px; font-size:15px; border:none; color:white; cursor:pointer; font-weight:bold;">Continua con Google</button>
+
             <div style="text-align: center; margin-bottom: 16px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Oppure usa email</div>
-            
+
             <div class="input-group">
                 <label>Email</label>
                 <input type="email" id="authEmail" placeholder="La tua email">
@@ -64,34 +64,34 @@
                 <input type="password" id="authPassword" placeholder="La tua password">
             </div>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn-spesa" style="flex:1; margin-top:0;" onclick="signInWithEmail()">Accedi</button>
-                <button class="btn-action" style="flex:1; background:#0f766e; font-size:14px; padding:13px; border-radius:10px; margin-top:0;" onclick="signUpWithEmail()">Registrati</button>
+                <button class="btn-spesa" id="btnSignInEmail">Accedi</button>
+                <button class="btn-action" id="btnSignUpEmail" style="background:#0f766e; font-size:14px; padding:13px; border-radius:10px;">Registrati</button>
             </div>
         </div>
     </div>
 
-    <!-- =================== TAB 1: MESE CORRENTE =================== -->
+    <!-- TAB 1: MESE CORRENTE -->
     <div id="current-month-tab" class="tab-content active">
 
         <div class="config-bar">
             <div class="day-selector-group">
                 <label for="startCycleDay">Inizio Ciclo:</label>
-                <input type="number" id="startCycleDay" class="day-selector" min="1" max="28" value="23" onchange="changeStartCycleDay()">
+                <input type="number" id="startCycleDay" class="day-selector" min="1" max="28" value="23">
             </div>
-            <input type="month" id="currentMonth" class="month-selector" onchange="loadMonthData()">
+            <input type="month" id="currentMonth" class="month-selector">
         </div>
 
         <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
 
         <div class="summary-grid">
-            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
-            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
+            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
+            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
+            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
         </div>
 
-        <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" onclick="event.stopPropagation();">
-                <button class="popup-close" onclick="closeRendicontoPopup(event)" aria-label="Chiudi popup">×</button>
+        <div id="popup-rendiconto" class="popup-overlay">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+                <button class="popup-close">×</button>
                 <div class="popup-header">
                     <div>
                         <h3 id="popupTitle">Confronto rendiconto</h3>
@@ -110,11 +110,11 @@
             <div class="layout-column left-panel">
 
                 <div class="card">
-                    <h2 class="collapsible" onclick="toggleSection('importSection', this)">🔄 Pianificazione Ciclo</h2>
+                    <h2 class="collapsible" data-target="importSection">🔄Pianificazione Ciclo</h2>
                     <div class="collapsible-content" id="importSection">
                         <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Eredita voci dal ciclo precedente:</p>
                         <div class="import-checkbox-list" id="importCategoriesList"></div>
-                        <button class="btn-copy" style="width:100%; margin-top:10px;" onclick="copyFromPreviousMonth()">🔄 Genera Stime Selezionate</button>
+                        <button class="btn-copy" style="width:100%; margin-top:10px;" id="btnGenerateEstimates">🔄 Genera Stime Selezionate</button>
                     </div>
                 </div>
 
@@ -124,7 +124,7 @@
                         <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
                         <div class="input-group"><label>Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
                     </div>
-                    <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
+                    <button class="btn-entrate" id="btnAddIncome">Registra Entrata</button>
                 </div>
 
                 <div class="card" id="addExpenseCard">
@@ -142,7 +142,7 @@
                         <label>Quota a tuo carico % (opzionale)</label>
                         <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
                     </div>
-                    <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
+                    <button class="btn-spesa" id="btnAddExpense">Registra Spesa</button>
                 </div>
 
             </div>
@@ -152,16 +152,13 @@
 
                 <!-- HUB IA -->
                 <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
-                    <h2 class="collapsible" onclick="toggleSection('iaSection', this)">
-                        🧠 Hub IA <span class="ia-badge" id="iaProviderBadge">IA</span>
-                        <span class="desktop-only-note">su richiesta</span>
-                    </h2>
+                    <h2 class="collapsible" data-target="iaSection">🧠 Hub IA <span class="ia-badge" id="iaProviderBadge">IA</span></h2>
                     <div class="collapsible-content" id="iaSection">
                         <span id="iaStatusHint" class="ia-hint">Analisi strategica del mese corrente.</span>
                         <div class="grid-inputs" style="margin-top: 12px;">
                             <div class="input-group">
                                 <label style="color: var(--ia-color);">Motore:</label>
-                                <select id="iaProviderSelect" onchange="toggleIaProviderFields()">
+                                <select id="iaProviderSelect">
                                     <option value="browser-gemini">✨ Gemini Nano (Browser)</option>
                                     <option value="gemini">☁️ Gemini API Cloud</option>
                                     <option value="ollama">💻 Ollama Locale</option>
@@ -172,11 +169,11 @@
                                 <select id="ollamaModelSelect"><option value="">Rilevamento...</option></select>
                             </div>
                         </div>
-                        <div class="input-group" id="geminiKeyGroup" style="display: none;">
+                        <div class="input-group" id="geminiKeyGroup" style="display:none;">
                             <label style="color: var(--ia-color); font-weight: bold;">Gemini API Key:</label>
-                            <input type="password" id="geminiApiKeyInput" placeholder="Incolla la tua API Key" onchange="saveGeminiKey()">
+                            <input type="password" id="geminiApiKeyInput" placeholder="Incolla la tua API Key">
                         </div>
-                        <button class="btn-ia" id="btnAnalyseIA" onclick="runFinancialAnalysisIA()">🔍 Analisi Strategica Mese</button>
+                        <button class="btn-ia" id="btnAnalyseIA">🔍 Analisi Strategica Mese</button>
                         <div id="iaResponse" class="ia-response-box"></div>
                     </div>
                 </div>
@@ -192,34 +189,32 @@
                     <h2>📋 Rendiconto Ciclo Corrente</h2>
                     <p style="font-size: 11px; color:#64748b; margin-bottom:10px;">Tocca una riga per filtrare le voci.</p>
                     <div class="table-responsive">
-                    <div class="table-responsive" style="overflow: visible;">
                         <div id="overviewTableBody" class="flat-list-container"></div>
                         <div id="overviewTableFoot" class="flat-list-footer" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;"></div>
-                    </div>
                     </div>
                 </div>
 
                 <!-- VOCI DEL PERIODO -->
                 <div class="card">
-                    <h2 id="listTitle">📅 Distribuzione &amp; Registro Spese</h2>
+                    <h2 id="listTitle">📅 Distribuzione & Registro Spese</h2>
                     <div class="calendar-grid" id="calendarGrid"></div>
                     <div class="search-bar-container">
-                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()">
-                        <button class="btn-clear-filters" id="btnClearAllFilters" onclick="clearAllFilters()">✕ Filtri</button>
+                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data...">
+                        <button class="btn-clear-filters" id="btnClearAllFilters">✕ Filtri</button>
                     </div>
                     <h3 style="margin-top: 14px; font-size:13px; font-weight:700; color:#475569;">📋 Registro Spese</h3>
                     <div id="entriesList" style="margin-top: 8px; padding-bottom: 10px;"></div>
                     <div class="grid-inputs" style="margin-top: 14px;">
-                        <button class="btn-csv" onclick="exportCSV()">📥 CSV</button>
-                        <button class="btn-csv" style="background: #8b5cf6;" onclick="exportPDF()">📄 PDF</button>
+                        <button class="btn-csv" id="btnExportCSV">📥 CSV</button>
+                        <button class="btn-csv" id="btnExportPDF" style="background: #8b5cf6;">📄 PDF</button>
                     </div>
                 </div>
 
                 <!-- NOTE MESE -->
                 <div class="card">
-                    <h2 class="collapsible" onclick="toggleSection('notesSection', this)">📝 Note del Mese</h2>
+                    <h2 class="collapsible" data-target="notesSection">📝 Note del Mese</h2>
                     <div class="collapsible-content" id="notesSection">
-                        <div class="input-group"><label>Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..." onchange="saveNotes()"></textarea></div>
+                        <div class="input-group"><label>Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..."></textarea></div>
                         <div class="input-group"><label>Note I.A.</label><textarea id="iaNotes" class="notes-textarea notes-ia-textarea" readonly placeholder="Qui verrà salvato l'ultimo resoconto IA..."></textarea></div>
                     </div>
                 </div>
@@ -228,13 +223,13 @@
         </div>
     </div>
 
-    <!-- =================== TAB 2: STORICO PLURIMENSILE =================== -->
+    <!-- TAB 2: STORICO -->
     <div id="history-tab" class="tab-content hidden">
         <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
-            <h2 class="collapsible" onclick="toggleSection('iaHistorySection', this)">🧠 Analisi Storica I.A. Multimese</h2>
+            <h2 class="collapsible" data-target="iaHistorySection">🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
-                <button class="btn-ia" id="btnHistoryIA" onclick="runHistoryAnalysisIA()">🔍 Genera Resoconto Storico</button>
+                <button class="btn-ia" id="btnHistoryIA">🔍 Genera Resoconto Storico</button>
                 <div id="iaHistoryResponse" class="ia-response-box"></div>
             </div>
         </div>
@@ -285,7 +280,7 @@
         </div>
     </div>
 
-    <!-- =================== TAB 3: FUTURO =================== -->
+    <!-- TAB 3: FUTURO -->
     <div id="future-tab" class="tab-content hidden">
 
         <div class="card">
@@ -300,8 +295,8 @@
                 <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                     <input type="number" id="simulatedExpense" class="responsive-input" placeholder="Spesa mensile fissa €">
-                    <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
-                    <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="resetFutureSimulation()">Reset</button>
+                    <button class="btn-spesa" id="btnSimulateFuture" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;">Simula</button>
+                    <button class="btn-spesa" id="btnResetFuture" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;">Reset</button>
                 </div>
             </div>
 
@@ -318,8 +313,9 @@
             </div>
             <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
             <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
-            <button class="btn-spesa" onclick="addAnnualDeadline()" style="background: var(--warning);">Salva Scadenza</button>
+            <button class="btn-spesa" id="btnAddAnnualDeadline" style="background: var(--warning);">Salva Scadenza</button>
         </div>
+
         <div class="card">
             <h2>📋 Scadenziario Programmato</h2>
             <div id="annualDeadlinesList"></div>
@@ -330,18 +326,18 @@
             <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">
                 L'IA leggerà le proiezioni matematiche qui sopra e indicherà le categorie di spesa critiche su cui agire per proteggere o migliorare il tuo futuro finanziario.
             </p>
-            <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🧠 Attiva Analisi Predittiva I.A.</button>
+            <button class="btn-ia" id="btnFutureIA">🧠 Attiva Analisi Predittiva I.A.</button>
             <div id="iaFutureResponse" class="ia-response-box"></div>
         </div>
 
     </div>
 
-    <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
+    <!-- TAB 5: IMPOSTAZIONI -->
     <div id="settings-tab" class="tab-content hidden">
         <div class="settings-grid">
             <div class="settings-col-left">
                 <div class="card">
-                    <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
+                    <h2 class="collapsible show" data-target="categoriesSection">🛠️ Categorie</h2>
                     <div class="collapsible-content show" id="categoriesSection">
                         <div id="categoriesAdminList" style="margin-bottom: 12px;"></div>
                         <div class="grid-inputs" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -358,43 +354,23 @@
                                 <option value="🍕">🍕</option><option value="🏷️" selected>🏷️</option>
                             </select>
                             <input type="text" id="newCatName" placeholder="Nuova categoria..." style="flex: 1; min-width: 120px;">
-                            <button class="btn-spesa" id="btnSaveCategory" onclick="saveCategory()" style="margin:0; white-space: nowrap;">Aggiungi</button>
+                            <button class="btn-spesa" id="btnSaveCategory" style="margin:0; white-space: nowrap;">Aggiungi</button>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="settings-col-right">
                 <div class="card">
-                    <h2>📱 App &amp; Notifiche</h2>
+                    <h2>📱 App & Notifiche</h2>
                     <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                         <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
-                        <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
+                        <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;">
                     </div>
-                    <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa App</button>
+                    <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;">📲 Installa App</button>
                 </div>
                 <div class="card">
                     <h2>💾 Backup Dati</h2>
                     <div class="backup-action-grid">
-                        <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Esporta JSON</button>
-                        <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
-                    </div>
-                    <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
-                </div>
-                <div class="card" id="cloudSyncCard">
-                    <h2>☁️ Sincronizzazione Cloud</h2>
-                    <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Salva una copia sicura su Supabase.</p>
-                    <p id="authStatusText" style="font-size: 13px; font-weight: bold; color: #10b981; display: none;">✅ Connesso a Supabase</p>
-                    <button class="btn-ia" id="btnSettingsAuth" onclick="openAuthModal()">🔑 Accedi al Cloud</button>
-                </div>
-                <div class="card" style="border: 2px solid #ef4444; background: #fef2f2;">
-                    <h2 style="color: #ef4444; border-left-color: #ef4444;">⚠️ Zona Pericolo</h2>
-                    <button class="btn-action" style="background: #ef4444; width: 100%; padding: 12px; font-size: 14px;" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
+                        <button class="btn-backup-export" id="btnExportJSON">📤 Esporta JSON</button>
+                        <button class="btn-backup-import" id="btnImportJSON">📥 Importa JSON</button>
+                        <input type="file" id="importFileInput" class="hidden-file-input" accept=".
