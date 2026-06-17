@@ -1,16 +1,19 @@
 // =====================================================================
 // 1. CONFIGURAZIONE
 // =====================================================================
+
+// Importa il client direttamente (richiede <script type="module" ...> nell'HTML)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 const SUPABASE_URL = 'https://bkvludpqlwtntswzrhpm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_bPVweV54mHiYuQSTZd7e-A_2DGbZr-j';
-const supabase = (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function')
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-    : null;
+
+// Inizializza il client una sola volta
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
 const DB_NAME = 'BilancioDB';
-
 // =====================================================================
 // 2. DATABASE
 // =====================================================================
