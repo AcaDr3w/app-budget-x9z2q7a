@@ -67,12 +67,12 @@
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            background: #10b981 !important;
+            background: #3b82f6 !important;
             color: white;
-            box-shadow: 0 14px 28px rgba(16,185,129,0.2) !important;
+            box-shadow: 0 14px 28px rgba(59,130,246,0.2) !important;
             border: none;
         }
-        .tab-button.add-button:hover { background: #0f766e !important; }
+        .tab-button.add-button:hover { background: #2563eb !important; }
         .tab-button.add-button:active { transform: scale(0.95); }
         .tab-button:hover { color: white; background: transparent; }
         .tab-button.active {

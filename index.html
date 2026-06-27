@@ -20,15 +20,14 @@
 <div class="header">
     <div class="header-top">
         <h1>📊 EcoBilancio Digitale</h1>
-        <div id="authContainer" class="auth-container">
-            <button id="btn-open-auth" class="btn-auth">Accedi / Registrati</button>
-        </div>
+
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
+        <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📅</span><span class="tab-label">Mese</span></button>
         <button class="tab-button" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
         <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
+        <button class="tab-button" id="tab-btn-deadlines" data-tab="deadlines-tab" aria-label="Scadenze"><span class="tab-icon">🏛️</span><span class="tab-label">Scadenze</span></button>
         <button class="tab-button" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
         <button class="tab-button" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
     </nav>
@@ -43,31 +42,7 @@
         <button class="btn-recovery-trigger">📥 Carica Backup (.json)</button>
     </div>
 
-    <!-- MODAL AUTH -->
-    <div id="modal-auth" class="popup-overlay">
-        <div class="popup-panel" style="max-width: 400px; padding: 24px;" role="dialog" aria-modal="true">
-            <button id="btn-close-auth" class="popup-close">×</button>
-            <h3 style="margin-top:0; color:var(--primary); font-size:18px;">Autenticazione Cloud</h3>
-            <p style="font-size:13px; color:#64748b; margin-bottom:18px;">Accedi per attivare il salvataggio automatico sicuro su Supabase.</p>
-
-            <button class="btn-gdrive" id="btnGoogleAuth" style="width:100%; margin-bottom: 16px; background:#4285F4; border-radius:10px; padding:12px; font-size:15px; border:none; color:white; cursor:pointer; font-weight:bold;">Continua con Google</button>
-
-            <div style="text-align: center; margin-bottom: 16px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Oppure usa email</div>
-
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="authEmail" placeholder="La tua email">
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="authPassword" placeholder="La tua password">
-            </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn-spesa" id="btnSignInEmail">Accedi</button>
-                <button class="btn-action" id="btnSignUpEmail" style="background:#0f766e; font-size:14px; padding:13px; border-radius:10px;">Registrati</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modulo rimosso: spostato in Impostazioni -->
 
     <!-- TAB 1: MESE CORRENTE -->
     <div id="current-month-tab" class="tab-panel active">
@@ -193,15 +168,11 @@
                     </div>
                 </div>
 
-                <!-- VOCI DEL PERIODO -->
-                <div class="card">
-                    <h2 id="listTitle">📅 Distribuzione & Registro Spese</h2>
-                    <div class="calendar-grid" id="calendarGrid"></div>
+                    <h2 id="listTitle">📅 Registro Spese</h2>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data...">
                         <button class="btn-clear-filters" id="btnClearAllFilters">✕ Filtri</button>
                     </div>
-                    <h3 style="margin-top: 14px; font-size:13px; font-weight:700; color:#475569;">📋 Registro Spese</h3>
                     <div id="entriesList" style="margin-top: 8px; padding-bottom: 10px;"></div>
                     <div class="grid-inputs" style="margin-top: 14px;">
                         <button class="btn-csv" id="btnExportCSV">📥 CSV</button>
@@ -270,7 +241,31 @@
         </div>
     </div>
 
-    <!-- TAB 3: FUTURO -->
+    <!-- TAB 3: SCADENZE -->
+    <div id="deadlines-tab" class="tab-panel hidden">
+        <div class="card">
+            <h2>📅 Calendario Mensile</h2>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="card">
+            <h2>📅 Aggiungi Scadenza Futura</h2>
+            <div class="grid-inputs">
+                <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
+                <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
+            </div>
+            <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
+            <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
+            <button class="btn-spesa" id="btnAddAnnualDeadline" style="background: var(--warning);">Salva Scadenza</button>
+        </div>
+
+        <div class="card">
+            <h2>📋 Scadenziario Programmato</h2>
+            <div id="annualDeadlinesList"></div>
+        </div>
+    </div>
+
+    <!-- TAB 4: FUTURO -->
     <div id="future-tab" class="tab-panel hidden">
 
         <div class="card">
@@ -295,21 +290,7 @@
             <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
         </div>
 
-        <div class="card">
-            <h2>📅 Aggiungi Scadenza Futura</h2>
-            <div class="grid-inputs">
-                <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
-                <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
-            </div>
-            <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
-            <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
-            <button class="btn-spesa" id="btnAddAnnualDeadline" style="background: var(--warning);">Salva Scadenza</button>
-        </div>
 
-        <div class="card">
-            <h2>📋 Scadenziario Programmato</h2>
-            <div id="annualDeadlinesList"></div>
-        </div>
 
         <div class="card" style="border: 2px solid var(--ia-color); background: #fdfaff;">
             <h2>🤖 Analisi Predittiva I.A. (Su Richiesta)</h2>
@@ -326,6 +307,34 @@
     <div id="settings-tab" class="tab-panel hidden">
         <div class="settings-grid">
             <div class="settings-col-left">
+                <!-- AUTH CARD -->
+                <div class="card">
+                    <h2 class="collapsible show" data-target="authSection">☁️ Cloud & Sicurezza</h2>
+                    <div class="collapsible-content show" id="authSection">
+                        <div id="authContainerSettings">
+                            <p style="font-size:13px; color:#64748b; margin-bottom:12px;">Accedi per attivare il salvataggio automatico sicuro su Supabase.</p>
+                            <button class="btn-gdrive" id="btnGoogleAuth" style="width:100%; margin-bottom: 16px; background:#4285F4; border-radius:10px; padding:12px; font-size:15px; border:none; color:white; cursor:pointer; font-weight:bold;">Continua con Google</button>
+                            <div style="text-align: center; margin-bottom: 16px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Oppure usa email</div>
+                            <div class="input-group">
+                                <label>Email</label>
+                                <input type="email" id="authEmail" placeholder="La tua email">
+                            </div>
+                            <div class="input-group">
+                                <label>Password</label>
+                                <input type="password" id="authPassword" placeholder="La tua password">
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:10px;">
+                                <button class="btn-spesa" id="btnSignInEmail">Accedi</button>
+                                <button class="btn-action" id="btnSignUpEmail" style="background:#0f766e; font-size:14px; padding:13px; border-radius:10px;">Registrati</button>
+                            </div>
+                        </div>
+                        <div id="loggedInUserBox" style="display:none; background: #e0f2fe; padding: 14px; border-radius: 10px; border: 1px solid #bae6fd;">
+                            <p style="margin: 0; font-size: 14px; color: #0284c7; font-weight: bold;">✅ Connesso</p>
+                            <p id="loggedInEmail" style="margin: 4px 0 10px 0; font-size: 13px; color: #0369a1;"></p>
+                            <button id="btnSignOut" class="btn-action" style="background:#0284c7; width: 100%;">Disconnetti</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="card">
                     <h2 class="collapsible show" data-target="categoriesSection">🛠️ Categorie</h2>
                     <div class="collapsible-content show" id="categoriesSection">

@@ -6,8 +6,17 @@
 const SUPABASE_URL = 'https://bkvludpqlwtntswzrhpm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_bPVweV54mHiYuQSTZd7e-A_2DGbZr-j';
 
-// Inizializza il client usando window.supabase (dal CDN)
-const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// Inizializza il client in modo sicuro
+let supabase = null;
+try {
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } else {
+        console.warn('SDK Supabase non trovato nel window, proseguo in locale offline.');
+    }
+} catch (e) {
+    console.warn("Supabase non inizializzato o offline:", e);
+}
 
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
@@ -234,70 +243,54 @@ async function installPWA() {
 // =====================================================================
 // 7. AUTH SUPABASE
 // =====================================================================
-function openAuthModal() {
-    const modal = $('modal-auth') || $('authModal');
-    if (!modal) return;
-    modal.classList.remove('hidden');
-    modal.classList.add('active');
-}
+function updateAuthUI() {
+    const authContainer = document.getElementById('authContainerSettings');
+    const loggedInBox = document.getElementById('loggedInUserBox');
+    const loggedInEmail = document.getElementById('loggedInEmail');
 
-function closeAuthModal(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
+    if (currentUser) {
+        if (authContainer) authContainer.style.display = 'none';
+        if (loggedInBox) loggedInBox.style.display = 'block';
+        if (loggedInEmail) loggedInEmail.innerText = currentUser.email || currentUser.user_metadata?.email || "Utente Connesso";
+    } else {
+        if (authContainer) authContainer.style.display = 'block';
+        if (loggedInBox) loggedInBox.style.display = 'none';
     }
-    const modal = $('modal-auth') || $('authModal');
-    if (!modal) return;
-    modal.classList.remove('active');
-    modal.classList.add('hidden');
 }
 
 async function signInWithGoogle() {
-    if (!supabase) {
-        alert('Supabase non disponibile. Proseguo in locale.');
-        return;
-    }
+    if (!supabase) return alert('Supabase offline. Proseguo in locale.');
     try {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.origin }
-        });
+        await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
     } catch (err) {
-        console.warn('[SUPABASE] Google login fallito, proseguo in locale.', err);
-        alert('Login Google non disponibile. Proseguo in locale.');
+        console.warn('Google login fallito', err);
+        alert('Errore login Google.');
     }
 }
 
 async function signInWithEmail() {
-    if (!supabase) {
-        alert('Supabase non disponibile. Proseguo in locale.');
-        return;
-    }
-    const email = $('authEmail').value.trim();
-    const password = $('authPassword').value;
+    if (!supabase) return alert('Supabase offline. Proseguo in locale.');
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value;
     if (!email || !password) return alert('Inserisci email e password');
     try {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        closeAuthModal();
         showToast('Login effettuato!', false);
+        updateAuthUI();
     } catch (err) {
         alert('Errore login: ' + err.message);
     }
 }
 
 async function signUpWithEmail() {
-    if (!supabase) {
-        alert('Supabase non disponibile. Proseguo in locale.');
-        return;
-    }
-    const email = $('authEmail').value.trim();
-    const password = $('authPassword').value;
+    if (!supabase) return alert('Supabase offline. Proseguo in locale.');
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value;
     if (!email || !password) return alert('Inserisci email e password');
     try {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        closeAuthModal();
         alert('Controlla la tua email per confermare la registrazione!');
     } catch (err) {
         alert('Errore registrazione: ' + err.message);
@@ -306,35 +299,12 @@ async function signUpWithEmail() {
 
 async function signOut() {
     if (supabase) {
-        try {
-            await supabase.auth.signOut();
-        } catch (err) {
-            console.warn('[SUPABASE] Logout fallito.', err);
-        }
+        try { await supabase.auth.signOut(); } catch (err) { console.warn('Logout err', err); }
     }
     currentUser = null;
     realtimeChannel = null;
     updateAuthUI();
     localStorage.removeItem('supabase_first_sync_done');
-}
-
-function updateAuthUI() {
-    const headerBtn = $('btn-open-auth') || $('btnAuthAction');
-    const statusText = $('authStatusText');
-    const settingsBtn = $('btn-settings-auth') || ($('btnSettingsAuth'));
-
-    if (headerBtn) {
-        if (currentUser) {
-            headerBtn.innerText = 'Disconnetti';
-            headerBtn.onclick = signOut;
-        } else {
-            headerBtn.innerText = 'Accedi / Registrati';
-            headerBtn.onclick = openAuthModal;
-        }
-    }
-
-    if (statusText) statusText.style.display = currentUser ? 'block' : 'none';
-    if (settingsBtn) settingsBtn.style.display = currentUser ? 'none' : 'block';
 }
 
 async function setupSupabaseAuth() {
@@ -1684,34 +1654,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // SBLOCCO MODALE AUTH
-    const btnOpenAuth = document.getElementById("btn-open-auth");
-    const modalAuth = document.getElementById("modal-auth");
-    const btnCloseAuth = document.getElementById("btn-close-auth");
-
-    if (btnOpenAuth && modalAuth) {
-        btnOpenAuth.addEventListener("click", () => {
-            modalAuth.classList.remove("hidden");
-            modalAuth.style.display = "flex"; // Forzatura visiva in caso di conflitti CSS
-        });
-    }
-
-    if (btnCloseAuth && modalAuth) {
-        btnCloseAuth.addEventListener("click", () => {
-            modalAuth.classList.add("hidden");
-            modalAuth.style.display = "none";
-        });
-    }
-
     // LOGICA PULSANTE +
     const navBtnAdd = document.getElementById("nav-btn-add");
     if (navBtnAdd) {
         navBtnAdd.addEventListener("click", () => {
-            // Torna al tab "Mese"
             const currentTabBtn = document.getElementById("tab-btn-current");
             if (currentTabBtn) currentTabBtn.click();
-            
-            // Scrolla fino al modulo spese
             setTimeout(() => {
                 const addCard = document.getElementById("addExpenseCard");
                 if (addCard) {
@@ -1719,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const expActual = document.getElementById("expActual");
                     if (expActual) expActual.focus();
                 }
-            }, 100); // Piccolo timeout per permettere al tab di attivarsi
+            }, 100);
         });
     }
 
@@ -1732,6 +1680,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnGoogleAuth = document.getElementById('btnGoogleAuth');
     if (btnGoogleAuth) btnGoogleAuth.addEventListener('click', signInWithGoogle);
+
+    const btnSignOutNode = document.getElementById('btnSignOut');
+    if (btnSignOutNode) btnSignOutNode.addEventListener('click', signOut);
 
     // Inizializza i dati
     initApp();
