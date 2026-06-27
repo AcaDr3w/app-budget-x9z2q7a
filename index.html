@@ -26,11 +26,11 @@
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="nav-item active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
-        <button class="nav-item" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
-        <button class="nav-item add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
-        <button class="nav-item" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
-        <button class="nav-item" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
+        <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
+        <button class="tab-button" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
+        <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
+        <button class="tab-button" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
+        <button class="tab-button" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
     </nav>
 </div>
 
@@ -265,16 +265,7 @@
         <div class="card">
             <h2>📋 Registro Mesi Archiviati</h2>
             <div class="table-responsive">
-                <table>
-                    <thead><tr>
-                        <th>Mese</th>
-                        <th class="text-right">Entrate</th>
-                        <th class="text-right">Budget</th>
-                        <th class="text-right">Speso</th>
-                        <th class="text-right">Risparmio</th>
-                    </tr></thead>
-                    <tbody id="historyTableBody"></tbody>
-                </table>
+                <div id="historyTableBody" class="flat-list-container"></div>
             </div>
         </div>
     </div>
@@ -371,5 +362,16 @@
                     <h2>💾 Backup Dati</h2>
                     <div class="backup-action-grid">
                         <button class="btn-backup-export" id="btnExportJSON">📤 Esporta JSON</button>
-                        <button class="btn-backup-import" id="btnImportJSON">📥 Importa JSON</button>
-                        <input type="file" id="importFileInput" class="hidden-file-input" accept=".
+                        <input type="file" id="importFileInput" class="hidden-file-input" accept=".json">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- SCRIPT DEFER -->
+<script src="script.js"></script>
+</body>
+</html>

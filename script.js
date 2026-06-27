@@ -2,14 +2,12 @@
 // 1. CONFIGURAZIONE
 // =====================================================================
 
-// Importa il client direttamente (richiede <script type="module" ...> nell'HTML)
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
+// Usa il client globale fornito dal CDN nell'HTML
 const SUPABASE_URL = 'https://bkvludpqlwtntswzrhpm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_bPVweV54mHiYuQSTZd7e-A_2DGbZr-j';
 
-// Inizializza il client una sola volta
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Inizializza il client usando window.supabase (dal CDN)
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
@@ -807,8 +805,9 @@ function renderCalendar() {
     while (cursor <= range.end) {
         const ds = cursor.toISOString().slice(0, 10);
         const dayNum = cursor.getDate();
-        const hasPlanned = currentData.expenses.some(e => e.date === ds && e.planned > 0);
-        const hasDeadline = annualDeadlines.some(a => a.month === monthVal && (!a.day || Number(a.day) === dayNum) && !a.isPaid);
+        const isFuture = cursor >= new Date(new Date().setHours(0,0,0,0));
+        const hasPlanned = currentData.expenses.some(e => e.date === ds && e.planned > 0 && e.actual === 0 && isFuture);
+        const hasDeadline = annualDeadlines.some(a => a.month === monthVal && (!a.day || Number(a.day) === dayNum) && !a.isPaid && isFuture);
         const dayEl = document.createElement('div');
         dayEl.className = `calendar-day${hasPlanned || hasDeadline ? ' has-deadline' : ''}${selectedFilterDate === ds ? ' selected' : ''}`;
         dayEl.innerHTML = `${cursor.getDate()}<span>${cursor.getMonth() + 1}/${cursor.getFullYear().toString().slice(-2)}</span>`;
@@ -1104,12 +1103,23 @@ async function renderGlobalHistory() {
     if (tbody) {
         tbody.innerHTML = '';
         if (!hd.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Nessun dato storico.</td></tr>';
+            tbody.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">Nessun dato storico.</div>';
         } else {
             hd.forEach(d => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td><strong>${d.month.split('-').reverse().join('/')}</strong></td><td class="text-right">${fmtN(d.income)}</td><td class="text-right" style="color:var(--previsto);">${fmtN(d.planned)}</td><td class="text-right" style="color:var(--sostenuto);font-weight:bold;">${fmtN(d.actual)}</td><td class="text-right ${d.savings >= 0 ? 'diff-plus' : 'diff-minus'}">${fmtN(d.savings)}</td>`;
-                tbody.appendChild(tr);
+                const row = document.createElement('div');
+                row.className = 'flat-row';
+                row.innerHTML = `
+                    <div class="flat-left">
+                        <div class="flat-title-group">
+                            <span class="flat-title">${d.month.split('-').reverse().join('/')}</span>
+                            <span class="flat-subtitle">Entrate: ${fmtN(d.income)}</span>
+                        </div>
+                    </div>
+                    <div class="flat-right">
+                        <span class="flat-actual" style="color:var(--sostenuto);">${fmtN(d.actual)}</span>
+                        <span class="flat-margin ${d.savings >= 0 ? 'diff-plus' : 'diff-minus'}">${fmtN(d.savings)}</span>
+                    </div>`;
+                tbody.appendChild(row);
             });
         }
     }
@@ -1648,21 +1658,29 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Inizializzazione Event Listeners...");
 
     // SBLOCCO TAB NAVIGAZIONE
-    const navItems = document.querySelectorAll(".nav-item");
+    const navItems = document.querySelectorAll(".tab-button:not(.add-button)");
     const tabPanels = document.querySelectorAll(".tab-panel");
     
-    if(navItems.length === 0) console.error("ATTENZIONE: Nessun .nav-item trovato in HTML!");
+    if(navItems.length === 0) console.error("ATTENZIONE: Nessun .tab-button trovato in HTML!");
 
     navItems.forEach(item => {
         item.addEventListener("click", () => {
             const targetTab = item.getAttribute("data-tab");
+            if (!targetTab) return;
             console.log("Cambio tab verso:", targetTab);
             
             navItems.forEach(nav => nav.classList.remove("active"));
-            tabPanels.forEach(panel => panel.classList.remove("active"));
+            tabPanels.forEach(panel => {
+                panel.classList.remove("active");
+                panel.classList.add("hidden");
+            });
             
             item.classList.add("active");
-            document.getElementById(targetTab)?.classList.add("active");
+            const targetPanel = document.getElementById(targetTab);
+            if (targetPanel) {
+                targetPanel.classList.add("active");
+                targetPanel.classList.remove("hidden");
+            }
         });
     });
 
@@ -1685,6 +1703,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // LOGICA PULSANTE +
+    const navBtnAdd = document.getElementById("nav-btn-add");
+    if (navBtnAdd) {
+        navBtnAdd.addEventListener("click", () => {
+            // Torna al tab "Mese"
+            const currentTabBtn = document.getElementById("tab-btn-current");
+            if (currentTabBtn) currentTabBtn.click();
+            
+            // Scrolla fino al modulo spese
+            setTimeout(() => {
+                const addCard = document.getElementById("addExpenseCard");
+                if (addCard) {
+                    addCard.scrollIntoView({ behavior: "smooth", block: "center" });
+                    const expActual = document.getElementById("expActual");
+                    if (expActual) expActual.focus();
+                }
+            }, 100); // Piccolo timeout per permettere al tab di attivarsi
+        });
+    }
+
+    // AUTH LISTENERS
+    const btnSignInEmail = document.getElementById('btnSignInEmail');
+    if (btnSignInEmail) btnSignInEmail.addEventListener('click', signInWithEmail);
+
+    const btnSignUpEmail = document.getElementById('btnSignUpEmail');
+    if (btnSignUpEmail) btnSignUpEmail.addEventListener('click', signUpWithEmail);
+
+    const btnGoogleAuth = document.getElementById('btnGoogleAuth');
+    if (btnGoogleAuth) btnGoogleAuth.addEventListener('click', signInWithGoogle);
+
     // Inizializza i dati
     initApp();
+    setupSupabaseAuth();
 });
