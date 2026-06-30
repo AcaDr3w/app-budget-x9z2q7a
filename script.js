@@ -2,21 +2,8 @@
 // 1. CONFIGURAZIONE
 // =====================================================================
 
-// Usa il client globale fornito dal CDN nell'HTML
-const SUPABASE_URL = 'https://bkvludpqlwtntswzrhpm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_bPVweV54mHiYuQSTZd7e-A_2DGbZr-j';
-
-// Inizializza il client in modo sicuro
+// Supabase e Auth disabilitati - Solo Locale (IndexedDB)
 let supabase = null;
-try {
-    if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } else {
-        console.warn('SDK Supabase non trovato nel window, proseguo in locale offline.');
-    }
-} catch (e) {
-    console.warn("Supabase non inizializzato o offline:", e);
-}
 
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
@@ -152,18 +139,8 @@ function showToast(msg, isError = false) {
     }, 3000);
 }
 
-function isCloudReady() {
-    return !!supabase && !!currentUser;
-}
-
-async function safeCloudCall(label, fn) {
-    if (!isCloudReady()) return;
-    try {
-        await fn();
-    } catch (err) {
-        console.warn(`[SUPABASE] ${label} fallita, proseguo in locale.`, err);
-    }
-}
+function isCloudReady() { return false; }
+async function safeCloudCall(label, fn) { /* Disabilitato */ }
 
 // =====================================================================
 // 6. PWA / SERVICE WORKER
@@ -243,166 +220,14 @@ async function installPWA() {
 // =====================================================================
 // 7. AUTH SUPABASE
 // =====================================================================
-function updateAuthUI() {
-    const authContainer = document.getElementById('authContainerSettings');
-    const loggedInBox = document.getElementById('loggedInUserBox');
-    const loggedInEmail = document.getElementById('loggedInEmail');
-
-    if (currentUser) {
-        if (authContainer) authContainer.style.display = 'none';
-        if (loggedInBox) loggedInBox.style.display = 'block';
-        if (loggedInEmail) loggedInEmail.innerText = currentUser.email || currentUser.user_metadata?.email || "Utente Connesso";
-    } else {
-        if (authContainer) authContainer.style.display = 'block';
-        if (loggedInBox) loggedInBox.style.display = 'none';
-    }
-}
-
-async function signInWithGoogle() {
-    if (!supabase) return alert('Supabase offline. Proseguo in locale.');
-    try {
-        await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-    } catch (err) {
-        console.warn('Google login fallito', err);
-        alert('Errore login Google.');
-    }
-}
-
-async function signInWithEmail() {
-    if (!supabase) return alert('Supabase offline. Proseguo in locale.');
-    const email = document.getElementById('authEmail')?.value.trim();
-    const password = document.getElementById('authPassword')?.value;
-    if (!email || !password) return alert('Inserisci email e password');
-    try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        showToast('Login effettuato!', false);
-        updateAuthUI();
-    } catch (err) {
-        alert('Errore login: ' + err.message);
-    }
-}
-
-async function signUpWithEmail() {
-    if (!supabase) return alert('Supabase offline. Proseguo in locale.');
-    const email = document.getElementById('authEmail')?.value.trim();
-    const password = document.getElementById('authPassword')?.value;
-    if (!email || !password) return alert('Inserisci email e password');
-    try {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        alert('Controlla la tua email per confermare la registrazione!');
-    } catch (err) {
-        alert('Errore registrazione: ' + err.message);
-    }
-}
-
-async function signOut() {
-    if (supabase) {
-        try { await supabase.auth.signOut(); } catch (err) { console.warn('Logout err', err); }
-    }
-    currentUser = null;
-    realtimeChannel = null;
-    updateAuthUI();
-    localStorage.removeItem('supabase_first_sync_done');
-}
-
-async function setupSupabaseAuth() {
-    if (!supabase) {
-        console.warn('[SUPABASE] Libreria non caricata. App locale attiva.');
-        updateAuthUI();
-        return;
-    }
-
-    try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        currentUser = data?.session?.user || null;
-
-        if (currentUser && !localStorage.getItem('supabase_first_sync_done')) {
-            await syncLocalToSupabaseFirstTime();
-            localStorage.setItem('supabase_first_sync_done', 'true');
-        }
-
-        updateAuthUI();
-
-        if (currentUser) {
-            await subscribeSupabaseRealtime();
-        }
-
-        supabase.auth.onAuthStateChange(async (_event, session) => {
-            currentUser = session?.user || null;
-            updateAuthUI();
-            if (currentUser) {
-                try {
-                    await subscribeSupabaseRealtime();
-                    if (!localStorage.getItem('supabase_first_sync_done')) {
-                        await syncLocalToSupabaseFirstTime();
-                        localStorage.setItem('supabase_first_sync_done', 'true');
-                    }
-                } catch (e) {
-                    console.warn("Supabase offline:", e);
-                }
-            } else {
-                realtimeChannel = null;
-            }
-        });
-    } catch (e) {
-        console.warn("Supabase offline:", e);
-        currentUser = null;
-        updateAuthUI();
-    }
-}
-
-async function subscribeSupabaseRealtime() {
-    if (!isCloudReady() || realtimeChannel) return;
-    try {
-        realtimeChannel = supabase
-            .channel(`local-sync-${currentUser.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'income' }, () => loadMonthData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => loadMonthData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => initCategories())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'annual_deadlines' }, () => loadAnnualDeadlines())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'months' }, () => loadMonthData())
-            .subscribe();
-    } catch (e) {
-        console.warn("Supabase offline:", e);
-    }
-}
-
-async function syncLocalToSupabaseFirstTime() {
-    if (!isCloudReady()) return;
-    try {
-        const categories = await db.categories.toArray();
-        const months = await db.months.toArray();
-        const incomes = await db.income.toArray();
-        const expenses = await db.expenses.toArray();
-        const deadlines = await db.annualDeadlines.toArray();
-        const savingsGoals = await db.savingsGoals.toArray();
-        const settings = await db.settings.toArray();
-
-        if (categories.length) await supabase.from('categories').upsert(categories.map(c => ({ name: c.name, icon: c.icon || '🏷️', user_id: currentUser.id })));
-        if (months.length) await supabase.from('months').upsert(months.map(m => ({ month: m.month, total_income: m.totalIncome, total_planned: m.totalPlanned, total_actual: m.totalActual, notes: m.notes || '', ia_notes: m.iaNotes || '', user_id: currentUser.id })));
-        if (incomes.length) await supabase.from('income').upsert(incomes.map(i => ({ id: i.id, month: i.month, descrizione: i.desc, amount: i.amount, user_id: currentUser.id })));
-        if (expenses.length) await supabase.from('expenses').upsert(expenses.map(e => ({ id: e.id, month: e.month, date: e.date, category: e.category, descrizione: e.desc, planned: e.planned, actual: e.actual, shared_percentage: e.sharedPercentage || 0, user_id: currentUser.id })));
-        if (deadlines.length) await supabase.from('annual_deadlines').upsert(deadlines.map(d => ({ id: d.id, month: d.month, day: d.day || '', descrizione: d.desc, amount: d.amount, is_paid: !!d.isPaid, user_id: currentUser.id })));
-        if (savingsGoals.length) await supabase.from('savings_goals').upsert(savingsGoals.map(s => ({ id: s.id, name: s.name, target_amount: s.targetAmount, importo_accumulato: s.importo_accumulato || 0, created_at: s.createdAt, user_id: currentUser.id })));
-        if (settings.length) await supabase.from('settings').upsert(settings.map(s => ({ id: s.key, key: s.key, value: s.value, user_id: currentUser.id })));
-
-        const versionState = await db.syncState.get('versionData');
-        await supabase.from('sync_state').upsert({
-            id: 'versionData',
-            counter: (versionState?.counter || 0) + 1,
-            device_id: getDeviceId(),
-            lastUpdated: Date.now(),
-            user_id: currentUser.id
-        });
-
-        showToast('✅ Primo backup su Cloud completato', false);
-    } catch (e) {
-        console.warn("Supabase offline:", e);
-    }
-}
+function updateAuthUI() {}
+async function setupSupabaseAuth() {}
+async function subscribeSupabaseRealtime() {}
+async function syncLocalToSupabaseFirstTime() {}
+async function signInWithGoogle() {}
+async function signInWithEmail() {}
+async function signUpWithEmail() {}
+async function signOut() {}
 
 // =====================================================================
 // 8. INIZIALIZZAZIONE UI
@@ -1514,6 +1339,149 @@ async function resetTotalDB() {
 // =====================================================================
 // 16. NOTIFICHE
 // =====================================================================
+
+// =====================================================================
+// FUNZIONI MANCANTI DI INSERIMENTO (LOCAL-FIRST DEXIE)
+// =====================================================================
+
+async function addIncome() {
+    try {
+        const desc = $('incDesc').value.trim();
+        const amount = Number($('incAmount').value);
+        const month = $('currentMonth').value;
+        if (!desc || isNaN(amount) || amount <= 0 || !month) return alert('Inserisci dati validi per l\'entrata');
+        
+        const newInc = { id: Date.now().toString(), month, desc, amount };
+        await db.income.put(newInc);
+        currentData.income.push(newInc);
+        $('incDesc').value = '';
+        $('incAmount').value = '';
+        await updateUI();
+        showToast('Entrata registrata!');
+    } catch(e) { console.error("Errore addIncome:", e); }
+}
+
+async function addExpense() {
+    try {
+        const date = $('expDate').value;
+        const category = $('expenseCategory').value;
+        const desc = $('expDesc').value.trim();
+        const planned = Number($('expPlanned').value) || 0;
+        const actual = Number($('expActual').value) || 0;
+        const sharedPercentage = Number($('expShared').value) || 0;
+        const month = $('currentMonth').value;
+
+        if (!date || !category || (!planned && !actual) || !month) {
+            return alert('Completa data, categoria e almeno un importo!');
+        }
+
+        const newExp = {
+            id: Date.now().toString(),
+            month,
+            date,
+            category,
+            desc,
+            planned,
+            actual,
+            sharedPercentage
+        };
+
+        await db.expenses.put(newExp);
+        currentData.expenses.push(newExp);
+        $('expDesc').value = '';
+        $('expPlanned').value = '';
+        $('expActual').value = '';
+        $('expShared').value = '';
+        await updateUI();
+        showToast('Spesa registrata!');
+    } catch(e) { console.error("Errore addExpense:", e); }
+}
+
+async function payExpense(id) {
+    try {
+        const expIndex = currentData.expenses.findIndex(e => e.id === id);
+        if (expIndex === -1) return;
+        const exp = currentData.expenses[expIndex];
+        const payAmount = prompt(`Quanto hai pagato per "${exp.desc || exp.category}"?`, exp.planned);
+        if (payAmount === null) return;
+        
+        const actual = Number(payAmount);
+        if (isNaN(actual) || actual < 0) return alert('Importo non valido.');
+        
+        exp.actual = actual;
+        await db.expenses.put(exp);
+        await updateUI();
+        showToast('Spesa pagata!');
+    } catch(e) { console.error("Errore payExpense:", e); }
+}
+
+async function deleteEntry(type, id) {
+    try {
+        if (!confirm('Vuoi davvero eliminare questa voce?')) return;
+        if (type === 'income') {
+            await db.income.delete(id);
+            currentData.income = currentData.income.filter(i => i.id !== id);
+        } else if (type === 'expense') {
+            await db.expenses.delete(id);
+            currentData.expenses = currentData.expenses.filter(e => e.id !== id);
+        }
+        await updateUI();
+        showToast('Voce eliminata!');
+    } catch(e) { console.error("Errore deleteEntry:", e); }
+}
+
+async function saveCategory() {
+    try {
+        const name = $('newCatName').value.trim();
+        const icon = $('newCatIcon').value;
+        if (!name) return alert('Inserisci un nome per la categoria.');
+        
+        const exists = await db.categories.get(name);
+        if (exists) return alert('Categoria già esistente.');
+        
+        await db.categories.put({ name, icon });
+        $('newCatName').value = '';
+        await initCategories();
+        showToast('Categoria aggiunta!');
+    } catch(e) { console.error("Errore saveCategory:", e); }
+}
+
+async function generateEstimates() {
+    try {
+        const checkboxes = document.querySelectorAll('.import-checkbox-item input:checked');
+        if (checkboxes.length === 0) return alert('Seleziona almeno una categoria.');
+        
+        const month = $('currentMonth').value;
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0,10);
+        
+        let added = 0;
+        for (const cb of checkboxes) {
+            const catName = cb.value;
+            const plannedAmount = Number(cb.dataset.amount);
+            if (plannedAmount > 0) {
+                const newExp = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2,5),
+                    month,
+                    date: dateStr,
+                    category: catName,
+                    desc: 'Stima generata',
+                    planned: plannedAmount,
+                    actual: 0,
+                    sharedPercentage: 0
+                };
+                await db.expenses.put(newExp);
+                currentData.expenses.push(newExp);
+                added++;
+            }
+        }
+        
+        if (added > 0) {
+            await updateUI();
+            showToast(`${added} stime generate!`);
+        }
+    } catch(e) { console.error("Errore generateEstimates:", e); }
+}
 function togglePushNotifications() {
     const toggle = $('pushNotifToggle');
     if (toggle.checked) {
@@ -1608,20 +1576,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // AUTH LISTENERS
-    const btnSignInEmail = document.getElementById('btnSignInEmail');
-    if (btnSignInEmail) btnSignInEmail.addEventListener('click', signInWithEmail);
-
-    const btnSignUpEmail = document.getElementById('btnSignUpEmail');
-    if (btnSignUpEmail) btnSignUpEmail.addEventListener('click', signUpWithEmail);
-
-    const btnGoogleAuth = document.getElementById('btnGoogleAuth');
-    if (btnGoogleAuth) btnGoogleAuth.addEventListener('click', signInWithGoogle);
-
-    const btnSignOutNode = document.getElementById('btnSignOut');
-    if (btnSignOutNode) btnSignOutNode.addEventListener('click', signOut);
+    // AUTH LISTENERS DISABILITATI
 
     // Inizializza i dati
     initApp();
-    setupSupabaseAuth();
+
+    // BINDING DEGLI EVENTI MANCANTI E COLLAPSIBLES
+    const btnAddIncome = document.getElementById('btnAddIncome');
+    if (btnAddIncome) btnAddIncome.addEventListener('click', addIncome);
+
+    const btnAddExpense = document.getElementById('btnAddExpense');
+    if (btnAddExpense) btnAddExpense.addEventListener('click', addExpense);
+
+    const btnSaveCategory = document.getElementById('btnSaveCategory');
+    if (btnSaveCategory) btnSaveCategory.addEventListener('click', saveCategory);
+
+    const btnGenerateEstimates = document.getElementById('btnGenerateEstimates');
+    if (btnGenerateEstimates) btnGenerateEstimates.addEventListener('click', generateEstimates);
+
+    const pushNotifToggle = document.getElementById('pushNotifToggle');
+    if (pushNotifToggle) pushNotifToggle.addEventListener('change', togglePushNotifications);
+
+    document.querySelectorAll('.collapsible').forEach(header => {
+        header.addEventListener('click', () => {
+            try {
+                const targetId = header.getAttribute('data-target');
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.classList.toggle('show');
+                    header.classList.toggle('active');
+                }
+            } catch(e) { console.error("Errore collapsible:", e); }
+        });
+    });
+
 });
