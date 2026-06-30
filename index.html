@@ -11,7 +11,7 @@
     <title>📊 EcoBilancio Digitale</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,8 +26,6 @@
     <nav class="navigation-tabs" id="mainNav">
         <button class="tab-button active" id="tab-btn-current" data-tab="current-month-tab" aria-label="Mese"><span class="tab-icon">📅</span><span class="tab-label">Mese</span></button>
         <button class="tab-button" id="tab-btn-history" data-tab="history-tab" aria-label="Storico"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
-        <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
-        <button class="tab-button" id="tab-btn-deadlines" data-tab="deadlines-tab" aria-label="Scadenze"><span class="tab-icon">🏛️</span><span class="tab-label">Scadenze</span></button>
         <button class="tab-button" id="tab-btn-future" data-tab="future-tab" aria-label="Futuro"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
         <button class="tab-button" id="tab-btn-settings" data-tab="settings-tab" aria-label="Impostazioni"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
     </nav>
@@ -168,16 +166,12 @@
                     </div>
                 </div>
 
-                    <h2 id="listTitle">📅 Registro Spese</h2>
+                    <h2 id="listTitle">📅 Voci del Periodo</h2>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data...">
                         <button class="btn-clear-filters" id="btnClearAllFilters">✕ Filtri</button>
                     </div>
                     <div id="entriesList" style="margin-top: 8px; padding-bottom: 10px;"></div>
-                    <div class="grid-inputs" style="margin-top: 14px;">
-                        <button class="btn-csv" id="btnExportCSV">📥 CSV</button>
-                        <button class="btn-csv" id="btnExportPDF" style="background: #8b5cf6;">📄 PDF</button>
-                    </div>
                 </div>
 
                 <!-- NOTE MESE -->
@@ -241,8 +235,8 @@
         </div>
     </div>
 
-    <!-- TAB 3: SCADENZE -->
-    <div id="deadlines-tab" class="tab-panel hidden">
+    <!-- TAB 3: FUTURO (Hub Pianificazione) -->
+    <div id="future-tab" class="tab-panel hidden">
         <div class="card">
             <h2>📅 Calendario Mensile</h2>
             <div class="calendar-grid" id="calendarGrid"></div>
@@ -263,10 +257,6 @@
             <h2>📋 Scadenziario Programmato</h2>
             <div id="annualDeadlinesList"></div>
         </div>
-    </div>
-
-    <!-- TAB 4: FUTURO -->
-    <div id="future-tab" class="tab-panel hidden">
 
         <div class="card">
             <h2>🔮 E nel futuro come sto messo?</h2>
@@ -379,6 +369,9 @@
     </div>
 
 </div>
+
+<!-- BOTTONE FLUTTUANTE (+) -->
+<button id="floating-add-btn" class="fab-button" aria-label="Aggiungi spesa rapida">+</button>
 
 <!-- SCRIPT DEFER -->
 <script src="script.js"></script>

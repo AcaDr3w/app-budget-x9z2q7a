@@ -334,17 +334,21 @@ async function setupSupabaseAuth() {
             currentUser = session?.user || null;
             updateAuthUI();
             if (currentUser) {
-                await subscribeSupabaseRealtime();
-                if (!localStorage.getItem('supabase_first_sync_done')) {
-                    await syncLocalToSupabaseFirstTime();
-                    localStorage.setItem('supabase_first_sync_done', 'true');
+                try {
+                    await subscribeSupabaseRealtime();
+                    if (!localStorage.getItem('supabase_first_sync_done')) {
+                        await syncLocalToSupabaseFirstTime();
+                        localStorage.setItem('supabase_first_sync_done', 'true');
+                    }
+                } catch (e) {
+                    console.warn("Supabase offline:", e);
                 }
             } else {
                 realtimeChannel = null;
             }
         });
-    } catch (err) {
-        console.warn('[SUPABASE] Sessione non recuperata. App locale attiva.', err);
+    } catch (e) {
+        console.warn("Supabase offline:", e);
         currentUser = null;
         updateAuthUI();
     }
@@ -361,8 +365,8 @@ async function subscribeSupabaseRealtime() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'annual_deadlines' }, () => loadAnnualDeadlines())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'months' }, () => loadMonthData())
             .subscribe();
-    } catch (err) {
-        console.warn('[SUPABASE] Realtime non attivo, solo locale.', err);
+    } catch (e) {
+        console.warn("Supabase offline:", e);
     }
 }
 
@@ -395,8 +399,8 @@ async function syncLocalToSupabaseFirstTime() {
         });
 
         showToast('✅ Primo backup su Cloud completato', false);
-    } catch (err) {
-        console.warn('[SUPABASE] Primo backup fallito, dati locali intatti.', err);
+    } catch (e) {
+        console.warn("Supabase offline:", e);
     }
 }
 
@@ -1381,74 +1385,7 @@ async function runFuturePredictionIA() {
 // =====================================================================
 // 15. EXPORT / BACKUP / RESET
 // =====================================================================
-async function exportPDF() {
-    if (typeof html2pdf === 'undefined') {
-        alert('Libreria PDF non caricata. Riprova.');
-        return;
-    }
-    const month = $('currentMonth').value;
-    const fileName = prompt('Nome del file PDF:', `Report_${month}`);
-    if (!fileName) return;
-
-    const totalIncome = currentData.income.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const totalActual = currentData.expenses.reduce((sum, item) => sum + Number(item.actual || 0), 0);
-    const net = totalIncome - totalActual;
-    const sorted = [...currentData.expenses].sort((a, b) => a.category.localeCompare(b.category));
-    const iaNotes = $('iaNotes').value;
-
-    const htmlString = `
-    <div style="padding:40px;background:white;color:#1e293b;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;width:794px;">
-        <div style="text-align:center;border-bottom:3px solid #3b82f6;padding-bottom:18px;margin-bottom:24px;">
-            <h1 style="font-size:26px;margin:0;color:#1e293b;font-weight:800;">Resoconto Finanziario</h1>
-            <h2 style="font-size:16px;color:#64748b;font-weight:400;margin-top:6px;">Periodo: ${month}</h2>
-        </div>
-        <div style="display:table;width:100%;margin-bottom:28px;background:#f8fafc;padding:16px;border-radius:10px;box-sizing:border-box;">
-            <div style="display:table-cell;text-align:center;width:33%;"><div style="font-size:11px;font-weight:bold;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Entrate Totali</div><div style="font-size:22px;font-weight:800;color:#10b981;">${fmtE(totalIncome)}</div></div>
-            <div style="display:table-cell;text-align:center;width:33%;"><div style="font-size:11px;font-weight:bold;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Spese Sostenute</div><div style="font-size:22px;font-weight:800;color:#e53935;">${fmtE(totalActual)}</div></div>
-            <div style="display:table-cell;text-align:center;width:33%;"><div style="font-size:11px;font-weight:bold;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Risparmio Netto</div><div style="font-size:22px;font-weight:800;color:${net >= 0 ? '#10b981' : '#e53935'};">${fmtE(net)}</div></div>
-        </div>
-        <h3 style="font-size:15px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:12px;color:#1e293b;">Dettaglio per Categoria</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px;">
-            <thead><tr style="background:#f1f5f9;">
-                <th style="padding:9px 12px;text-align:left;border-bottom:1px solid #cbd5e1;color:#334155;">Categoria</th>
-                <th style="padding:9px 12px;text-align:left;border-bottom:1px solid #cbd5e1;color:#334155;">Note</th>
-                <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e1;color:#334155;">Pianificato</th>
-                <th style="padding:9px 12px;text-align:right;border-bottom:1px solid #cbd5e1;color:#334155;">Sostenuto</th>
-            </tr></thead>
-            <tbody>${sorted.map(exp => `<tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${escapeHtml(exp.category)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${escapeHtml(exp.desc)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtE(exp.planned)}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:bold;">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</td></tr>`).join('')}</tbody>
-        </table>
-        ${iaNotes.trim() ? `<div style="margin-bottom:24px;"><h3 style="font-size:14px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:10px;color:#8b5cf6;">Analisi I.A. del Mese</h3><div style="background:#fdfaff;border:1px solid #e9d5ff;padding:14px;border-radius:8px;font-size:12px;line-height:1.6;color:#581c87;white-space:pre-line;">${escapeHtml(iaNotes)}</div></div>` : ''}
-    </div>`;
-
-    const element = document.createElement('div');
-    element.innerHTML = htmlString;
-    html2pdf().set({
-        margin: [10, 10, 10, 10],
-        filename: `${fileName}.pdf`,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(element).save();
-}
-
-async function exportCSV() {
-    const month = $('currentMonth').value;
-    const fileName = prompt('Nome file CSV:', `bilancio_${month}`);
-    if (!fileName) return;
-
-    let csv = `Report: ${month}\n\nENTRATE\nCausale;Importo\n`;
-    currentData.income.forEach(item => { csv += `"${item.desc}";"${Number(item.amount || 0).toFixed(2)}"\n`; });
-    csv += '\nSPESE\nData;Categoria;Nota;Pianificato;Sostenuto\n';
-    currentData.expenses.forEach(item => {
-        csv += `"${item.date}";"${item.category}";"${item.desc}";"${Number(item.planned || 0).toFixed(2)}";"${Number(item.actual || 0).toFixed(2)}"\n`;
-    });
-
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${fileName}.csv`;
-    link.click();
-}
+// Rimosse funzioni export PDF e CSV
 
 async function getCompiledBackupData() {
     const versionState = await db.syncState.get('versionData');
@@ -1655,9 +1592,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // LOGICA PULSANTE +
-    const navBtnAdd = document.getElementById("nav-btn-add");
-    if (navBtnAdd) {
-        navBtnAdd.addEventListener("click", () => {
+    const floatingAddBtn = document.getElementById("floating-add-btn");
+    if (floatingAddBtn) {
+        floatingAddBtn.addEventListener("click", () => {
             const currentTabBtn = document.getElementById("tab-btn-current");
             if (currentTabBtn) currentTabBtn.click();
             setTimeout(() => {
