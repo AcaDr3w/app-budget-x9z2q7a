@@ -1230,8 +1230,15 @@ function getPreviousMonthStrings(month, count) {
 }
 
 async function runFinancialAnalysisIA() {
+    const errorBox = document.getElementById('hub-ia-error-box');
+    if(errorBox) errorBox.style.display = 'none';
+
     const currentMonth = document.getElementById('currentMonth').value;
-    if (!currentMonth) { document.getElementById('iaResponse').innerText = '❌ Mese corrente non selezionato.'; return; }
+    if (!currentMonth) { 
+        if(errorBox) { errorBox.textContent = 'Errore: Mese corrente non selezionato.'; errorBox.style.display = 'block'; }
+        return; 
+    }
+    
     const prevMonths = getPreviousMonthStrings(currentMonth, 2);
     const categories = [...new Set(currentData.expenses.map(e => e.category))].sort();
     const historicalExpenses = await db.expenses.where('month').anyOf(prevMonths).toArray();
@@ -1247,10 +1254,73 @@ async function runFinancialAnalysisIA() {
         const prev2 = historyMap[`${cat}|${prevMonths[1]}`] || 0;
         dataText += `  - ${cat}: corrente ${fmtE(currentTotal)}; ${prevMonths[0]} ${fmtE(prev1)}; ${prevMonths[1]} ${fmtE(prev2)}\n`;
     });
-    const prompt = `Agisci come un consulente finanziario cinico e conciso. Lingua: Italiano. Analizza i seguenti dati di spesa del mese corrente e il confronto con i due mesi passati: ${dataText}Identifica le 2 categorie meno importanti (es. svago, abbonamenti, extra) dove l'utente sta spendendo di più rispetto al solito o in assoluto. Scrivi un resoconto di massimo 3 frasi indicando quanto si potrebbe risparmiare e un consiglio pratico per tagliare subito quelle spese.`;
-    await callAIEndpoint(prompt, 'iaResponse', 'btnAnalyseIA');
-    const txt = document.getElementById('iaResponse').innerText;
-    document.getElementById('iaNotes').value = txt; await saveNotes();
+    const promptTesto = `Agisci come un consulente finanziario cinico e conciso. Lingua: Italiano. Analizza i seguenti dati di spesa del mese corrente e il confronto con i due mesi passati: ${dataText}Identifica le 2 categorie meno importanti (es. svago, abbonamenti, extra) dove l'utente sta spendendo di più rispetto al solito o in assoluto. Scrivi un resoconto di massimo 3 frasi indicando quanto si potrebbe risparmiare e un consiglio pratico per tagliare subito quelle spese.`;
+
+    const engine = document.getElementById('ai-engine-select') ? document.getElementById('ai-engine-select').value : 'openrouter';
+
+    if (engine === 'openrouter') {
+        const apiKey = document.getElementById('openrouter-key-input') ? document.getElementById('openrouter-key-input').value.trim() : '';
+        const model = document.getElementById('openrouter-model-select') ? document.getElementById('openrouter-model-select').value : 'google/gemini-2.5-flash:free';
+        
+        if (!apiKey) {
+            if(errorBox) {
+                errorBox.textContent = "Errore: Inserire la OpenRouter API Key nell'apposito campo.";
+                errorBox.style.display = 'block';
+            }
+            return;
+        }
+
+        try {
+            document.getElementById('btn-analisi-strategica').textContent = "Elaborazione in corso...";
+            document.getElementById('btn-analisi-strategica').disabled = true;
+
+            const response = await window.fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [{ role: 'user', content: promptTesto }]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`${response.status} - Controlla chiave o modello`);
+            }
+
+            const data = await response.json();
+            const rispostaTesto = data.choices[0].message.content;
+            
+            document.getElementById('iaNotes').value = rispostaTesto; 
+            await saveNotes();
+
+        } catch (err) {
+            if(errorBox) {
+                errorBox.textContent = "Errore: " + err.message;
+                errorBox.style.display = 'block';
+            }
+        } finally {
+            document.getElementById('btn-analisi-strategica').textContent = "Analisi Strategica Mese";
+            document.getElementById('btn-analisi-strategica').disabled = false;
+        }
+    } else {
+        try {
+            document.getElementById('btn-analisi-strategica').textContent = "Elaborazione Ollama...";
+            document.getElementById('btn-analisi-strategica').disabled = true;
+            const res = await window.fetch('http://localhost:11434/api/generate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model: 'llama3', prompt:promptTesto, stream:false})});
+            if(!res.ok) throw new Error("Ollama error");
+            const data = await res.json();
+            document.getElementById('iaNotes').value = data.response; 
+            await saveNotes();
+        } catch(e) {
+            if(errorBox) { errorBox.textContent = "Errore Ollama: " + e.message; errorBox.style.display = 'block'; }
+        } finally {
+            document.getElementById('btn-analisi-strategica').textContent = "Analisi Strategica Mese";
+            document.getElementById('btn-analisi-strategica').disabled = false;
+        }
+    }
 }
 async function runHistoryAnalysisIA() {
     const months = await db.months.orderBy('month').toArray();

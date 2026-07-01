@@ -124,44 +124,35 @@
             <div class="layout-column right-panel">
 
                 <!-- HUB IA -->
-                <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
-                    <h2 class="collapsible" onclick="toggleSection('iaSection', this)">
-                        🧠 Hub IA <span class="ia-badge" id="iaProviderBadge">IA</span>
-                        <span class="desktop-only-note">su richiesta</span>
-                    </h2>
-                    <div class="collapsible-content" id="iaSection">
-                        <span id="iaStatusHint" class="ia-hint">Analisi strategica del mese corrente.</span>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
-                            <div class="input-group">
-                                <label style="color: var(--ia-color);">Motore:</label>
-                                <select id="iaProviderSelect" onchange="toggleIaProviderFields()">
-                                    <option value="openrouter" selected>🌐 OpenRouter (Default)</option>
-                                    <option value="browser-gemini">✨ Gemini Nano (Browser)</option>
-                                    <option value="gemini">☁️ Gemini API Cloud</option>
-                                    <option value="ollama">💻 Ollama Locale</option>
-                                </select>
-                            </div>
-                            <div class="input-group" id="aiModelGroup" style="display: flex;">
-                                <label id="aiModelLabel" style="color: var(--ia-color);">Modello OpenRouter:</label>
-                                <select id="aiModelSelect">
-                                    <option value="google/gemini-2.5-flash:free" selected>google/gemini-2.5-flash:free</option>
-                                    <option value="meta-llama/llama-3.3-70b-instruct:free">meta-llama/llama-3.3-70b-instruct:free</option>
-                                    <option value="deepseek/deepseek-chat:free">deepseek/deepseek-chat:free</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="input-group" id="openRouterKeyGroup" style="display: flex; margin-top: 10px;">
-                            <label style="color: var(--ia-color); font-weight: bold;">OPENROUTER API KEY:</label>
-                            <input type="password" id="openRouterApiKeyInput" placeholder="sk-or-v1-..." onchange="saveOpenRouterKey()">
-                        </div>
-                        <div class="input-group" id="geminiKeyGroup" style="display: none;">
-                            <label style="color: var(--ia-color); font-weight: bold;">Gemini API Key:</label>
-                            <input type="password" id="geminiApiKeyInput" placeholder="Incolla la tua API Key" onchange="saveGeminiKey()">
-                        </div>
-                        <button class="btn-ia" id="btnAnalyseIA" onclick="runFinancialAnalysisIA()">🔍 Analisi Strategica Mese</button>
-                        <div id="iaResponse" class="ia-response-box"></div>
-                    </div>
-                </div>
+<div id="hub-ia-container" style="border: 1px solid #9061f9; padding: 15px; border-radius: 8px; background: #f9f5ff;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <strong>HUB IA</strong>
+    <span style="background: #9061f9; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">OPENROUTER</span>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+    <div>
+      <label>MOTORE:</label>
+      <select id="ai-engine-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        <option value="openrouter" selected>OpenRouter (Default)</option>
+        <option value="ollama">Ollama</option>
+      </select>
+    </div>
+    <div>
+      <label>MODELLO OPENROUTER:</label>
+      <select id="openrouter-model-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        <option value="google/gemini-2.5-flash:free">google/gemini-2.5-flash:free</option>
+        <option value="meta-llama/llama-3.3-70b-instruct:free">meta-llama/llama-3.3-70b-instruct:free</option>
+        <option value="deepseek/deepseek-chat:free">deepseek/deepseek-chat:free</option>
+      </select>
+    </div>
+  </div>
+  <div style="margin-bottom: 15px;">
+    <label>OPENROUTER API KEY:</label>
+    <input type="password" id="openrouter-key-input" placeholder="sk-or-v1-..." style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+  </div>
+  <button id="btn-analisi-strategica" style="width: 100%; background: #9061f9; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="runFinancialAnalysisIA()">Analisi Strategica Mese</button>
+  <div id="hub-ia-error-box" style="margin-top: 10px; padding: 10px; background: #fde8e8; color: #e02424; border-radius: 4px; display: none;"></div>
+</div>
 
                 <!-- GRAFICI -->
                 <div class="charts-wrapper">
