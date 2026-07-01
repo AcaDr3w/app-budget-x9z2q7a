@@ -1112,7 +1112,8 @@ function toggleIaProviderFields() {
     const geminiG = document.getElementById('geminiKeyGroup');
     const badge = document.getElementById('iaProviderBadge');
     const hint = document.getElementById('iaStatusHint');
-    if (provider === 'browser-gemini') { ollamaG.style.display='none'; geminiG.style.display='none'; badge.innerText='Gemini Nano'; hint.innerText="✨ IA locale integrata nel browser (se abilitata)."; }
+    if (provider === 'openrouter') { ollamaG.style.display='none'; geminiG.style.display='none'; badge.innerText='OpenRouter'; hint.innerText="🌐 Connessione globale via OpenRouter."; }
+    else if (provider === 'browser-gemini') { ollamaG.style.display='none'; geminiG.style.display='none'; badge.innerText='Gemini Nano'; hint.innerText="✨ IA locale integrata nel browser (se abilitata)."; }
     else if (provider === 'gemini') { ollamaG.style.display='none'; geminiG.style.display='flex'; badge.innerText='Gemini Cloud'; hint.innerText="☁️ Connessione Cloud a Google Gemini 1.5 Pro."; }
     else { ollamaG.style.display='flex'; geminiG.style.display='none'; badge.innerText='Ollama'; checkLocalLLM(); }
 }
@@ -1141,7 +1142,26 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     box.style.display = 'block'; box.innerText = '🤖 Elaborazione in corso...';
     if (btn) btn.disabled = true;
     try {
-        if (provider === 'browser-gemini') {
+        if (provider === 'openrouter') {
+            const OPENROUTER_API_KEY = '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';
+            const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+            const OPENROUTER_MODEL = 'google/gemini-2.5-flash:free';
+            const res = await fetch(OPENROUTER_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'Bilancio Pro PWA',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: OPENROUTER_MODEL,
+                    messages: [{ role: 'user', content: promptText }]
+                })
+            });
+            const json = await res.json();
+            box.innerText = json.choices?.[0]?.message?.content || "❌ Risposta IA non valida da OpenRouter.";
+        } else if (provider === 'browser-gemini') {
             let session = null;
             if (typeof ai !== 'undefined' && ai.languageModel) session = await ai.languageModel.create();
             else if (typeof window.ai !== 'undefined' && window.ai.createTextSession) session = await window.ai.createTextSession();
