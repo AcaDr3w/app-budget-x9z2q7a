@@ -1163,59 +1163,66 @@ async function checkLocalLLM() {
 // CHIAMATE AI
 // =====================================================================
 async function callAIEndpoint(promptText, responseBoxId, btnId) {
-    const provider = document.getElementById('iaProviderSelect').value;
+    const engineSelect = document.getElementById('ai-engine-select');
+    const modelSelect = document.getElementById('openrouter-model-select');
+    const keyInput = document.getElementById('openrouter-key-input');
+    const errorBox = document.getElementById('hub-ia-error-box');
+
+    if (!engineSelect || !modelSelect || !keyInput) {
+        console.error("Elementi non trovati nel DOM!");
+        return;
+    }
+
+    const provider = engineSelect.value;
+    const model = modelSelect.value;
+    const apiKey = keyInput.value.trim();
+
     const box = document.getElementById(responseBoxId);
     const btn = document.getElementById(btnId);
-    box.style.display = 'block'; box.innerText = '🤖 Elaborazione in corso...';
+    if (box) { box.style.display = 'block'; box.innerText = '🤖 Elaborazione in corso...'; }
     if (btn) btn.disabled = true;
+    if (errorBox) errorBox.style.display = 'none';
+
     try {
         if (provider === 'openrouter') {
-            let openRouterKey = document.getElementById('openRouterApiKeyInput').value.trim();
-            if (!openRouterKey) {
-                openRouterKey = await getSetting('openrouter_api_key', '');
-                if (openRouterKey) document.getElementById('openRouterApiKeyInput').value = openRouterKey;
-            }
-            if (!openRouterKey) {
-                if (box) box.innerText = "❌ Inserire API Key di OpenRouter.";
-                alert("Inserire API Key");
+            if (!apiKey) {
+                if (errorBox) {
+                    errorBox.textContent = "Errore: Inserire la OpenRouter API Key nell'apposito campo.";
+                    errorBox.style.display = 'block';
+                }
+                if (box) box.innerText = "❌ Errore API Key mancante.";
                 return;
             }
-            const selectedModel = document.getElementById('aiModelSelect') ? document.getElementById('aiModelSelect').value : 'google/gemini-2.5-flash:free';
             const response = await window.fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${openRouterKey}`,
+                    'Authorization': 'Bearer ' + apiKey,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: selectedModel,
+                    model: model,
                     messages: [{ role: 'user', content: promptText }]
                 })
             });
             if (!response.ok) {
-                if (box) box.innerText = `Errore: ${response.status} - Controlla chiave o modello`;
-                return;
+                throw new Error('Server risponde con status ' + response.status);
             }
-            const json = await response.json();
-            if (box) box.innerText = json.choices[0].message.content;
-        } else if (provider === 'browser-gemini') {
-            let session = null;
-            if (typeof ai !== 'undefined' && ai.languageModel) session = await ai.languageModel.create();
-            else if (typeof window.ai !== 'undefined' && window.ai.createTextSession) session = await window.ai.createTextSession();
-            box.innerText = session ? await session.prompt(promptText) : "❌ Gemini Nano non disponibile su questo browser.";
-        } else if (provider === 'gemini') {
-            const apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) { box.innerText = "❌ Chiave API Gemini mancante."; return; }
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:promptText}]}]})});
-            const json = await res.json();
-            box.innerText = json.candidates?.[0]?.content?.parts?.[0]?.text || "❌ Risposta IA non valida.";
+            const data = await response.json();
+            if (box) box.innerText = data.choices[0].message.content;
         } else {
-            const model = document.getElementById('ollamaModelSelect').value;
-            if (!model) { box.innerText = "❌ Nessun modello Ollama selezionato."; return; }
-            const res = await fetch(OLLAMA_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model, prompt:promptText, stream:false})});
-            const json = await res.json(); box.innerText = json.response;
+            const res = await window.fetch('http://localhost:11434/api/generate', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({model: 'llama3', prompt:promptText, stream:false})
+            });
+            if(!res.ok) throw new Error("Ollama error");
+            const data = await res.json(); 
+            if (box) box.innerText = data.response;
         }
-    } catch(err) { box.innerText = "❌ Errore: " + err.message; }
+    } catch(err) { 
+        if (box) box.innerText = "❌ Errore: " + err.message; 
+        if (errorBox) { errorBox.textContent = "Errore: " + err.message; errorBox.style.display = 'block'; }
+    }
     finally { if (btn) btn.disabled = false; }
 }
 
@@ -1256,12 +1263,20 @@ async function runFinancialAnalysisIA() {
     });
     const promptTesto = `Agisci come un consulente finanziario cinico e conciso. Lingua: Italiano. Analizza i seguenti dati di spesa del mese corrente e il confronto con i due mesi passati: ${dataText}Identifica le 2 categorie meno importanti (es. svago, abbonamenti, extra) dove l'utente sta spendendo di più rispetto al solito o in assoluto. Scrivi un resoconto di massimo 3 frasi indicando quanto si potrebbe risparmiare e un consiglio pratico per tagliare subito quelle spese.`;
 
-    const engine = document.getElementById('ai-engine-select') ? document.getElementById('ai-engine-select').value : 'openrouter';
+    const engineSelect = document.getElementById('ai-engine-select');
+    const modelSelect = document.getElementById('openrouter-model-select');
+    const keyInput = document.getElementById('openrouter-key-input');
+
+    if (!engineSelect || !modelSelect || !keyInput) {
+        console.error("Elementi non trovati nel DOM!");
+        return;
+    }
+
+    const engine = engineSelect.value;
+    const model = modelSelect.value;
+    const apiKey = keyInput.value.trim();
 
     if (engine === 'openrouter') {
-        const apiKey = document.getElementById('openrouter-key-input') ? document.getElementById('openrouter-key-input').value.trim() : '';
-        const model = document.getElementById('openrouter-model-select') ? document.getElementById('openrouter-model-select').value : 'google/gemini-2.5-flash:free';
-        
         if (!apiKey) {
             if(errorBox) {
                 errorBox.textContent = "Errore: Inserire la OpenRouter API Key nell'apposito campo.";
@@ -1287,7 +1302,7 @@ async function runFinancialAnalysisIA() {
             });
 
             if (!response.ok) {
-                throw new Error(`${response.status} - Controlla chiave o modello`);
+                throw new Error('Server risponde con status ' + response.status);
             }
 
             const data = await response.json();
