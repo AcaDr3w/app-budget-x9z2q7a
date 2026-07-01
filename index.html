@@ -131,7 +131,7 @@
                     </h2>
                     <div class="collapsible-content" id="iaSection">
                         <span id="iaStatusHint" class="ia-hint">Analisi strategica del mese corrente.</span>
-                        <div class="grid-inputs" style="margin-top: 12px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
                             <div class="input-group">
                                 <label style="color: var(--ia-color);">Motore:</label>
                                 <select id="iaProviderSelect" onchange="toggleIaProviderFields()">
@@ -141,10 +141,18 @@
                                     <option value="ollama">💻 Ollama Locale</option>
                                 </select>
                             </div>
-                            <div class="input-group" id="ollamaModelGroup" style="display:none;">
-                                <label style="color: var(--ia-color);">Modello Ollama:</label>
-                                <select id="ollamaModelSelect"><option value="">Rilevamento...</option></select>
+                            <div class="input-group" id="aiModelGroup" style="display: flex;">
+                                <label id="aiModelLabel" style="color: var(--ia-color);">Modello OpenRouter:</label>
+                                <select id="aiModelSelect">
+                                    <option value="google/gemini-2.5-flash:free" selected>google/gemini-2.5-flash:free</option>
+                                    <option value="meta-llama/llama-3.3-70b-instruct:free">meta-llama/llama-3.3-70b-instruct:free</option>
+                                    <option value="deepseek/deepseek-chat:free">deepseek/deepseek-chat:free</option>
+                                </select>
                             </div>
+                        </div>
+                        <div class="input-group" id="openRouterKeyGroup" style="display: flex; margin-top: 10px;">
+                            <label style="color: var(--ia-color); font-weight: bold;">OPENROUTER API KEY:</label>
+                            <input type="password" id="openRouterApiKeyInput" placeholder="sk-or-v1-..." onchange="saveOpenRouterKey()">
                         </div>
                         <div class="input-group" id="geminiKeyGroup" style="display: none;">
                             <label style="color: var(--ia-color); font-weight: bold;">Gemini API Key:</label>

@@ -1108,15 +1108,42 @@ function resetFutureSimulation() {
 function toggleIaProviderFields() {
     const provider = document.getElementById('iaProviderSelect').value;
     localStorage.setItem('ia_provider', provider);
-    const ollamaG = document.getElementById('ollamaModelGroup');
+    const modelGroup = document.getElementById('aiModelGroup');
     const geminiG = document.getElementById('geminiKeyGroup');
+    const openRouterG = document.getElementById('openRouterKeyGroup');
     const badge = document.getElementById('iaProviderBadge');
     const hint = document.getElementById('iaStatusHint');
-    if (provider === 'openrouter') { ollamaG.style.display='none'; geminiG.style.display='none'; badge.innerText='OpenRouter'; hint.innerText="🌐 Connessione globale via OpenRouter."; }
-    else if (provider === 'browser-gemini') { ollamaG.style.display='none'; geminiG.style.display='none'; badge.innerText='Gemini Nano'; hint.innerText="✨ IA locale integrata nel browser (se abilitata)."; }
-    else if (provider === 'gemini') { ollamaG.style.display='none'; geminiG.style.display='flex'; badge.innerText='Gemini Cloud'; hint.innerText="☁️ Connessione Cloud a Google Gemini 1.5 Pro."; }
-    else { ollamaG.style.display='flex'; geminiG.style.display='none'; badge.innerText='Ollama'; checkLocalLLM(); }
+    if (provider === 'openrouter') { 
+        if(modelGroup) modelGroup.style.display='flex'; 
+        if(geminiG) geminiG.style.display='none'; 
+        if(openRouterG) openRouterG.style.display='flex';
+        if(badge) badge.innerText='OpenRouter'; 
+        if(hint) hint.innerText="🌐 Connessione globale via OpenRouter."; 
+        getSetting('openrouter_api_key', '').then(k => { if(k) document.getElementById('openRouterApiKeyInput').value = k; });
+    }
+    else if (provider === 'browser-gemini') { 
+        if(modelGroup) modelGroup.style.display='none'; 
+        if(geminiG) geminiG.style.display='none'; 
+        if(openRouterG) openRouterG.style.display='none';
+        if(badge) badge.innerText='Gemini Nano'; 
+        if(hint) hint.innerText="✨ IA locale integrata nel browser."; 
+    }
+    else if (provider === 'gemini') { 
+        if(modelGroup) modelGroup.style.display='none'; 
+        if(geminiG) geminiG.style.display='flex'; 
+        if(openRouterG) openRouterG.style.display='none';
+        if(badge) badge.innerText='Gemini Cloud'; 
+        if(hint) hint.innerText="☁️ Connessione Cloud a Google Gemini."; 
+    }
+    else { 
+        if(modelGroup) modelGroup.style.display='flex'; 
+        if(geminiG) geminiG.style.display='none'; 
+        if(openRouterG) openRouterG.style.display='none';
+        if(badge) badge.innerText='Ollama'; 
+        if(typeof checkLocalLLM === 'function') checkLocalLLM(); 
+    }
 }
+async function saveOpenRouterKey() { await setSetting('openrouter_api_key', document.getElementById('openRouterApiKeyInput').value.trim()); }
 function saveGeminiKey() { localStorage.setItem('gemini_api_key', document.getElementById('geminiApiKeyInput').value.trim()); }
 async function checkLocalLLM() {
     const select = document.getElementById('ollamaModelSelect');
@@ -1143,24 +1170,34 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     if (btn) btn.disabled = true;
     try {
         if (provider === 'openrouter') {
-            const OPENROUTER_API_KEY = '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';
-            const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-            const OPENROUTER_MODEL = 'google/gemini-2.5-flash:free';
-            const res = await fetch(OPENROUTER_URL, {
+            let openRouterKey = document.getElementById('openRouterApiKeyInput').value.trim();
+            if (!openRouterKey) {
+                openRouterKey = await getSetting('openrouter_api_key', '');
+                if (openRouterKey) document.getElementById('openRouterApiKeyInput').value = openRouterKey;
+            }
+            if (!openRouterKey) {
+                if (box) box.innerText = "❌ Inserire API Key di OpenRouter.";
+                alert("Inserire API Key");
+                return;
+            }
+            const selectedModel = document.getElementById('aiModelSelect') ? document.getElementById('aiModelSelect').value : 'google/gemini-2.5-flash:free';
+            const response = await window.fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                    'HTTP-Referer': window.location.href,
-                    'X-Title': 'Bilancio Pro PWA',
+                    'Authorization': `Bearer ${openRouterKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: OPENROUTER_MODEL,
+                    model: selectedModel,
                     messages: [{ role: 'user', content: promptText }]
                 })
             });
-            const json = await res.json();
-            box.innerText = json.choices?.[0]?.message?.content || "❌ Risposta IA non valida da OpenRouter.";
+            if (!response.ok) {
+                if (box) box.innerText = `Errore: ${response.status} - Controlla chiave o modello`;
+                return;
+            }
+            const json = await response.json();
+            if (box) box.innerText = json.choices[0].message.content;
         } else if (provider === 'browser-gemini') {
             let session = null;
             if (typeof ai !== 'undefined' && ai.languageModel) session = await ai.languageModel.create();
