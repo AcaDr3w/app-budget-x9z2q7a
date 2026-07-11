@@ -1107,7 +1107,9 @@ function resetFutureSimulation() {
 // PROVIDER IA
 // =====================================================================
 function toggleIaProviderFields() {
-    const provider = document.getElementById('iaProviderSelect').value;
+    const providerEl = document.getElementById('iaProviderSelect');
+    if (!providerEl) return; // Elemento non presente nella UI corrente
+    const provider = providerEl.value;
     localStorage.setItem('ia_provider', provider);
     const modelGroup = document.getElementById('aiModelGroup');
     const geminiG = document.getElementById('geminiKeyGroup');
