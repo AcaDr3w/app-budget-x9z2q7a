@@ -48,6 +48,13 @@ if ('serviceWorker' in navigator) {
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
 
+const TAB_TITLES = {
+    'current-month-tab': 'Mese',
+    'history-tab': 'Storico',
+    'future-tab': 'Futuro',
+    'settings-tab': 'Impostazioni'
+};
+
 const db = new Dexie('BilancioDB');
 db.version(1).stores({
     months:          'month',
@@ -328,12 +335,6 @@ async function migrateFromLocalStorage() {
 // =====================================================================
 // NAVIGAZIONE TABS
 // =====================================================================
-const TAB_TITLES = {
-    'current-month-tab': 'Mese',
-    'history-tab': 'Storico',
-    'future-tab': 'Futuro',
-    'settings-tab': 'Impostazioni'
-};
 function updateActivePageSubtitle(tabId) {
     const subtitle = document.getElementById('activePageSubtitle');
     if (!subtitle) return;
