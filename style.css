@@ -38,15 +38,14 @@
             scrollbar-width: none;
             padding-bottom: 0;
             -webkit-overflow-scrolling: touch;
-            justify-content: space-around;
         }
         .navigation-tabs::-webkit-scrollbar { display: none; }
         .tab-button {
             flex-shrink: 0;
             padding: 10px 14px;
-            background: transparent !important;
+            background: transparent;
             color: #94a3b8;
-            border-radius: 0;
+            border-radius: 8px 8px 0 0;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -56,7 +55,6 @@
             white-space: nowrap;
             width: auto;
             margin-top: 0;
-            box-shadow: none !important;
         }
         .tab-button.add-button {
             width: 55px;
@@ -67,16 +65,15 @@
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            background: #3b82f6 !important;
+            background: #10b981;
             color: white;
-            box-shadow: 0 14px 28px rgba(59,130,246,0.2) !important;
-            border: none;
+            box-shadow: 0 14px 28px rgba(16,185,129,0.2);
         }
-        .tab-button.add-button:hover { background: #2563eb !important; }
+        .tab-button.add-button:hover { background: #0f766e; }
         .tab-button.add-button:active { transform: scale(0.95); }
-        .tab-button:hover { color: white; background: transparent; }
+        .tab-button:hover { color: white; background: rgba(255,255,255,0.08); }
         .tab-button.active {
-            background: transparent !important;
+            background: rgba(59,130,246,0.2);
             color: white;
             border-bottom-color: var(--accent);
         }
@@ -147,8 +144,6 @@
         .btn-action { border: none; padding: 5px 9px; border-radius: 6px; font-size: 11px; font-weight: bold; color: white; cursor: pointer; width: auto; margin: 0; }
         .btn-pay { background: #d97706; }
         .btn-pay:hover { opacity: 0.85; }
-        .btn-auth { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 0; width: auto; transition: background 0.2s; }
-        .btn-auth:hover { background: rgba(255,255,255,0.25); }
 
         /* ===== IA ===== */
         .ia-response-box { background: #f3e8ff; border: 1px solid #e9d5ff; padding: 16px; border-radius: 10px; margin-top: 14px; font-size: 13px; line-height: 1.7; color: #581c87; display: none; white-space: pre-line; }
@@ -454,7 +449,6 @@
 
         /* ===== RESPONSIVE: Desktop ===== */
         @media (min-width: 768px) {
-            .navigation-tabs { justify-content: center; gap: 20px; }
             body { padding: 0; padding-bottom: 20px; }
             .header h1 { font-size: 22px; }
             .tab-button { font-size: 14px; padding: 12px 18px; }
@@ -468,15 +462,6 @@
             .annual-layout { display: grid; grid-template-columns: 4fr 6fr; gap: 16px; align-items: flex-start; }
             .fab-button { display: none !important; }
             .tab-button.add-button { display: none !important; }
-            
-            /* Linear Desktop Rendiconto */
-            .flat-row { display: grid !important; grid-template-columns: 2fr 1fr 1fr 1fr; align-items: center; gap: 12px; }
-            .flat-left { display: flex; align-items: center; gap: 12px; }
-            .flat-title-group { display: block !important; }
-            .flat-right { display: contents !important; }
-            .val-previsto { color: #f97316 !important; font-weight: bold; font-size: 14px; text-align: right; }
-            .val-sostenuto { color: #ef4444 !important; font-weight: bold; font-size: 14px; text-align: right; }
-            .flat-margin { text-align: right; }
         }
 
         /* ===== RESPONSIVE: Mobile ===== */
@@ -489,20 +474,20 @@
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
                 left: 16px;
                 right: 16px;
-                height: 65px;
+                height: 64px;
                 background: var(--primary);
                 z-index: 1000;
                 padding: 0 12px;
-                border-radius: 32.5px;
+                border-radius: 28px;
                 display: flex;
-                justify-content: space-around;
+                justify-content: space-between;
                 align-items: center;
                 gap: 8px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                box-shadow: none; /* flat */
                 overflow: visible;
             }
             .tab-button {
-                border-radius: 0;
+                border-radius: 18px;
                 padding: 15px 0;
                 font-size: 14px;
                 display: flex;
@@ -516,18 +501,17 @@
                 flex: 1;
                 min-width: 0;
                 box-sizing: border-box;
-                background: transparent !important;
+                background: transparent;
                 color: #94a3b8;
-                box-shadow: none !important;
             }
-            .tab-button:hover { background: transparent !important; color: white; }
+            .tab-button:hover { background: rgba(255,255,255,0.08); }
             .tab-button .tab-label {
                 display: none;
             }
             .tab-button .tab-icon { font-size: 20px; line-height: 1; }
             .tab-button.active {
                 border-top-color: var(--accent);
-                background: transparent !important;
+                background: rgba(255,255,255,0.08);
                 color: white;
             }
             .tab-button.add-button {
@@ -624,10 +608,10 @@
         .flat-title { font-weight: bold; font-size: 14px; color: #1e293b; }
         .flat-subtitle { font-size: 11px; color: #64748b; }
         .flat-right {
-            display: flex; align-items: center; gap: 12px;
+            display: flex; flex-direction: column; align-items: flex-end;
         }
         .flat-actual { font-weight: bold; font-size: 15px; color: #1e293b; }
-        .flat-margin { font-size: 12px; font-weight: bold; min-width: 50px; text-align: right; }
+        .flat-margin { font-size: 12px; font-weight: bold; }
         .diff-plus { color: #10b981; }
         .diff-minus { color: #ef4444; }
 
