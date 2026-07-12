@@ -297,6 +297,27 @@ if (localStorage.getItem('gemini_api_key')) document.getElementById('geminiApiKe
 // AVVIO APP & MIGRAZIONE DA LOCALSTORAGE
 // =====================================================================
 async function initApp() {
+    // Request persistent storage to prevent browser auto-cleanup
+    if (navigator.storage && navigator.storage.persist) {
+        try {
+            const granted = await navigator.storage.persist();
+            if (granted) console.log("[Storage] Persistenza garantita dal browser.");
+            else console.log("[Storage] Persistenza non garantita (storage temporaneo).");
+        } catch (err) {
+            console.warn("[Storage] Errore richiesta persistenza:", err);
+        }
+    }
+
+    // Ensure IndexedDB is fully open before any operations
+    try {
+        await db.open();
+        console.log("[DB] Database aperto con successo.");
+    } catch (err) {
+        console.error("[DB] Errore apertura database:", err);
+        showToast("Errore nel database. Consulta la console.", true);
+        return;
+    }
+
     await migrateFromLocalStorage();
     await initCategories();
     await loadAnnualDeadlines();
@@ -425,16 +446,27 @@ async function loadMonthData() {
 // CATEGORIE
 // =====================================================================
 async function initCategories() {
-    let storedCats = await db.categories.toArray();
-    if (storedCats.length > 0) {
-        userCategories = storedCats.map(c => c.name);
-        categoryIconMap = {};
-        storedCats.forEach(c => { categoryIconMap[c.name] = c.icon || '🏷️'; });
-    } else {
+    try {
+        let storedCats = await db.categories.toArray();
+        if (storedCats.length > 0) {
+            userCategories = storedCats.map(c => c.name);
+            categoryIconMap = {};
+            storedCats.forEach(c => { categoryIconMap[c.name] = c.icon || '🏷️'; });
+            console.log('[DB] Categorie caricate da database:', storedCats.length);
+        } else {
+            userCategories = DEFAULT_CATEGORIES.map(c => c.name);
+            categoryIconMap = {};
+            DEFAULT_CATEGORIES.forEach(c => { categoryIconMap[c.name] = c.icon; });
+            await db.categories.bulkPut(DEFAULT_CATEGORIES);
+            console.log('[DB] Categorie di default salvate in database:', DEFAULT_CATEGORIES.length);
+        }
+    } catch (err) {
+        console.error('[DB] Errore inizializzazione categorie:', err);
+        showToast('Errore nel caricare le categorie', true);
+        // Fallback: use DEFAULT_CATEGORIES in memory only
         userCategories = DEFAULT_CATEGORIES.map(c => c.name);
         categoryIconMap = {};
         DEFAULT_CATEGORIES.forEach(c => { categoryIconMap[c.name] = c.icon; });
-        await db.categories.bulkPut(DEFAULT_CATEGORIES);
     }
     renderCategoriesDropdown();
 }
@@ -468,42 +500,50 @@ function editCategory(cat) {
 }
 
 async function saveCategory() {
-    const input = document.getElementById('newCatName'); const name = input.value.trim();
+    const input = document.getElementById('newCatName');
+    const name = input.value.trim();
     if (!name) return;
     const iconSelect = document.getElementById('newCatIcon');
     const icon = iconSelect ? iconSelect.value : '🏷️';
     
-    if (categoryToEdit) {
-        if (name !== categoryToEdit && userCategories.includes(name)) {
-            alert('Categoria già esistente.'); return;
+    try {
+        if (categoryToEdit) {
+            if (name !== categoryToEdit && userCategories.includes(name)) {
+                alert('Categoria già esistente.'); return;
+            }
+            if (name !== categoryToEdit) {
+                const allExp = await db.expenses.where('category').equals(categoryToEdit).toArray();
+                for (let e of allExp) { await db.expenses.update(e.id, {category: name}); }
+                currentData.expenses.forEach(e => { if (e.category === categoryToEdit) e.category = name; });
+                userCategories = userCategories.filter(c => c !== categoryToEdit);
+                delete categoryIconMap[categoryToEdit];
+                await db.categories.delete(categoryToEdit);
+            }
+            if (!userCategories.includes(name)) userCategories.push(name);
+            categoryIconMap[name] = icon;
+            await db.categories.put({name, icon});
+            
+            categoryToEdit = null;
+            const btn = document.getElementById('btnSaveCategory');
+            if(btn) {
+                btn.innerText = 'Aggiungi';
+                btn.style.background = 'var(--accent)';
+            }
+        } else {
+            if (userCategories.includes(name)) return;
+            userCategories.push(name);
+            categoryIconMap[name] = icon;
+            await db.categories.put({name, icon});
         }
-        if (name !== categoryToEdit) {
-            const allExp = await db.expenses.where('category').equals(categoryToEdit).toArray();
-            for (let e of allExp) { await db.expenses.update(e.id, {category: name}); }
-            currentData.expenses.forEach(e => { if (e.category === categoryToEdit) e.category = name; });
-            userCategories = userCategories.filter(c => c !== categoryToEdit);
-            delete categoryIconMap[categoryToEdit];
-            await db.categories.delete(categoryToEdit);
-        }
-        if (!userCategories.includes(name)) userCategories.push(name);
-        categoryIconMap[name] = icon;
-        await db.categories.put({name, icon});
-        
-        categoryToEdit = null;
-        const btn = document.getElementById('btnSaveCategory');
-        if(btn) {
-            btn.innerText = 'Aggiungi';
-            btn.style.background = 'var(--accent)';
-        }
-    } else {
-        if (userCategories.includes(name)) return;
-        userCategories.push(name);
-        categoryIconMap[name] = icon;
-        await db.categories.put({name, icon});
+        await updateGlobalVersion();
+        input.value = '';
+        renderCategoriesDropdown();
+        renderImportCheckboxList();
+        updateUI();
+    } catch (err) {
+        console.error('[DB] Errore salvataggio categoria:', err);
+        showToast('Errore nel salvare la categoria', true);
     }
-    await updateGlobalVersion();
-    input.value = '';
-    renderCategoriesDropdown(); renderImportCheckboxList(); updateUI();
 }
 async function deleteCategory(cat) {
     if (!confirm(`Eliminare "${cat}"?`)) return;
@@ -548,10 +588,21 @@ async function addExpense() {
     if (planned === 0 && actual === 0) return;
     if (shared > 0 && shared < 100) { planned *= (shared/100); actual *= (shared/100); }
     let exp = {id: Date.now(), month, date, category: cat, desc, planned, actual, sharedPercentage: shared};
-    currentData.expenses.push(exp); await db.expenses.put(exp);
-    document.getElementById('expDesc').value = ''; document.getElementById('expPlanned').value = '';
-    document.getElementById('expActual').value = ''; document.getElementById('expShared').value = '';
-    updateUI(); checkDatabaseHealth();
+    
+    try {
+        currentData.expenses.push(exp);
+        await db.expenses.put(exp);
+        document.getElementById('expDesc').value = '';
+        document.getElementById('expPlanned').value = '';
+        document.getElementById('expActual').value = '';
+        document.getElementById('expShared').value = '';
+        updateUI();
+        checkDatabaseHealth();
+    } catch (err) {
+        console.error('[DB] Errore salvataggio spesa:', err);
+        showToast('Errore nel salvare la spesa', true);
+        currentData.expenses.pop(); // Rollback from memory
+    }
 }
 async function payExpense(id) {
     const exp = currentData.expenses.find(i => i.id === id); if (!exp) return;
