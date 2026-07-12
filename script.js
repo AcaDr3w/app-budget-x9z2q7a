@@ -259,6 +259,7 @@ let userCategories = [];
 let categoryIconMap = {}; // { 'Alimentari': '🍔', ... }
 let currentData = { income: [], expenses: [] };
 let annualDeadlines = [];
+let categoryToEdit = null;
 let selectedFilterDate = null;
 let selectedFilterCategory = null;
 let searchQuery = "";
@@ -426,7 +427,7 @@ async function initCategories() {
 function getCatIcon(catName) {
     return categoryIconMap[catName] || '🏷️';
 }
-let categoryToEdit = null;
+
 
 function renderCategoriesDropdown() {
     const select = document.getElementById('expenseCategory');
@@ -1675,4 +1676,6 @@ function checkPushNotifications() {
 // INIT
 // =====================================================================
 window.onload = initApp;
+
+
 
