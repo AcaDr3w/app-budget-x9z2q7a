@@ -55,6 +55,9 @@ const TAB_TITLES = {
     'settings-tab': 'Impostazioni'
 };
 
+// Responsive helper
+function isDesktop() { return window.innerWidth >= 768; }
+
 const db = new Dexie('BilancioDB');
 db.version(1).stores({
     months:          'month',
@@ -751,15 +754,18 @@ async function updateUI() {
     const alertBox = document.getElementById('deadlineAlert');
     if (pending > 0) { alertBox.innerText = `⏳ ${pending} uscite pianificate in attesa di saldo.`; alertBox.style.display = 'block'; } else { alertBox.style.display = 'none'; }
 
-    // Tabella categorie
+    // Tabella categorie - responsive: full list on desktop, filtered on mobile
     let catSums = {}; userCategories.forEach(c => catSums[c] = {planned:0, actual:0});
     currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
     const tableBody = document.getElementById('overviewTableBody'); tableBody.innerHTML = '';
+    const showAllCategories = isDesktop(); // Desktop shows all, mobile only active
     userCategories.sort().forEach(cat => {
         const pVal = catSums[cat].planned, aVal = catSums[cat].actual, diff = pVal - aVal;
         let diffClass = '', diffText = '';
         if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtE(diff)}`; }
-        if (pVal > 0 || aVal > 0) {
+        
+        // On desktop, show all categories (even with 0 values); on mobile, only show those with activity
+        if (showAllCategories || pVal > 0 || aVal > 0) {
             const icon = getCatIcon(cat);
             let row = document.createElement('div');
             row.className = 'flat-row';
@@ -1741,6 +1747,13 @@ function checkPushNotifications() {
 // INIT
 // =====================================================================
 window.onload = initApp;
+
+// Re-render rendiconto on window resize for responsive behavior
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => updateUI(), 250);
+});
 
 
 
