@@ -247,14 +247,28 @@ async function processSilentRestore(data, cloudCounter) {
 }
 
 const DEFAULT_CATEGORIES = [
-    {name: "Alimentari", icon: "🍔"}, {name: "Igiene e Pulizia", icon: "🧴"}, {name: "Carburante Auto", icon: "🚗"}, {name: "Carburante Moto", icon: "🏍️"},
-    {name: "Sanitarie", icon: "🏥"}, {name: "Bolletta Acqua", icon: "💧"}, {name: "Bolletta Luce", icon: "💡"}, {name: "Bolletta Gas", icon: "🔥"},
-    {name: "Bolletta Rifiuti", icon: "♻️"}, {name: "Bolletta Condominio", icon: "🏢"}, {name: "Bolletta Telefonia", icon: "📱"}, {name: "Mutuo", icon: "🏠"},
-    {name: "Tasse Auto (Assicurazione/Bollo)", icon: "🚗"}, {name: "Tasse Moto (Assicurazione/Bollo)", icon: "🏍️"},
-    {name: "Manutenzioni Programmate", icon: "🔧"}, {name: "Imprevisti e Svago", icon: "🎉"}, {name: "Formazione", icon: "📚"},
-    {name: "Abbigliamento", icon: "👕"}, {name: "Varie", icon: "📦"}
+    {name: "Abbigliamento", icon: "👕"},
+    {name: "Alimentari", icon: "🛒"},
+    {name: "Bolletta Acqua", icon: "💧"},
+    {name: "Bolletta Condominio", icon: "🏢"},
+    {name: "Bolletta Gas", icon: "🔥"},
+    {name: "Bolletta Luce", icon: "💡"},
+    {name: "Bolletta Rifiuti", icon: "🗑️"},
+    {name: "Bolletta Telefonia", icon: "📞"},
+    {name: "Carburante Auto", icon: "⛽🚗"},
+    {name: "Carburante Moto", icon: "⛽🏍️"},
+    {name: "Cane", icon: "🐕"},
+    {name: "Formazione", icon: "📚"},
+    {name: "Igiene e Pulizia", icon: "🧼"},
+    {name: "Imprevisti e Svago", icon: "🎉"},
+    {name: "Manutenzioni Programmate", icon: "🔧"},
+    {name: "Mutuo", icon: "🏠"},
+    {name: "Sanitarie", icon: "🩺"},
+    {name: "Tasse Auto (Assicurazione/Bollo)", icon: "💰🚗"},
+    {name: "Tasse Moto (Assicurazione/Bollo)", icon: "💰🏍️"},
+    {name: "Varie", icon: "📦"}
 ];
-const ICON_OPTIONS = ['🏠','🚗','🏍️','🍔','🛍️','🏥','✈️','📚','💡','💧','🔥','📱','🏢','♻️','🧴','🔧','🎉','👕','📦','💰','📈','🎮','🐾','👶','💄','🎵','🏋️','🍕'];
+const ICON_OPTIONS = ['🏠','🚗','🏍️','🛒','🗑️','📞','⛽','🧼','🐕','🩺','💰','👕','📦','🔧','💡','💧','🔥','🏢','📚','🎉','♻️','📱','🍔','🛍️','✈️','📈','🎮','🐾','👶','💄','🎵','🏋️','🍕'];
 let userCategories = [];
 let categoryIconMap = {}; // { 'Alimentari': '🍔', ... }
 let currentData = { income: [], expenses: [] };
@@ -306,7 +320,7 @@ async function migrateFromLocalStorage() {
     console.log("🔄 Migrazione dati da localStorage a IndexedDB...");
     const cats = localStorage.getItem('user_categories');
     if (cats) await db.categories.bulkPut(JSON.parse(cats).map(c => ({name: c})));
-    else await db.categories.bulkPut(DEFAULT_CATEGORIES.map(c => ({name: c})));
+    else await db.categories.bulkPut(DEFAULT_CATEGORIES.map(c => ({name: c.name, icon: c.icon})));
     const deadlines = localStorage.getItem('annual_deadlines');
     if (deadlines) {
         const parsed = JSON.parse(deadlines);
