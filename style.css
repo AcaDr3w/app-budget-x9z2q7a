@@ -271,7 +271,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .header p { display: block; }
     .grid-inputs { display: flex; flex-direction: column; gap: 10px; }
     .hide-mobile { display: none !important; }
-    .hide-desktop { display: none !important; }
     
     .responsive-input, .responsive-select { max-width: 100%; }
     .month-selector { width: 100%; max-width: 360px; }
@@ -296,9 +295,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 
 /* ===== MOBILE CATEGORY GRID ===== */
+.category-grid-mobile { display: none; }
 @media (max-width: 767px) {
     .category-grid-mobile {
-        display: grid;
+        display: grid !important;
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
         margin-bottom: 16px;
