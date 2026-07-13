@@ -389,12 +389,14 @@
         <div id="sheetCategoryBadge" class="sheet-category-badge"></div>
 
         <div class="sheet-amount-display" id="sheetAmountDisplay">
-          <div class="spin-wheel" id="wheelInteger"></div>
-          <span class="separator">·</span>
-          <div class="spin-wheel" id="wheelDecimal"></div>
-          <span class="sheet-eur">€</span>
-          <input type="number" id="hiddenAmountInput" step="0.01" inputmode="decimal" min="0" max="999.99" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:10; pointer-events:auto;">
+           <div class="wheel-scroll" id="wheelInteger" data-wheel="integer"></div>
+           <span class="separator">·</span>
+           <div class="wheel-scroll" id="wheelDecimal" data-wheel="decimal"></div>
+           <span class="sheet-eur">€</span>
         </div>
+        <input type="number" id="hiddenAmountInput" step="0.01" inputmode="decimal" min="0" max="999.99" class="hidden-amount-overlay">
+++++++++
+```
 
         <div class="sheet-inputs">
           <input type="date" id="sheetDate" class="responsive-input">

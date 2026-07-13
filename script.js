@@ -514,8 +514,6 @@ function getCategoryCardBorder(catName) {
 let sheetSelectedCategory = null;
 let sheetType = 'actual'; // 'actual' or 'planned'
 const ITEM_HEIGHT = 40;
-let sheetSwipeStartY = 0;
-let sheetTranslateY = 0;
 
 function openTransactionSheet(categoryName) {
     sheetSelectedCategory = categoryName;
@@ -524,7 +522,7 @@ function openTransactionSheet(categoryName) {
     const overlay = document.getElementById('transactionSheetOverlay');
     const badge = document.getElementById('sheetCategoryBadge');
     const sheetDate = document.getElementById('sheetDate');
-    const hiddenInput = document.getElementById('hiddenAmountInput');
+    const sheetInput = document.getElementById('sheetAmountInput');
     
     // Populate category badge
     const icon = getCatIcon(categoryName);
@@ -542,7 +540,7 @@ function openTransactionSheet(categoryName) {
     document.getElementById('sheetNote').value = '';
     
     // Reset amount input
-    if (hiddenInput) hiddenInput.value = '';
+    sheetInput.value = '';
     
     // Show overlay
     overlay.classList.add('active');
@@ -550,26 +548,55 @@ function openTransactionSheet(categoryName) {
     // Init spin wheels
     initSpinWheels();
     
-    // Setup swipe-down handler for sheet closure
-    setupSheetSwipeHandlers();
+    // Setup input listener for hybrid keyboard support
+    sheetInput.addEventListener('input', updateWheelsFromInput);
 }
 
 function closeTransactionSheet() {
     const overlay = document.getElementById('transactionSheetOverlay');
     overlay.classList.remove('active');
     sheetSelectedCategory = null;
-    sheetSwipeStartY = 0;
-    sheetTranslateY = 0;
 }
 
 function setSheetType(type) {
     sheetType = type;
 }
 
+function updateWheelsFromInput() {
+    const sheetInput = document.getElementById('sheetAmountInput');
+    const intWheel = document.getElementById('wheelInteger');
+    const decWheel = document.getElementById('wheelDecimal');
+    
+    let value = parseFloat(sheetInput.value) || 0;
+    if (value < 0) value = 0;
+    if (value > 999.99) value = 999.99;
+    
+    const intVal = Math.floor(value);
+    const decVal = Math.round((value - intVal) * 100);
+    
+    // Update wheel positions
+    const intNumbers = intWheel.querySelector('.wheel-numbers');
+    const decNumbers = decWheel.querySelector('.wheel-numbers');
+    
+    const intTransform = -intVal * ITEM_HEIGHT;
+    const decTransform = -decVal * ITEM_HEIGHT;
+    
+    intNumbers.style.transform = `translateY(${intTransform}px)`;
+    decNumbers.style.transform = `translateY(${decTransform}px)`;
+    
+    // Update dataset
+    intWheel.dataset.selected = intVal;
+    decWheel.dataset.selected = decVal;
+    
+    // Highlight selected
+    highlightSelected(intWheel, intVal);
+    highlightSelected(decWheel, decVal);
+}
+
 function initSpinWheels() {
     const intWheel = document.getElementById('wheelInteger');
     const decWheel = document.getElementById('wheelDecimal');
-    const hiddenInput = document.getElementById('hiddenAmountInput');
+    const sheetAmountInput = document.getElementById('sheetAmountInput');
     
     // Generate integer wheel (0-999)
     intWheel.innerHTML = '<div class="wheel-numbers"></div>';
@@ -595,83 +622,38 @@ function initSpinWheels() {
     intWheel.dataset.selected = 0;
     decWheel.dataset.selected = 0;
     
-    // Add touch handlers with stopPropagation/preventDefault
+    // Add touch handlers
     setupWheelTouch(intWheel, intNumbers, ITEM_HEIGHT, false);
     setupWheelTouch(decWheel, decNumbers, ITEM_HEIGHT, true);
     
     // Add click-to-open-keyboard handlers
     intWheel.addEventListener('click', () => {
-        if (hiddenInput) hiddenInput.focus();
+        sheetAmountInput.focus();
     });
     decWheel.addEventListener('click', () => {
-        if (hiddenInput) hiddenInput.focus();
+        sheetAmountInput.focus();
     });
-    
-    // Setup input listener for hybrid keyboard support (prevent duplicate)
-    if (hiddenInput && !hiddenInput._hasInputListener) {
-        hiddenInput.addEventListener('input', updateWheelsFromInput);
-        hiddenInput._hasInputListener = true;
-    }
-}
-
-function setupSheetSwipeHandlers() {
-    const sheet = document.getElementById('transactionSheet');
-    if (!sheet) return;
-    
-    sheet.addEventListener('touchstart', (e) => {
-        if (e.target.classList.contains('sheet-handle')) {
-            sheetSwipeStartY = e.touches[0].clientY;
-            e.stopPropagation();
-        }
-    }, { passive: false });
-    
-    sheet.addEventListener('touchmove', (e) => {
-        if (sheetSwipeStartY > 0) {
-            const delta = e.touches[0].clientY - sheetSwipeStartY;
-            if (delta > 0) {
-                sheetTranslateY = delta;
-                sheet.style.transform = `translateY(${sheetTranslateY}px)`;
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }
-    }, { passive: false });
-    
-    sheet.addEventListener('touchend', (e) => {
-        if (sheetSwipeStartY > 0) {
-            if (sheetTranslateY > 100) {
-                closeTransactionSheet();
-            } else {
-                sheet.style.transform = '';
-            }
-            sheetSwipeStartY = 0;
-            sheetTranslateY = 0;
-        }
-    }, { passive: false });
 }
 
 function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
     const maxIndex = isDecimal ? 99 : 999;
     
     wheel.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
         wheel.dataset.dragging = 'true';
         wheel.dataset.startY = e.touches[0].clientY;
         wheel.dataset.startTransform = parseInt(wheel.dataset.currentTransform || 0);
         wheel.dataset.velocity = 0;
         wheel.dataset.lastY = e.touches[0].clientY;
-    }, { passive: false });
+    });
     
     wheel.addEventListener('touchmove', (e) => {
-        e.stopPropagation();
         if (wheel.dataset.dragging !== 'true') return;
         const deltaY = e.touches[0].clientY - wheel.dataset.lastY;
         wheel.dataset.velocity = Math.abs(deltaY);
         wheel.dataset.currentTransform = wheel.dataset.startTransform + (e.touches[0].clientY - wheel.dataset.startY);
-    }, { passive: false });
+    });
     
     wheel.addEventListener('touchend', (e) => {
-        e.stopPropagation();
         if (wheel.dataset.dragging !== 'true') return;
         wheel.dataset.dragging = 'false';
         
@@ -712,44 +694,10 @@ function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
         };
         
         animate();
-    }, { passive: false });
+    });
 }
 
-function updateWheelsFromInput() {
-    const hiddenInput = document.getElementById('hiddenAmountInput');
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
-    
-    if (!hiddenInput || !intWheel || !decWheel) return;
-    
-    let value = parseFloat(hiddenInput.value) || 0;
-    if (value < 0) value = 0;
-    if (value > 999.99) value = 999.99;
-    
-const intVal = Math.floor(value);
-    const decVal = Math.round((value - intVal) * 100);
-    
-    // Update wheel positions
-    const intNumbers = intWheel.querySelector('.wheel-numbers');
-    const decNumbers = decWheel.querySelector('.wheel-numbers');
-    if (!intNumbers || !decNumbers) return;
-    
-    const intTransform = -intVal * ITEM_HEIGHT;
-    const decTransform = -decVal * ITEM_HEIGHT;
-    
-    intNumbers.style.transform = `translateY(${intTransform}px)`;
-    decNumbers.style.transform = `translateY(${decTransform}px)`;
-    
-    // Update dataset
-    intWheel.dataset.selected = intVal;
-    decWheel.dataset.selected = decVal;
-    
-    // Highlight selected
-    highlightSelected(intWheel, intVal);
-    highlightSelected(decWheel, decVal);
-}
-
-function highlightSelected(wheel, selectedIndex) {
+function highlightSelected(wheel, selectedIndex, itemHeight) {
     const numbers = wheel.querySelector('.wheel-numbers');
     const spans = numbers.querySelectorAll('span');
     spans.forEach((span, idx) => {

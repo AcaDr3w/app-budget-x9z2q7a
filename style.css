@@ -730,6 +730,71 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     flex: 1;
 }
 
+/* ===== NATIVE SCROLL WHEELS (REPLACES spin-wheel) ===== */
+.wheel-scroll {
+    height: 150px;
+    width: 60px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    position: relative;
+    border-radius: 16px;
+    background: transparent;
+}
+.wheel-scroll::-webkit-scrollbar {
+    display: none;
+}
+.wheel-item {
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    height: 50px;
+    line-height: 50px;
+    font-size: 20px;
+    font-weight: 500;
+    color: #64748b;
+    width: 100%;
+    text-align: center;
+}
+.wheel-item.selected {
+    color: var(--accent);
+    font-weight: 600;
+}
+.wheel-scroll::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: rgba(59, 130, 246, 0.08);
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 8px;
+}
+.wheel-scroll::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.9) 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+.hidden-amount-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    z-index: 10;
+}
+
 /* Desktop: hide bottom sheet */
 @media (min-width: 768px) {
     .transaction-sheet-overlay {
@@ -743,3 +808,5 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
     }
 }
+++++++++
+```
