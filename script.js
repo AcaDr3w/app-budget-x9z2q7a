@@ -731,6 +731,58 @@ function checkAnnualAlertForCurrentMonth() {
 }
 
 // =====================================================================
+// CATEGORY GRID (MOBILE)
+// =====================================================================
+function renderCategoryGrid(catSums) {
+    const container = document.getElementById('categoryGridContainer');
+    if (!container) return;
+    
+    // Su desktop, nascondi il contenitore
+    if (isDesktop()) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'grid';
+    container.innerHTML = '';
+    
+    userCategories.forEach(cat => {
+        const pVal = catSums[cat]?.planned || 0;
+        const aVal = catSums[cat]?.actual || 0;
+        const icon = getCatIcon(cat);
+        
+        // Calcolo percentuale con logica corretta
+        let pct = 0;
+        let barClass = 'default';
+        if (pVal > 0) {
+            pct = Math.min(100, (aVal / pVal) * 100);
+            if (aVal > pVal) {
+                barClass = 'over';
+            } else if (pct > 80) {
+                barClass = 'warning';
+            }
+        } else if (aVal > 0) {
+            // Caso: previsto = 0 ma sostenuto > 0 (speso senza budget)
+            pct = 100;
+            barClass = 'over';
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        card.innerHTML = `
+            <div class="category-card-icon">${icon}</div>
+            <div class="category-card-name">${cat}</div>
+            <div class="category-progress-bar">
+                <div class="category-progress-fill ${barClass}" style="width: ${pct}%"></div>
+            </div>
+        `;
+        card.onclick = () => filterByCategory(cat);
+        container.appendChild(card);
+    });
+}
+
+// =====================================================================
 // AGGIORNAMENTO UI PRINCIPALE
 // =====================================================================
 async function updateUI() {
@@ -795,6 +847,9 @@ async function updateUI() {
         <div class="flat-footer-actual">${fmtE(netSavings)}</div>
     `;
     tableFoot.appendChild(savingsDiv);
+
+    // Render griglia categorie per mobile
+    renderCategoryGrid(catSums);
 
     renderCalendar();
 

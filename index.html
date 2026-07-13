@@ -91,7 +91,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card hide-mobile" id="incomeCard">
                     <h2>💰 Nuova Entrata</h2>
                     <div class="grid-inputs">
                         <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
@@ -100,7 +100,7 @@
                     <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
                 </div>
 
-                <div class="card" id="addExpenseCard">
+                <div class="card hide-mobile" id="addExpenseCard">
                     <h2>📝 Registra Spesa</h2>
                     <div class="grid-inputs">
                         <div class="input-group"><label>Data</label><input type="date" id="expDate"></div>
@@ -112,7 +112,7 @@
                         <div class="input-group"><label>Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
                     </div>
                     <div class="input-group">
-                        <label>Quota a tuo carico % (opzionale)</label>
+                        <label>Quota a tuo carato % (opzionale)</label>
                         <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
                     </div>
                     <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
@@ -123,8 +123,8 @@
             <!-- RIGHT PANEL -->
             <div class="layout-column right-panel">
 
-                <!-- HUB IA -->
-<div id="hub-ia-container" style="border: 1px solid #9061f9; padding: 15px; border-radius: 8px; background: #f9f5ff;">
+<!-- HUB IA -->
+<div id="hub-ia-container" class="hide-mobile" style="border: 1px solid #9061f9; padding: 15px; border-radius: 8px; background: #f9f5ff;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
     <strong>HUB IA</strong>
     <span style="background: #9061f9; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">OPENROUTER</span>
@@ -155,13 +155,16 @@
 </div>
 
                 <!-- GRAFICI -->
-                <div class="charts-wrapper">
+                <div class="charts-wrapper hide-mobile">
                     <div class="card"><h2>📈 Stato Budget</h2><div class="chart-container"><canvas id="budgetChart"></canvas></div></div>
                     <div class="card"><h2>🍕 Speso per Categoria</h2><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
                 </div>
 
+                <!-- CATEGORY GRID (MOBILE ONLY) -->
+                <div id="categoryGridContainer" class="category-grid-mobile hide-desktop"></div>
+
                 <!-- RENDICONTO CICLO -->
-                <div class="card">
+                <div class="card hide-mobile" id="rendicontoCard">
                     <h2>📋 Rendiconto Ciclo Corrente</h2>
                     <p style="font-size: 11px; color:#64748b; margin-bottom:10px;">Tocca una riga per filtrare le voci.</p>
                     <div class="table-responsive">
@@ -173,8 +176,8 @@
                 </div>
 
                 <!-- VOCI DEL PERIODO -->
-                <div class="card">
-                    <h2 id="listTitle">📅 Distribuzione &amp; Registro Spese</h2>
+                <div class="card hide-mobile" id="entriesCard">
+                    <h2 id="listTitle">📅 Distribuzione & Registro Spese</h2>
                     <div class="calendar-grid" id="calendarGrid"></div>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()">
@@ -189,7 +192,7 @@
                 </div>
 
                 <!-- NOTE MESE -->
-                <div class="card">
+                <div class="card hide-mobile" id="notesCard">
                     <h2 class="collapsible" onclick="toggleSection('notesSection', this)">📝 Note del Mese</h2>
                     <div class="collapsible-content" id="notesSection">
                         <div class="input-group"><label>Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..." onchange="saveNotes()"></textarea></div>
