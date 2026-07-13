@@ -513,6 +513,7 @@ function getCategoryCardBorder(catName) {
 // ===== BOTTOM SHEET STATE =====
 let sheetSelectedCategory = null;
 let sheetType = 'actual'; // 'actual' or 'planned'
+const ITEM_HEIGHT = 40;
 
 function openTransactionSheet(categoryName) {
     sheetSelectedCategory = categoryName;
@@ -521,14 +522,15 @@ function openTransactionSheet(categoryName) {
     const overlay = document.getElementById('transactionSheetOverlay');
     const badge = document.getElementById('sheetCategoryBadge');
     const sheetDate = document.getElementById('sheetDate');
+    const sheetInput = document.getElementById('sheetAmountInput');
     
     // Populate category badge
     const icon = getCatIcon(categoryName);
     badge.innerHTML = `${icon} <span>${categoryName}</span>`;
     
     // Reset to default tab (actual)
-    document.getElementById('tabActual').classList.add('active');
-    document.getElementById('tabPlanned').classList.remove('active');
+    document.getElementById('radioActual').checked = true;
+    document.getElementById('radioPlanned').checked = false;
     
     // Set default date
     const today = new Date().toISOString().slice(0, 10);
@@ -537,11 +539,17 @@ function openTransactionSheet(categoryName) {
     // Clear note input
     document.getElementById('sheetNote').value = '';
     
+    // Reset amount input
+    sheetInput.value = '';
+    
     // Show overlay
     overlay.classList.add('active');
     
     // Init spin wheels
     initSpinWheels();
+    
+    // Setup input listener for hybrid keyboard support
+    sheetInput.addEventListener('input', updateWheelsFromInput);
 }
 
 function closeTransactionSheet() {
@@ -552,13 +560,43 @@ function closeTransactionSheet() {
 
 function setSheetType(type) {
     sheetType = type;
-    document.getElementById('tabActual').classList.toggle('active', type === 'actual');
-    document.getElementById('tabPlanned').classList.toggle('active', type === 'planned');
+}
+
+function updateWheelsFromInput() {
+    const sheetInput = document.getElementById('sheetAmountInput');
+    const intWheel = document.getElementById('wheelInteger');
+    const decWheel = document.getElementById('wheelDecimal');
+    
+    let value = parseFloat(sheetInput.value) || 0;
+    if (value < 0) value = 0;
+    if (value > 999.99) value = 999.99;
+    
+    const intVal = Math.floor(value);
+    const decVal = Math.round((value - intVal) * 100);
+    
+    // Update wheel positions
+    const intNumbers = intWheel.querySelector('.wheel-numbers');
+    const decNumbers = decWheel.querySelector('.wheel-numbers');
+    
+    const intTransform = -intVal * ITEM_HEIGHT;
+    const decTransform = -decVal * ITEM_HEIGHT;
+    
+    intNumbers.style.transform = `translateY(${intTransform}px)`;
+    decNumbers.style.transform = `translateY(${decTransform}px)`;
+    
+    // Update dataset
+    intWheel.dataset.selected = intVal;
+    decWheel.dataset.selected = decVal;
+    
+    // Highlight selected
+    highlightSelected(intWheel, intVal);
+    highlightSelected(decWheel, decVal);
 }
 
 function initSpinWheels() {
     const intWheel = document.getElementById('wheelInteger');
     const decWheel = document.getElementById('wheelDecimal');
+    const sheetAmountInput = document.getElementById('sheetAmountInput');
     
     // Generate integer wheel (0-999)
     intWheel.innerHTML = '<div class="wheel-numbers"></div>';
@@ -585,8 +623,16 @@ function initSpinWheels() {
     decWheel.dataset.selected = 0;
     
     // Add touch handlers
-    setupWheelTouch(intWheel, intNumbers, 120);
-    setupWheelTouch(decWheel, decNumbers, 120, true);
+    setupWheelTouch(intWheel, intNumbers, ITEM_HEIGHT, false);
+    setupWheelTouch(decWheel, decNumbers, ITEM_HEIGHT, true);
+    
+    // Add click-to-open-keyboard handlers
+    intWheel.addEventListener('click', () => {
+        sheetAmountInput.focus();
+    });
+    decWheel.addEventListener('click', () => {
+        sheetAmountInput.focus();
+    });
 }
 
 function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {

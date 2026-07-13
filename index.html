@@ -371,35 +371,41 @@
     </div>
  </div>
 
- <!-- BOTTOM SHEET TRANSAZIONI MOBILE -->
- <div id="transactionSheetOverlay" class="transaction-sheet-overlay" onclick="closeTransactionSheet()">
-   <div id="transactionSheet" class="transaction-sheet" onclick="event.stopPropagation();">
-     <div class="sheet-handle"></div>
-     
-     <div class="sheet-type-tabs">
-       <button id="tabActual" class="sheet-tab active" onclick="setSheetType('actual')">SPESA SOSTENUTA</button>
-       <button id="tabPlanned" class="sheet-tab" onclick="setSheetType('planned')">SPESA PREVISTA</button>
-     </div>
-     
-     <div id="sheetCategoryBadge" class="sheet-category-badge"></div>
-     
-     <div class="sheet-wheels">
-       <div id="wheelInteger" class="spin-wheel"></div>
-       <div class="wheel-divider">,</div>
-       <div id="wheelDecimal" class="spin-wheel"></div>
-     </div>
-     
-     <div class="sheet-inputs">
-       <input type="date" id="sheetDate" class="responsive-input">
-       <input type="text" id="sheetNote" class="responsive-input" placeholder="Es. Conad...">
-     </div>
-     
-     <div class="sheet-actions">
-       <button class="btn-secondary" onclick="closeTransactionSheet()">Annulla</button>
-       <button class="btn-spesa" onclick="saveFromSheet()">SALVA</button>
-     </div>
-   </div>
- </div>
+    <!-- BOTTOM SHEET TRANSAZIONI MOBILE -->
+    <div id="transactionSheetOverlay" class="transaction-sheet-overlay" onclick="closeTransactionSheet()">
+      <div id="transactionSheet" class="transaction-sheet" onclick="event.stopPropagation();">
+        <div class="sheet-handle"></div>
+
+        <div class="sheet-type-tabs">
+          <div class="segmented-control">
+            <input type="radio" id="radioActual" name="sheetType" checked onchange="setSheetType('actual')">
+            <input type="radio" id="radioPlanned" name="sheetType" onchange="setSheetType('planned')">
+            <label for="radioActual" class="segment-label">SOSTENUTA</label>
+            <label for="radioPlanned" class="segment-label">PREVISTA</label>
+            <div class="segment-slider"></div>
+          </div>
+        </div>
+
+        <div id="sheetCategoryBadge" class="sheet-category-badge"></div>
+
+        <div class="sheet-amount-display" id="sheetAmountDisplay">
+          <div class="spin-wheel" id="wheelInteger"></div>
+          <span class="sheet-eur">€</span>
+          <div class="spin-wheel" id="wheelDecimal"></div>
+          <input type="number" id="sheetAmountInput" inputmode="decimal" step="0.01" min="0" max="999.99" style="position:absolute;opacity:0;width:1px;height:1px;left:-100px;">
+        </div>
+
+        <div class="sheet-inputs">
+          <input type="date" id="sheetDate" class="responsive-input">
+          <input type="text" id="sheetNote" class="responsive-input" placeholder="Es. Conad...">
+        </div>
+
+        <div class="sheet-actions">
+          <button class="btn-secondary" onclick="closeTransactionSheet()">Annulla</button>
+          <button class="btn-spesa" onclick="saveFromSheet()">SALVA</button>
+        </div>
+      </div>
+    </div>
 
  <script src="script.js"></script>
 </body>
