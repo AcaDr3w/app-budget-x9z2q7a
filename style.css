@@ -562,6 +562,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     background: #cbd5e1;
     border-radius: 2px;
     margin: 0 auto 20px;
+    cursor: grab;
+    touch-action: none;
+}
+.sheet-handle:active {
+    cursor: grabbing;
 }
 
 /* ===== SEGMENTED CONTROL PREMIUM ===== */
@@ -699,12 +704,18 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     font-weight: 600;
 }
 
+.separator {
+    font-size: 28px;
+    font-weight: 400;
+    color: #94a3b8;
+    padding-bottom: 12px;
+}
+
 .sheet-eur {
     font-size: 28px;
     font-weight: 600;
     color: var(--accent);
-    margin: 0 8px;
-    padding-bottom: 12px;
+    margin-left: 8px;
 }
 
 .sheet-inputs {

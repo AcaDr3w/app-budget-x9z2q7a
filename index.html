@@ -341,7 +341,7 @@
             </div>
             <div class="settings-col-right">
                 <div class="card">
-                    <h2>📱 App &amp; Notifiche</h2>
+                    <h2>📱 App & Notifiche</h2>
                     <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                         <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
                         <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
@@ -390,9 +390,10 @@
 
         <div class="sheet-amount-display" id="sheetAmountDisplay">
           <div class="spin-wheel" id="wheelInteger"></div>
-          <span class="sheet-eur">€</span>
+          <span class="separator">·</span>
           <div class="spin-wheel" id="wheelDecimal"></div>
-          <input type="number" id="sheetAmountInput" inputmode="decimal" step="0.01" min="0" max="999.99" style="position:absolute;opacity:0;width:1px;height:1px;left:-100px;">
+          <span class="sheet-eur">€</span>
+          <input type="number" id="hiddenAmountInput" step="0.01" inputmode="decimal" min="0" max="999.99" style="position:absolute; opacity:0; pointer-events:none; width:1px; height:1px; left:-100px; top:-100px;">
         </div>
 
         <div class="sheet-inputs">
