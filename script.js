@@ -655,7 +655,6 @@ function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
     
     wheel.addEventListener('touchstart', (e) => {
         e.stopPropagation();
-        e.preventDefault();
         wheel.dataset.dragging = 'true';
         wheel.dataset.startY = e.touches[0].clientY;
         wheel.dataset.startTransform = parseInt(wheel.dataset.currentTransform || 0);
@@ -665,7 +664,6 @@ function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
     
     wheel.addEventListener('touchmove', (e) => {
         e.stopPropagation();
-        e.preventDefault();
         if (wheel.dataset.dragging !== 'true') return;
         const deltaY = e.touches[0].clientY - wheel.dataset.lastY;
         wheel.dataset.velocity = Math.abs(deltaY);
