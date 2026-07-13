@@ -367,10 +367,40 @@
                     <button class="btn-action" style="background: #ef4444; width: 100%; padding: 12px; font-size: 14px;" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
                 </div>
             </div>
-        </div>
     </div>
-</div>
+    </div>
+ </div>
 
-<script src="script.js"></script>
+ <!-- BOTTOM SHEET TRANSAZIONI MOBILE -->
+ <div id="transactionSheetOverlay" class="transaction-sheet-overlay" onclick="closeTransactionSheet()">
+   <div id="transactionSheet" class="transaction-sheet" onclick="event.stopPropagation();">
+     <div class="sheet-handle"></div>
+     
+     <div class="sheet-type-tabs">
+       <button id="tabActual" class="sheet-tab active" onclick="setSheetType('actual')">SPESA SOSTENUTA</button>
+       <button id="tabPlanned" class="sheet-tab" onclick="setSheetType('planned')">SPESA PREVISTA</button>
+     </div>
+     
+     <div id="sheetCategoryBadge" class="sheet-category-badge"></div>
+     
+     <div class="sheet-wheels">
+       <div id="wheelInteger" class="spin-wheel"></div>
+       <div class="wheel-divider">,</div>
+       <div id="wheelDecimal" class="spin-wheel"></div>
+     </div>
+     
+     <div class="sheet-inputs">
+       <input type="date" id="sheetDate" class="responsive-input">
+       <input type="text" id="sheetNote" class="responsive-input" placeholder="Es. Conad...">
+     </div>
+     
+     <div class="sheet-actions">
+       <button class="btn-secondary" onclick="closeTransactionSheet()">Annulla</button>
+       <button class="btn-spesa" onclick="saveFromSheet()">SALVA</button>
+     </div>
+   </div>
+ </div>
+
+ <script src="script.js"></script>
 </body>
 </html>

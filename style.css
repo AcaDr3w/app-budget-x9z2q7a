@@ -528,3 +528,154 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         font-size: 13px;
     }
 }
+
+/* ===== BOTTOM SHEET TRANSAZIONI MOBILE ===== */
+.transaction-sheet-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 2001;
+    align-items: flex-end;
+    justify-content: center;
+}
+.transaction-sheet-overlay.active {
+    display: flex;
+}
+.transaction-sheet {
+    width: 100%;
+    background: var(--panel);
+    border-radius: 24px 24px 0 0;
+    padding: 20px 16px 24px;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.transaction-sheet-overlay.active .transaction-sheet {
+    transform: translateY(0);
+}
+.sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+    margin: 0 auto 16px;
+}
+.sheet-type-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.sheet-tab {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+}
+.sheet-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+.sheet-category-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary);
+}
+.sheet-wheels {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 20px;
+    padding: 10px 0;
+}
+.spin-wheel {
+    height: 120px;
+    width: 60px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
+}
+.spin-wheel::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 36px;
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+}
+.wheel-divider {
+    font-size: 24px;
+    font-weight: bold;
+    color: #64748b;
+    padding-bottom: 40px;
+}
+.wheel-numbers {
+    position: absolute;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.wheel-numbers span {
+    height: 36px;
+    line-height: 36px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+    width: 100%;
+    text-align: center;
+}
+.wheel-numbers span.selected {
+    color: var(--accent);
+    font-weight: 700;
+}
+.sheet-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.sheet-actions {
+    display: flex;
+    gap: 10px;
+}
+.sheet-actions button {
+    flex: 1;
+}
+
+/* Desktop: hide bottom sheet */
+@media (min-width: 768px) {
+    .transaction-sheet-overlay {
+        display: none !important;
+    }
+}
+
+/* Mobile specific: ensure sheet appears above nav */
+@media (max-width: 767px) {
+    .transaction-sheet {
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+    }
+}

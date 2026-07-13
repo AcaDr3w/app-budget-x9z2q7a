@@ -510,9 +510,199 @@ function getCategoryCardBorder(catName) {
     return `1px solid rgba(${r}, ${g}, ${b}, 0.25)`;
 }
 
+// ===== BOTTOM SHEET STATE =====
+let sheetSelectedCategory = null;
+let sheetType = 'actual'; // 'actual' or 'planned'
+
 function openTransactionSheet(categoryName) {
-    // Placeholder per la Parte 2: aprirà il foglio delle transazioni della categoria
-    console.log('[DEBUG] openTransactionSheet called for:', categoryName);
+    sheetSelectedCategory = categoryName;
+    sheetType = 'actual';
+    
+    const overlay = document.getElementById('transactionSheetOverlay');
+    const badge = document.getElementById('sheetCategoryBadge');
+    const sheetDate = document.getElementById('sheetDate');
+    
+    // Populate category badge
+    const icon = getCatIcon(categoryName);
+    badge.innerHTML = `${icon} <span>${categoryName}</span>`;
+    
+    // Reset to default tab (actual)
+    document.getElementById('tabActual').classList.add('active');
+    document.getElementById('tabPlanned').classList.remove('active');
+    
+    // Set default date
+    const today = new Date().toISOString().slice(0, 10);
+    sheetDate.value = today;
+    
+    // Clear note input
+    document.getElementById('sheetNote').value = '';
+    
+    // Show overlay
+    overlay.classList.add('active');
+    
+    // Init spin wheels
+    initSpinWheels();
+}
+
+function closeTransactionSheet() {
+    const overlay = document.getElementById('transactionSheetOverlay');
+    overlay.classList.remove('active');
+    sheetSelectedCategory = null;
+}
+
+function setSheetType(type) {
+    sheetType = type;
+    document.getElementById('tabActual').classList.toggle('active', type === 'actual');
+    document.getElementById('tabPlanned').classList.toggle('active', type === 'planned');
+}
+
+function initSpinWheels() {
+    const intWheel = document.getElementById('wheelInteger');
+    const decWheel = document.getElementById('wheelDecimal');
+    
+    // Generate integer wheel (0-999)
+    intWheel.innerHTML = '<div class="wheel-numbers"></div>';
+    const intNumbers = intWheel.querySelector('.wheel-numbers');
+    for (let i = 0; i <= 999; i++) {
+        const span = document.createElement('span');
+        span.textContent = i.toString();
+        intNumbers.appendChild(span);
+    }
+    
+    // Generate decimal wheel (.00 to .99)
+    decWheel.innerHTML = '<div class="wheel-numbers"></div>';
+    const decNumbers = decWheel.querySelector('.wheel-numbers');
+    for (let i = 0; i <= 99; i++) {
+        const span = document.createElement('span');
+        span.textContent = '.' + i.toString().padStart(2, '0');
+        decNumbers.appendChild(span);
+    }
+    
+    // Set initial position (0.00)
+    intNumbers.style.transform = 'translateY(0)';
+    decNumbers.style.transform = 'translateY(0)';
+    intWheel.dataset.selected = 0;
+    decWheel.dataset.selected = 0;
+    
+    // Add touch handlers
+    setupWheelTouch(intWheel, intNumbers, 120);
+    setupWheelTouch(decWheel, decNumbers, 120, true);
+}
+
+function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
+    const maxIndex = isDecimal ? 99 : 999;
+    
+    wheel.addEventListener('touchstart', (e) => {
+        wheel.dataset.dragging = 'true';
+        wheel.dataset.startY = e.touches[0].clientY;
+        wheel.dataset.startTransform = parseInt(wheel.dataset.currentTransform || 0);
+        wheel.dataset.velocity = 0;
+        wheel.dataset.lastY = e.touches[0].clientY;
+    });
+    
+    wheel.addEventListener('touchmove', (e) => {
+        if (wheel.dataset.dragging !== 'true') return;
+        const deltaY = e.touches[0].clientY - wheel.dataset.lastY;
+        wheel.dataset.velocity = Math.abs(deltaY);
+        wheel.dataset.currentTransform = wheel.dataset.startTransform + (e.touches[0].clientY - wheel.dataset.startY);
+    });
+    
+    wheel.addEventListener('touchend', (e) => {
+        if (wheel.dataset.dragging !== 'true') return;
+        wheel.dataset.dragging = 'false';
+        
+        // Inertia animation
+        let velocity = parseInt(wheel.dataset.velocity || 0);
+        let transform = parseInt(wheel.dataset.currentTransform || 0);
+        const friction = 0.95;
+        const snapThreshold = itemHeight / 3;
+        
+        const animate = () => {
+            if (velocity > 0.5) {
+                velocity *= friction;
+                transform += (velocity > 10 ? (transform < 0 ? velocity : -velocity) : 0);
+                wheel.dataset.currentTransform = transform;
+                
+                // Clamp to bounds
+                const minY = -(maxIndex * itemHeight);
+                if (transform < minY) transform = minY;
+                if (transform > 0) transform = 0;
+            }
+            
+            // Snap to nearest item
+            const nearestIndex = Math.max(0, Math.min(maxIndex, Math.round(-transform / itemHeight)));
+            const snapY = -nearestIndex * itemHeight;
+            
+            if (Math.abs(transform - snapY) < 1 || (velocity <= 0.5 && Math.abs(transform - snapY) < snapThreshold)) {
+                transform = snapY;
+                wheel.dataset.currentTransform = transform;
+                wheel.dataset.selected = nearestIndex;
+                numbers.style.transform = `translateY(${transform}px)`;
+                highlightSelected(wheel, nearestIndex, itemHeight);
+            } else {
+                transform += (snapY - transform) * 0.3;
+                wheel.dataset.currentTransform = transform;
+                numbers.style.transform = `translateY(${transform}px)`;
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    });
+}
+
+function highlightSelected(wheel, selectedIndex, itemHeight) {
+    const numbers = wheel.querySelector('.wheel-numbers');
+    const spans = numbers.querySelectorAll('span');
+    spans.forEach((span, idx) => {
+        span.classList.toggle('selected', idx === selectedIndex);
+    });
+}
+
+function saveFromSheet() {
+    const intWheel = document.getElementById('wheelInteger');
+    const decWheel = document.getElementById('wheelDecimal');
+    
+    const intVal = parseInt(intWheel.dataset.selected || 0);
+    const decVal = parseInt(decWheel.dataset.selected || 0);
+    const amount = intVal + (decVal / 100);
+    
+    const date = document.getElementById('sheetDate').value;
+    const note = document.getElementById('sheetNote').value.trim() || 'Aggiunto da sheet';
+    
+    // Create expense object
+    const month = document.getElementById('currentMonth').value;
+    
+    let planned = 0;
+    let actual = 0;
+    
+    if (sheetType === 'planned') {
+        planned = amount;
+    } else {
+        actual = amount;
+    }
+    
+    // Add to data structure
+    const exp = {
+        id: Date.now(),
+        month: month,
+        date: date,
+        category: sheetSelectedCategory,
+        desc: note,
+        planned: planned,
+        actual: actual,
+        sharedPercentage: 0
+    };
+    
+    currentData.expenses.push(exp);
+    db.expenses.put(exp).then(() => {
+        closeTransactionSheet();
+        updateUI();
+        showToast('Spesa aggiunta', false);
+    }).catch(err => {
+        console.error('[DB] Error adding expense from sheet:', err);
+        showToast('Errore salvataggio', true);
+    });
 }
 
 function renderCategoriesDropdown() {
