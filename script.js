@@ -478,6 +478,29 @@ function getCatIcon(catName) {
 }
 
 
+
+// =====================================================================
+// CATEGORY COLOR MAPPING (for pie chart and grid)
+// =====================================================================
+const CATEGORY_COLORS = ['#3b82f6','#8b5cf6','#475569','#0d9488','#10b981','#f59e0b','#f97316','#ef4444','#06b6d4','#ec4899','#a855f7','#eab308'];
+
+function getCategoryColor(catName) {
+    if (!catName) return CATEGORY_COLORS[0];
+    let hash = 0;
+    for (let i = 0; i < catName.length; i++) {
+        hash = catName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % CATEGORY_COLORS.length;
+    return CATEGORY_COLORS[index];
+}
+
+function getCategoryCardBg(catName) {
+    const color = getCategoryColor(catName);
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.15)`;
+}
 function renderCategoriesDropdown() {
     const select = document.getElementById('expenseCategory');
     const adminList = document.getElementById('categoriesAdminList');
@@ -770,6 +793,7 @@ function renderCategoryGrid(catSums) {
         
         const card = document.createElement('div');
         card.className = 'category-card';
+        card.style.background = getCategoryCardBg(cat);
         card.innerHTML = `
             <div class="category-card-icon">${icon}</div>
             <div class="category-card-name">${cat}</div>

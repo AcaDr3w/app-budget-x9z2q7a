@@ -301,7 +301,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 @media (max-width: 767px) {
     .category-grid-mobile {
         display: grid !important;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, 1fr) !important;
         gap: 6px;
         margin-bottom: 16px;
     }
@@ -329,7 +329,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         color: var(--primary);
         margin-bottom: 6px;
         line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
         word-break: break-word;
+        hyphens: auto;
     }
     .category-progress-bar {
         height: 5px;
