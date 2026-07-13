@@ -501,6 +501,20 @@ function getCategoryCardBg(catName) {
     const b = parseInt(color.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, 0.15)`;
 }
+
+function getCategoryCardBorder(catName) {
+    const color = getCategoryColor(catName);
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    return `1px solid rgba(${r}, ${g}, ${b}, 0.25)`;
+}
+
+function openTransactionSheet(categoryName) {
+    // Placeholder per la Parte 2: aprirà il foglio delle transazioni della categoria
+    console.log('[DEBUG] openTransactionSheet called for:', categoryName);
+}
+
 function renderCategoriesDropdown() {
     const select = document.getElementById('expenseCategory');
     const adminList = document.getElementById('categoriesAdminList');
@@ -791,9 +805,10 @@ function renderCategoryGrid(catSums) {
             barClass = 'over';
         }
         
-        const card = document.createElement('div');
+const card = document.createElement('div');
         card.className = 'category-card';
         card.style.background = getCategoryCardBg(cat);
+        card.style.border = getCategoryCardBorder(cat);
         card.innerHTML = `
             <div class="category-card-icon">${icon}</div>
             <div class="category-card-name">${cat}</div>
@@ -801,7 +816,7 @@ function renderCategoryGrid(catSums) {
                 <div class="category-progress-fill ${barClass}" style="width: ${pct}%"></div>
             </div>
         `;
-        card.onclick = () => filterByCategory(cat);
+        card.onclick = () => openTransactionSheet(cat);
         container.appendChild(card);
     });
 }
