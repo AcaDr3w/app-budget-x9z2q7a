@@ -371,45 +371,20 @@
     </div>
  </div>
 
-    <!-- BOTTOM SHEET TRANSAZIONI MOBILE -->
-    <div id="transactionSheetOverlay" class="transaction-sheet-overlay" onclick="closeTransactionSheet()">
-      <div id="transactionSheet" class="transaction-sheet" onclick="event.stopPropagation();">
+    <!-- BOTTOM SHEET - STEP 1 (Minima Struttura) -->
+    <div id="sheetOverlay" class="sheet-overlay"></div>
+    <div id="bottomSheet" class="bottom-sheet">
         <div class="sheet-handle"></div>
-
-        <div class="sheet-type-tabs">
-          <div class="segmented-control">
-            <input type="radio" id="radioActual" name="sheetType" checked onchange="setSheetType('actual')">
-            <input type="radio" id="radioPlanned" name="sheetType" onchange="setSheetType('planned')">
-            <label for="radioActual" class="segment-label">SOSTENUTA</label>
-            <label for="radioPlanned" class="segment-label">PREVISTA</label>
-            <div class="segment-slider"></div>
-          </div>
+        <div class="sheet-header">
+            <h3 id="sheetCategoryTitle">Categoria</h3>
         </div>
-
-        <div id="sheetCategoryBadge" class="sheet-category-badge"></div>
-
-        <div class="sheet-amount-display" id="sheetAmountDisplay">
-           <div class="wheel-scroll" id="wheelInteger" data-wheel="integer"></div>
-           <span class="separator">·</span>
-           <div class="wheel-scroll" id="wheelDecimal" data-wheel="decimal"></div>
-           <span class="sheet-eur">€</span>
+        <div class="sheet-body">
+            <div class="test-amount">€ 0.00</div>
         </div>
-        <input type="number" id="hiddenAmountInput" step="0.01" inputmode="decimal" min="0" max="999.99" class="hidden-amount-overlay">
-++++++++
-```
-
-        <div class="sheet-inputs">
-          <input type="date" id="sheetDate" class="responsive-input">
-          <input type="text" id="sheetNote" class="responsive-input" placeholder="Es. Conad...">
+        <div class="sheet-footer">
+            <button id="closeSheetBtn">Annulla</button>
         </div>
-
-        <div class="sheet-actions">
-          <button class="btn-secondary" onclick="closeTransactionSheet()">Annulla</button>
-          <button class="btn-spesa" onclick="saveFromSheet()">SALVA</button>
-        </div>
-      </div>
     </div>
 
- <script src="script.js"></script>
-</body>
+    <script src="script.js"></script>
 </html>

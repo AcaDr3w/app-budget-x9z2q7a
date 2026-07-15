@@ -527,33 +527,39 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
 }
 
-/* ===== BOTTOM SHEET TRANSAZIONI MOBILE ===== */
-.transaction-sheet-overlay {
-    display: none;
+/* ===== BOTTOM SHEET - STEP 1 (Minimal Structure) ===== */
+.sheet-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.4);
+    background: rgba(15, 23, 42, 0.5);
     z-index: 2001;
-    align-items: flex-end;
-    justify-content: center;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
 }
-.transaction-sheet-overlay.active {
-    display: flex;
+.sheet-overlay.open {
+    visibility: visible;
+    pointer-events: auto;
 }
-.transaction-sheet {
-    width: 100%;
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     background: var(--panel);
     border-radius: 24px 24px 0 0;
     padding: 20px 16px 24px;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
-    max-height: 80vh;
-    overflow-y: auto;
+    z-index: 2002;
     transform: translateY(100%);
     transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    pointer-events: auto !important;
+    visibility: hidden;
+    pointer-events: none;
 }
-.transaction-sheet-overlay.active .transaction-sheet {
+.bottom-sheet.open {
     transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
 }
 .sheet-handle {
     width: 40px;
@@ -567,246 +573,30 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     cursor: grabbing;
 }
 
-/* ===== SEGMENTED CONTROL PREMIUM ===== */
-.sheet-type-tabs {
+/* ===== STEP 1: Sheet Header/Body/Footer ===== */
+.sheet-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    text-align: center;
     margin-bottom: 20px;
 }
-.segmented-control {
-    position: relative;
-    display: flex;
-    background: #f1f5f9;
-    border-radius: 16px;
-    padding: 4px;
-    overflow: hidden;
+.sheet-body {
+    padding: 20px 0;
 }
-.segmented-control input[type="radio"] {
-    display: none;
-}
-.segment-label {
-    flex: 1;
-    padding: 8px 12px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    cursor: pointer;
-    z-index: 2;
-    transition: color 0.25s ease;
-    border-radius: 12px;
-}
-#radioActual:checked ~ .segment-label:first-of-type,
-#radioPlanned:checked ~ .segment-label:last-of-type {
-    color: var(--primary);
-}
-.segment-slider {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    width: calc(50% - 4px);
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    transition: transform 0.25s cubic-bezier(0.33, 1, 0.68, 1);
-    z-index: 1;
-}
-#radioPlanned:checked ~ .segment-slider {
-    transform: translateX(100%);
-}
-
-.sheet-category-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background: #f8fafc;
-    border-radius: 16px;
-    margin-bottom: 24px;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--primary);
-}
-
-/* ===== AMOUNT DISPLAY CILINDRO 3D ===== */
-.sheet-amount-display {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 24px;
-    position: relative;
-}
-.sheet-amount-display::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% + 80px);
-    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, transparent 15%, transparent 85%, rgba(255,255,255,0.95) 100%);
-    pointer-events: none;
-    z-index: 3;
-}
-.spin-wheel {
-    height: 120px;
-    width: 60px;
-    overflow: hidden;
-    position: relative;
-    border-radius: 16px;
-    background: transparent;
-}
-.spin-wheel::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.9) 100%);
-    pointer-events: none;
-    z-index: 2;
-}
-.spin-wheel::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 40px;
-    background: rgba(59, 130, 246, 0.08);
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 8px;
-}
-.wheel-numbers {
-    position: absolute;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: transform 0.2s ease-out;
-}
-.wheel-numbers span {
-    height: 40px;
-    line-height: 40px;
-    font-size: 20px;
-    font-weight: 500;
-    color: #64748b;
-    width: 100%;
+.test-amount {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--accent);
     text-align: center;
 }
-.wheel-numbers span.selected {
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.separator {
-    font-size: 28px;
-    font-weight: 400;
-    color: #94a3b8;
-    padding-bottom: 12px;
-}
-
-.sheet-eur {
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--accent);
-    margin-left: 8px;
-}
-
-.sheet-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 24px;
-}
-.sheet-actions {
-    display: flex;
-    gap: 10px;
-}
-.sheet-actions button {
-    flex: 1;
-}
-
-/* ===== NATIVE SCROLL WHEELS (REPLACES spin-wheel) ===== */
-.wheel-scroll {
-    height: 150px;
-    width: 60px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scroll-snap-type: y mandatory;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    position: relative;
-    border-radius: 16px;
-    background: transparent;
-}
-.wheel-scroll::-webkit-scrollbar {
-    display: none;
-}
-.wheel-item {
-    scroll-snap-align: center;
-    scroll-snap-stop: always;
-    height: 50px;
-    line-height: 50px;
-    font-size: 20px;
-    font-weight: 500;
-    color: #64748b;
-    width: 100%;
-    text-align: center;
-}
-.wheel-item.selected {
-    color: var(--accent);
-    font-weight: 600;
-}
-.wheel-scroll::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 50px;
-    background: rgba(59, 130, 246, 0.08);
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 8px;
-}
-.wheel-scroll::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.9) 100%);
-    pointer-events: none;
-    z-index: 2;
-}
-.hidden-amount-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    z-index: 10;
+.sheet-footer {
+    margin-top: 20px;
 }
 
 /* Desktop: hide bottom sheet */
 @media (min-width: 768px) {
-    .transaction-sheet-overlay {
+    #sheetOverlay, #bottomSheet {
         display: none !important;
     }
 }
-
-/* Mobile specific: ensure sheet appears above nav */
-@media (max-width: 767px) {
-    .transaction-sheet {
-        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
-    }
-}
-++++++++
-```

@@ -512,246 +512,45 @@ function getCategoryCardBorder(catName) {
 
 // ===== BOTTOM SHEET STATE =====
 let sheetSelectedCategory = null;
-let sheetType = 'actual'; // 'actual' or 'planned'
-const ITEM_HEIGHT = 40;
 
 function openTransactionSheet(categoryName) {
+    console.log("Card cliccata:", categoryName);
     sheetSelectedCategory = categoryName;
-    sheetType = 'actual';
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    const title = document.getElementById('sheetCategoryTitle');
     
-    const overlay = document.getElementById('transactionSheetOverlay');
-    const badge = document.getElementById('sheetCategoryBadge');
-    const sheetDate = document.getElementById('sheetDate');
-    const sheetInput = document.getElementById('sheetAmountInput');
-    
-    // Populate category badge
-    const icon = getCatIcon(categoryName);
-    badge.innerHTML = `${icon} <span>${categoryName}</span>`;
-    
-    // Reset to default tab (actual)
-    document.getElementById('radioActual').checked = true;
-    document.getElementById('radioPlanned').checked = false;
-    
-    // Set default date
-    const today = new Date().toISOString().slice(0, 10);
-    sheetDate.value = today;
-    
-    // Clear note input
-    document.getElementById('sheetNote').value = '';
-    
-    // Reset amount input
-    sheetInput.value = '';
-    
-    // Show overlay
-    overlay.classList.add('active');
-    
-    // Init spin wheels
-    initSpinWheels();
-    
-    // Setup input listener for hybrid keyboard support
-    sheetInput.addEventListener('input', updateWheelsFromInput);
+    if (overlay && sheet && title) {
+        title.textContent = categoryName;
+        overlay.classList.add('open');
+        sheet.classList.add('open');
+    }
 }
 
 function closeTransactionSheet() {
-    const overlay = document.getElementById('transactionSheetOverlay');
-    overlay.classList.remove('active');
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    if (overlay && sheet) {
+        overlay.classList.remove('open');
+        sheet.classList.remove('open');
+    }
     sheetSelectedCategory = null;
 }
 
-function setSheetType(type) {
-    sheetType = type;
-}
-
-function updateWheelsFromInput() {
-    const sheetInput = document.getElementById('sheetAmountInput');
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
-    
-    let value = parseFloat(sheetInput.value) || 0;
-    if (value < 0) value = 0;
-    if (value > 999.99) value = 999.99;
-    
-    const intVal = Math.floor(value);
-    const decVal = Math.round((value - intVal) * 100);
-    
-    // Update wheel positions
-    const intNumbers = intWheel.querySelector('.wheel-numbers');
-    const decNumbers = decWheel.querySelector('.wheel-numbers');
-    
-    const intTransform = -intVal * ITEM_HEIGHT;
-    const decTransform = -decVal * ITEM_HEIGHT;
-    
-    intNumbers.style.transform = `translateY(${intTransform}px)`;
-    decNumbers.style.transform = `translateY(${decTransform}px)`;
-    
-    // Update dataset
-    intWheel.dataset.selected = intVal;
-    decWheel.dataset.selected = decVal;
-    
-    // Highlight selected
-    highlightSelected(intWheel, intVal);
-    highlightSelected(decWheel, decVal);
-}
-
-function initSpinWheels() {
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
-    const sheetAmountInput = document.getElementById('sheetAmountInput');
-    
-    // Generate integer wheel (0-999)
-    intWheel.innerHTML = '<div class="wheel-numbers"></div>';
-    const intNumbers = intWheel.querySelector('.wheel-numbers');
-    for (let i = 0; i <= 999; i++) {
-        const span = document.createElement('span');
-        span.textContent = i.toString();
-        intNumbers.appendChild(span);
+// Setup close button and overlay click handlers
+(function setupBottomSheetEvents() {
+    const closeBtn = document.getElementById('closeSheetBtn');
+    const overlay = document.getElementById('sheetOverlay');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeTransactionSheet);
     }
-    
-    // Generate decimal wheel (.00 to .99)
-    decWheel.innerHTML = '<div class="wheel-numbers"></div>';
-    const decNumbers = decWheel.querySelector('.wheel-numbers');
-    for (let i = 0; i <= 99; i++) {
-        const span = document.createElement('span');
-        span.textContent = '.' + i.toString().padStart(2, '0');
-        decNumbers.appendChild(span);
+    if (overlay) {
+        overlay.addEventListener('click', closeTransactionSheet);
     }
-    
-    // Set initial position (0.00)
-    intNumbers.style.transform = 'translateY(0)';
-    decNumbers.style.transform = 'translateY(0)';
-    intWheel.dataset.selected = 0;
-    decWheel.dataset.selected = 0;
-    
-    // Add touch handlers
-    setupWheelTouch(intWheel, intNumbers, ITEM_HEIGHT, false);
-    setupWheelTouch(decWheel, decNumbers, ITEM_HEIGHT, true);
-    
-    // Add click-to-open-keyboard handlers
-    intWheel.addEventListener('click', () => {
-        sheetAmountInput.focus();
-    });
-    decWheel.addEventListener('click', () => {
-        sheetAmountInput.focus();
-    });
-}
-
-function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
-    const maxIndex = isDecimal ? 99 : 999;
-    
-    wheel.addEventListener('touchstart', (e) => {
-        wheel.dataset.dragging = 'true';
-        wheel.dataset.startY = e.touches[0].clientY;
-        wheel.dataset.startTransform = parseInt(wheel.dataset.currentTransform || 0);
-        wheel.dataset.velocity = 0;
-        wheel.dataset.lastY = e.touches[0].clientY;
-    });
-    
-    wheel.addEventListener('touchmove', (e) => {
-        if (wheel.dataset.dragging !== 'true') return;
-        const deltaY = e.touches[0].clientY - wheel.dataset.lastY;
-        wheel.dataset.velocity = Math.abs(deltaY);
-        wheel.dataset.currentTransform = wheel.dataset.startTransform + (e.touches[0].clientY - wheel.dataset.startY);
-    });
-    
-    wheel.addEventListener('touchend', (e) => {
-        if (wheel.dataset.dragging !== 'true') return;
-        wheel.dataset.dragging = 'false';
-        
-        // Inertia animation
-        let velocity = parseInt(wheel.dataset.velocity || 0);
-        let transform = parseInt(wheel.dataset.currentTransform || 0);
-        const friction = 0.95;
-        const snapThreshold = itemHeight / 3;
-        
-        const animate = () => {
-            if (velocity > 0.5) {
-                velocity *= friction;
-                transform += (velocity > 10 ? (transform < 0 ? velocity : -velocity) : 0);
-                wheel.dataset.currentTransform = transform;
-                
-                // Clamp to bounds
-                const minY = -(maxIndex * itemHeight);
-                if (transform < minY) transform = minY;
-                if (transform > 0) transform = 0;
-            }
-            
-            // Snap to nearest item
-            const nearestIndex = Math.max(0, Math.min(maxIndex, Math.round(-transform / itemHeight)));
-            const snapY = -nearestIndex * itemHeight;
-            
-            if (Math.abs(transform - snapY) < 1 || (velocity <= 0.5 && Math.abs(transform - snapY) < snapThreshold)) {
-                transform = snapY;
-                wheel.dataset.currentTransform = transform;
-                wheel.dataset.selected = nearestIndex;
-                numbers.style.transform = `translateY(${transform}px)`;
-                highlightSelected(wheel, nearestIndex, itemHeight);
-            } else {
-                transform += (snapY - transform) * 0.3;
-                wheel.dataset.currentTransform = transform;
-                numbers.style.transform = `translateY(${transform}px)`;
-                requestAnimationFrame(animate);
-            }
-        };
-        
-        animate();
-    });
-}
-
-function highlightSelected(wheel, selectedIndex, itemHeight) {
-    const numbers = wheel.querySelector('.wheel-numbers');
-    const spans = numbers.querySelectorAll('span');
-    spans.forEach((span, idx) => {
-        span.classList.toggle('selected', idx === selectedIndex);
-    });
-}
-
-function saveFromSheet() {
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
-    
-    const intVal = parseInt(intWheel.dataset.selected || 0);
-    const decVal = parseInt(decWheel.dataset.selected || 0);
-    const amount = intVal + (decVal / 100);
-    
-    const date = document.getElementById('sheetDate').value;
-    const note = document.getElementById('sheetNote').value.trim() || 'Aggiunto da sheet';
-    
-    // Create expense object
-    const month = document.getElementById('currentMonth').value;
-    
-    let planned = 0;
-    let actual = 0;
-    
-    if (sheetType === 'planned') {
-        planned = amount;
-    } else {
-        actual = amount;
-    }
-    
-    // Add to data structure
-    const exp = {
-        id: Date.now(),
-        month: month,
-        date: date,
-        category: sheetSelectedCategory,
-        desc: note,
-        planned: planned,
-        actual: actual,
-        sharedPercentage: 0
-    };
-    
-    currentData.expenses.push(exp);
-    db.expenses.put(exp).then(() => {
-        closeTransactionSheet();
-        updateUI();
-        showToast('Spesa aggiunta', false);
-    }).catch(err => {
-        console.error('[DB] Error adding expense from sheet:', err);
-        showToast('Errore salvataggio', true);
-    });
-}
+})();
 
 function renderCategoriesDropdown() {
+
     const select = document.getElementById('expenseCategory');
     const adminList = document.getElementById('categoriesAdminList');
     select.innerHTML = ''; adminList.innerHTML = '';
