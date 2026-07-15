@@ -565,6 +565,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     visibility: visible;
     pointer-events: auto;
 }
+.bottom-sheet.dragging {
+    transition: none !important;
+}
 .sheet-handle {
     width: 40px;
     height: 4px;

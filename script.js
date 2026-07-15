@@ -563,8 +563,12 @@ function closeTransactionSheet() {
 
 // Wheel state
 let wheelDebounceTimer = null;
+let isScrollingProgrammatically = false;
 let selectedInteger = 0;
 let selectedDecimal = 0;
+
+// Constants for wheel calculations
+const WHEEL_ITEM_HEIGHT = 50; // Must match CSS .wheel-item height
 
 function initNativeWheels() {
     const intWheel = document.getElementById('integerWheel');
@@ -620,6 +624,9 @@ function initNativeWheels() {
     
     // Setup scroll listeners with debounce
     intWheel.addEventListener('scroll', () => {
+        // Skip if we're scrolling programmatically
+        if (isScrollingProgrammatically) return;
+        
         clearTimeout(wheelDebounceTimer);
         wheelDebounceTimer = setTimeout(() => {
             const items = intWheel.querySelectorAll('.wheel-item');
@@ -628,8 +635,8 @@ function initNativeWheels() {
             let closestDiff = Infinity;
             
             items.forEach((item, idx) => {
-                const itemTop = idx * 50;
-                const itemCenter = itemTop + 25;
+                const itemTop = idx * WHEEL_ITEM_HEIGHT;
+                const itemCenter = itemTop + (WHEEL_ITEM_HEIGHT / 2);
                 const diff = Math.abs(centerY - itemCenter);
                 if (diff < closestDiff) {
                     closestDiff = diff;
@@ -649,6 +656,9 @@ function initNativeWheels() {
     });
     
     decWheel.addEventListener('scroll', () => {
+        // Skip if we're scrolling programmatically
+        if (isScrollingProgrammatically) return;
+        
         clearTimeout(wheelDebounceTimer);
         wheelDebounceTimer = setTimeout(() => {
             const items = decWheel.querySelectorAll('.wheel-item');
@@ -657,8 +667,8 @@ function initNativeWheels() {
             let closestDiff = Infinity;
             
             items.forEach((item, idx) => {
-                const itemTop = idx * 50;
-                const itemCenter = itemTop + 25;
+                const itemTop = idx * WHEEL_ITEM_HEIGHT;
+                const itemCenter = itemTop + (WHEEL_ITEM_HEIGHT / 2);
                 const diff = Math.abs(centerY - itemCenter);
                 if (diff < closestDiff) {
                     closestDiff = diff;
@@ -722,14 +732,76 @@ function syncInputToWheel(type, value) {
     
     if (type === 'integer' && intWheel) {
         selectedInteger = value;
-        const targetScrollTop = (value + 1) * 50;
+        // +1 for padding item at start, use exact pixel calculation
+        const targetScrollTop = (value + 1) * WHEEL_ITEM_HEIGHT;
+        isScrollingProgrammatically = true;
         intWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        // Reset flag after smooth scroll completes
+        setTimeout(() => { isScrollingProgrammatically = false; }, 300);
     } else if (type === 'decimal' && decWheel) {
         selectedDecimal = value;
-        const targetScrollTop = (value + 1) * 50;
+        const targetScrollTop = (value + 1) * WHEEL_ITEM_HEIGHT;
+        isScrollingProgrammatically = true;
         decWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        setTimeout(() => { isScrollingProgrammatically = false; }, 300);
     }
 }
+
+// Swipe-to-dismiss for bottom sheet
+let dragStartY = 0;
+let dragCurrentY = 0;
+let isDragging = false;
+
+function setupSwipeToClose() {
+    const sheet = document.getElementById('bottomSheet');
+    const handle = document.querySelector('.sheet-handle');
+    
+    if (!sheet || !handle) return;
+    
+    // Touch start
+    handle.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        dragStartY = e.touches[0].clientY;
+        sheet.classList.add('dragging');
+    }, { passive: true });
+    
+    // Touch move
+    handle.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        dragCurrentY = e.touches[0].clientY;
+        const deltaY = dragCurrentY - dragStartY;
+        
+        // Only allow dragging down
+        if (deltaY > 0) {
+            sheet.style.transform = `translateY(${deltaY}px)`;
+        }
+    }, { passive: true });
+    
+    // Touch end
+    const endDrag = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const deltaY = dragCurrentY - dragStartY;
+        const sheetHeight = sheet.offsetHeight;
+        const threshold = Math.min(100, sheetHeight * 0.3);
+        
+        sheet.classList.remove('dragging');
+        
+        if (deltaY > threshold) {
+            // Close the sheet
+            closeTransactionSheet();
+        } else {
+            // Reset position
+            sheet.style.transform = '';
+        }
+    };
+    
+    handle.addEventListener('touchend', endDrag);
+    handle.addEventListener('touchcancel', endDrag);
+}
+
+// Initialize swipe handlers when DOM ready
+document.addEventListener('DOMContentLoaded', setupSwipeToClose);
 
 // Toggle transaction type (Segmented control)
 function setupToggleType() {
