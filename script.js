@@ -570,6 +570,10 @@ let isScrollingProgrammatically = false;
 let selectedInteger = 0;
 let selectedDecimal = 0;
 
+// Store scroll handlers for removal during programmatic scroll
+let intWheelScrollHandler = null;
+let decWheelScrollHandler = null;
+
 // Constants for wheel calculations
 const WHEEL_ITEM_HEIGHT = 50; // Must match CSS .wheel-item height
 
@@ -625,8 +629,8 @@ function initNativeWheels() {
     selectedInteger = 0;
     selectedDecimal = 0;
     
-    // Setup scroll listeners with debounce
-    intWheel.addEventListener('scroll', () => {
+    // Define scroll handlers and store them for later removal
+    intWheelScrollHandler = function() {
         // Skip if we're scrolling programmatically
         if (isScrollingProgrammatically) return;
         
@@ -656,9 +660,9 @@ function initNativeWheels() {
                 syncWheelToInput('integer', selectedInteger);
             }
         }, 100);
-    });
+    };
     
-    decWheel.addEventListener('scroll', () => {
+    decWheelScrollHandler = function() {
         // Skip if we're scrolling programmatically
         if (isScrollingProgrammatically) return;
         
@@ -687,9 +691,15 @@ function initNativeWheels() {
                 syncWheelToInput('decimal', selectedDecimal);
             }
         }, 100);
-    });
+    };
+    
+    intWheel.addEventListener('scroll', intWheelScrollHandler);
+    decWheel.addEventListener('scroll', decWheelScrollHandler);
     
     // Sync input changes to wheels
+    const intContainer = document.getElementById('integerWheelContainer');
+    const decContainer = document.getElementById('decimalWheelContainer');
+    
     if (intInput) {
         intInput.addEventListener('change', () => {
             const val = parseInt(intInput.value) || 0;
@@ -704,6 +714,13 @@ function initNativeWheels() {
                 decInput.focus();
             }
         });
+        // Focus/blur visual feedback
+        intInput.addEventListener('focus', () => {
+            if (intContainer) intContainer.classList.add('focused');
+        });
+        intInput.addEventListener('blur', () => {
+            if (intContainer) intContainer.classList.remove('focused');
+        });
     }
     
     if (decInput) {
@@ -712,6 +729,25 @@ function initNativeWheels() {
             if (val < 0) val = 0;
             if (val > 99) val = 99;
             syncInputToWheel('decimal', val);
+        });
+        // Focus/blur visual feedback
+        decInput.addEventListener('focus', () => {
+            if (decContainer) decContainer.classList.add('focused');
+        });
+        decInput.addEventListener('blur', () => {
+            if (decContainer) decContainer.classList.remove('focused');
+        });
+    }
+    
+    // Click on wheel container opens keyboard
+    if (intContainer) {
+        intContainer.addEventListener('click', () => {
+            if (intInput) intInput.focus();
+        });
+    }
+    if (decContainer) {
+        decContainer.addEventListener('click', () => {
+            if (decInput) decInput.focus();
         });
     }
 }
@@ -738,15 +774,34 @@ function syncInputToWheel(type, value) {
         // +1 for padding item at start, use exact pixel calculation
         const targetScrollTop = (value + 1) * WHEEL_ITEM_HEIGHT;
         isScrollingProgrammatically = true;
+        // Remove scroll listener temporarily
+        if (intWheelScrollHandler) {
+            intWheel.removeEventListener('scroll', intWheelScrollHandler);
+        }
         intWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
-        // Reset flag after smooth scroll completes
-        setTimeout(() => { isScrollingProgrammatically = false; }, 300);
+        // Re-add listener and reset flag after smooth scroll completes
+        setTimeout(() => {
+            if (intWheelScrollHandler) {
+                intWheel.addEventListener('scroll', intWheelScrollHandler);
+            }
+            isScrollingProgrammatically = false;
+        }, 300);
     } else if (type === 'decimal' && decWheel) {
         selectedDecimal = value;
         const targetScrollTop = (value + 1) * WHEEL_ITEM_HEIGHT;
         isScrollingProgrammatically = true;
+        // Remove scroll listener temporarily
+        if (decWheelScrollHandler) {
+            decWheel.removeEventListener('scroll', decWheelScrollHandler);
+        }
         decWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
-        setTimeout(() => { isScrollingProgrammatically = false; }, 300);
+        // Re-add listener and reset flag after smooth scroll completes
+        setTimeout(() => {
+            if (decWheelScrollHandler) {
+                decWheel.addEventListener('scroll', decWheelScrollHandler);
+            }
+            isScrollingProgrammatically = false;
+        }, 300);
     }
 }
 

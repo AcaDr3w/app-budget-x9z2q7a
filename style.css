@@ -628,6 +628,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     z-index: 10;
     border: none;
     background: transparent;
+    pointer-events: none; /* Allows scroll on wheel below */
+}
+
+/* Focus feedback for active wheel */
+.wheel-container.focused {
+    background-color: rgba(0, 122, 255, 0.08);
+    border: 1.5px solid #007aff;
+    border-radius: 12px;
+    transition: background-color 0.2s, border 0.2s;
 }
 
 .wheel-item {
