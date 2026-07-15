@@ -698,50 +698,61 @@ function initNativeWheels() {
     intWheel.addEventListener('scroll', intWheelScrollHandler);
     decWheel.addEventListener('scroll', decWheelScrollHandler);
     
-    // Sync input changes to wheels
+    // Sync input changes to wheels - INPUT event for real-time sync
     const intContainer = document.getElementById('integerWheelContainer');
     const decContainer = document.getElementById('decimalWheelContainer');
     
+    // Debounce timers for input events
+    let intInputDebounceTimer = null;
+    let decInputDebounceTimer = null;
+    
     if (intInput) {
-        intInput.addEventListener('change', () => {
-            const val = parseInt(intInput.value) || 0;
-            if (val >= 0 && val <= 999) {
-                syncInputToWheel('integer', val);
-            }
+        intInput.addEventListener('input', () => {
+            // Debounce the scroll to avoid interrupting fast typing
+            clearTimeout(intInputDebounceTimer);
+            intInputDebounceTimer = setTimeout(() => {
+                const val = parseInt(intInput.value) || 0;
+                if (val >= 0 && val <= 999) {
+                    syncInputToWheel('integer', val);
+                }
+            }, 150);
         });
-        // Enter key moves focus to decimal
+        // Enter key moves focus to decimal with small delay to avoid blur conflict
         intInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && decInput) {
                 e.preventDefault();
-                decInput.focus();
+                setTimeout(() => decInput.focus(), 50);
             }
         });
         // Focus/blur visual feedback + select all on focus
         intInput.addEventListener('focus', (e) => {
             if (intContainer) intContainer.classList.add('focused');
-            // Select all text to allow overwriting
             e.target.select();
         });
         intInput.addEventListener('blur', () => {
             if (intContainer) intContainer.classList.remove('focused');
+            isScrollingProgrammatically = false; // Reset flag on blur
         });
     }
     
     if (decInput) {
-        decInput.addEventListener('change', () => {
-            let val = parseInt(decInput.value) || 0;
-            if (val < 0) val = 0;
-            if (val > 99) val = 99;
-            syncInputToWheel('decimal', val);
+        decInput.addEventListener('input', () => {
+            clearTimeout(decInputDebounceTimer);
+            decInputDebounceTimer = setTimeout(() => {
+                let val = parseInt(decInput.value) || 0;
+                if (val < 0) val = 0;
+                if (val > 99) val = 99;
+                syncInputToWheel('decimal', val);
+            }, 150);
         });
         // Focus/blur visual feedback + select all on focus
         decInput.addEventListener('focus', (e) => {
             if (decContainer) decContainer.classList.add('focused');
-            // Select all text to allow overwriting
             e.target.select();
         });
         decInput.addEventListener('blur', () => {
             if (decContainer) decContainer.classList.remove('focused');
+            isScrollingProgrammatically = false; // Reset flag on blur
         });
     }
     
