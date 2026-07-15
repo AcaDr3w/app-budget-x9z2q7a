@@ -647,7 +647,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     font-weight: 600;
     color: #94a3b8;
     scroll-snap-align: center;
-    scroll-snap-stop: always;
+    scroll-snap-stop: normal;
     transition: color 0.2s, transform 0.2s;
 }
 .wheel-item.selected {

@@ -716,9 +716,11 @@ function initNativeWheels() {
                 decInput.focus();
             }
         });
-        // Focus/blur visual feedback
-        intInput.addEventListener('focus', () => {
+        // Focus/blur visual feedback + select all on focus
+        intInput.addEventListener('focus', (e) => {
             if (intContainer) intContainer.classList.add('focused');
+            // Select all text to allow overwriting
+            e.target.select();
         });
         intInput.addEventListener('blur', () => {
             if (intContainer) intContainer.classList.remove('focused');
@@ -732,9 +734,11 @@ function initNativeWheels() {
             if (val > 99) val = 99;
             syncInputToWheel('decimal', val);
         });
-        // Focus/blur visual feedback
-        decInput.addEventListener('focus', () => {
+        // Focus/blur visual feedback + select all on focus
+        decInput.addEventListener('focus', (e) => {
             if (decContainer) decContainer.classList.add('focused');
+            // Select all text to allow overwriting
+            e.target.select();
         });
         decInput.addEventListener('blur', () => {
             if (decContainer) decContainer.classList.remove('focused');
