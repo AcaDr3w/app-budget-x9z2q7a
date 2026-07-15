@@ -512,19 +512,39 @@ function getCategoryCardBorder(catName) {
 
 // ===== BOTTOM SHEET STATE =====
 let sheetSelectedCategory = null;
+let sheetTransactionType = 'actual'; // 'actual' for Sostenuta, 'planned' for Prevista
 
 function openTransactionSheet(categoryName) {
     console.log("Card cliccata:", categoryName);
     sheetSelectedCategory = categoryName;
+    sheetTransactionType = 'actual';
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
     const title = document.getElementById('sheetCategoryTitle');
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    const sheetDate = document.getElementById('sheetDate');
+    const toggleOptions = document.querySelectorAll('.toggle-option');
     
     if (overlay && sheet && title) {
         title.textContent = categoryName;
         document.body.classList.add('sheet-open');
         overlay.classList.add('open');
         sheet.classList.add('open');
+        
+        // Reset inputs
+        if (intInput) intInput.value = '';
+        if (decInput) decInput.value = '';
+        
+        // Reset date to today
+        if (sheetDate) {
+            const today = new Date().toISOString().slice(0, 10);
+            sheetDate.value = today;
+        }
+        
+        // Reset toggle to 'actual' (Sostenuta)
+        toggleOptions.forEach(opt => opt.classList.toggle('active', opt.dataset.type === 'actual'));
+        
         initNativeWheels();
     }
 }
@@ -538,6 +558,7 @@ function closeTransactionSheet() {
         sheet.classList.remove('open');
     }
     sheetSelectedCategory = null;
+    sheetTransactionType = 'actual';
 }
 
 // Wheel state
@@ -548,6 +569,8 @@ let selectedDecimal = 0;
 function initNativeWheels() {
     const intWheel = document.getElementById('integerWheel');
     const decWheel = document.getElementById('decimalWheel');
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
     
     if (!intWheel || !decWheel) return;
     
@@ -620,7 +643,7 @@ function initNativeWheels() {
                 items.forEach((item, idx) => {
                     item.classList.toggle('selected', idx === closestIdx);
                 });
-                console.log('Integer selected:', selectedInteger);
+                syncWheelToInput('integer', selectedInteger);
             }
         }, 100);
     });
@@ -648,17 +671,129 @@ function initNativeWheels() {
                 items.forEach((item, idx) => {
                     item.classList.toggle('selected', idx === closestIdx);
                 });
-                console.log('Decimal selected:', selectedDecimal);
+                syncWheelToInput('decimal', selectedDecimal);
             }
         }, 100);
     });
+    
+    // Sync input changes to wheels
+    if (intInput) {
+        intInput.addEventListener('change', () => {
+            const val = parseInt(intInput.value) || 0;
+            if (val >= 0 && val <= 999) {
+                syncInputToWheel('integer', val);
+            }
+        });
+        // Enter key moves focus to decimal
+        intInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && decInput) {
+                e.preventDefault();
+                decInput.focus();
+            }
+        });
+    }
+    
+    if (decInput) {
+        decInput.addEventListener('change', () => {
+            let val = parseInt(decInput.value) || 0;
+            if (val < 0) val = 0;
+            if (val > 99) val = 99;
+            syncInputToWheel('decimal', val);
+        });
+    }
 }
 
-// Setup close button and overlay click handlers
+// Sync wheel selection to input value
+function syncWheelToInput(type, value) {
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    
+    if (type === 'integer' && intInput) {
+        intInput.value = value;
+    } else if (type === 'decimal' && decInput) {
+        decInput.value = value;
+    }
+}
+
+// Sync input value to wheel scroll position
+function syncInputToWheel(type, value) {
+    const intWheel = document.getElementById('integerWheel');
+    const decWheel = document.getElementById('decimalWheel');
+    
+    if (type === 'integer' && intWheel) {
+        selectedInteger = value;
+        const targetScrollTop = (value + 1) * 50;
+        intWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+    } else if (type === 'decimal' && decWheel) {
+        selectedDecimal = value;
+        const targetScrollTop = (value + 1) * 50;
+        decWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+    }
+}
+
+// Toggle transaction type (Segmented control)
+function setupToggleType() {
+    const toggleOptions = document.querySelectorAll('.toggle-option');
+    toggleOptions.forEach(opt => {
+        opt.addEventListener('click', () => {
+            toggleOptions.forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            sheetTransactionType = opt.dataset.type;
+        });
+    });
+}
+
+// Save transaction from bottom sheet
+async function saveTransactionFromSheet() {
+    const month = document.getElementById('currentMonth').value;
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    const sheetDate = document.getElementById('sheetDate');
+    const sheetNote = document.getElementById('sheetNote');
+    const saveBtn = document.getElementById('saveTransactionBtn');
+    
+    const intVal = parseInt(intInput?.value) || selectedInteger;
+    const decVal = parseInt(decInput?.value) || selectedDecimal;
+    const amount = intVal + (decVal / 100);
+    
+    if (amount <= 0) {
+        alert('Inserisci un importo maggiore di zero');
+        return;
+    }
+    
+    const date = sheetDate?.value || new Date().toISOString().slice(0, 10);
+    const note = sheetNote?.value.trim() || '';
+    
+    const exp = {
+        id: Date.now(),
+        month: month,
+        date: date,
+        category: sheetSelectedCategory,
+        desc: note || 'Aggiunto da mobile',
+        planned: sheetTransactionType === 'planned' ? amount : 0,
+        actual: sheetTransactionType === 'actual' ? amount : 0,
+        sharedPercentage: 0
+    };
+    
+    try {
+        currentData.expenses.push(exp);
+        await db.expenses.put(exp);
+        closeTransactionSheet();
+        updateUI();
+        showToast('Spesa aggiunta', false);
+    } catch (err) {
+        console.error('[DB] Error adding expense from sheet:', err);
+        showToast('Errore salvataggio', true);
+        currentData.expenses.pop();
+    }
+}
+
+// Setup close button and save button handlers
 (function setupBottomSheetEvents() {
     const closeBtn = document.getElementById('closeSheetBtn');
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
+    const saveBtn = document.getElementById('saveTransactionBtn');
     
     if (closeBtn) {
         closeBtn.addEventListener('click', closeTransactionSheet);
@@ -666,11 +801,17 @@ function initNativeWheels() {
     if (overlay) {
         overlay.addEventListener('click', closeTransactionSheet);
     }
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveTransactionFromSheet);
+    }
     // Prevent click-through on sheet
     if (sheet) {
         sheet.addEventListener('click', (e) => e.stopPropagation());
     }
 })();
+
+// Initialize toggle when DOM ready
+document.addEventListener('DOMContentLoaded', setupToggleType);
 
 function renderCategoriesDropdown() {
 

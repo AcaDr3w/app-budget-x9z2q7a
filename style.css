@@ -577,7 +577,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     cursor: grabbing;
 }
 
-/* ===== STEP 2: Wheels Scroll Snap ===== */
+/* ===== STEP 3: Complete Bottom Sheet ===== */
 .sheet-body {
     padding: 10px 0;
 }
@@ -615,6 +615,18 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     scrollbar-width: none;
 }
 
+/* Hybrid input - invisible but clickable */
+.hidden-wheel-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    z-index: 10;
+    border: none;
+    background: transparent;
+}
+
 .wheel-item {
     height: 50px;
     line-height: 50px;
@@ -643,6 +655,62 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     font-weight: 600;
     color: var(--accent);
     margin-left: 5px;
+}
+
+/* Segmented toggle for expense type */
+.sheet-type-toggle {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    border-radius: 16px;
+    padding: 4px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+.toggle-option {
+    flex: 1;
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: color 0.25s ease;
+}
+.toggle-option.active {
+    color: #ef4444;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.toggle-option[data-type="planned"].active {
+    color: #f97316;
+}
+
+/* Sheet inputs (date and note) */
+.sheet-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+.sheet-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+}
+
+/* Sheet footer with two buttons */
+.sheet-footer {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.sheet-footer button {
+    flex: 1;
 }
 
 /* Desktop: hide bottom sheet */
