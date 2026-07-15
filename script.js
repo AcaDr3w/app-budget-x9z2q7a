@@ -556,6 +556,9 @@ function closeTransactionSheet() {
         document.body.classList.remove('sheet-open');
         overlay.classList.remove('open');
         sheet.classList.remove('open');
+        // Reset inline transform and dragging class (for swipe-to-close)
+        sheet.style.transform = '';
+        sheet.classList.remove('dragging');
     }
     sheetSelectedCategory = null;
     sheetTransactionType = 'actual';
