@@ -371,7 +371,7 @@
     </div>
  </div>
 
-    <!-- BOTTOM SHEET - STEP 1 (Minima Struttura) -->
+    <!-- BOTTOM SHEET - STEP 2 (Wheels) -->
     <div id="sheetOverlay" class="sheet-overlay"></div>
     <div id="bottomSheet" class="bottom-sheet">
         <div class="sheet-handle"></div>
@@ -379,7 +379,16 @@
             <h3 id="sheetCategoryTitle">Categoria</h3>
         </div>
         <div class="sheet-body">
-            <div class="test-amount">€ 0.00</div>
+            <div class="sheet-amount-display">
+                <div class="wheel-container" id="integerWheelContainer">
+                    <div class="wheel-scroll" id="integerWheel"></div>
+                </div>
+                <span class="wheel-separator">,</span>
+                <div class="wheel-container" id="decimalWheelContainer">
+                    <div class="wheel-scroll" id="decimalWheel"></div>
+                </div>
+                <span class="currency-symbol">€</span>
+            </div>
         </div>
         <div class="sheet-footer">
             <button id="closeSheetBtn">Annulla</button>

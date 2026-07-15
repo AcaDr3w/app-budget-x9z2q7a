@@ -522,8 +522,10 @@ function openTransactionSheet(categoryName) {
     
     if (overlay && sheet && title) {
         title.textContent = categoryName;
+        document.body.classList.add('sheet-open');
         overlay.classList.add('open');
         sheet.classList.add('open');
+        initNativeWheels();
     }
 }
 
@@ -531,21 +533,142 @@ function closeTransactionSheet() {
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
     if (overlay && sheet) {
+        document.body.classList.remove('sheet-open');
         overlay.classList.remove('open');
         sheet.classList.remove('open');
     }
     sheetSelectedCategory = null;
 }
 
+// Wheel state
+let wheelDebounceTimer = null;
+let selectedInteger = 0;
+let selectedDecimal = 0;
+
+function initNativeWheels() {
+    const intWheel = document.getElementById('integerWheel');
+    const decWheel = document.getElementById('decimalWheel');
+    
+    if (!intWheel || !decWheel) return;
+    
+    // Generate integer wheel (0-999) with padding
+    intWheel.innerHTML = '';
+    decWheel.innerHTML = '';
+    
+    // Padding items for proper snap (empty items before/after)
+    const intPaddingBefore = document.createElement('div');
+    intPaddingBefore.className = 'wheel-item';
+    intPaddingBefore.style.height = '50px';
+    intWheel.appendChild(intPaddingBefore);
+    
+    for (let i = 0; i <= 999; i++) {
+        const span = document.createElement('div');
+        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
+        span.textContent = i.toString().padStart(3, '0');
+        intWheel.appendChild(span);
+    }
+    
+    const intPaddingAfter = document.createElement('div');
+    intPaddingAfter.className = 'wheel-item';
+    intPaddingAfter.style.height = '50px';
+    intWheel.appendChild(intPaddingAfter);
+    
+    // Decimal wheel (00-99) with padding
+    const decPaddingBefore = document.createElement('div');
+    decPaddingBefore.className = 'wheel-item';
+    decPaddingBefore.style.height = '50px';
+    decWheel.appendChild(decPaddingBefore);
+    
+    for (let i = 0; i <= 99; i++) {
+        const span = document.createElement('div');
+        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
+        span.textContent = i.toString().padStart(2, '0');
+        decWheel.appendChild(span);
+    }
+    
+    const decPaddingAfter = document.createElement('div');
+    decPaddingAfter.className = 'wheel-item';
+    decPaddingAfter.style.height = '50px';
+    decWheel.appendChild(decPaddingAfter);
+    
+    // Reset selections
+    selectedInteger = 0;
+    selectedDecimal = 0;
+    
+    // Setup scroll listeners with debounce
+    intWheel.addEventListener('scroll', () => {
+        clearTimeout(wheelDebounceTimer);
+        wheelDebounceTimer = setTimeout(() => {
+            const items = intWheel.querySelectorAll('.wheel-item');
+            const centerY = intWheel.scrollTop + 75; // 150px/2
+            let closestIdx = 0;
+            let closestDiff = Infinity;
+            
+            items.forEach((item, idx) => {
+                const itemTop = idx * 50;
+                const itemCenter = itemTop + 25;
+                const diff = Math.abs(centerY - itemCenter);
+                if (diff < closestDiff) {
+                    closestDiff = diff;
+                    closestIdx = idx;
+                }
+            });
+            
+            // Skip padding items (first and last)
+            if (closestIdx > 0 && closestIdx < items.length - 1) {
+                selectedInteger = closestIdx - 1;
+                items.forEach((item, idx) => {
+                    item.classList.toggle('selected', idx === closestIdx);
+                });
+                console.log('Integer selected:', selectedInteger);
+            }
+        }, 100);
+    });
+    
+    decWheel.addEventListener('scroll', () => {
+        clearTimeout(wheelDebounceTimer);
+        wheelDebounceTimer = setTimeout(() => {
+            const items = decWheel.querySelectorAll('.wheel-item');
+            const centerY = decWheel.scrollTop + 75;
+            let closestIdx = 0;
+            let closestDiff = Infinity;
+            
+            items.forEach((item, idx) => {
+                const itemTop = idx * 50;
+                const itemCenter = itemTop + 25;
+                const diff = Math.abs(centerY - itemCenter);
+                if (diff < closestDiff) {
+                    closestDiff = diff;
+                    closestIdx = idx;
+                }
+            });
+            
+            if (closestIdx > 0 && closestIdx < items.length - 1) {
+                selectedDecimal = closestIdx - 1;
+                items.forEach((item, idx) => {
+                    item.classList.toggle('selected', idx === closestIdx);
+                });
+                console.log('Decimal selected:', selectedDecimal);
+            }
+        }, 100);
+    });
+}
+
 // Setup close button and overlay click handlers
 (function setupBottomSheetEvents() {
     const closeBtn = document.getElementById('closeSheetBtn');
     const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    
     if (closeBtn) {
         closeBtn.addEventListener('click', closeTransactionSheet);
     }
     if (overlay) {
         overlay.addEventListener('click', closeTransactionSheet);
+    }
+    // Prevent click-through on sheet
+    if (sheet) {
+        sheet.addEventListener('click', (e) => e.stopPropagation());
     }
 })();
 

@@ -14,6 +14,10 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 100px; transition: background-color 0.3s, color 0.3s; }
+body.sheet-open {
+    overflow: hidden;
+    touch-action: none;
+}
 
 /* ===== HEADER / NAVBAR ===== */
 .header {
@@ -573,25 +577,72 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     cursor: grabbing;
 }
 
-/* ===== STEP 1: Sheet Header/Body/Footer ===== */
-.sheet-header h3 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary);
-    text-align: center;
-    margin-bottom: 20px;
-}
+/* ===== STEP 2: Wheels Scroll Snap ===== */
 .sheet-body {
-    padding: 20px 0;
+    padding: 10px 0;
 }
-.test-amount {
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--accent);
+
+/* Wheel styles */
+.sheet-amount-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 150px;
+    position: relative;
+    margin: 10px 0;
+}
+.wheel-container {
+    height: 150px;
+    width: 80px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.wheel-scroll {
+    height: 100%;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.wheel-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Firefox scrollbar */
+.wheel-scroll {
+    scrollbar-width: none;
+}
+
+.wheel-item {
+    height: 50px;
+    line-height: 50px;
     text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: #94a3b8;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    transition: color 0.2s, transform 0.2s;
 }
-.sheet-footer {
-    margin-top: 20px;
+.wheel-item.selected {
+    color: var(--primary);
+    transform: scale(1.15);
+    font-weight: 700;
+}
+
+/* Visual separator and currency */
+.wheel-separator {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--primary);
+}
+.currency-symbol {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-left: 5px;
 }
 
 /* Desktop: hide bottom sheet */
