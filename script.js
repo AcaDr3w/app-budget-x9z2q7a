@@ -599,6 +599,7 @@ function initNativeWheels() {
         const span = document.createElement('div');
         span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
         span.textContent = i.toString().padStart(3, '0');
+        span.dataset.value = i.toString().padStart(3, '0');
         intWheel.appendChild(span);
     }
     
@@ -617,6 +618,7 @@ function initNativeWheels() {
         const span = document.createElement('div');
         span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
         span.textContent = i.toString().padStart(2, '0');
+        span.dataset.value = i.toString().padStart(2, '0');
         decWheel.appendChild(span);
     }
     
@@ -764,44 +766,55 @@ function syncWheelToInput(type, value) {
     }
 }
 
-// Sync input value to wheel scroll position
+// Sync input value to wheel scroll position using DOM-based approach
 function syncInputToWheel(type, value) {
     const intWheel = document.getElementById('integerWheel');
     const decWheel = document.getElementById('decimalWheel');
     
     if (type === 'integer' && intWheel) {
         selectedInteger = value;
-        // +1 for padding item at start, use exact pixel calculation
-        const targetScrollTop = (value + 1) * WHEEL_ITEM_HEIGHT;
-        isScrollingProgrammatically = true;
-        // Remove scroll listener temporarily
-        if (intWheelScrollHandler) {
-            intWheel.removeEventListener('scroll', intWheelScrollHandler);
-        }
-        intWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
-        // Re-add listener and reset flag after smooth scroll completes
-        setTimeout(() => {
+        // Format value with padding
+        const formattedValue = value.toString().padStart(3, '0');
+        // Find element by data-value
+        const targetElement = intWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
+        if (targetElement) {
+            isScrollingProgrammatically = true;
+            // Remove scroll listener temporarily
             if (intWheelScrollHandler) {
-                intWheel.addEventListener('scroll', intWheelScrollHandler);
+                intWheel.removeEventListener('scroll', intWheelScrollHandler);
             }
-            isScrollingProgrammatically = false;
-        }, 300);
+            // Use scrollIntoView to center the element
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Re-add listener and reset flag after smooth scroll completes
+            setTimeout(() => {
+                if (intWheelScrollHandler) {
+                    intWheel.addEventListener('scroll', intWheelScrollHandler);
+                }
+                isScrollingProgrammatically = false;
+            }, 400);
+        }
     } else if (type === 'decimal' && decWheel) {
         selectedDecimal = value;
-        const targetScrollTop = (value + 1) * WHEEL_ITEM_HEIGHT;
-        isScrollingProgrammatically = true;
-        // Remove scroll listener temporarily
-        if (decWheelScrollHandler) {
-            decWheel.removeEventListener('scroll', decWheelScrollHandler);
-        }
-        decWheel.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
-        // Re-add listener and reset flag after smooth scroll completes
-        setTimeout(() => {
+        // Format value with padding
+        const formattedValue = value.toString().padStart(2, '0');
+        // Find element by data-value
+        const targetElement = decWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
+        if (targetElement) {
+            isScrollingProgrammatically = true;
+            // Remove scroll listener temporarily
             if (decWheelScrollHandler) {
-                decWheel.addEventListener('scroll', decWheelScrollHandler);
+                decWheel.removeEventListener('scroll', decWheelScrollHandler);
             }
-            isScrollingProgrammatically = false;
-        }, 300);
+            // Use scrollIntoView to center the element
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Re-add listener and reset flag after smooth scroll completes
+            setTimeout(() => {
+                if (decWheelScrollHandler) {
+                    decWheel.addEventListener('scroll', decWheelScrollHandler);
+                }
+                isScrollingProgrammatically = false;
+            }, 400);
+        }
     }
 }
 
