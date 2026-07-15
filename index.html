@@ -15,7 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
-    <link rel="stylesheet" href="style.css?v=1.3">
+    <link rel="stylesheet" href="style.css?v=1.4">
 </head>
 <body>
 
@@ -43,20 +43,17 @@
         <button class="btn-recovery-trigger" onclick="document.getElementById('importFileInput').click()">📥 Carica Backup (.json)</button>
     </div>
 
-    <!-- =================== TAB 1: MESE CORRENTE =================== -->
+<!-- =================== TAB 1: MESE CORRENTE =================== -->
     <div id="current-month-tab" class="tab-content active">
 
-        <div class="config-bar">
-            <div class="day-selector-group">
-                <label for="startCycleDay">Inizio Ciclo:</label>
-                <input type="number" id="startCycleDay" class="day-selector" min="1" max="28" value="23" onchange="changeStartCycleDay()">
-            </div>
-            <input type="month" id="currentMonth" class="month-selector" onchange="loadMonthData()">
+        <div class="month-selector-pill">
+            <span id="currentMonthLabel">Luglio 2026</span>
+            <span class="month-selector-icon">▼</span>
         </div>
 
         <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
 
-        <div class="summary-grid">
+        <div class="summary-grid" style="margin-top: 20px;">
             <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
             <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
             <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
@@ -81,15 +78,6 @@
         <div class="main-layout">
             <!-- LEFT PANEL -->
             <div class="layout-column left-panel">
-
-                <div class="card hide-mobile" id="importSectionCard">
-                    <h2 class="collapsible" onclick="toggleSection('importSection', this)">🔄 Pianificazione Ciclo</h2>
-                    <div class="collapsible-content" id="importSection">
-                        <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Eredita voci dal ciclo precedente:</p>
-                        <div class="import-checkbox-list" id="importCategoriesList"></div>
-                        <button class="btn-copy" style="width:100%; margin-top:10px;" onclick="copyFromPreviousMonth()">🔄 Genera Stime Selezionate</button>
-                    </div>
-                </div>
 
                 <div class="card hide-mobile" id="incomeCard">
                     <h2>💰 Nuova Entrata</h2>
