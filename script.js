@@ -284,7 +284,23 @@ let chartB = null, chartC = null;
 let historyBarChart = null;
 let tradingChart = null;
 
-// Inizializzazione valori UI da localStorage (impostazioni leggere, non dati finanziari)
+// ===== VIEW MODE STATE =====
+let currentViewMode = 'full'; // 'full' or 'tabs'
+let activeMacroGroup = 'casa';
+
+// Mappa le categorie nei 3 macro gruppi
+function getCategoryMacroGroup(catName) {
+    const casaGruppo = ['Bolletta Acqua', 'Bolletta Condominio', 'Bolletta Gas', 'Bolletta Luce', 'Bolletta Rifiuti', 'Bolletta Telefonia', 'Mutuo'];
+    const autoGruppo = ['Alimentari', 'Abbigliamento', 'Cane', 'Sanitarie', 'Carburante Auto', 'Carburante Moto', 'Tasse Auto (Assicurazione/Bollo)', 'Tasse Moto (Assicurazione/Bollo)'];
+    const svagoGruppo = ['Formazione', 'Igiene e Pulizia', 'Imprevisti e Svago', 'Manutenzioni Programmate', 'Varie'];
+    
+    if (casaGruppo.includes(catName)) return 'casa';
+    if (autoGruppo.includes(catName)) return 'auto';
+    if (svagoGruppo.includes(catName)) return 'svago';
+    return 'altro';
+}
+
+// Inizializzazione valori UI
 const dateNow = new Date();
 let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
 document.getElementById('currentMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
@@ -765,7 +781,7 @@ function initNativeWheels() {
         });
     }
     
-    // Click on wheel container opens keyboard
+// Click on wheel container opens keyboard
     if (intContainer) {
         intContainer.addEventListener('click', () => {
             if (intInput) intInput.focus();
@@ -777,6 +793,46 @@ function initNativeWheels() {
         });
     }
 }
+
+// =====================================================================
+// VIEW MODE & MACRO TABS
+// =====================================================================
+function setupViewToggle() {
+    const toggleBtn = document.getElementById('viewToggleBtn');
+    const macroTabsContainer = document.getElementById('macroTabsContainer');
+    
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            if (currentViewMode === 'full') {
+                currentViewMode = 'tabs';
+                toggleBtn.innerHTML = '<i class="fas fa-th"></i>';
+                if (macroTabsContainer) macroTabsContainer.style.display = 'flex';
+            } else {
+                currentViewMode = 'full';
+                toggleBtn.innerHTML = '<i class="fas fa-layer-group"></i>';
+                if (macroTabsContainer) macroTabsContainer.style.display = 'none';
+            }
+            updateUI();
+        });
+    }
+    
+    // Setup macro tab clicks
+    document.querySelectorAll('.macro-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.macro-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeMacroGroup = tab.dataset.target;
+            updateUI();
+        });
+    });
+}
+
+// Initialize view toggle when DOM ready
+document.addEventListener('DOMContentLoaded', setupViewToggle);
+
+// =====================================================================
+// CATEGORY GRID (MOBILE)
+// =====================================================================
 
 // Sync wheel selection to input value
 function syncWheelToInput(type, value) {
@@ -1254,6 +1310,14 @@ function renderCategoryGrid(catSums) {
         const pVal = catSums[cat]?.planned || 0;
         const aVal = catSums[cat]?.actual || 0;
         const icon = getCatIcon(cat);
+        
+        // Filtra per macro-gruppo in modalità tabs
+        if (currentViewMode === 'tabs') {
+            const macroGroup = getCategoryMacroGroup(cat);
+            if (macroGroup !== activeMacroGroup && macroGroup !== 'altro') {
+                return; // Salta questa categoria
+            }
+        }
         
         // Calcolo percentuale con logica corretta
         let pct = 0;

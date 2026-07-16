@@ -50,8 +50,17 @@
              <span id="currentMonthDisplay"></span>
              <i class="fas fa-chevron-down"></i>
          </div>
+         <button id="viewToggleBtn" class="view-toggle-btn" aria-label="Cambia vista">
+             <i class="fas fa-layer-group"></i>
+         </button>
 
          <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">
+
+         <div id="macroTabsContainer" class="macro-tabs-wrapper" style="display: none;">
+             <button class="macro-tab active" data-target="casa">🏠 Casa</button>
+             <button class="macro-tab" data-target="auto">🚗 Auto & Vita</button>
+             <button class="macro-tab" data-target="svago">🎉 Svago</button>
+         </div>
 
         <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
 
