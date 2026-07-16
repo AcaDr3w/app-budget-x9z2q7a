@@ -283,18 +283,34 @@ let searchQuery = "";
 let chartB = null, chartC = null;
 let historyBarChart = null;
 let tradingChart = null;
-let startCycleDay = parseInt(localStorage.getItem('global_start_cycle_day')) || 23;
 
 // Inizializzazione valori UI da localStorage (impostazioni leggere, non dati finanziari)
-document.getElementById('startCycleDay').value = startCycleDay;
 const dateNow = new Date();
 let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
-if (dateNow.getDate() >= startCycleDay) { initMonth++; if (initMonth > 12) { initMonth = 1; initYear++; } }
 document.getElementById('currentMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 document.getElementById('annDeadlineMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 document.getElementById('expDate').value = dateNow.toISOString().slice(0,10);
 if (localStorage.getItem('ia_provider')) document.getElementById('iaProviderSelect').value = localStorage.getItem('ia_provider');
 if (localStorage.getItem('gemini_api_key')) document.getElementById('geminiApiKeyInput').value = localStorage.getItem('gemini_api_key');
+
+// Aggiorna il display del mese nella pillola
+function updateMonthDisplay() {
+    const monthInput = document.getElementById('currentMonth');
+    const display = document.getElementById('currentMonthDisplay');
+    if (!monthInput || !display) return;
+    const [year, month] = monthInput.value.split('-');
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const monthName = monthNames[parseInt(month, 10) - 1] || '';
+    display.textContent = `${monthName} ${year}`;
+}
+
+// Aggiorna il display del mese quando cambia la selezione
+document.addEventListener('DOMContentLoaded', () => {
+    const monthInputEl = document.getElementById('currentMonth');
+    if (monthInputEl) {
+        monthInputEl.addEventListener('change', updateMonthDisplay);
+    }
+});
 
 // =====================================================================
 // AVVIO APP & MIGRAZIONE DA LOCALSTORAGE
@@ -328,6 +344,8 @@ async function initApp() {
     toggleIaProviderFields();
     checkDatabaseHealth();
     initPWA();
+    // Aggiorna il display del mese nella pillola all'avvio
+    updateMonthDisplay();
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
@@ -400,24 +418,15 @@ function switchTab(tabId, buttonEl) {
 })();
 
 // =====================================================================
-// IMPOSTAZIONI CICLO
+// UTILITY - MESE SOLARE STANDARD
 // =====================================================================
-function changeStartCycleDay() {
-    let val = parseInt(document.getElementById('startCycleDay').value);
-    if (isNaN(val) || val < 1 || val > 28) { alert("Inserisci un giorno tra 1 e 28."); document.getElementById('startCycleDay').value = startCycleDay; return; }
-    startCycleDay = val;
-    localStorage.setItem('global_start_cycle_day', startCycleDay);
-    loadMonthData();
-}
-
 function getMonthRange(monthStr) {
+    // Mese solare standard: 1° giorno al 31° (ultimo giorno del mese)
     let year = parseInt(monthStr.split('-')[0]);
     let month = parseInt(monthStr.split('-')[1]);
-    let startMonth = month - 1, startYear = year;
-    if (startMonth === 0) { startMonth = 12; startYear--; }
-    let endDay = startCycleDay - 1;
-    if (endDay === 0) { let pd = new Date(year, month-1, 0).getDate(); return {start: new Date(startYear, startMonth-1, 1), end: new Date(startYear, startMonth-1, pd)}; }
-    return {start: new Date(startYear, startMonth-1, startCycleDay), end: new Date(year, month-1, endDay)};
+    let start = new Date(year, month - 1, 1);
+    let end = new Date(year, month - 1 + 1, 0); // 0 dell'ennesimo mese = ultimo giorno del mese
+    return { start, end };
 }
 
 // =====================================================================

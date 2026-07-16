@@ -43,16 +43,15 @@
         <button class="btn-recovery-trigger" onclick="document.getElementById('importFileInput').click()">📥 Carica Backup (.json)</button>
     </div>
 
-    <!-- =================== TAB 1: MESE CORRENTE =================== -->
-    <div id="current-month-tab" class="tab-content active">
+     <!-- =================== TAB 1: MESE CORRENTE =================== -->
+     <div id="current-month-tab" class="tab-content active">
 
-        <div class="config-bar">
-            <div class="day-selector-group">
-                <label for="startCycleDay">Inizio Ciclo:</label>
-                <input type="number" id="startCycleDay" class="day-selector" min="1" max="28" value="23" onchange="changeStartCycleDay()">
-            </div>
-            <input type="month" id="currentMonth" class="month-selector" onchange="loadMonthData()">
-        </div>
+         <div class="month-selector-pill">
+             <span id="currentMonthDisplay"></span>
+             <i class="fas fa-chevron-down"></i>
+         </div>
+
+         <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">
 
         <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
 
