@@ -362,6 +362,8 @@ async function initApp() {
     initPWA();
     // Aggiorna il display del mese nella pillola all'avvio
     updateMonthDisplay();
+    // Inizializza il view toggle
+    setupViewToggle();
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
@@ -827,8 +829,7 @@ function setupViewToggle() {
     });
 }
 
-// Initialize view toggle when DOM ready
-document.addEventListener('DOMContentLoaded', setupViewToggle);
+// setupViewToggle() è ora chiamato in initApp()
 
 // =====================================================================
 // CATEGORY GRID (MOBILE)
@@ -1375,15 +1376,23 @@ async function updateUI() {
     const alertBox = document.getElementById('deadlineAlert');
     if (pending > 0) { alertBox.innerText = `⏳ ${pending} uscite pianificate in attesa di saldo.`; alertBox.style.display = 'block'; } else { alertBox.style.display = 'none'; }
 
-    // Tabella categorie - responsive: full list on desktop, filtered on mobile
+    // Tabella categorie - responsive: full list on desktop, filtered on mobile/tabs
     let catSums = {}; userCategories.forEach(c => catSums[c] = {planned:0, actual:0});
     currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
     const tableBody = document.getElementById('overviewTableBody'); tableBody.innerHTML = '';
-    const showAllCategories = isDesktop(); // Desktop shows all, mobile only active
+    const showAllCategories = isDesktop() && currentViewMode !== 'tabs'; // Desktop shows all, mobile only active, tabs filters by macro group
     userCategories.sort().forEach(cat => {
         const pVal = catSums[cat].planned, aVal = catSums[cat].actual, diff = pVal - aVal;
         let diffClass = '', diffText = '';
         if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtE(diff)}`; }
+        
+        // Filtra per macro-gruppo in modalità tabs (sia desktop che mobile)
+        if (currentViewMode === 'tabs') {
+            const macroGroup = getCategoryMacroGroup(cat);
+            if (macroGroup !== activeMacroGroup && macroGroup !== 'altro') {
+                return; // Salta questa categoria
+            }
+        }
         
         // On desktop, show all categories (even with 0 values); on mobile, only show those with activity
         if (showAllCategories || pVal > 0 || aVal > 0) {
