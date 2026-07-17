@@ -836,3 +836,79 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none !important;
     }
 }
+
+/* ===== MOBILE-ONLY DASHBOARD ===== */
+
+/* Di default, su schermi grandi, la nuova dashboard mobile è nascosta */
+.mobile-dashboard-container {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* Nuovo Header Moderno e Meno Invasivo */
+    .header {
+        background: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: #1a1a1a !important;
+        padding: 10px 20px !important;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .header h1, .header h2, .header span, .header i {
+        color: #1a1a1a !important;
+    }
+
+    /* Nascondi i vecchi elementi su Mobile */
+    .summary-grid,
+    .category-grid-mobile,
+    .macro-tabs-wrapper {
+        display: none !important;
+    }
+
+    /* Mostra e formatta la nuova Dashboard Mobile */
+    .mobile-dashboard-container {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        padding: 10px 15px;
+        margin-top: 15px;
+    }
+
+    /* Stile delle 3 grandi Card */
+    .dash-card {
+        border-radius: 24px;
+        padding: 30px 15px;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        min-height: 160px;
+    }
+    .dash-card h3 {
+        margin: 0 0 15px 0;
+        font-size: 18px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .dash-card .card-icon {
+        font-size: 50px;
+        text-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Colori Specifici (Gradients) */
+    .card-casa {
+        background: linear-gradient(135deg, #1A8699, #28B4A6);
+    }
+    .card-veicoli {
+        background: linear-gradient(135deg, #5AB963, #8AD458);
+    }
+    .card-svago {
+        grid-column: span 2;
+        background: linear-gradient(135deg, #8E2DE2, #4A00E0);
+        min-height: 180px;
+    }
+}
