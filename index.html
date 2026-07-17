@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -27,7 +27,7 @@
     </div>
     <p id="activePageSubtitle">Mese</p>
     <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📋</span><span class="tab-label">Mese</span></button>
+        <button class="tab-button active" id="tab-btn-current" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
         <button class="tab-button" id="tab-btn-history" aria-label="Storico" onclick="switchTab('history-tab', this)"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
         <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
         <button class="tab-button" id="tab-btn-future" aria-label="Futuro" onclick="switchTab('future-tab', this)"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
@@ -55,101 +55,82 @@
               <i class="fas fa-layer-group"></i>
           </button>
 
-          <!-- NUOVA DASHBOARD CENTRALE -->
-          <div class="dashboard-cards-container" style="display:flex;gap:12px;margin-bottom:16px;">
-              <!-- Card 1 -->
-              <div class="dash-card card-casa">
-                  <h3>Casa e Utenze</h3>
-                  <i class="fas fa-home card-icon"></i>
-                  <h4>Gestione Spese Domestiche</h4>
-                  <p>Total: 0,00 € | Utenze Attive</p>
-              </div>
-              <!-- Card 2 -->
-              <div class="dash-card card-veicoli">
-                  <h3>Veicoli</h3>
-                  <i class="fas fa-car card-icon"></i>
-                  <h4>Gestione Costi Mezzi</h4>
-                  <p>Total: 0,00 € | Mezzi Gestiti</p>
-              </div>
-              <!-- Card 3 -->
-              <div class="dash-card card-svago">
-                  <h3>Spese e Svago</h3>
-                  <i class="fas fa-shopping-cart card-icon"></i>
-                  <h4>Gestione Altro e Piacere</h4>
-                  <p>Total: 0,00 € | Transazioni Recenti</p>
-              </div>
-          </div>
-
           <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">
 
-<div id="macroTabsContainer" class="macro-tabs-wrapper" style="display: none !important;">
+<div id="macroTabsContainer" class="macro-tabs-wrapper" style="display: none;">
     <button class="macro-tab active" data-target="casa">🏠 Casa & Servizi</button>
     <button class="macro-tab" data-target="auto">🚗 Auto & Vita</button>
     <button class="macro-tab" data-target="svago">🎉 Svago & Altro</button>
 </div>
 
-          <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
+        <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
 
-          <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
-              <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" onclick="event.stopPropagation();">
-                  <button class="popup-close" onclick="closeRendicontoPopup(event)" aria-label="Chiudi popup">×</button>
-                  <div class="popup-header">
-                      <div>
-                          <h3 id="popupTitle">Confronto rendiconto</h3>
-                          <p id="popupSubtitle">Mese corrente vs mese precedente</p>
-                      </div>
-                  </div>
-                  <div id="popupBars" class="popup-bars"></div>
-                  <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
-              </div>
-          </div>
+        <div class="summary-grid">
+            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
+            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
+            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
+        </div>
 
-          <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
+        <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" onclick="event.stopPropagation();">
+                <button class="popup-close" onclick="closeRendicontoPopup(event)" aria-label="Chiudi popup">×</button>
+                <div class="popup-header">
+                    <div>
+                        <h3 id="popupTitle">Confronto rendiconto</h3>
+                        <p id="popupSubtitle">Mese corrente vs mese precedente</p>
+                    </div>
+                </div>
+                <div id="popupBars" class="popup-bars"></div>
+                <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
+            </div>
+        </div>
 
-          <div class="main-layout">
-              <!-- LEFT PANEL -->
-              <div class="layout-column left-panel">
+        <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
 
-                  <div class="card hide-mobile" id="importSectionCard">
-                      <h2 class="collapsible" onclick="toggleSection('importSection', this)">📒 Pianificazione Ciclo</h2>
-                      <div class="collapsible-content" id="importSection">
-                          <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Eredita voci dal ciclo precedente:</p>
-                          <div class="import-checkbox-list" id="importCategoriesList"></div>
-                          <button class="btn-copy" style="width:100%; margin-top:10px;" onclick="copyFromPreviousMonth()">📒 Genera Stime Selezionate</button>
-                      </div>
-                  </div>
+        <div class="main-layout">
+            <!-- LEFT PANEL -->
+            <div class="layout-column left-panel">
 
-                  <div class="card hide-mobile" id="incomeCard">
-                      <h2>💰 Nuova Entrata</h2>
-                      <div class="grid-inputs">
-                          <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
-                          <div class="input-group"><label>Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
-                      </div>
-                      <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
-                  </div>
+                <div class="card hide-mobile" id="importSectionCard">
+                    <h2 class="collapsible" onclick="toggleSection('importSection', this)">🔄 Pianificazione Ciclo</h2>
+                    <div class="collapsible-content" id="importSection">
+                        <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Eredita voci dal ciclo precedente:</p>
+                        <div class="import-checkbox-list" id="importCategoriesList"></div>
+                        <button class="btn-copy" style="width:100%; margin-top:10px;" onclick="copyFromPreviousMonth()">🔄 Genera Stime Selezionate</button>
+                    </div>
+                </div>
 
-                  <div class="card hide-mobile" id="addExpenseCard">
-                      <h2>📝 Registra Spesa</h2>
-                      <div class="grid-inputs">
-                          <div class="input-group"><label>Data</label><input type="date" id="expDate"></div>
-                          <div class="input-group"><label>Categoria</label><select id="expenseCategory"></select></div>
-                      </div>
-                      <div class="input-group"><label>Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
-                      <div class="grid-inputs">
-                          <div class="input-group"><label>Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
-                          <div class="input-group"><label>Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
-                      </div>
-                      <div class="input-group">
-                          <label>Quota a tuo carato % (opzionale)</label>
-                          <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
-                      </div>
-                      <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
-                  </div>
+                <div class="card hide-mobile" id="incomeCard">
+                    <h2>💰 Nuova Entrata</h2>
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
+                        <div class="input-group"><label>Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
+                    </div>
+                    <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
+                </div>
 
-              </div>
+                <div class="card hide-mobile" id="addExpenseCard">
+                    <h2>📝 Registra Spesa</h2>
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Data</label><input type="date" id="expDate"></div>
+                        <div class="input-group"><label>Categoria</label><select id="expenseCategory"></select></div>
+                    </div>
+                    <div class="input-group"><label>Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
+                        <div class="input-group"><label>Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Quota a tuo carato % (opzionale)</label>
+                        <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
+                    </div>
+                    <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
+                </div>
 
-              <!-- RIGHT PANEL -->
-              <div class="layout-column right-panel">
+            </div>
+
+            <!-- RIGHT PANEL -->
+            <div class="layout-column right-panel">
 
 <!-- HUB IA -->
 <div id="hub-ia-container" class="hide-mobile" style="border: 1px solid #9061f9; padding: 15px; border-radius: 8px; background: #f9f5ff;">
@@ -179,17 +160,17 @@
     <input type="password" id="openrouter-key-input" placeholder="sk-or-v1-..." style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
   </div>
   <button id="btn-analisi-strategica" style="width: 100%; background: #9061f9; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="runFinancialAnalysisIA()">Analisi Strategica Mese</button>
-  <div id="hub-ia-error-box" style="margin-top: 10px; padding: 10px; background: #fde8e8; color: #e02424; border-radius: 4px; display: none !important;"></div>
+  <div id="hub-ia-error-box" style="margin-top: 10px; padding: 10px; background: #fde8e8; color: #e02424; border-radius: 4px; display: none;"></div>
 </div>
 
                 <!-- GRAFICI -->
                 <div class="charts-wrapper hide-mobile">
-                    <div class="card"><h2>📊 Stato Budget</h2><div class="chart-container"><canvas id="budgetChart"></canvas></div></div>
+                    <div class="card"><h2>📈 Stato Budget</h2><div class="chart-container"><canvas id="budgetChart"></canvas></div></div>
                     <div class="card"><h2>🍕 Speso per Categoria</h2><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
                 </div>
 
-                <!-- CATEGORY GRID (MOBILE ONLY) - HIDDEN -->
-                <div id="categoryGridContainer" class="category-grid-mobile hide-desktop" style="display:none !important;"></div>
+                <!-- CATEGORY GRID (MOBILE ONLY) -->
+                <div id="categoryGridContainer" class="category-grid-mobile hide-desktop"></div>
 
                 <!-- RENDICONTO CICLO -->
                 <div class="card hide-mobile" id="rendicontoCard">
@@ -205,16 +186,16 @@
 
                 <!-- VOCI DEL PERIODO -->
                 <div class="card hide-mobile" id="entriesCard">
-                    <h2 id="listTitle">📄 Distribuzione & Registro Spese</h2>
+                    <h2 id="listTitle">📅 Distribuzione & Registro Spese</h2>
                     <div class="calendar-grid" id="calendarGrid"></div>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()">
-                        <button class="btn-clear-filters" id="btnClearAllFilters" onclick="clearAllFilters()">✉ Filtri</button>
+                        <button class="btn-clear-filters" id="btnClearAllFilters" onclick="clearAllFilters()">✕ Filtri</button>
                     </div>
                     <h3 style="margin-top: 14px; font-size:13px; font-weight:700; color:#475569;">📋 Registro Spese</h3>
                     <div id="entriesList" style="margin-top: 8px; padding-bottom: 10px;"></div>
                     <div class="grid-inputs" style="margin-top: 14px;">
-                        <button class="btn-csv" onclick="exportCSV()">📦 CSV</button>
+                        <button class="btn-csv" onclick="exportCSV()">📥 CSV</button>
                         <button class="btn-csv" style="background: #8b5cf6;" onclick="exportPDF()">📄 PDF</button>
                     </div>
                 </div>
@@ -228,13 +209,6 @@
                     </div>
                 </div>
 
-                <!-- SUMMARY CARDS SPOSTATE IN FONDO -->
-                <div class="summary-grid">
-                    <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-                    <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
-                    <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
-                </div>
-
             </div>
         </div>
     </div>
@@ -242,7 +216,7 @@
     <!-- =================== TAB 2: STORICO PLURIMENSILE =================== -->
     <div id="history-tab" class="tab-content hidden">
         <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
-            <h2 class="collapsible" onclick="toggleSection('iaHistorySection', this)">🤖 Analisi Storica I.A. Multimese</h2>
+            <h2 class="collapsible" onclick="toggleSection('iaHistorySection', this)">🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
                 <button class="btn-ia" id="btnHistoryIA" onclick="runHistoryAnalysisIA()">🔍 Genera Resoconto Storico</button>
@@ -251,7 +225,7 @@
         </div>
 
         <div class="card" id="recordsHubContainer">
-            <h2>🏛️ Hub dei Record Personali</h2>
+            <h2>🏆 Hub dei Record Personali</h2>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
                 <div style="background: #fdfaff; border: 1px solid #e9d5ff; padding: 10px; border-radius: 8px; text-align: center;">
                     <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Mese d'Oro</div>
@@ -269,13 +243,13 @@
         </div>
 
         <div class="card">
-            <h2>📊 Grafico Monitoraggio Continuo</h2>
+            <h2>📈 Grafico Monitoraggio Continuo</h2>
             <p style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
             <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
         </div>
 
         <div class="card">
-            <h2>📈 Andamento Storico Plurimensile</h2>
+            <h2>📊 Andamento Storico Plurimensile</h2>
             <div class="large-chart-container"><canvas id="historyBarChart"></canvas></div>
         </div>
 
@@ -322,7 +296,7 @@
         </div>
 
         <div class="card">
-            <h2>📐 Aggiungi Scadenza Futura</h2>
+            <h2>📅 Aggiungi Scadenza Futura</h2>
             <div class="grid-inputs">
                 <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
                 <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
@@ -341,7 +315,7 @@
             <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">
                 L'IA leggerà le proiezioni matematiche qui sopra e indicherà le categorie di spesa critiche su cui agire per proteggere o migliorare il tuo futuro finanziario.
             </p>
-            <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🤖 Attiva Analisi Predittiva I.A.</button>
+            <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🧠 Attiva Analisi Predittiva I.A.</button>
             <div id="iaFutureResponse" class="ia-response-box"></div>
         </div>
 
@@ -358,9 +332,15 @@
                         <div class="grid-inputs" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <select id="newCatIcon" class="responsive-select" style="width: 60px; min-width: 60px; font-size: 20px; text-align: center; padding: 8px 4px;">
                                 <option value="🏠">🏠</option><option value="🚗">🚗</option><option value="🏍️">🏍️</option>
-                                <option value="🍝">🍝</option><option value="🔍">🔍</option><option value="🏥">🏥</option>
-                                <option value="✈️">✈️</option><option value="📡">📡</option><option value="📚">📚</option>
-                                <option value="🛠️">🛠️</option><option value="📦">📦</option><option value="💰" selected>💰</option>
+                                <option value="🍔">🍔</option><option value="🛍️">🛍️</option><option value="🏥">🏥</option>
+                                <option value="✈️">✈️</option><option value="📚">📚</option><option value="💡">💡</option>
+                                <option value="💧">💧</option><option value="🔥">🔥</option><option value="📱">📱</option>
+                                <option value="🏢">🏢</option><option value="♻️">♻️</option><option value="🧴">🧴</option>
+                                <option value="🔧">🔧</option><option value="🎉">🎉</option><option value="👕">👕</option>
+                                <option value="📦">📦</option><option value="💰">💰</option><option value="📈">📈</option>
+                                <option value="🎮">🎮</option><option value="🐾">🐾</option><option value="👶">👶</option>
+                                <option value="💄">💄</option><option value="🎵">🎵</option><option value="🏋️">🏋️</option>
+                                <option value="🍕">🍕</option><option value="🏷️" selected>🏷️</option>
                             </select>
                             <input type="text" id="newCatName" placeholder="Nuova categoria..." style="flex: 1; min-width: 120px;">
                             <button class="btn-spesa" id="btnSaveCategory" onclick="saveCategory()" style="margin:0; white-space: nowrap;">Aggiungi</button>
@@ -388,15 +368,14 @@
                 <div class="card">
                     <h2>☁️ Sincronizzazione Cloud</h2>
                     <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Salva una copia sicura su Google Drive.</p>
-                    <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()">🔗 Connetti a Google Drive</button>
-                    <button class="btn-gdrive" id="btnGDriveSync" onclick="syncToDrive()" style="display: none !important;">☁️ Sincronizza ora</button>
+                    <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()">🔑 Connetti a Google Drive</button>
+                    <button class="btn-gdrive" id="btnGDriveSync" onclick="syncToDrive()" style="display: none;">☁️ Sincronizza ora</button>
                 </div>
                 <div class="card" style="border: 2px solid #ef4444; background: #fef2f2;">
                     <h2 style="color: #ef4444; border-left-color: #ef4444;">⚠️ Zona Pericolo</h2>
                     <button class="btn-action" style="background: #ef4444; width: 100%; padding: 12px; font-size: 14px;" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
                 </div>
             </div>
-        </div>
     </div>
     </div>
 

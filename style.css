@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --bg: #F5F7FA;
     --panel: #ffffff;
     --primary: #2C333D;
@@ -13,7 +13,7 @@
     --nav-h: 130px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 140px !important; transition: background-color 0.3s, color 0.3s; }
+body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 100px; transition: background-color 0.3s, color 0.3s; }
 body.sheet-open {
     overflow: hidden;
     touch-action: none;
@@ -114,8 +114,8 @@ body.sheet-open {
 .card { background: var(--panel); padding: 20px; border-radius: 20px; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08); border: none; margin-bottom: 16px; }
 .card h2 { font-size: 14px; color: var(--primary); margin-bottom: 14px; border-left: 3px solid var(--accent); padding-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
 .card h2.collapsible { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-.card h2.collapsible::after { content: 'â–¼'; font-size: 11px; color: #94a3b8; }
-.card h2.collapsible.active::after { content: 'â–²'; }
+.card h2.collapsible::after { content: '▼'; font-size: 11px; color: #94a3b8; }
+.card h2.collapsible.active::after { content: '▲'; }
 .collapsible-content { display: none; margin-top: 14px; }
 .collapsible-content.show { display: block; }
 
@@ -153,7 +153,7 @@ button:active { transform: scale(0.98); }
 .ia-hint { font-size: 11px; color: #6b21a8; margin-top: 5px; display: block; opacity: 0.8; line-height: 1.4; }
 
 /* ===== VIEW TOGGLE BUTTON ===== */
-#viewToggleBtn { display: inline-flex !important; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.8) !important; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #2C333D !important; font-size: 16px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-left: 10px; } .view-toggle-btn {
+.view-toggle-btn {
     position: absolute;
     top: 14px;
     right: 14px;
@@ -202,7 +202,7 @@ button:active { transform: scale(0.98); }
 }
 
 /* ===== MACRO TABS WRAPPER ===== */
-#macroTabsContainer { display: flex !important; background: rgba(255, 255, 255, 0.6) !important; backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important; border-radius: 30px !important; padding: 4px !important; margin: 10px 8px !important; border: 1px solid rgba(255, 255, 255, 0.3) !important; } .macro-tabs-wrapper {
+.macro-tabs-wrapper {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
@@ -225,7 +225,7 @@ button:active { transform: scale(0.98); }
     transition: all 0.25s ease;
     text-align: center;
 }
-#macroTabsContainer .macro-tab.active { background: #2ecc71 !important; color: white !important; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3) !important; } .macro-tab.active {
+.macro-tab.active {
     background: var(--accent);
     color: white;
 }
@@ -233,13 +233,13 @@ button:active { transform: scale(0.98); }
 /* ===== SUMMARY BOXES ===== */
 .config-bar { display: none; }
 .month-selector { display: none; }
-.summary-grid { display: flex !important; gap: 8px !important; margin-bottom: 12px !important; padding: 0 8px !important; }
+.summary-grid { display: flex; gap: 6px; margin-bottom: 8px; }
 .summary-box { 
-    padding: 8px 5px !important; 
+    padding: 6px 4px; 
     border-radius: 16px; 
     font-weight: 600; 
     text-align: center; 
-    font-size: 11px !important; 
+    font-size: 10px; 
     line-height: 1.1; 
     cursor: default; 
     transition: transform 0.18s ease, box-shadow 0.18s ease; 
@@ -306,9 +306,9 @@ button:active { transform: scale(0.98); }
 .item-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 4px; border-bottom: 1px solid #f1f5f9; font-size: 13px; gap: 8px; }
 .item-row:last-child { border-bottom: none; }
 .item-name { font-weight: 600; flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; overflow: hidden; }
-.item-meta { font-size: 11px !important; color: #64748b; display: block; font-weight: normal; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-meta { font-size: 10px; color: #64748b; display: block; font-weight: normal; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item-vals { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.val-p { color: var(--previsto); font-size: 11px !important; display: block; }
+.val-p { color: var(--previsto); font-size: 10px; display: block; }
 .val-s { color: var(--sostenuto); font-weight: 700; display: block; font-size: 13px; }
 
 /* ===== CATEGORIES ===== */
@@ -628,7 +628,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         font-size: 13px;
     }
     .flat-subtitle.val-previsto {
-        font-size: 11px !important;
+        font-size: 10px;
         color: var(--previsto);
     }
     .flat-actual.val-sostenuto {
@@ -836,62 +836,3 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none !important;
     }
 }
-
-
-
-
-
-
-
-
-
-
-/* =================== DASHBOARD CARDS =================== */
-.dashboard-cards-container {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-
-         g a p :   1 5 p x   ! i m p o r t a n t ; 
-         p a d d i n g :   0   1 5 p x   ! i m p o r t a n t ; 
-         m a r g i n - b o t t o m :   2 0 p x   ! i m p o r t a n t ; 
-         h e i g h t :   c a l c ( 1 0 0 v h   -   2 8 0 p x )   ! i m p o r t a n t ; 
-         m i n - h e i g h t :   3 5 0 p x   ! i m p o r t a n t ; 
- } 
- 
- . d a s h - c a r d   { 
-         b o r d e r - r a d i u s :   2 4 p x   ! i m p o r t a n t ; 
-         p a d d i n g :   2 0 p x   1 5 p x   ! i m p o r t a n t ; 
-         c o l o r :   w h i t e   ! i m p o r t a n t ; 
-         d i s p l a y :   f l e x   ! i m p o r t a n t ; 
-         f l e x - d i r e c t i o n :   c o l u m n   ! i m p o r t a n t ; 
-         a l i g n - i t e m s :   c e n t e r   ! i m p o r t a n t ; 
-         j u s t i f y - c o n t e n t :   s p a c e - b e t w e e n   ! i m p o r t a n t ; 
-         t e x t - a l i g n :   c e n t e r   ! i m p o r t a n t ; 
-         b o x - s h a d o w :   0   1 0 p x   2 0 p x   r g b a ( 0 , 0 , 0 , 0 . 1 5 )   ! i m p o r t a n t ; 
-         t r a n s i t i o n :   t r a n s f o r m   0 . 2 s   ! i m p o r t a n t ; 
- } 
- . d a s h - c a r d : a c t i v e   { 
-         t r a n s f o r m :   s c a l e ( 0 . 9 7 )   ! i m p o r t a n t ; 
- } 
- . d a s h - c a r d   h 3   {   m a r g i n :   0 ;   f o n t - s i z e :   1 8 p x ;   f o n t - w e i g h t :   7 0 0 ;   t e x t - s h a d o w :   0   2 p x   4 p x   r g b a ( 0 , 0 , 0 , 0 . 2 ) ;   } 
- . d a s h - c a r d   h 4   {   m a r g i n :   5 p x   0   0   0 ;   f o n t - s i z e :   1 4 p x ;   f o n t - w e i g h t :   6 0 0 ;   } 
- . d a s h - c a r d   p   {   m a r g i n :   5 p x   0   0   0 ;   f o n t - s i z e :   1 0 p x ;   o p a c i t y :   0 . 9 ;   } 
- . d a s h - c a r d   . c a r d - i c o n   {   f o n t - s i z e :   5 0 p x ;   m a r g i n :   1 5 p x   0 ;   t e x t - s h a d o w :   0   4 p x   1 0 p x   r g b a ( 0 , 0 , 0 , 0 . 2 ) ;   } 
- 
- . c a r d - s v a g o   { 
-         g r i d - c o l u m n :   s p a n   2   ! i m p o r t a n t ; 
-         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( 1 3 5 d e g ,   # 7 F 0 0 F F ,   # E 1 0 0 F F )   ! i m p o r t a n t ; 
- } 
- . c a r d - c a s a   { 
-         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( 1 3 5 d e g ,   # 1 1 9 9 8 e ,   # 3 8 e f 7 d )   ! i m p o r t a n t ; 
- } 
- . c a r d - v e i c o l i   { 
-         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( 1 3 5 d e g ,   # 5 6 a b 2 f ,   # a 8 e 0 6 3 )   ! i m p o r t a n t ; 
- } 
- 
- . s u m m a r y - g r i d   { 
-         m a r g i n - t o p :   a u t o   ! i m p o r t a n t ; 
-         p a d d i n g :   0   1 5 p x   ! i m p o r t a n t ; 
-         m a r g i n - b o t t o m :   2 0 p x   ! i m p o r t a n t ; 
- }  
- 
