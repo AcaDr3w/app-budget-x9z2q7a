@@ -153,7 +153,7 @@ button:active { transform: scale(0.98); }
 .ia-hint { font-size: 11px; color: #6b21a8; margin-top: 5px; display: block; opacity: 0.8; line-height: 1.4; }
 
 /* ===== VIEW TOGGLE BUTTON ===== */
-.view-toggle-btn {
+#viewToggleBtn { display: inline-flex !important; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.8) !important; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #2C333D !important; font-size: 16px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-left: 10px; } .view-toggle-btn {
     position: absolute;
     top: 14px;
     right: 14px;
@@ -202,7 +202,7 @@ button:active { transform: scale(0.98); }
 }
 
 /* ===== MACRO TABS WRAPPER ===== */
-.macro-tabs-wrapper {
+#macroTabsContainer { display: flex !important; background: rgba(255, 255, 255, 0.6) !important; backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important; border-radius: 30px !important; padding: 4px !important; margin: 10px 8px !important; border: 1px solid rgba(255, 255, 255, 0.3) !important; } .macro-tabs-wrapper {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
@@ -225,7 +225,7 @@ button:active { transform: scale(0.98); }
     transition: all 0.25s ease;
     text-align: center;
 }
-.macro-tab.active {
+#macroTabsContainer .macro-tab.active { background: #2ecc71 !important; color: white !important; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3) !important; } .macro-tab.active {
     background: var(--accent);
     color: white;
 }
@@ -233,7 +233,7 @@ button:active { transform: scale(0.98); }
 /* ===== SUMMARY BOXES ===== */
 .config-bar { display: none; }
 .month-selector { display: none; }
-.summary-grid { display: flex !important; gap: 10px !important; margin-bottom: 15px !important; padding: 0 10px !important; }
+.summary-grid { display: flex !important; gap: 8px !important; margin-bottom: 12px !important; padding: 0 8px !important; }
 .summary-box { 
     padding: 8px 5px !important; 
     border-radius: 16px; 
@@ -836,6 +836,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none !important;
     }
 }
+
+
+
+
 
 
 
