@@ -284,9 +284,12 @@ let chartB = null, chartC = null;
 let historyBarChart = null;
 let tradingChart = null;
 
-// ===== VIEW MODE STATE =====
-let currentViewMode = 'full'; // 'full' or 'tabs'
-let activeMacroGroup = 'casa';
+ // ===== VIEW MODE STATE =====
+ let currentViewMode = 'full'; // 'full' or 'tabs'
+ let activeMacroGroup = 'casa';
+
+ // ===== BOTTOM SHEET SLIDER STATE =====
+ let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
 
 // Mappa le categorie nei 3 macro gruppi
 function getCategoryMacroGroup(catName) {
@@ -583,12 +586,16 @@ function closeTransactionSheet() {
         document.body.classList.remove('sheet-open');
         overlay.classList.remove('open');
         sheet.classList.remove('open');
-        // Reset inline transform and dragging class (for swipe-to-close)
         sheet.style.transform = '';
         sheet.classList.remove('dragging');
     }
     sheetSelectedCategory = null;
     sheetTransactionType = 'actual';
+    sheetCurrentMacroGroup = null;
+    
+    // Reset slider position
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(0)';
 }
 
 // Wheel state
@@ -832,10 +839,169 @@ function setupViewToggle() {
 // setupViewToggle() è ora chiamato in initApp()
 
 // =====================================================================
-// CATEGORY GRID (MOBILE)
+// BOTTOM SHEET WITH MACRO/MICRO CATEGORIES (ORIGINAL GRID INJECTION)
 // =====================================================================
+function openBottomSheetFromMacro(macroGroup) {
+    sheetCurrentMacroGroup = macroGroup;
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    
+    if (!overlay || !sheet) return;
+    
+    document.body.classList.add('sheet-open');
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+    
+    // Render micro categories in the grid
+    renderMicroCategoriesGrid(macroGroup);
+    
+    // Reset slider position
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(0)';
+    
+    // Hide back button
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    
+    // Set title based on macro group
+    const sheetTitle = document.getElementById('sheetTitle');
+    if (sheetTitle) {
+        const titles = { 'casa': 'Casa e Utenze', 'auto': 'Veicoli', 'svago': 'Spese e Svago' };
+        sheetTitle.textContent = titles[macroGroup] || 'Categoria';
+    }
+}
 
-// Sync wheel selection to input value
+function renderMicroCategoriesGrid(macroGroup) {
+    const container = document.getElementById('microCategoriesGrid');
+    if (!container) return;
+    
+    // Calculate catSums first
+    let catSums = {};
+    userCategories.forEach(c => catSums[c] = {planned: 0, actual: 0});
+    currentData.expenses.forEach(exp => {
+        if (catSums[exp.category]) {
+            catSums[exp.category].planned += exp.planned;
+            catSums[exp.category].actual += exp.actual;
+        }
+    });
+    
+    container.innerHTML = '';
+    
+    userCategories.forEach(cat => {
+        const macro = getCategoryMacroGroup(cat);
+        // Show only categories matching the macro group (or 'altro' as fallback)
+        if (macro !== macroGroup && macro !== 'altro') return;
+        
+        const pVal = catSums[cat]?.planned || 0;
+        const aVal = catSums[cat]?.actual || 0;
+        const icon = getCatIcon(cat);
+        
+        // Calculate progress bar
+        let pct = 0;
+        let barClass = 'normal';
+        if (pVal > 0) {
+            pct = Math.min(100, (aVal / pVal) * 100);
+            if (aVal > pVal) barClass = 'over';
+            else if (pct > 80) barClass = 'warning';
+        } else if (aVal > 0) {
+            pct = 100;
+            barClass = 'over';
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        card.style.background = getCategoryCardBg(cat);
+        card.style.border = getCategoryCardBorder(cat);
+        card.innerHTML = `
+            <div class="category-card-icon">${icon}</div>
+            <div class="category-card-name">${cat}</div>
+            <div class="category-progress-bar">
+                <div class="category-progress-fill ${barClass}" style="width: ${pct}%"></div>
+            </div>
+        `;
+        card.onclick = () => slideToInputView(cat);
+        container.appendChild(card);
+    });
+}
+
+function slideToInputView(categoryName) {
+    sheetSelectedCategory = categoryName;
+    sheetTransactionType = 'actual';
+    
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(-100%)';
+    
+    // Show back button
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) backBtn.style.display = 'flex';
+    
+    // Update title
+    const sheetTitle = document.getElementById('sheetTitle');
+    if (sheetTitle) sheetTitle.textContent = categoryName;
+    
+    // Reset inputs and init wheels
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    const sheetDate = document.getElementById('sheetDate');
+    const toggleOptions = document.querySelectorAll('.toggle-option');
+    
+    if (intInput) intInput.value = '';
+    if (decInput) decInput.value = '';
+    if (sheetDate) sheetDate.value = new Date().toISOString().slice(0, 10);
+    
+    toggleOptions.forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === 'actual');
+    });
+    
+    initNativeWheels();
+}
+
+function slideBackToCategories() {
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(0)';
+    
+    // Hide back button
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    
+    // Update title back to macro
+    const sheetTitle = document.getElementById('sheetTitle');
+    if (sheetTitle && sheetCurrentMacroGroup) {
+        const titles = { 'casa': 'Casa e Utenze', 'auto': 'Veicoli', 'svago': 'Spese e Svago' };
+        sheetTitle.textContent = titles[sheetCurrentMacroGroup] || 'Categoria';
+    }
+    
+    sheetSelectedCategory = null;
+}
+
+// Setup macro dash card click handlers
+function setupMacroDashCards() {
+    const casaCard = document.querySelector('.card-casa');
+    const veicoliCard = document.querySelector('.card-veicoli');
+    const svagoCard = document.querySelector('.card-svago');
+    
+    if (casaCard) {
+        casaCard.style.cursor = 'pointer';
+        casaCard.onclick = () => openBottomSheetFromMacro('casa');
+    }
+    if (veicoliCard) {
+        veicoliCard.style.cursor = 'pointer';
+        veicoliCard.onclick = () => openBottomSheetFromMacro('auto');
+    }
+    if (svagoCard) {
+        svagoCard.style.cursor = 'pointer';
+        svagoCard.onclick = () => openBottomSheetFromMacro('svago');
+    }
+}
+
+// Setup back button handler
+function setupBottomSheetBackBtn() {
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', slideBackToCategories);
+    }
+}
+
 function syncWheelToInput(type, value) {
     const intInput = document.getElementById('hiddenIntegerInput');
     const decInput = document.getElementById('hiddenDecimalInput');
@@ -1036,6 +1202,12 @@ async function saveTransactionFromSheet() {
 
 // Initialize toggle when DOM ready
 document.addEventListener('DOMContentLoaded', setupToggleType);
+
+// Initialize macro dash cards and back button
+document.addEventListener('DOMContentLoaded', () => {
+    setupMacroDashCards();
+    setupBottomSheetBackBtn();
+});
 
 function renderCategoriesDropdown() {
 

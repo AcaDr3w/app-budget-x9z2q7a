@@ -832,6 +832,41 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     flex: 1;
 }
 
+/* ===== SHEET SLIDER FOR HORIZONTAL TRANSITION ===== */
+.sheet-slider {
+    display: flex;
+    width: 100%;
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+}
+.sheet-view {
+    flex: 0 0 100%;
+    min-width: 100%;
+}
+
+/* ===== BACK BUTTON ===== */
+.sheet-back-btn {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: background 0.2s;
+}
+.sheet-back-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
 /* Desktop: hide bottom sheet */
 @media (min-width: 768px) {
     #sheetOverlay, #bottomSheet {

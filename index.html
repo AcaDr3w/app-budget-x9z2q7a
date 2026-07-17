@@ -401,35 +401,45 @@
     <div id="bottomSheet" class="bottom-sheet">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
-            <h3 id="sheetCategoryTitle">Categoria</h3>
+            <button id="sheetBackBtn" class="sheet-back-btn" style="display:none;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h3 id="sheetTitle">Categoria</h3>
         </div>
-        <div class="sheet-body">
-            <div class="sheet-amount-display">
-                <div class="wheel-container" id="integerWheelContainer">
-                    <div class="wheel-scroll" id="integerWheel"></div>
-                    <input type="number" id="hiddenIntegerInput" class="hidden-wheel-input" min="0" max="999" inputmode="numeric">
+        <div class="sheet-slider">
+            <div id="viewCategories" class="sheet-view">
+                <div id="microCategoriesGrid" class="category-grid-mobile"></div>
+            </div>
+            <div id="viewInput" class="sheet-view">
+                <div class="sheet-body">
+                    <div class="sheet-amount-display">
+                        <div class="wheel-container" id="integerWheelContainer">
+                            <div class="wheel-scroll" id="integerWheel"></div>
+                            <input type="number" id="hiddenIntegerInput" class="hidden-wheel-input" min="0" max="999" inputmode="numeric">
+                        </div>
+                        <span class="wheel-separator">,</span>
+                        <div class="wheel-container" id="decimalWheelContainer">
+                            <div class="wheel-scroll" id="decimalWheel"></div>
+                            <input type="number" id="hiddenDecimalInput" class="hidden-wheel-input" min="0" max="99" inputmode="numeric">
+                        </div>
+                        <span class="currency-symbol">€</span>
+                    </div>
+                    
+                    <div class="sheet-type-toggle">
+                        <label class="toggle-option active" data-type="actual">Spesa Sostenuta</label>
+                        <label class="toggle-option" data-type="planned">Spesa Prevista</label>
+                    </div>
+                    
+                    <div class="sheet-inputs">
+                        <input type="date" id="sheetDate" class="sheet-input">
+                        <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Spesa Esselunga)">
+                    </div>
                 </div>
-                <span class="wheel-separator">,</span>
-                <div class="wheel-container" id="decimalWheelContainer">
-                    <div class="wheel-scroll" id="decimalWheel"></div>
-                    <input type="number" id="hiddenDecimalInput" class="hidden-wheel-input" min="0" max="99" inputmode="numeric">
+                <div class="sheet-footer">
+                    <button id="closeSheetBtn" class="btn-secondary">Annulla</button>
+                    <button id="saveTransactionBtn" class="btn-spesa">Salva</button>
                 </div>
-                <span class="currency-symbol">€</span>
             </div>
-            
-            <div class="sheet-type-toggle">
-                <label class="toggle-option active" data-type="actual">Spesa Sostenuta</label>
-                <label class="toggle-option" data-type="planned">Spesa Prevista</label>
-            </div>
-            
-            <div class="sheet-inputs">
-                <input type="date" id="sheetDate" class="sheet-input">
-                <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Spesa Esselunga)">
-            </div>
-        </div>
-        <div class="sheet-footer">
-            <button id="closeSheetBtn" class="btn-secondary">Annulla</button>
-            <button id="saveTransactionBtn" class="btn-spesa">Salva</button>
         </div>
     </div>
 
