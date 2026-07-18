@@ -474,14 +474,27 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 767px) {
+    /* Congela lo scroll del body come app nativa */
+    html, body {
+        overflow: hidden !important;
+        height: 100% !important;
+        width: 100% !important;
+        position: fixed !important;
+    }
+    
+    /* Container principale a schermo intero */
+    .container {
+        height: 100vh !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+    }
+    
     /* Nascondi header-top legacy e pulsante + */
     .header-top { display: none !important; }
     .add-button, .tab-button.add-button { display: none !important; }
-    
-    /* Spazio per la Navbar */
-    body {
-        padding-bottom: 95px !important;
-    }
     
     /* Bottom Nav - ancoraggio in basso */
     .bottom-nav {
@@ -544,6 +557,18 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     /* Nascondi navigation-tabs legacy */
     .navigation-tabs {
         display: none !important;
+    }
+    
+    /* Dashboard mobile flessibile */
+    .mobile-dashboard-container {
+        gap: 12px !important;
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .dash-card {
+        min-height: auto !important;
+        flex: 1;
     }
 }
 
