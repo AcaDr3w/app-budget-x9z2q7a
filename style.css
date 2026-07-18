@@ -474,22 +474,28 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 767px) {
-    /* Congela lo scroll del body come app nativa */
+    /* Reset Strutturale del Body (Blocco Radicale) */
     html, body {
-        overflow: hidden !important;
-        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
         width: 100% !important;
+        height: 100vh !important;
+        height: -webkit-fill-available !important;
+        overflow: hidden !important;
         position: fixed !important;
     }
     
-    /* Container principale a schermo intero */
+    /* Container Principale (Gestore degli Spazi Equidistanti) */
     .container {
-        height: 100vh !important;
-        overflow: hidden !important;
         display: flex !important;
         flex-direction: column !important;
+        height: 100vh !important;
+        height: -webkit-fill-available !important;
         justify-content: space-between !important;
-        padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+        align-items: center !important;
+        padding: 10px 15px calc(85px + env(safe-area-inset-bottom)) 15px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }
     
     /* Nascondi header-top legacy e pulsante + */
@@ -559,16 +565,33 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none !important;
     }
     
-    /* Dashboard mobile flessibile */
+    /* Contenitore delle Macro-Card Dinamiche */
     .mobile-dashboard-container {
+        display: flex !important;
+        flex-direction: column !important;
+        flex-grow: 1 !important;
+        justify-content: center !important;
         gap: 12px !important;
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
+        width: 100% !important;
+        margin: 15px 0 !important;
     }
     
+    /* Ridimensionamento dinamico delle singole card */
     .dash-card {
-        min-height: auto !important;
-        flex: 1;
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 15px !important;
+    }
+    
+    /* Contenitore dei 3 Riepiloghi */
+    .summary-grid {
+        width: 100% !important;
+        margin-top: 5px !important;
+        margin-bottom: 5px !important;
     }
 }
 
