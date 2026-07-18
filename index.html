@@ -16,24 +16,35 @@
     <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=1.4">
+    <link rel="stylesheet" href="style.css?v=1.5">
 </head>
 <body>
 
-<!-- STICKY HEADER + NAV -->
+<!-- TOP BAR (MOBILE ONLY) -->
 <div class="header">
-    <div class="header-top">
-        <h1>📊 EcoBilancio Digitale</h1>
-    </div>
+    <h1>📊 Bilancio Pro</h1>
     <p id="activePageSubtitle">Mese</p>
-    <nav class="navigation-tabs" id="mainNav">
-        <button class="tab-button active" id="tab-btn-current" aria-label="Mese" onclick="switchTab('current-month-tab', this)"><span class="tab-icon">📄</span><span class="tab-label">Mese</span></button>
-        <button class="tab-button" id="tab-btn-history" aria-label="Storico" onclick="switchTab('history-tab', this)"><span class="tab-icon">📈</span><span class="tab-label">Storico</span></button>
-        <button class="tab-button add-button" id="nav-btn-add" aria-label="Aggiungi spesa rapida"><span class="tab-icon">+</span></button>
-        <button class="tab-button" id="tab-btn-future" aria-label="Futuro" onclick="switchTab('future-tab', this)"><span class="tab-icon">🔮</span><span class="tab-label">Futuro</span></button>
-        <button class="tab-button" id="tab-btn-settings" aria-label="Impostazioni" onclick="switchTab('settings-tab', this)"><span class="tab-icon">⚙️</span><span class="tab-label">Impostazioni</span></button>
-    </nav>
 </div>
+
+<!-- BOTTOM NAVIGATION (MOBILE) -->
+<nav class="bottom-nav" id="bottomNav">
+    <a href="#" class="nav-item active" id="navMese" onclick="switchTab('current-month-tab', document.getElementById('tab-btn-current'))">
+        <div class="nav-icon-wrapper"><i class="fas fa-calendar-day"></i></div>
+        <span class="nav-label">Mese</span>
+    </a>
+    <a href="#" class="nav-item" id="navAnalisi" onclick="switchTab('history-tab', document.getElementById('tab-btn-history'))">
+        <div class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></div>
+        <span class="nav-label">Analisi</span>
+    </a>
+    <a href="#" class="nav-item" id="navPrevisioni" onclick="switchTab('future-tab', document.getElementById('tab-btn-future'))">
+        <div class="nav-icon-wrapper"><i class="fas fa-crystal-ball"></i></div>
+        <span class="nav-label">Previsioni</span>
+    </a>
+    <a href="#" class="nav-item" id="navImpostazioni" onclick="switchTab('settings-tab', document.getElementById('tab-btn-settings'))">
+        <div class="nav-icon-wrapper"><i class="fas fa-cog"></i></div>
+        <span class="nav-label">Impostazioni</span>
+    </a>
+</nav>
 
 <div class="container">
 
@@ -444,4 +455,5 @@
     </div>
 
     <script src="script.js"></script>
+</body>
 </html>

@@ -474,67 +474,77 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 767px) {
-    .navigation-tabs {
+    /* Nascondi header-top legacy e pulsante + */
+    .header-top { display: none !important; }
+    .add-button, .tab-button.add-button { display: none !important; }
+    
+    /* Spazio per la Navbar */
+    body {
+        padding-bottom: 95px !important;
+    }
+    
+    /* Bottom Nav - ancoraggio in basso */
+    .bottom-nav {
         position: fixed !important;
         bottom: 0 !important;
         top: auto !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
+        left: 0 !important;
+        transform: none !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        display: flex !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        padding: 10px 0 calc(10px + env(safe-area-inset-bottom)) !important;
+        box-shadow: 0 -2px 15px rgba(0,0,0,0.05) !important;
+        border-radius: 0 !important;
         z-index: 9999 !important;
-        width: 90% !important;
-        height: 64px;
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        padding: 0 12px;
-        border-radius: 40px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     }
-    .tab-button {
-        border-radius: 18px;
-        padding: 15px 0;
-        font-size: 14px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        border: none;
-        border-top: 3px solid transparent;
-        height: 100%;
+    
+    /* Nav Item - Icona sopra, testo sotto */
+    .bottom-nav .nav-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        color: #555555 !important;
+        gap: 4px !important;
         flex: 1;
-        min-width: 0;
-        box-sizing: border-box;
-        background: transparent;
-        color: #64748b;
     }
-    .tab-button:hover { background: rgba(0, 0, 0, 0.05); }
-    .tab-button .tab-label { display: none; }
-    .tab-button .tab-icon { font-size: 20px; line-height: 1; }
-    .tab-button.active {
-        border-top-color: var(--accent);
-        background: rgba(0, 0, 0, 0.05);
-        color: var(--primary);
+    
+    /* Nav Icon Wrapper */
+    .bottom-nav .nav-icon-wrapper {
+        padding: 6px 16px !important;
+        border-radius: 20px !important;
+        transition: background-color 0.3s ease !important;
     }
-    .tab-button.add-button {
-        width: 55px;
-        min-width: 55px;
-        height: 55px;
-        border-radius: 50%;
-        background: #2ecc71;
-        color: white;
-        justify-content: center;
-        align-items: center;
-        padding: 0;
-        box-shadow: 0 10px 25px rgba(46, 204, 113, 0.6);
-        transition: transform 0.18s ease, background 0.1s ease, box-shadow 0.18s ease;
+    
+    .bottom-nav .nav-item i {
+        font-size: 20px !important;
+        color: #555555 !important;
+        transition: color 0.3s ease !important;
     }
-    .tab-button.add-button:hover { background: #27ae60; }
-    .tab-button.add-button:active { transform: scale(0.92); }
+    
+    .bottom-nav .nav-label {
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        transition: color 0.3s ease !important;
+    }
+    
+    /* Stato attivo - Pillola azzurra */
+    .bottom-nav .nav-item.active .nav-icon-wrapper {
+        background-color: #E8F0FE !important;
+    }
+    .bottom-nav .nav-item.active i,
+    .bottom-nav .nav-item.active .nav-label {
+        color: #1A73E8 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Nascondi navigation-tabs legacy */
+    .navigation-tabs {
+        display: none !important;
+    }
 }
 
 /* ===== SMALL SCREEN ===== */
