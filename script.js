@@ -1,4 +1,4 @@
-﻿// =====================================================================
+// =====================================================================
 // SERVICE WORKER (PWA)
 // =====================================================================
 if ('serviceWorker' in navigator) {
@@ -283,18 +283,53 @@ let searchQuery = "";
 let chartB = null, chartC = null;
 let historyBarChart = null;
 let tradingChart = null;
-let startCycleDay = parseInt(localStorage.getItem('global_start_cycle_day')) || 23;
 
-// Inizializzazione valori UI da localStorage (impostazioni leggere, non dati finanziari)
-document.getElementById('startCycleDay').value = startCycleDay;
+ // ===== VIEW MODE STATE =====
+ let currentViewMode = 'full'; // 'full' or 'tabs'
+ let activeMacroGroup = 'casa';
+
+ // ===== BOTTOM SHEET SLIDER STATE =====
+ let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
+
+// Mappa le categorie nei 3 macro gruppi
+function getCategoryMacroGroup(catName) {
+    const casaGruppo = ['Bolletta Acqua', 'Bolletta Condominio', 'Bolletta Gas', 'Bolletta Luce', 'Bolletta Rifiuti', 'Bolletta Telefonia', 'Mutuo'];
+    const autoGruppo = ['Alimentari', 'Abbigliamento', 'Cane', 'Sanitarie', 'Carburante Auto', 'Carburante Moto', 'Tasse Auto (Assicurazione/Bollo)', 'Tasse Moto (Assicurazione/Bollo)'];
+    const svagoGruppo = ['Formazione', 'Igiene e Pulizia', 'Imprevisti e Svago', 'Manutenzioni Programmate', 'Varie'];
+    
+    if (casaGruppo.includes(catName)) return 'casa';
+    if (autoGruppo.includes(catName)) return 'auto';
+    if (svagoGruppo.includes(catName)) return 'svago';
+    return 'altro';
+}
+
+// Inizializzazione valori UI
 const dateNow = new Date();
 let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
-if (dateNow.getDate() >= startCycleDay) { initMonth++; if (initMonth > 12) { initMonth = 1; initYear++; } }
 document.getElementById('currentMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 document.getElementById('annDeadlineMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 document.getElementById('expDate').value = dateNow.toISOString().slice(0,10);
 if (localStorage.getItem('ia_provider')) document.getElementById('iaProviderSelect').value = localStorage.getItem('ia_provider');
 if (localStorage.getItem('gemini_api_key')) document.getElementById('geminiApiKeyInput').value = localStorage.getItem('gemini_api_key');
+
+// Aggiorna il display del mese nella pillola
+function updateMonthDisplay() {
+    const monthInput = document.getElementById('currentMonth');
+    const display = document.getElementById('currentMonthDisplay');
+    if (!monthInput || !display) return;
+    const [year, month] = monthInput.value.split('-');
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const monthName = monthNames[parseInt(month, 10) - 1] || '';
+    display.textContent = `${monthName} ${year}`;
+}
+
+// Aggiorna il display del mese quando cambia la selezione
+document.addEventListener('DOMContentLoaded', () => {
+    const monthInputEl = document.getElementById('currentMonth');
+    if (monthInputEl) {
+        monthInputEl.addEventListener('change', updateMonthDisplay);
+    }
+});
 
 // =====================================================================
 // AVVIO APP & MIGRAZIONE DA LOCALSTORAGE
@@ -328,6 +363,10 @@ async function initApp() {
     toggleIaProviderFields();
     checkDatabaseHealth();
     initPWA();
+    // Aggiorna il display del mese nella pillola all'avvio
+    updateMonthDisplay();
+    // Inizializza il view toggle
+    setupViewToggle();
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
@@ -400,24 +439,15 @@ function switchTab(tabId, buttonEl) {
 })();
 
 // =====================================================================
-// IMPOSTAZIONI CICLO
+// UTILITY - MESE SOLARE STANDARD
 // =====================================================================
-function changeStartCycleDay() {
-    let val = parseInt(document.getElementById('startCycleDay').value);
-    if (isNaN(val) || val < 1 || val > 28) { alert("Inserisci un giorno tra 1 e 28."); document.getElementById('startCycleDay').value = startCycleDay; return; }
-    startCycleDay = val;
-    localStorage.setItem('global_start_cycle_day', startCycleDay);
-    loadMonthData();
-}
-
 function getMonthRange(monthStr) {
+    // Mese solare standard: 1° giorno al 31° (ultimo giorno del mese)
     let year = parseInt(monthStr.split('-')[0]);
     let month = parseInt(monthStr.split('-')[1]);
-    let startMonth = month - 1, startYear = year;
-    if (startMonth === 0) { startMonth = 12; startYear--; }
-    let endDay = startCycleDay - 1;
-    if (endDay === 0) { let pd = new Date(year, month-1, 0).getDate(); return {start: new Date(startYear, startMonth-1, 1), end: new Date(startYear, startMonth-1, pd)}; }
-    return {start: new Date(startYear, startMonth-1, startCycleDay), end: new Date(year, month-1, endDay)};
+    let start = new Date(year, month - 1, 1);
+    let end = new Date(year, month - 1 + 1, 0); // 0 dell'ennesimo mese = ultimo giorno del mese
+    return { start, end };
 }
 
 // =====================================================================
@@ -512,246 +542,675 @@ function getCategoryCardBorder(catName) {
 
 // ===== BOTTOM SHEET STATE =====
 let sheetSelectedCategory = null;
-let sheetType = 'actual'; // 'actual' or 'planned'
-const ITEM_HEIGHT = 40;
+let sheetTransactionType = 'actual'; // 'actual' for Sostenuta, 'planned' for Prevista
 
 function openTransactionSheet(categoryName) {
+    console.log("Card cliccata:", categoryName);
     sheetSelectedCategory = categoryName;
-    sheetType = 'actual';
-    
-    const overlay = document.getElementById('transactionSheetOverlay');
-    const badge = document.getElementById('sheetCategoryBadge');
+    sheetTransactionType = 'actual';
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    const title = document.getElementById('sheetCategoryTitle');
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
     const sheetDate = document.getElementById('sheetDate');
-    const sheetInput = document.getElementById('sheetAmountInput');
+    const toggleOptions = document.querySelectorAll('.toggle-option');
     
-    // Populate category badge
-    const icon = getCatIcon(categoryName);
-    badge.innerHTML = `${icon} <span>${categoryName}</span>`;
-    
-    // Reset to default tab (actual)
-    document.getElementById('radioActual').checked = true;
-    document.getElementById('radioPlanned').checked = false;
-    
-    // Set default date
-    const today = new Date().toISOString().slice(0, 10);
-    sheetDate.value = today;
-    
-    // Clear note input
-    document.getElementById('sheetNote').value = '';
-    
-    // Reset amount input
-    sheetInput.value = '';
-    
-    // Show overlay
-    overlay.classList.add('active');
-    
-    // Init spin wheels
-    initSpinWheels();
-    
-    // Setup input listener for hybrid keyboard support
-    sheetInput.addEventListener('input', updateWheelsFromInput);
+    if (overlay && sheet && title) {
+        title.textContent = categoryName;
+        document.body.classList.add('sheet-open');
+        overlay.classList.add('open');
+        sheet.classList.add('open');
+        
+        // Reset inputs
+        if (intInput) intInput.value = '';
+        if (decInput) decInput.value = '';
+        
+        // Reset date to today
+        if (sheetDate) {
+            const today = new Date().toISOString().slice(0, 10);
+            sheetDate.value = today;
+        }
+        
+        // Reset toggle to 'actual' (Sostenuta)
+        toggleOptions.forEach(opt => opt.classList.toggle('active', opt.dataset.type === 'actual'));
+        
+        initNativeWheels();
+    }
 }
 
 function closeTransactionSheet() {
-    const overlay = document.getElementById('transactionSheetOverlay');
-    overlay.classList.remove('active');
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    if (overlay && sheet) {
+        document.body.classList.remove('sheet-open');
+        overlay.classList.remove('open');
+        sheet.classList.remove('open');
+        sheet.style.transform = '';
+        sheet.classList.remove('dragging');
+    }
+    sheetSelectedCategory = null;
+    sheetTransactionType = 'actual';
+    sheetCurrentMacroGroup = null;
+    
+    // Reset slider position
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(0)';
+}
+
+// Wheel state
+let wheelDebounceTimer = null;
+let isScrollingProgrammatically = false;
+let selectedInteger = 0;
+let selectedDecimal = 0;
+
+// Store scroll handlers for removal during programmatic scroll
+let intWheelScrollHandler = null;
+let decWheelScrollHandler = null;
+
+// Constants for wheel calculations
+const WHEEL_ITEM_HEIGHT = 50; // Must match CSS .wheel-item height
+
+function initNativeWheels() {
+    const intWheel = document.getElementById('integerWheel');
+    const decWheel = document.getElementById('decimalWheel');
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    
+    if (!intWheel || !decWheel) return;
+    
+    // Generate integer wheel (0-999) with padding
+    intWheel.innerHTML = '';
+    decWheel.innerHTML = '';
+    
+    // Padding items for proper snap (empty items before/after)
+    const intPaddingBefore = document.createElement('div');
+    intPaddingBefore.className = 'wheel-item';
+    intPaddingBefore.style.height = '50px';
+    intWheel.appendChild(intPaddingBefore);
+    
+    for (let i = 0; i <= 999; i++) {
+        const span = document.createElement('div');
+        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
+        span.textContent = i.toString().padStart(3, '0');
+        span.dataset.value = i.toString().padStart(3, '0');
+        intWheel.appendChild(span);
+    }
+    
+    const intPaddingAfter = document.createElement('div');
+    intPaddingAfter.className = 'wheel-item';
+    intPaddingAfter.style.height = '50px';
+    intWheel.appendChild(intPaddingAfter);
+    
+    // Decimal wheel (00-99) with padding
+    const decPaddingBefore = document.createElement('div');
+    decPaddingBefore.className = 'wheel-item';
+    decPaddingBefore.style.height = '50px';
+    decWheel.appendChild(decPaddingBefore);
+    
+    for (let i = 0; i <= 99; i++) {
+        const span = document.createElement('div');
+        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
+        span.textContent = i.toString().padStart(2, '0');
+        span.dataset.value = i.toString().padStart(2, '0');
+        decWheel.appendChild(span);
+    }
+    
+    const decPaddingAfter = document.createElement('div');
+    decPaddingAfter.className = 'wheel-item';
+    decPaddingAfter.style.height = '50px';
+    decWheel.appendChild(decPaddingAfter);
+    
+    // Reset selections
+    selectedInteger = 0;
+    selectedDecimal = 0;
+    
+    // Define scroll handlers and store them for later removal
+    intWheelScrollHandler = function() {
+        // Skip if we're scrolling programmatically
+        if (isScrollingProgrammatically) return;
+        
+        clearTimeout(wheelDebounceTimer);
+        wheelDebounceTimer = setTimeout(() => {
+            const items = intWheel.querySelectorAll('.wheel-item');
+            const centerY = intWheel.scrollTop + 75; // 150px/2
+            let closestIdx = 0;
+            let closestDiff = Infinity;
+            
+            items.forEach((item, idx) => {
+                const itemTop = idx * WHEEL_ITEM_HEIGHT;
+                const itemCenter = itemTop + (WHEEL_ITEM_HEIGHT / 2);
+                const diff = Math.abs(centerY - itemCenter);
+                if (diff < closestDiff) {
+                    closestDiff = diff;
+                    closestIdx = idx;
+                }
+            });
+            
+            // Skip padding items (first and last)
+            if (closestIdx > 0 && closestIdx < items.length - 1) {
+                selectedInteger = closestIdx - 1;
+                items.forEach((item, idx) => {
+                    item.classList.toggle('selected', idx === closestIdx);
+                });
+                syncWheelToInput('integer', selectedInteger);
+            }
+        }, 100);
+    };
+    
+    decWheelScrollHandler = function() {
+        // Skip if we're scrolling programmatically
+        if (isScrollingProgrammatically) return;
+        
+        clearTimeout(wheelDebounceTimer);
+        wheelDebounceTimer = setTimeout(() => {
+            const items = decWheel.querySelectorAll('.wheel-item');
+            const centerY = decWheel.scrollTop + 75;
+            let closestIdx = 0;
+            let closestDiff = Infinity;
+            
+            items.forEach((item, idx) => {
+                const itemTop = idx * WHEEL_ITEM_HEIGHT;
+                const itemCenter = itemTop + (WHEEL_ITEM_HEIGHT / 2);
+                const diff = Math.abs(centerY - itemCenter);
+                if (diff < closestDiff) {
+                    closestDiff = diff;
+                    closestIdx = idx;
+                }
+            });
+            
+            if (closestIdx > 0 && closestIdx < items.length - 1) {
+                selectedDecimal = closestIdx - 1;
+                items.forEach((item, idx) => {
+                    item.classList.toggle('selected', idx === closestIdx);
+                });
+                syncWheelToInput('decimal', selectedDecimal);
+            }
+        }, 100);
+    };
+    
+    intWheel.addEventListener('scroll', intWheelScrollHandler);
+    decWheel.addEventListener('scroll', decWheelScrollHandler);
+    
+    // Sync input changes to wheels - INPUT event for real-time sync
+    const intContainer = document.getElementById('integerWheelContainer');
+    const decContainer = document.getElementById('decimalWheelContainer');
+    
+    // Debounce timers for input events
+    let intInputDebounceTimer = null;
+    let decInputDebounceTimer = null;
+    
+    if (intInput) {
+        intInput.addEventListener('input', () => {
+            // Debounce the scroll to avoid interrupting fast typing
+            clearTimeout(intInputDebounceTimer);
+            intInputDebounceTimer = setTimeout(() => {
+                const val = parseInt(intInput.value) || 0;
+                if (val >= 0 && val <= 999) {
+                    syncInputToWheel('integer', val);
+                }
+            }, 150);
+        });
+        // Enter key moves focus to decimal with small delay to avoid blur conflict
+        intInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && decInput) {
+                e.preventDefault();
+                setTimeout(() => decInput.focus(), 50);
+            }
+        });
+        // Focus/blur visual feedback + select all on focus
+        intInput.addEventListener('focus', (e) => {
+            if (intContainer) intContainer.classList.add('focused');
+            e.target.select();
+        });
+        intInput.addEventListener('blur', () => {
+            if (intContainer) intContainer.classList.remove('focused');
+            isScrollingProgrammatically = false; // Reset flag on blur
+        });
+    }
+    
+    if (decInput) {
+        decInput.addEventListener('input', () => {
+            clearTimeout(decInputDebounceTimer);
+            decInputDebounceTimer = setTimeout(() => {
+                let val = parseInt(decInput.value) || 0;
+                if (val < 0) val = 0;
+                if (val > 99) val = 99;
+                syncInputToWheel('decimal', val);
+            }, 150);
+        });
+        // Focus/blur visual feedback + select all on focus
+        decInput.addEventListener('focus', (e) => {
+            if (decContainer) decContainer.classList.add('focused');
+            e.target.select();
+        });
+        decInput.addEventListener('blur', () => {
+            if (decContainer) decContainer.classList.remove('focused');
+            isScrollingProgrammatically = false; // Reset flag on blur
+        });
+    }
+    
+// Click on wheel container opens keyboard
+    if (intContainer) {
+        intContainer.addEventListener('click', () => {
+            if (intInput) intInput.focus();
+        });
+    }
+    if (decContainer) {
+        decContainer.addEventListener('click', () => {
+            if (decInput) decInput.focus();
+        });
+    }
+}
+
+// =====================================================================
+// VIEW MODE & MACRO TABS
+// =====================================================================
+function setupViewToggle() {
+    const toggleBtn = document.getElementById('viewToggleBtn');
+    const macroTabsContainer = document.getElementById('macroTabsContainer');
+    
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            if (currentViewMode === 'full') {
+                currentViewMode = 'tabs';
+                toggleBtn.innerHTML = '<i class="fas fa-th"></i>';
+                if (macroTabsContainer) macroTabsContainer.style.display = 'flex';
+            } else {
+                currentViewMode = 'full';
+                toggleBtn.innerHTML = '<i class="fas fa-layer-group"></i>';
+                if (macroTabsContainer) macroTabsContainer.style.display = 'none';
+            }
+            updateUI();
+        });
+    }
+    
+    // Setup macro tab clicks
+    document.querySelectorAll('.macro-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.macro-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeMacroGroup = tab.dataset.target;
+            updateUI();
+        });
+    });
+}
+
+// setupViewToggle() è ora chiamato in initApp()
+
+// =====================================================================
+// BOTTOM SHEET WITH MACRO/MICRO CATEGORIES (ORIGINAL GRID INJECTION)
+// =====================================================================
+function openBottomSheetFromMacro(macroGroup) {
+    sheetCurrentMacroGroup = macroGroup;
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    
+    if (!overlay || !sheet) return;
+    
+    document.body.classList.add('sheet-open');
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+    
+    // Render micro categories in the grid
+    renderMicroCategoriesGrid(macroGroup);
+    
+    // Reset slider position
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(0)';
+    
+    // Hide back button
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    
+    // Set title based on macro group
+    const sheetTitle = document.getElementById('sheetTitle');
+    if (sheetTitle) {
+        const titles = { 'casa': 'Casa e Utenze', 'auto': 'Veicoli', 'svago': 'Spese e Svago' };
+        sheetTitle.textContent = titles[macroGroup] || 'Categoria';
+    }
+}
+
+function renderMicroCategoriesGrid(macroGroup) {
+    const container = document.getElementById('microCategoriesGrid');
+    if (!container) return;
+    
+    // Calculate catSums first
+    let catSums = {};
+    userCategories.forEach(c => catSums[c] = {planned: 0, actual: 0});
+    currentData.expenses.forEach(exp => {
+        if (catSums[exp.category]) {
+            catSums[exp.category].planned += exp.planned;
+            catSums[exp.category].actual += exp.actual;
+        }
+    });
+    
+    container.innerHTML = '';
+    
+    userCategories.forEach(cat => {
+        const macro = getCategoryMacroGroup(cat);
+        // Show only categories matching the macro group (or 'altro' as fallback)
+        if (macro !== macroGroup && macro !== 'altro') return;
+        
+        const pVal = catSums[cat]?.planned || 0;
+        const aVal = catSums[cat]?.actual || 0;
+        const icon = getCatIcon(cat);
+        
+        // Calculate progress bar
+        let pct = 0;
+        let barClass = 'normal';
+        if (pVal > 0) {
+            pct = Math.min(100, (aVal / pVal) * 100);
+            if (aVal > pVal) barClass = 'over';
+            else if (pct > 80) barClass = 'warning';
+        } else if (aVal > 0) {
+            pct = 100;
+            barClass = 'over';
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        card.style.background = getCategoryCardBg(cat);
+        card.style.border = getCategoryCardBorder(cat);
+        card.innerHTML = `
+            <div class="category-card-icon">${icon}</div>
+            <div class="category-card-name">${cat}</div>
+            <div class="category-progress-bar">
+                <div class="category-progress-fill ${barClass}" style="width: ${pct}%"></div>
+            </div>
+        `;
+        card.onclick = () => slideToInputView(cat);
+        container.appendChild(card);
+    });
+}
+
+function slideToInputView(categoryName) {
+    sheetSelectedCategory = categoryName;
+    sheetTransactionType = 'actual';
+    
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(-100%)';
+    
+    // Show back button
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) backBtn.style.display = 'flex';
+    
+    // Update title
+    const sheetTitle = document.getElementById('sheetTitle');
+    if (sheetTitle) sheetTitle.textContent = categoryName;
+    
+    // Reset inputs and init wheels
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    const sheetDate = document.getElementById('sheetDate');
+    const toggleOptions = document.querySelectorAll('.toggle-option');
+    
+    if (intInput) intInput.value = '';
+    if (decInput) decInput.value = '';
+    if (sheetDate) sheetDate.value = new Date().toISOString().slice(0, 10);
+    
+    toggleOptions.forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === 'actual');
+    });
+    
+    initNativeWheels();
+}
+
+function slideBackToCategories() {
+    const slider = document.querySelector('.sheet-slider');
+    if (slider) slider.style.transform = 'translateX(0)';
+    
+    // Hide back button
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    
+    // Update title back to macro
+    const sheetTitle = document.getElementById('sheetTitle');
+    if (sheetTitle && sheetCurrentMacroGroup) {
+        const titles = { 'casa': 'Casa e Utenze', 'auto': 'Veicoli', 'svago': 'Spese e Svago' };
+        sheetTitle.textContent = titles[sheetCurrentMacroGroup] || 'Categoria';
+    }
+    
     sheetSelectedCategory = null;
 }
 
-function setSheetType(type) {
-    sheetType = type;
-}
-
-function updateWheelsFromInput() {
-    const sheetInput = document.getElementById('sheetAmountInput');
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
+// Setup macro dash card click handlers
+function setupMacroDashCards() {
+    const casaCard = document.querySelector('.card-casa');
+    const veicoliCard = document.querySelector('.card-veicoli');
+    const svagoCard = document.querySelector('.card-svago');
     
-    let value = parseFloat(sheetInput.value) || 0;
-    if (value < 0) value = 0;
-    if (value > 999.99) value = 999.99;
-    
-    const intVal = Math.floor(value);
-    const decVal = Math.round((value - intVal) * 100);
-    
-    // Update wheel positions
-    const intNumbers = intWheel.querySelector('.wheel-numbers');
-    const decNumbers = decWheel.querySelector('.wheel-numbers');
-    
-    const intTransform = -intVal * ITEM_HEIGHT;
-    const decTransform = -decVal * ITEM_HEIGHT;
-    
-    intNumbers.style.transform = `translateY(${intTransform}px)`;
-    decNumbers.style.transform = `translateY(${decTransform}px)`;
-    
-    // Update dataset
-    intWheel.dataset.selected = intVal;
-    decWheel.dataset.selected = decVal;
-    
-    // Highlight selected
-    highlightSelected(intWheel, intVal);
-    highlightSelected(decWheel, decVal);
-}
-
-function initSpinWheels() {
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
-    const sheetAmountInput = document.getElementById('sheetAmountInput');
-    
-    // Generate integer wheel (0-999)
-    intWheel.innerHTML = '<div class="wheel-numbers"></div>';
-    const intNumbers = intWheel.querySelector('.wheel-numbers');
-    for (let i = 0; i <= 999; i++) {
-        const span = document.createElement('span');
-        span.textContent = i.toString();
-        intNumbers.appendChild(span);
+    if (casaCard) {
+        casaCard.style.cursor = 'pointer';
+        casaCard.onclick = () => openBottomSheetFromMacro('casa');
     }
-    
-    // Generate decimal wheel (.00 to .99)
-    decWheel.innerHTML = '<div class="wheel-numbers"></div>';
-    const decNumbers = decWheel.querySelector('.wheel-numbers');
-    for (let i = 0; i <= 99; i++) {
-        const span = document.createElement('span');
-        span.textContent = '.' + i.toString().padStart(2, '0');
-        decNumbers.appendChild(span);
+    if (veicoliCard) {
+        veicoliCard.style.cursor = 'pointer';
+        veicoliCard.onclick = () => openBottomSheetFromMacro('auto');
     }
-    
-    // Set initial position (0.00)
-    intNumbers.style.transform = 'translateY(0)';
-    decNumbers.style.transform = 'translateY(0)';
-    intWheel.dataset.selected = 0;
-    decWheel.dataset.selected = 0;
-    
-    // Add touch handlers
-    setupWheelTouch(intWheel, intNumbers, ITEM_HEIGHT, false);
-    setupWheelTouch(decWheel, decNumbers, ITEM_HEIGHT, true);
-    
-    // Add click-to-open-keyboard handlers
-    intWheel.addEventListener('click', () => {
-        sheetAmountInput.focus();
-    });
-    decWheel.addEventListener('click', () => {
-        sheetAmountInput.focus();
-    });
+    if (svagoCard) {
+        svagoCard.style.cursor = 'pointer';
+        svagoCard.onclick = () => openBottomSheetFromMacro('svago');
+    }
 }
 
-function setupWheelTouch(wheel, numbers, itemHeight, isDecimal = false) {
-    const maxIndex = isDecimal ? 99 : 999;
+// Setup back button handler
+function setupBottomSheetBackBtn() {
+    const backBtn = document.getElementById('sheetBackBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', slideBackToCategories);
+    }
+}
+
+function syncWheelToInput(type, value) {
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
     
-    wheel.addEventListener('touchstart', (e) => {
-        wheel.dataset.dragging = 'true';
-        wheel.dataset.startY = e.touches[0].clientY;
-        wheel.dataset.startTransform = parseInt(wheel.dataset.currentTransform || 0);
-        wheel.dataset.velocity = 0;
-        wheel.dataset.lastY = e.touches[0].clientY;
-    });
+    if (type === 'integer' && intInput) {
+        intInput.value = value;
+    } else if (type === 'decimal' && decInput) {
+        decInput.value = value;
+    }
+}
+
+// Sync input value to wheel scroll position using DOM-based approach
+function syncInputToWheel(type, value) {
+    const intWheel = document.getElementById('integerWheel');
+    const decWheel = document.getElementById('decimalWheel');
     
-    wheel.addEventListener('touchmove', (e) => {
-        if (wheel.dataset.dragging !== 'true') return;
-        const deltaY = e.touches[0].clientY - wheel.dataset.lastY;
-        wheel.dataset.velocity = Math.abs(deltaY);
-        wheel.dataset.currentTransform = wheel.dataset.startTransform + (e.touches[0].clientY - wheel.dataset.startY);
-    });
-    
-    wheel.addEventListener('touchend', (e) => {
-        if (wheel.dataset.dragging !== 'true') return;
-        wheel.dataset.dragging = 'false';
-        
-        // Inertia animation
-        let velocity = parseInt(wheel.dataset.velocity || 0);
-        let transform = parseInt(wheel.dataset.currentTransform || 0);
-        const friction = 0.95;
-        const snapThreshold = itemHeight / 3;
-        
-        const animate = () => {
-            if (velocity > 0.5) {
-                velocity *= friction;
-                transform += (velocity > 10 ? (transform < 0 ? velocity : -velocity) : 0);
-                wheel.dataset.currentTransform = transform;
-                
-                // Clamp to bounds
-                const minY = -(maxIndex * itemHeight);
-                if (transform < minY) transform = minY;
-                if (transform > 0) transform = 0;
+    if (type === 'integer' && intWheel) {
+        selectedInteger = value;
+        // Format value with padding
+        const formattedValue = value.toString().padStart(3, '0');
+        // Find element by data-value
+        const targetElement = intWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
+        if (targetElement) {
+            isScrollingProgrammatically = true;
+            // Remove scroll listener temporarily
+            if (intWheelScrollHandler) {
+                intWheel.removeEventListener('scroll', intWheelScrollHandler);
             }
-            
-            // Snap to nearest item
-            const nearestIndex = Math.max(0, Math.min(maxIndex, Math.round(-transform / itemHeight)));
-            const snapY = -nearestIndex * itemHeight;
-            
-            if (Math.abs(transform - snapY) < 1 || (velocity <= 0.5 && Math.abs(transform - snapY) < snapThreshold)) {
-                transform = snapY;
-                wheel.dataset.currentTransform = transform;
-                wheel.dataset.selected = nearestIndex;
-                numbers.style.transform = `translateY(${transform}px)`;
-                highlightSelected(wheel, nearestIndex, itemHeight);
-            } else {
-                transform += (snapY - transform) * 0.3;
-                wheel.dataset.currentTransform = transform;
-                numbers.style.transform = `translateY(${transform}px)`;
-                requestAnimationFrame(animate);
+            // Use scrollIntoView to center the element
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Re-add listener and reset flag after smooth scroll completes
+            setTimeout(() => {
+                if (intWheelScrollHandler) {
+                    intWheel.addEventListener('scroll', intWheelScrollHandler);
+                }
+                isScrollingProgrammatically = false;
+            }, 400);
+        }
+    } else if (type === 'decimal' && decWheel) {
+        selectedDecimal = value;
+        // Format value with padding
+        const formattedValue = value.toString().padStart(2, '0');
+        // Find element by data-value
+        const targetElement = decWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
+        if (targetElement) {
+            isScrollingProgrammatically = true;
+            // Remove scroll listener temporarily
+            if (decWheelScrollHandler) {
+                decWheel.removeEventListener('scroll', decWheelScrollHandler);
             }
-        };
-        
-        animate();
-    });
+            // Use scrollIntoView to center the element
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Re-add listener and reset flag after smooth scroll completes
+            setTimeout(() => {
+                if (decWheelScrollHandler) {
+                    decWheel.addEventListener('scroll', decWheelScrollHandler);
+                }
+                isScrollingProgrammatically = false;
+            }, 400);
+        }
+    }
 }
 
-function highlightSelected(wheel, selectedIndex, itemHeight) {
-    const numbers = wheel.querySelector('.wheel-numbers');
-    const spans = numbers.querySelectorAll('span');
-    spans.forEach((span, idx) => {
-        span.classList.toggle('selected', idx === selectedIndex);
-    });
-}
+// Swipe-to-dismiss for bottom sheet
+let dragStartY = 0;
+let dragCurrentY = 0;
+let isDragging = false;
 
-function saveFromSheet() {
-    const intWheel = document.getElementById('wheelInteger');
-    const decWheel = document.getElementById('wheelDecimal');
+function setupSwipeToClose() {
+    const sheet = document.getElementById('bottomSheet');
+    const handle = document.querySelector('.sheet-handle');
     
-    const intVal = parseInt(intWheel.dataset.selected || 0);
-    const decVal = parseInt(decWheel.dataset.selected || 0);
+    if (!sheet || !handle) return;
+    
+    // Touch start
+    handle.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        dragStartY = e.touches[0].clientY;
+        sheet.classList.add('dragging');
+    }, { passive: true });
+    
+    // Touch move
+    handle.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        dragCurrentY = e.touches[0].clientY;
+        const deltaY = dragCurrentY - dragStartY;
+        
+        // Only allow dragging down
+        if (deltaY > 0) {
+            sheet.style.transform = `translateY(${deltaY}px)`;
+        }
+    }, { passive: true });
+    
+    // Touch end
+    const endDrag = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const deltaY = dragCurrentY - dragStartY;
+        const sheetHeight = sheet.offsetHeight;
+        const threshold = Math.min(100, sheetHeight * 0.3);
+        
+        sheet.classList.remove('dragging');
+        
+        if (deltaY > threshold) {
+            // Close the sheet
+            closeTransactionSheet();
+        } else {
+            // Reset position
+            sheet.style.transform = '';
+        }
+    };
+    
+    handle.addEventListener('touchend', endDrag);
+    handle.addEventListener('touchcancel', endDrag);
+}
+
+// Initialize swipe handlers when DOM ready
+document.addEventListener('DOMContentLoaded', setupSwipeToClose);
+
+// Toggle transaction type (Segmented control)
+function setupToggleType() {
+    const toggleOptions = document.querySelectorAll('.toggle-option');
+    toggleOptions.forEach(opt => {
+        opt.addEventListener('click', () => {
+            toggleOptions.forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            sheetTransactionType = opt.dataset.type;
+        });
+    });
+}
+
+// Save transaction from bottom sheet
+async function saveTransactionFromSheet() {
+    const month = document.getElementById('currentMonth').value;
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    const sheetDate = document.getElementById('sheetDate');
+    const sheetNote = document.getElementById('sheetNote');
+    const saveBtn = document.getElementById('saveTransactionBtn');
+    
+    const intVal = parseInt(intInput?.value) || selectedInteger;
+    const decVal = parseInt(decInput?.value) || selectedDecimal;
     const amount = intVal + (decVal / 100);
     
-    const date = document.getElementById('sheetDate').value;
-    const note = document.getElementById('sheetNote').value.trim() || 'Aggiunto da sheet';
-    
-    // Create expense object
-    const month = document.getElementById('currentMonth').value;
-    
-    let planned = 0;
-    let actual = 0;
-    
-    if (sheetType === 'planned') {
-        planned = amount;
-    } else {
-        actual = amount;
+    if (amount <= 0) {
+        alert('Inserisci un importo maggiore di zero');
+        return;
     }
     
-    // Add to data structure
+    const date = sheetDate?.value || new Date().toISOString().slice(0, 10);
+    const note = sheetNote?.value.trim() || '';
+    
     const exp = {
         id: Date.now(),
         month: month,
         date: date,
         category: sheetSelectedCategory,
-        desc: note,
-        planned: planned,
-        actual: actual,
+        desc: note || 'Aggiunto da mobile',
+        planned: sheetTransactionType === 'planned' ? amount : 0,
+        actual: sheetTransactionType === 'actual' ? amount : 0,
         sharedPercentage: 0
     };
     
-    currentData.expenses.push(exp);
-    db.expenses.put(exp).then(() => {
+    try {
+        currentData.expenses.push(exp);
+        await db.expenses.put(exp);
         closeTransactionSheet();
         updateUI();
         showToast('Spesa aggiunta', false);
-    }).catch(err => {
+    } catch (err) {
         console.error('[DB] Error adding expense from sheet:', err);
         showToast('Errore salvataggio', true);
-    });
+        currentData.expenses.pop();
+    }
 }
 
+// Setup close button and save button handlers
+(function setupBottomSheetEvents() {
+    const closeBtn = document.getElementById('closeSheetBtn');
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    const saveBtn = document.getElementById('saveTransactionBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeTransactionSheet);
+    }
+    if (overlay) {
+        overlay.addEventListener('click', closeTransactionSheet);
+    }
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveTransactionFromSheet);
+    }
+    // Prevent click-through on sheet
+    if (sheet) {
+        sheet.addEventListener('click', (e) => e.stopPropagation());
+    }
+})();
+
+// Initialize toggle when DOM ready
+document.addEventListener('DOMContentLoaded', setupToggleType);
+
+// Initialize macro dash cards and back button
+document.addEventListener('DOMContentLoaded', () => {
+    setupMacroDashCards();
+    setupBottomSheetBackBtn();
+});
+
 function renderCategoriesDropdown() {
+
     const select = document.getElementById('expenseCategory');
     const adminList = document.getElementById('categoriesAdminList');
     select.innerHTML = ''; adminList.innerHTML = '';
@@ -1025,6 +1484,14 @@ function renderCategoryGrid(catSums) {
         const aVal = catSums[cat]?.actual || 0;
         const icon = getCatIcon(cat);
         
+        // Filtra per macro-gruppo in modalità tabs
+        if (currentViewMode === 'tabs') {
+            const macroGroup = getCategoryMacroGroup(cat);
+            if (macroGroup !== activeMacroGroup && macroGroup !== 'altro') {
+                return; // Salta questa categoria
+            }
+        }
+        
         // Calcolo percentuale con logica corretta
         let pct = 0;
         let barClass = 'default';
@@ -1081,15 +1548,23 @@ async function updateUI() {
     const alertBox = document.getElementById('deadlineAlert');
     if (pending > 0) { alertBox.innerText = `⏳ ${pending} uscite pianificate in attesa di saldo.`; alertBox.style.display = 'block'; } else { alertBox.style.display = 'none'; }
 
-    // Tabella categorie - responsive: full list on desktop, filtered on mobile
+    // Tabella categorie - responsive: full list on desktop, filtered on mobile/tabs
     let catSums = {}; userCategories.forEach(c => catSums[c] = {planned:0, actual:0});
     currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
     const tableBody = document.getElementById('overviewTableBody'); tableBody.innerHTML = '';
-    const showAllCategories = isDesktop(); // Desktop shows all, mobile only active
+    const showAllCategories = isDesktop() && currentViewMode !== 'tabs'; // Desktop shows all, mobile only active, tabs filters by macro group
     userCategories.sort().forEach(cat => {
         const pVal = catSums[cat].planned, aVal = catSums[cat].actual, diff = pVal - aVal;
         let diffClass = '', diffText = '';
         if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtE(diff)}`; }
+        
+        // Filtra per macro-gruppo in modalità tabs (sia desktop che mobile)
+        if (currentViewMode === 'tabs') {
+            const macroGroup = getCategoryMacroGroup(cat);
+            if (macroGroup !== activeMacroGroup && macroGroup !== 'altro') {
+                return; // Salta questa categoria
+            }
+        }
         
         // On desktop, show all categories (even with 0 values); on mobile, only show those with activity
         if (showAllCategories || pVal > 0 || aVal > 0) {
@@ -2084,7 +2559,6 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => updateUI(), 250);
 });
-
 
 
 
