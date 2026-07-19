@@ -479,10 +479,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .container, .main-container, .app-wrapper, #app,
     .page, .view, .section {
         overflow-x: hidden !important;
-        overflow-y: hidden !important;
+        overflow-y: auto !important;
         position: relative !important;
         height: auto !important;
-        min-height: 0 !important;
+        min-height: 100vh !important;
         -webkit-overflow-scrolling: touch !important;
     }
     
@@ -495,7 +495,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     #current-month-tab {
         height: auto !important;
         min-height: 0 !important;
-        padding-bottom: 15px !important;
+        padding-bottom: 20px !important;
     }
     
     /* Main layout - niente overflow vuoto */
@@ -581,8 +581,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         grid-template-columns: 1fr 1fr !important;
         gap: 12px !important;
         width: 100% !important;
-        margin: 15px 0 !important;
-        margin-bottom: 10px !important;
+        margin: 15px 0 10px !important;
     }
     
     /* Stile delle 3 grandi Card - Sbloccate */
@@ -595,7 +594,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         padding: 15px !important;
     }
     
-    /* Contenitore dei 3 Riepiloghi - margino minimo */
+    /* Contenitore dei 3 Riepiloghi */
     .summary-grid {
         width: 100% !important;
         margin-top: 5px !important;
