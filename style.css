@@ -479,11 +479,29 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .container, .main-container, .app-wrapper, #app,
     .page, .view, .section {
         overflow-x: hidden !important;
-        overflow-y: auto !important;
+        overflow-y: hidden !important;
         position: relative !important;
         height: auto !important;
-        min-height: 100vh !important;
+        min-height: 0 !important;
         -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Container principale - padding minimo per navbar */
+    .container {
+        padding-bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+    }
+    
+    /* Contenitore schermata Mese - height auto */
+    #current-month-tab {
+        height: auto !important;
+        min-height: 0 !important;
+        padding-bottom: 15px !important;
+    }
+    
+    /* Main layout - niente overflow vuoto */
+    .main-layout {
+        height: auto !important;
+        min-height: 0 !important;
     }
     
     /* Bottom Nav - ancoraggio in basso (unico elemento fixed) */
@@ -564,6 +582,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         gap: 12px !important;
         width: 100% !important;
         margin: 15px 0 !important;
+        margin-bottom: 10px !important;
     }
     
     /* Stile delle 3 grandi Card - Sbloccate */
@@ -576,11 +595,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         padding: 15px !important;
     }
     
-    /* Contenitore dei 3 Riepiloghi */
+    /* Contenitore dei 3 Riepiloghi - margino minimo */
     .summary-grid {
         width: 100% !important;
         margin-top: 5px !important;
-        margin-bottom: 5px !important;
+        margin-bottom: 10px !important;
     }
 }
 
