@@ -474,28 +474,21 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 767px) {
-    /* Reset Strutturale del Body (Blocco Radicale) */
+    /* Riattivazione Scroll Nativo e Fluido */
     html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        height: 100vh !important;
-        height: -webkit-fill-available !important;
-        overflow: hidden !important;
-        position: fixed !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important; /* Riattiva lo scroll verticale */
+        position: relative !important; /* Rimuove eventuali position: fixed */
+        height: auto !important;
+        min-height: 100vh !important;
+        -webkit-overflow-scrolling: touch; /* Rende lo scroll fluidissimo su iOS */
     }
     
-    /* Container Principale (Gestore degli Spazi Equidistanti) */
+    /* Sblocco Container Principale */
     .container {
-        display: flex !important;
-        flex-direction: column !important;
-        height: 100vh !important;
-        height: -webkit-fill-available !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        padding: 10px 15px calc(85px + env(safe-area-inset-bottom)) 15px !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: auto !important; /* Permette il flusso naturale del contenuto */
     }
     
     /* Nascondi header-top legacy e pulsante + */
