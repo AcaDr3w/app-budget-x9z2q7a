@@ -991,15 +991,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .mobile-dashboard-container {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        padding: 10px 15px;
+        gap: 12px !important;
+        padding: 8px 15px !important;
         margin-top: 15px;
     }
 
     /* Stile delle 3 grandi Card */
     .dash-card {
         border-radius: 24px;
-        padding: 30px 15px;
+        padding: 35px 15px !important;
         color: white;
         display: flex;
         flex-direction: column;
@@ -1007,7 +1007,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center;
         text-align: center;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        min-height: 160px;
+        min-height: 120px !important;
     }
     .dash-card h3 {
         margin: 0 0 15px 0;
@@ -1030,6 +1030,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .card-svago {
         grid-column: span 2;
         background: linear-gradient(135deg, #8E2DE2, #4A00E0);
-        min-height: 180px;
+        min-height: 200px !important;
     }
 }
