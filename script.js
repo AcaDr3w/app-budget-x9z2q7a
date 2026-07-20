@@ -308,67 +308,41 @@ let tradingChart = null;
 // CATEGORIES MAP - Struttura dati centralizzata per macro-categorie
 // =====================================================================
 const CATEGORIES_MAP = {
-    casa: {
-        label: "Casa e Utenze",
-        color: "#1A8699",
-        icon: "fa-home",
-        subcategories: [
-            { id: "affitto", name: "Affitto", icon: "fa-house", color: "#1A8699" },
-            { id: "mutuo", name: "Mutuo", icon: "fa-building", color: "#1A8699" },
-            { id: "luce", name: "Luce", icon: "fa-lightbulb", color: "#1A8699" },
-            { id: "gas", name: "Gas", icon: "fa-fire", color: "#1A8699" },
-            { id: "acqua", name: "Acqua", icon: "fa-tint", color: "#1A8699" },
-            { id: "rifiuti", name: "Rifiuti", icon: "fa-trash", color: "#1A8699" },
-            { id: "condominio", name: "Condominio", icon: "fa-building", color: "#1A8699" },
-            { id: "internet", name: "Internet", icon: "fa-wifi", color: "#1A8699" },
-            { id: "telefonia", name: "Telefonia", icon: "fa-phone", color: "#1A8699" }
-        ]
-    },
-    veicoli: {
-        label: "Veicoli",
-        color: "#5AB963",
-        icon: "fa-car",
-        subcategories: [
-            { id: "carburante_auto", name: "Carburante Auto", icon: "fa-gas-pump", color: "#5AB963" },
-            { id: "carburante_moto", name: "Carburante Moto", icon: "fa-gas-pump", color: "#5AB963" },
-            { id: "assicurazione_auto", name: "Assicurazione Auto", icon: "fa-shield-alt", color: "#5AB963" },
-            { id: "assicurazione_moto", name: "Assicurazione Moto", icon: "fa-shield-alt", color: "#5AB963" },
-            { id: "bollo_auto", name: "Bollo Auto", icon: "fa-receipt", color: "#5AB963" },
-            { id: "bollo_moto", name: "Bollo Moto", icon: "fa-receipt", color: "#5AB963" },
-            { id: "manutenzione_auto", name: "Manutenzione Auto", icon: "fa-tools", color: "#5AB963" },
-            { id: "manutenzione_moto", name: "Manutenzione Moto", icon: "fa-tools", color: "#5AB963" }
-        ]
-    },
-    svago: {
-        label: "Spese e Svago",
-        color: "#8E2DE2",
-        icon: "fa-shopping-cart",
-        subcategories: [
-            { id: "shopping", name: "Shopping", icon: "fa-shopping-bag", color: "#8E2DE2" },
-            { id: "abbigliamento", name: "Abbigliamento", icon: "fa-tshirt", color: "#8E2DE2" },
-            { id: "ristoranti", name: "Ristoranti", icon: "fa-utensils", color: "#8E2DE2" },
-            { id: "salute", name: "Salute", icon: "fa-heartbeat", color: "#8E2DE2" },
-            { id: "viaggi", name: "Viaggi", icon: "fa-plane", color: "#8E2DE2" },
-            { id: "sport", name: "Sport", icon: "fa-running", color: "#8E2DE2" },
-            { id: "abbonamenti", name: "Abbonamenti", icon: "fa-tv", color: "#8E2DE2" },
-            { id: "formazione", name: "Formazione", icon: "fa-book", color: "#8E2DE2" },
-            { id: "igiene_pulizia", name: "Igiene e Pulizia", icon: "fa-soap", color: "#8E2DE2" },
-            { id: "cane", name: "Cane", icon: "fa-dog", color: "#8E2DE2" },
-            { id: "imprevisti", name: "Imprevisti", icon: "fa-exclamation-triangle", color: "#8E2DE2" },
-            { id: "manutenzioni", name: "Manutenzioni", icon: "fa-tools", color: "#8E2DE2" },
-            { id: "varie", name: "Varie", icon: "fa-box", color: "#8E2DE2" }
-        ]
-    }
+    "casa_utenze": [
+        { id: "alimentari", nome: "Alimentari", icona: "fa-shopping-cart", colore: "#2a9d8f" },
+        { id: "bolletta_acqua", nome: "Bolletta Acqua", icona: "fa-tint", colore: "#2a9d8f" },
+        { id: "bolletta_condominio", nome: "Bolletta Condominio", icona: "fa-building", colore: "#2a9d8f" },
+        { id: "bolletta_gas", nome: "Bolletta Gas", icona: "fa-fire", colore: "#2a9d8f" },
+        { id: "bolletta_luce", nome: "Bolletta Luce", icona: "fa-lightbulb", colore: "#2a9d8f" },
+        { id: "bolletta_rifiuti", nome: "Bolletta Rifiuti", icona: "fa-trash-alt", colore: "#2a9d8f" },
+        { id: "bolletta_telefonia", nome: "Bolletta Telefonia", icona: "fa-phone", colore: "#2a9d8f" },
+        { id: "igiene_pulizia", nome: "Igiene e Pulizia", icona: "fa-pump-soap", colore: "#2a9d8f" },
+        { id: "mutuo", nome: "Mutuo", icona: "fa-home", colore: "#2a9d8f" }
+    ],
+    "veicoli": [
+        { id: "carburante_auto", nome: "Carburante Auto", icona: "fa-gas-pump", colore: "#7bc043" },
+        { id: "carburante_moto", nome: "Carburante Moto", icona: "fa-motorcycle", colore: "#7bc043" },
+        { id: "manutenzioni", nome: "Manutenzioni", icona: "fa-wrench", colore: "#7bc043" },
+        { id: "tasse_auto", nome: "Tasse Auto (Assic.)", icona: "fa-car", colore: "#7bc043" },
+        { id: "tasse_moto", nome: "Tasse Moto (Assic.)", icona: "fa-shield-alt", colore: "#7bc043" }
+    ],
+    "spese_svago": [
+        { id: "abbigliamento", nome: "Abbigliamento", icona: "fa-tshirt", colore: "#6f42c1" },
+        { id: "cane", nome: "Cane", icona: "fa-dog", colore: "#6f42c1" },
+        { id: "formazione", nome: "Formazione", icona: "fa-book-open", colore: "#6f42c1" },
+        { id: "imprevisti_svago", nome: "Imprevisti e Svago", icona: "fa-glass-cheers", colore: "#6f42c1" },
+        { id: "sanitarie", nome: "Sanitarie", icona: "fa-stethoscope", colore: "#6f42c1" },
+        { id: "varie", nome: "Varie", icona: "fa-box", colore: "#6f42c1" }
+    ]
 };
 
-// Mappa le categorie nei 3 macro gruppi
 function getCategoryMacroGroup(catName) {
-    for (const [key, data] of Object.entries(CATEGORIES_MAP)) {
-        if (data.subcategories.some(sub => sub.name === catName)) {
+    for (const [key, subs] of Object.entries(CATEGORIES_MAP)) {
+        if (subs.some(sub => sub.nome === catName)) {
             return key;
         }
     }
-    return 'svago'; // fallback per categorie non mappate
+    return 'spese_svago'; // fallback per categorie non mappate
 }
 
 // Inizializzazione valori UI
@@ -937,7 +911,11 @@ function openBottomSheetFromMacro(macroGroup) {
     // Set title based on macro group
     const sheetTitle = document.getElementById('sheetTitle');
     if (sheetTitle) {
-        const titles = { 'casa': 'Casa e Utenze', 'auto': 'Veicoli', 'svago': 'Spese e Svago' };
+        const titles = { 
+            'casa_utenze': 'Casa e Utenze', 
+            'veicoli': 'Veicoli', 
+            'spese_svago': 'Spese e Svago' 
+        };
         sheetTitle.textContent = titles[macroGroup] || 'Categoria';
     }
 }
@@ -961,8 +939,8 @@ function renderMicroCategoriesGrid(macroGroup) {
     const macro = CATEGORIES_MAP[macroGroup];
     if (!macro) return;
     
-    macro.subcategories.forEach(sub => {
-        const cat = sub.name;
+    macro.forEach(sub => {
+        const cat = sub.nome;
         // Only show categories that exist in userCategories (user-added or enabled)
         if (!userCategories.includes(cat)) return;
         
@@ -1041,7 +1019,11 @@ function slideBackToCategories() {
     // Update title back to macro
     const sheetTitle = document.getElementById('sheetTitle');
     if (sheetTitle && sheetCurrentMacroGroup) {
-        const titles = { 'casa': 'Casa e Utenze', 'auto': 'Veicoli', 'svago': 'Spese e Svago' };
+        const titles = { 
+            'casa_utenze': 'Casa e Utenze', 
+            'veicoli': 'Veicoli', 
+            'spese_svago': 'Spese e Svago' 
+        };
         sheetTitle.textContent = titles[sheetCurrentMacroGroup] || 'Categoria';
     }
     
