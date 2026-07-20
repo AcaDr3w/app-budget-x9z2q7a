@@ -491,8 +491,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         padding-bottom: 0 !important;
     }
     .container {
-        padding-bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+        padding-bottom: calc(65px + env(safe-area-inset-bottom)) !important;
         margin-bottom: 0 !important;
+        box-sizing: border-box !important;
     }
     
     /* Contenitore schermata Mese - height auto, niente spazio vuoto */
@@ -587,7 +588,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         grid-template-columns: 1fr 1fr !important;
         gap: 12px !important;
         width: 100% !important;
-        margin: 15px 0 10px !important;
+        margin: 15px 0 0 !important;
     }
     
     /* Stile delle 3 grandi Card - Sbloccate */
@@ -604,7 +605,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .summary-grid {
         width: 100% !important;
         margin-top: 5px !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 0 !important;
     }
 }
 
@@ -986,7 +987,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: space-between;
         gap: 5px !important;
         padding: 0 15px !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 0 !important;
     }
     .summary-box {
         flex: 1 !important;
