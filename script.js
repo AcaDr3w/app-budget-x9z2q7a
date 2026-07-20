@@ -250,25 +250,38 @@ async function processSilentRestore(data, cloudCounter) {
 }
 
 const DEFAULT_CATEGORIES = [
-    {name: "Abbigliamento", icon: "👕"},
-    {name: "Alimentari", icon: "🛒"},
-    {name: "Bolletta Acqua", icon: "💧"},
-    {name: "Bolletta Condominio", icon: "🏢"},
-    {name: "Bolletta Gas", icon: "🔥"},
-    {name: "Bolletta Luce", icon: "💡"},
-    {name: "Bolletta Rifiuti", icon: "🗑️"},
-    {name: "Bolletta Telefonia", icon: "📞"},
+    // Casa e Utenze
+    {name: "Affitto", icon: "🏠"},
+    {name: "Mutuo", icon: "🏠"},
+    {name: "Luce", icon: "💡"},
+    {name: "Gas", icon: "🔥"},
+    {name: "Acqua", icon: "💧"},
+    {name: "Rifiuti", icon: "🗑️"},
+    {name: "Condominio", icon: "🏢"},
+    {name: "Internet", icon: "📱"},
+    {name: "Telefonia", icon: "📞"},
+    // Veicoli
     {name: "Carburante Auto", icon: "⛽🚗"},
     {name: "Carburante Moto", icon: "⛽🏍️"},
-    {name: "Cane", icon: "🐕"},
+    {name: "Assicurazione Auto", icon: "💰🚗"},
+    {name: "Assicurazione Moto", icon: "💰🏍️"},
+    {name: "Bollo Auto", icon: "💰🚗"},
+    {name: "Bollo Moto", icon: "💰🏍️"},
+    {name: "Manutenzione Auto", icon: "🔧"},
+    {name: "Manutenzione Moto", icon: "🔧"},
+    // Spese e Svago
+    {name: "Shopping", icon: "🛍️"},
+    {name: "Abbigliamento", icon: "👕"},
+    {name: "Ristoranti", icon: "🍔"},
+    {name: "Salute", icon: "🏥"},
+    {name: "Viaggi", icon: "✈️"},
+    {name: "Sport", icon: "🏋️"},
+    {name: "Abbonamenti", icon: "📺"},
     {name: "Formazione", icon: "📚"},
     {name: "Igiene e Pulizia", icon: "🧼"},
-    {name: "Imprevisti e Svago", icon: "🎉"},
-    {name: "Manutenzioni Programmate", icon: "🔧"},
-    {name: "Mutuo", icon: "🏠"},
-    {name: "Sanitarie", icon: "🩺"},
-    {name: "Tasse Auto (Assicurazione/Bollo)", icon: "💰🚗"},
-    {name: "Tasse Moto (Assicurazione/Bollo)", icon: "💰🏍️"},
+    {name: "Cane", icon: "🐕"},
+    {name: "Imprevisti", icon: "🎉"},
+    {name: "Manutenzioni", icon: "🔧"},
     {name: "Varie", icon: "📦"}
 ];
 const ICON_OPTIONS = ['🏠','🚗','🏍️','🛒','🗑️','📞','⛽','🧼','🐕','🩺','💰','👕','📦','🔧','💡','💧','🔥','🏢','📚','🎉','♻️','📱','🍔','🛍️','✈️','📈','🎮','🐾','👶','💄','🎵','🏋️','🍕'];
@@ -291,16 +304,71 @@ let tradingChart = null;
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
 
+// =====================================================================
+// CATEGORIES MAP - Struttura dati centralizzata per macro-categorie
+// =====================================================================
+const CATEGORIES_MAP = {
+    casa: {
+        label: "Casa e Utenze",
+        color: "#1A8699",
+        icon: "fa-home",
+        subcategories: [
+            { id: "affitto", name: "Affitto", icon: "fa-house", color: "#1A8699" },
+            { id: "mutuo", name: "Mutuo", icon: "fa-building", color: "#1A8699" },
+            { id: "luce", name: "Luce", icon: "fa-lightbulb", color: "#1A8699" },
+            { id: "gas", name: "Gas", icon: "fa-fire", color: "#1A8699" },
+            { id: "acqua", name: "Acqua", icon: "fa-tint", color: "#1A8699" },
+            { id: "rifiuti", name: "Rifiuti", icon: "fa-trash", color: "#1A8699" },
+            { id: "condominio", name: "Condominio", icon: "fa-building", color: "#1A8699" },
+            { id: "internet", name: "Internet", icon: "fa-wifi", color: "#1A8699" },
+            { id: "telefonia", name: "Telefonia", icon: "fa-phone", color: "#1A8699" }
+        ]
+    },
+    veicoli: {
+        label: "Veicoli",
+        color: "#5AB963",
+        icon: "fa-car",
+        subcategories: [
+            { id: "carburante_auto", name: "Carburante Auto", icon: "fa-gas-pump", color: "#5AB963" },
+            { id: "carburante_moto", name: "Carburante Moto", icon: "fa-gas-pump", color: "#5AB963" },
+            { id: "assicurazione_auto", name: "Assicurazione Auto", icon: "fa-shield-alt", color: "#5AB963" },
+            { id: "assicurazione_moto", name: "Assicurazione Moto", icon: "fa-shield-alt", color: "#5AB963" },
+            { id: "bollo_auto", name: "Bollo Auto", icon: "fa-receipt", color: "#5AB963" },
+            { id: "bollo_moto", name: "Bollo Moto", icon: "fa-receipt", color: "#5AB963" },
+            { id: "manutenzione_auto", name: "Manutenzione Auto", icon: "fa-tools", color: "#5AB963" },
+            { id: "manutenzione_moto", name: "Manutenzione Moto", icon: "fa-tools", color: "#5AB963" }
+        ]
+    },
+    svago: {
+        label: "Spese e Svago",
+        color: "#8E2DE2",
+        icon: "fa-shopping-cart",
+        subcategories: [
+            { id: "shopping", name: "Shopping", icon: "fa-shopping-bag", color: "#8E2DE2" },
+            { id: "abbigliamento", name: "Abbigliamento", icon: "fa-tshirt", color: "#8E2DE2" },
+            { id: "ristoranti", name: "Ristoranti", icon: "fa-utensils", color: "#8E2DE2" },
+            { id: "salute", name: "Salute", icon: "fa-heartbeat", color: "#8E2DE2" },
+            { id: "viaggi", name: "Viaggi", icon: "fa-plane", color: "#8E2DE2" },
+            { id: "sport", name: "Sport", icon: "fa-running", color: "#8E2DE2" },
+            { id: "abbonamenti", name: "Abbonamenti", icon: "fa-tv", color: "#8E2DE2" },
+            { id: "formazione", name: "Formazione", icon: "fa-book", color: "#8E2DE2" },
+            { id: "igiene_pulizia", name: "Igiene e Pulizia", icon: "fa-soap", color: "#8E2DE2" },
+            { id: "cane", name: "Cane", icon: "fa-dog", color: "#8E2DE2" },
+            { id: "imprevisti", name: "Imprevisti", icon: "fa-exclamation-triangle", color: "#8E2DE2" },
+            { id: "manutenzioni", name: "Manutenzioni", icon: "fa-tools", color: "#8E2DE2" },
+            { id: "varie", name: "Varie", icon: "fa-box", color: "#8E2DE2" }
+        ]
+    }
+};
+
 // Mappa le categorie nei 3 macro gruppi
 function getCategoryMacroGroup(catName) {
-    const casaGruppo = ['Bolletta Acqua', 'Bolletta Condominio', 'Bolletta Gas', 'Bolletta Luce', 'Bolletta Rifiuti', 'Bolletta Telefonia', 'Mutuo'];
-    const autoGruppo = ['Alimentari', 'Abbigliamento', 'Cane', 'Sanitarie', 'Carburante Auto', 'Carburante Moto', 'Tasse Auto (Assicurazione/Bollo)', 'Tasse Moto (Assicurazione/Bollo)'];
-    const svagoGruppo = ['Formazione', 'Igiene e Pulizia', 'Imprevisti e Svago', 'Manutenzioni Programmate', 'Varie'];
-    
-    if (casaGruppo.includes(catName)) return 'casa';
-    if (autoGruppo.includes(catName)) return 'auto';
-    if (svagoGruppo.includes(catName)) return 'svago';
-    return 'altro';
+    for (const [key, data] of Object.entries(CATEGORIES_MAP)) {
+        if (data.subcategories.some(sub => sub.name === catName)) {
+            return key;
+        }
+    }
+    return 'svago'; // fallback per categorie non mappate
 }
 
 // Inizializzazione valori UI
@@ -890,10 +958,13 @@ function renderMicroCategoriesGrid(macroGroup) {
     
     container.innerHTML = '';
     
-    userCategories.forEach(cat => {
-        const macro = getCategoryMacroGroup(cat);
-        // Show only categories matching the macro group (or 'altro' as fallback)
-        if (macro !== macroGroup && macro !== 'altro') return;
+    const macro = CATEGORIES_MAP[macroGroup];
+    if (!macro) return;
+    
+    macro.subcategories.forEach(sub => {
+        const cat = sub.name;
+        // Only show categories that exist in userCategories (user-added or enabled)
+        if (!userCategories.includes(cat)) return;
         
         const pVal = catSums[cat]?.planned || 0;
         const aVal = catSums[cat]?.actual || 0;
@@ -977,24 +1048,18 @@ function slideBackToCategories() {
     sheetSelectedCategory = null;
 }
 
-// Setup macro dash card click handlers
+// Setup macro dash card click handlers with event delegation
 function setupMacroDashCards() {
-    const casaCard = document.querySelector('.card-casa');
-    const veicoliCard = document.querySelector('.card-veicoli');
-    const svagoCard = document.querySelector('.card-svago');
+    const container = document.querySelector('.mobile-dashboard-container');
+    if (!container) return;
     
-    if (casaCard) {
-        casaCard.style.cursor = 'pointer';
-        casaCard.onclick = () => openBottomSheetFromMacro('casa');
-    }
-    if (veicoliCard) {
-        veicoliCard.style.cursor = 'pointer';
-        veicoliCard.onclick = () => openBottomSheetFromMacro('auto');
-    }
-    if (svagoCard) {
-        svagoCard.style.cursor = 'pointer';
-        svagoCard.onclick = () => openBottomSheetFromMacro('svago');
-    }
+    container.style.cursor = 'pointer';
+    container.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-category]');
+        if (!card) return;
+        const macro = card.dataset.category;
+        if (macro) openBottomSheetFromMacro(macro);
+    });
 }
 
 // Setup back button handler
