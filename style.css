@@ -474,7 +474,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 767px) {
-    /* Reset Totale - Sblocco di tutti i contenitori strutturali */
+    /* Reset Totale - Sblocco di tutti i contenitori strutturali e calibrazione spazio zero */
     html, body,
     .container, .main-container, .app-wrapper, #app,
     .page, .view, .section {
@@ -484,14 +484,16 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: auto !important;
         min-height: 100vh !important;
         -webkit-overflow-scrolling: touch !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     
-    /* Container principale - padding minimo per navbar (rimuovi padding-body doppio) */
+    /* Container principale - padding esatto per navbar (zero tolleranza) */
     body {
         padding-bottom: 0 !important;
     }
     .container {
-        padding-bottom: calc(65px + env(safe-area-inset-bottom)) !important;
+        padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important;
         margin-bottom: 0 !important;
         box-sizing: border-box !important;
     }
