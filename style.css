@@ -486,22 +486,28 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         -webkit-overflow-scrolling: touch !important;
     }
     
-    /* Container principale - padding minimo per navbar */
+    /* Container principale - padding minimo per navbar (rimuovi padding-body doppio) */
+    body {
+        padding-bottom: 0 !important;
+    }
     .container {
         padding-bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+        margin-bottom: 0 !important;
     }
     
-    /* Contenitore schermata Mese - height auto */
+    /* Contenitore schermata Mese - height auto, niente spazio vuoto */
     #current-month-tab {
         height: auto !important;
         min-height: 0 !important;
-        padding-bottom: 20px !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
     }
     
     /* Main layout - niente overflow vuoto */
     .main-layout {
         height: auto !important;
         min-height: 0 !important;
+        margin-bottom: 0 !important;
     }
     
     /* Bottom Nav - ancoraggio in basso (unico elemento fixed) */
@@ -731,6 +737,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     visibility: hidden;
     pointer-events: none;
+    overscroll-behavior-y: contain !important;
 }
 .bottom-sheet.open {
     transform: translateY(0);
@@ -747,6 +754,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     border-radius: 2px;
     margin: 0 auto 20px;
     cursor: grab;
+    touch-action: none !important;
 }
 .sheet-handle:active {
     cursor: grabbing;
@@ -966,9 +974,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         color: #1a1a1a !important;
     }
 
-    /* Spazio per la Navbar */
+    /* Body padding gestito da @media (max-width: 767px) */
     body {
-        padding-bottom: 100px !important;
+        padding-bottom: 0 !important;
     }
 
     /* Ripristino Summary Grid compatto */

@@ -556,9 +556,10 @@ function openTransactionSheet(categoryName) {
     const sheetDate = document.getElementById('sheetDate');
     const toggleOptions = document.querySelectorAll('.toggle-option');
     
-    if (overlay && sheet && title) {
+if (overlay && sheet && title) {
         title.textContent = categoryName;
         document.body.classList.add('sheet-open');
+        document.body.style.overflow = 'hidden';
         overlay.classList.add('open');
         sheet.classList.add('open');
         
@@ -584,6 +585,7 @@ function closeTransactionSheet() {
     const sheet = document.getElementById('bottomSheet');
     if (overlay && sheet) {
         document.body.classList.remove('sheet-open');
+        document.body.style.overflow = '';
         overlay.classList.remove('open');
         sheet.classList.remove('open');
         sheet.style.transform = '';
@@ -849,6 +851,7 @@ function openBottomSheetFromMacro(macroGroup) {
     if (!overlay || !sheet) return;
     
     document.body.classList.add('sheet-open');
+    document.body.style.overflow = 'hidden';
     overlay.classList.add('open');
     sheet.classList.add('open');
     
