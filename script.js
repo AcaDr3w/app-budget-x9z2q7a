@@ -585,6 +585,14 @@ function getCatIcon(catName) {
     return categoryIconMap[catName] || '🏷️';
 }
 
+function getFaIcon(catName) {
+    for (const subs of Object.values(CATEGORIES_MAP)) {
+        const found = subs.find(sub => sub.nome === catName);
+        if (found) return found.icona;
+    }
+    return 'fa-tag';
+}
+
 
 
 // =====================================================================
@@ -960,56 +968,34 @@ function renderMicroCategoriesGrid(macroGroup) {
     const container = document.getElementById('microCategoriesGrid');
     if (!container) return;
     
-    // Calculate catSums first
-    let catSums = {};
-    userCategories.forEach(c => catSums[c] = {planned: 0, actual: 0});
-    currentData.expenses.forEach(exp => {
-        if (catSums[exp.category]) {
-            catSums[exp.category].planned += exp.planned;
-            catSums[exp.category].actual += exp.actual;
-        }
-    });
-    
     container.innerHTML = '';
     
-    const macro = CATEGORIES_MAP[macroGroup];
-    if (!macro) return;
+    const cats = userMacroCategories[macroGroup];
+    if (!cats || cats.length === 0) {
+        container.innerHTML = '<div class="bottom-sheet-empty">Nessuna categoria presente. Aggiungila nelle Impostazioni</div>';
+        return;
+    }
     
-    macro.forEach(sub => {
-        const cat = sub.nome;
-        // Only show categories that exist in userCategories (user-added or enabled)
-        if (!userCategories.includes(cat)) return;
-        
-        const pVal = catSums[cat]?.planned || 0;
-        const aVal = catSums[cat]?.actual || 0;
-        const icon = getCatIcon(cat);
-        
-        // Calculate progress bar
-        let pct = 0;
-        let barClass = 'normal';
-        if (pVal > 0) {
-            pct = Math.min(100, (aVal / pVal) * 100);
-            if (aVal > pVal) barClass = 'over';
-            else if (pct > 80) barClass = 'warning';
-        } else if (aVal > 0) {
-            pct = 100;
-            barClass = 'over';
-        }
-        
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bottom-sheet-grid';
+    
+    cats.forEach(cat => {
+        const faIcon = getFaIcon(cat);
         const card = document.createElement('div');
-        card.className = 'category-card';
+        card.className = 'bottom-sheet-cat-card';
+        card.dataset.id = cat;
         card.style.background = getCategoryCardBg(cat);
-        card.style.border = getCategoryCardBorder(cat);
         card.innerHTML = `
-            <div class="category-card-icon">${icon}</div>
-            <div class="category-card-name">${cat}</div>
-            <div class="category-progress-bar">
-                <div class="category-progress-fill ${barClass}" style="width: ${pct}%"></div>
+            <div class="cat-icon-wrap">
+                <i class="fas ${faIcon}"></i>
             </div>
+            <span class="cat-name">${cat}</span>
         `;
-        card.onclick = () => slideToInputView(cat);
-        container.appendChild(card);
+        card.addEventListener('click', () => slideToInputView(cat));
+        wrapper.appendChild(card);
     });
+    
+    container.appendChild(wrapper);
 }
 
 function slideToInputView(categoryName) {

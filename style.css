@@ -955,6 +955,56 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     background: rgba(0, 0, 0, 0.1);
 }
 
+/* Bottom sheet overrides: force grid visibility inside sheet */
+#microCategoriesGrid {
+    display: block !important;
+}
+
+/* ===== BOTTOM SHEET CATEGORY GRID ===== */
+.bottom-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 16px 8px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+.bottom-sheet-cat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 8px;
+    border-radius: 18px;
+    background: #f4f6f8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.2s ease;
+}
+.bottom-sheet-cat-card:active {
+    transform: scale(0.94);
+}
+.bottom-sheet-cat-card .cat-icon-wrap {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+    color: #333;
+}
+.bottom-sheet-cat-card .cat-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: #2c3e50;
+    word-break: break-word;
+}
+.bottom-sheet-empty {
+    padding: 32px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
 /* Desktop: hide bottom sheet */
 @media (min-width: 768px) {
     #sheetOverlay, #bottomSheet {
