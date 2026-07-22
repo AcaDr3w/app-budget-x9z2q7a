@@ -1144,50 +1144,47 @@ let isDragging = false;
 
 function setupSwipeToClose() {
     const sheet = document.getElementById('bottomSheet');
-    const handle = document.querySelector('.sheet-handle');
+    const handle = document.querySelector('.drag-handle-wrapper');
+    const header = document.querySelector('.sheet-header');
+    const dragTargets = [handle, header].filter(Boolean);
     
-    if (!sheet || !handle) return;
+    if (!sheet || dragTargets.length === 0) return;
     
-    // Touch start
-    handle.addEventListener('touchstart', (e) => {
+    const onTouchStart = (e) => {
         isDragging = true;
         dragStartY = e.touches[0].clientY;
         sheet.classList.add('dragging');
-    }, { passive: true });
+    };
     
-    // Touch move
-    handle.addEventListener('touchmove', (e) => {
+    const onTouchMove = (e) => {
         if (!isDragging) return;
         dragCurrentY = e.touches[0].clientY;
         const deltaY = dragCurrentY - dragStartY;
-        
-        // Only allow dragging down
         if (deltaY > 0) {
             sheet.style.transform = `translateY(${deltaY}px)`;
         }
-    }, { passive: true });
+    };
     
-    // Touch end
-    const endDrag = (e) => {
+    const onTouchEnd = () => {
         if (!isDragging) return;
         isDragging = false;
         const deltaY = dragCurrentY - dragStartY;
         const sheetHeight = sheet.offsetHeight;
         const threshold = Math.min(100, sheetHeight * 0.3);
-        
         sheet.classList.remove('dragging');
-        
         if (deltaY > threshold) {
-            // Close the sheet
             closeTransactionSheet();
         } else {
-            // Reset position
             sheet.style.transform = '';
         }
     };
     
-    handle.addEventListener('touchend', endDrag);
-    handle.addEventListener('touchcancel', endDrag);
+    dragTargets.forEach(el => {
+        el.addEventListener('touchstart', onTouchStart, { passive: true });
+        el.addEventListener('touchmove', onTouchMove, { passive: true });
+        el.addEventListener('touchend', onTouchEnd);
+        el.addEventListener('touchcancel', onTouchEnd);
+    });
 }
 
 // Initialize swipe handlers when DOM ready
