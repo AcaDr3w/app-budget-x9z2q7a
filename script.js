@@ -323,8 +323,8 @@ const CATEGORIES_MAP = {
         { id: "carburante_auto", nome: "Carburante Auto", icona: "fa-gas-pump", colore: "#7bc043" },
         { id: "carburante_moto", nome: "Carburante Moto", icona: "fa-motorcycle", colore: "#7bc043" },
         { id: "manutenzioni", nome: "Manutenzioni", icona: "fa-wrench", colore: "#7bc043" },
-        { id: "tasse_auto", nome: "Tasse Auto (Assic.)", icona: "fa-car", colore: "#7bc043" },
-        { id: "tasse_moto", nome: "Tasse Moto (Assic.)", icona: "fa-shield-alt", colore: "#7bc043" }
+        { id: "tasse_auto", nome: "Tasse Auto", icona: "fa-car", colore: "#7bc043" },
+        { id: "tasse_moto", nome: "Tasse Moto", icona: "fa-shield-alt", colore: "#7bc043" }
     ],
     "spese_svago": [
         { id: "abbigliamento", nome: "Abbigliamento", icona: "fa-tshirt", colore: "#6f42c1" },
@@ -336,6 +336,20 @@ const CATEGORIES_MAP = {
     ]
 };
 
+// Default categories organized by macro - for settings management
+const defaultCategories = {
+    casa_utenze: ["Alimentari", "Bolletta Acqua", "Bolletta Condominio", "Bolletta Gas", "Bolletta Luce", "Bolletta Rifiuti", "Bolletta Telefonia", "Igiene e Pulizia", "Mutuo"],
+    veicoli: ["Carburante Auto", "Carburante Moto", "Manutenzioni", "Tasse Auto", "Tasse Moto"],
+    spese_svago: ["Abbigliamento", "Cane", "Formazione", "Imprevisti e Svago", "Sanitarie", "Varie"]
+};
+
+// User-added categories (not in default), organized by macro
+let userAddedCategories = {
+    casa_utenze: [],
+    veicoli: [],
+    spese_svago: []
+};
+
 function getCategoryMacroGroup(catName) {
     for (const [key, subs] of Object.entries(CATEGORIES_MAP)) {
         if (subs.some(sub => sub.nome === catName)) {
@@ -343,6 +357,135 @@ function getCategoryMacroGroup(catName) {
         }
     }
     return 'spese_svago'; // fallback per categorie non mappate
+}
+
+// =====================================================================
+// CATEGORY MANAGEMENT - Load/save user-added categories
+// =====================================================================
+function loadUserAddedCategories() {
+    const stored = localStorage.getItem('userAddedCategories');
+    if (stored) {
+        try {
+            userAddedCategories = JSON.parse(stored);
+        } catch (e) {
+            console.warn('[CATEGORIES] Error parsing user categories:', e);
+        }
+    }
+}
+
+function saveUserAddedCategories() {
+    localStorage.setItem('userAddedCategories', JSON.stringify(userAddedCategories));
+}
+
+function getAllCategoriesFlat() {
+    const all = [];
+    Object.values(defaultCategories).forEach(arr => all.push(...arr));
+    Object.values(userAddedCategories).forEach(arr => all.push(...arr));
+    return [...new Set(all)]; // Remove duplicates
+}
+
+function renderMacroCategoryBlocks() {
+    const container = document.getElementById('macroCategoriesContainer');
+    if (!container) return;
+    
+    const macroLabels = {
+        casa_utenze: 'Casa e Utenze',
+        veicoli: 'Veicoli',
+        spese_svago: 'Spese e Svago'
+    };
+    
+    const macroIcons = {
+        casa_utenze: 'fa-home',
+        veicoli: 'fa-car',
+        spese_svago: 'fa-shopping-cart'
+    };
+    
+    let html = '';
+    Object.entries(defaultCategories).forEach(([macroKey, subcats]) => {
+        const allSubcats = [...subcats, ...userAddedCategories[macroKey]];
+        const defaultSet = new Set(subcats);
+        
+        html += `
+        <div class="macro-block" data-macro="${macroKey}">
+            <h3 class="macro-title">
+                <i class="fas ${macroIcons[macroKey]}"></i> ${macroLabels[macroKey]}
+                <span class="macro-count">(${allSubcats.length})</span>
+            </h3>
+            <div class="subcat-list">
+        `;
+        
+        allSubcats.forEach(cat => {
+            const isDefault = defaultSet.has(cat);
+            html += `
+                <span class="subcat-item">
+                    ${cat}
+                    ${isDefault ? '' : `<button class="trash-btn" onclick="deleteSubcategory('${cat}', '${macroKey}')">
+                        <i class="fas fa-trash"></i>
+                    </button>`}
+                </span>
+            `;
+        });
+        
+        html += '</div></div>';
+    });
+    
+    container.innerHTML = html;
+}
+
+async function addSubcategory() {
+    const nameInput = document.getElementById('newSubcatName');
+    const macroSelect = document.getElementById('macroSelect');
+    
+    const name = nameInput.value.trim();
+    const macroKey = macroSelect.value;
+    
+    if (!name) {
+        showToast('Inserisci il nome della categoria', true);
+        return;
+    }
+    
+    if (!macroKey) {
+        showToast('Seleziona una macro-categoria', true);
+        return;
+    }
+    
+    const allCats = getAllCategoriesFlat();
+    if (allCats.includes(name)) {
+        showToast('Categoria già esistente', true);
+        return;
+    }
+    
+    userAddedCategories[macroKey].push(name);
+    saveUserAddedCategories();
+    
+    userCategories.push(name);
+    categoryIconMap[name] = '🏷️';
+    await db.categories.put({name, icon: '🏷️'});
+    
+    nameInput.value = '';
+    macroSelect.value = '';
+    renderMacroCategoryBlocks();
+    renderCategoriesDropdown();
+    renderImportCheckboxList();
+    updateUI();
+    showToast('Categoria aggiunta', false);
+}
+
+async function deleteSubcategory(catName, macroKey) {
+    if (!confirm(`Eliminare "${catName}"?`)) return;
+    
+    userAddedCategories[macroKey] = userAddedCategories[macroKey].filter(c => c !== catName);
+    saveUserAddedCategories();
+    
+    userCategories = userCategories.filter(c => c !== catName);
+    delete categoryIconMap[catName];
+    await db.categories.delete(catName);
+    
+    renderMacroCategoryBlocks();
+    renderCategoriesDropdown();
+    renderImportCheckboxList();
+    updateUI();
+    showToast('Categoria eliminata', false);
 }
 
 // Inizializzazione valori UI
@@ -521,6 +664,9 @@ async function loadMonthData() {
 // CATEGORIE
 // =====================================================================
 async function initCategories() {
+    // Load user-added categories from localStorage
+    loadUserAddedCategories();
+    
     try {
         let storedCats = await db.categories.toArray();
         if (storedCats.length > 0) {
@@ -529,21 +675,30 @@ async function initCategories() {
             storedCats.forEach(c => { categoryIconMap[c.name] = c.icon || '🏷️'; });
             console.log('[DB] Categorie caricate da database:', storedCats.length);
         } else {
-            userCategories = DEFAULT_CATEGORIES.map(c => c.name);
+            // Initialize with default categories
+            userCategories = [...getAllCategoriesFlat()];
             categoryIconMap = {};
-            DEFAULT_CATEGORIES.forEach(c => { categoryIconMap[c.name] = c.icon; });
-            await db.categories.bulkPut(DEFAULT_CATEGORIES);
-            console.log('[DB] Categorie di default salvate in database:', DEFAULT_CATEGORIES.length);
+            getAllCategoriesFlat().forEach(cat => {
+                categoryIconMap[cat] = '🏷️'; // Default icon for all
+            });
+            // Save default categories to database
+            for (const cat of getAllCategoriesFlat()) {
+                await db.categories.put({name: cat, icon: '🏷️'});
+            }
+            console.log('[DB] Categorie di default salvate in database:', getAllCategoriesFlat().length);
         }
     } catch (err) {
         console.error('[DB] Errore inizializzazione categorie:', err);
         showToast('Errore nel caricare le categorie', true);
-        // Fallback: use DEFAULT_CATEGORIES in memory only
-        userCategories = DEFAULT_CATEGORIES.map(c => c.name);
+        // Fallback: use default + user categories in memory
+        userCategories = [...getAllCategoriesFlat()];
         categoryIconMap = {};
-        DEFAULT_CATEGORIES.forEach(c => { categoryIconMap[c.name] = c.icon; });
+        defaultCategories.casa_utenze.forEach(cat => categoryIconMap[cat] = '🏷️');
+        defaultCategories.veicoli.forEach(cat => categoryIconMap[cat] = '🏷️');
+        defaultCategories.spese_svago.forEach(cat => categoryIconMap[cat] = '🏷️');
     }
     renderCategoriesDropdown();
+    renderMacroCategoryBlocks();
 }
 function getCatIcon(catName) {
     return categoryIconMap[catName] || '🏷️';
