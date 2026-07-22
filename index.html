@@ -356,21 +356,39 @@
                 <div class="card">
                     <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
                     <div class="collapsible-content show" id="categoriesSection">
-                        <!-- Nuovo form di inserimento con select macro -->
-                        <div class="category-input-form">
-                            <input type="text" id="newSubcatName" placeholder="Nome sottocategoria..." class="responsive-input">
-                            <select id="macroSelect" class="responsive-select" required>
-                                <option value="">Seleziona macro-categoria</option>
-                                <option value="casa_utenze">Casa e Utenze</option>
-                                <option value="veicoli">Veicoli</option>
-                                <option value="spese_svago">Spese e Svago</option>
-                            </select>
-                            <button class="btn-spesa" onclick="addSubcategory()">Aggiungi</button>
+
+                        <div class="macro-group" data-macro="casa_utenze">
+                            <div class="macro-group-header" style="border-left-color: #2a9d8f;">
+                                <span>🏠 Casa e Utenze</span>
+                                <span class="macro-group-count" id="count-casa_utenze">0</span>
+                            </div>
+                            <ul class="macro-group-list" id="catList-casa_utenze"></ul>
                         </div>
-                        
-                        <!-- 3 blocchi di visualizzazione per macro-categorie -->
-                        <div id="macroCategoriesContainer" class="macro-categories-wrapper">
-                            <!-- Popolato dinamicamente da JS -->
+
+                        <div class="macro-group" data-macro="veicoli">
+                            <div class="macro-group-header" style="border-left-color: #7bc043;">
+                                <span>🚗 Veicoli</span>
+                                <span class="macro-group-count" id="count-veicoli">0</span>
+                            </div>
+                            <ul class="macro-group-list" id="catList-veicoli"></ul>
+                        </div>
+
+                        <div class="macro-group" data-macro="spese_svago">
+                            <div class="macro-group-header" style="border-left-color: #6f42c1;">
+                                <span>🎉 Spese e Svago</span>
+                                <span class="macro-group-count" id="count-spese_svago">0</span>
+                            </div>
+                            <ul class="macro-group-list" id="catList-spese_svago"></ul>
+                        </div>
+
+                        <div class="grid-inputs" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 16px;">
+                            <input type="text" id="newCatName" placeholder="Nuova categoria..." style="flex: 1; min-width: 120px;">
+                            <select id="newCatMacro" class="responsive-select" style="flex: 0 0 auto; min-width: 160px; padding: 11px 12px;">
+                                <option value="casa_utenze">🏠 Casa e Utenze</option>
+                                <option value="veicoli">🚗 Veicoli</option>
+                                <option value="spese_svago">🎉 Spese e Svago</option>
+                            </select>
+                            <button class="btn-spesa" id="btnSaveCategory" onclick="saveCategory()" style="margin:0; white-space: nowrap;">Aggiungi</button>
                         </div>
                     </div>
                 </div>
