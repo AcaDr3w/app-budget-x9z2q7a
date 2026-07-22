@@ -949,11 +949,11 @@ function openBottomSheetFromMacro(macroGroup) {
     if (slider) slider.style.transform = 'translateX(0)';
     
     // Hide back button
-    const backBtn = document.getElementById('sheetBackBtn');
+    const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) backBtn.style.display = 'none';
     
     // Set title based on macro group
-    const sheetTitle = document.getElementById('sheetTitle');
+    const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle) {
         const titles = { 
             'casa_utenze': 'Casa e Utenze', 
@@ -981,6 +981,22 @@ function renderMicroCategoriesGrid(macroGroup) {
     
     cats.forEach(cat => {
         const faIcon = getFaIcon(cat);
+        
+        const pVal = currentData.expenses
+            .filter(e => e.category === cat)
+            .reduce((s, e) => s + e.planned, 0);
+        const aVal = currentData.expenses
+            .filter(e => e.category === cat)
+            .reduce((s, e) => s + e.actual, 0);
+        
+        let perc = 0;
+        let barColor = '#2a9d8f';
+        if (pVal > 0) {
+            perc = Math.min((aVal / pVal) * 100, 100);
+            if (perc >= 100) barColor = '#e76f51';
+            else if (perc > 70) barColor = '#e9c46a';
+        }
+        
         const card = document.createElement('div');
         card.className = 'bottom-sheet-cat-card';
         card.dataset.id = cat;
@@ -990,6 +1006,9 @@ function renderMicroCategoriesGrid(macroGroup) {
                 <i class="fas ${faIcon}"></i>
             </div>
             <span class="cat-name">${cat}</span>
+            <div class="cat-progress-track">
+                <div class="cat-progress-bar" style="width: ${perc}%; background-color: ${barColor};"></div>
+            </div>
         `;
         card.addEventListener('click', () => slideToInputView(cat));
         wrapper.appendChild(card);
@@ -1006,11 +1025,11 @@ function slideToInputView(categoryName) {
     if (slider) slider.style.transform = 'translateX(-100%)';
     
     // Show back button
-    const backBtn = document.getElementById('sheetBackBtn');
+    const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) backBtn.style.display = 'flex';
     
     // Update title
-    const sheetTitle = document.getElementById('sheetTitle');
+    const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle) sheetTitle.textContent = categoryName;
     
     // Reset inputs and init wheels
@@ -1035,11 +1054,11 @@ function slideBackToCategories() {
     if (slider) slider.style.transform = 'translateX(0)';
     
     // Hide back button
-    const backBtn = document.getElementById('sheetBackBtn');
+    const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) backBtn.style.display = 'none';
     
     // Update title back to macro
-    const sheetTitle = document.getElementById('sheetTitle');
+    const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle && sheetCurrentMacroGroup) {
         const titles = { 
             'casa_utenze': 'Casa e Utenze', 
@@ -1068,7 +1087,7 @@ function setupMacroDashCards() {
 
 // Setup back button handler
 function setupBottomSheetBackBtn() {
-    const backBtn = document.getElementById('sheetBackBtn');
+    const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) {
         backBtn.addEventListener('click', slideBackToCategories);
     }
