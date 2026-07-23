@@ -253,8 +253,11 @@
             </div>
         </div>
 
-        <!-- MOBILE IA PILL (hidden on desktop) -->
-        <button class="analisi-ia-btn hide-desktop" onclick="openIaModal()">🤖 Analisi I.A.</button>
+        <!-- MOBILE TOP ACTION BAR (hidden on desktop) -->
+        <div class="analisi-top-actions hide-desktop">
+            <button class="analisi-icon-btn" onclick="openIaModal()" aria-label="Analisi IA">🤖</button>
+            <button class="analisi-icon-btn" onclick="openArchiveModal()" aria-label="Archivio Mesi">📋</button>
+        </div>
 
         <div class="card" id="recordsHubContainer">
             <h2 class="hide-mobile">🏆 Hub dei Record Personali</h2>
@@ -289,9 +292,6 @@
                 <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
             </div>
         </div>
-
-        <!-- MOBILE ARCHIVE PILL (hidden on desktop) -->
-        <button class="analisi-archive-btn hide-desktop" onclick="openArchiveModal()">📋 Archivio Mesi</button>
 
         <!-- DESKTOP TABLE (hidden on mobile) -->
         <div class="card hide-mobile">
