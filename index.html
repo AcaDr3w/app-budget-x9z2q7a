@@ -63,6 +63,9 @@
               <i class="fas fa-chevron-down"></i>
           </div>
 
+          <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
+          <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
+
           <!-- NUOVA DASHBOARD MOBILE -->
           <div class="mobile-dashboard-container">
 <div class="dash-card card-casa" data-category="casa_utenze">
@@ -91,8 +94,6 @@
     <button class="macro-tab" data-target="svago">🎉 Svago & Altro</button>
 </div>
 
-        <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
-
         <div class="summary-grid">
             <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
             <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
@@ -112,8 +113,6 @@
                 <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
             </div>
         </div>
-
-        <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
 
         <div class="main-layout">
             <!-- LEFT PANEL -->

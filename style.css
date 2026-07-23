@@ -510,14 +510,23 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         box-sizing: border-box !important;
     }
     
-    /* Contenitore schermata Mese - height auto, niente spazio vuoto */
+    /* Contenitore schermata Mese - Viewport full height, nessuno scroll */
     #current-month-tab {
-        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: calc(100dvh - 76px) !important;
+        overflow: hidden !important;
         min-height: 0 !important;
         padding-bottom: 0 !important;
         margin-bottom: 0 !important;
     }
     
+    /* Banner pianificazioni - flex-shrink: 0 per viewport */
+    .deadline-alert, .annual-deadline-box {
+        flex-shrink: 0 !important;
+        margin: 6px 16px !important;
+    }
+
     /* Main layout - niente overflow vuoto */
     .main-layout {
         height: auto !important;
@@ -596,13 +605,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none !important;
     }
     
-    /* Contenitore delle Macro-Card Dinamiche - Sbloccato */
+    /* Contenitore delle Macro-Card Dinamiche - Riempie spazio verticale */
     .mobile-dashboard-container {
+        flex: 1 !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 12px !important;
         width: 100% !important;
-        margin: 15px 0 0 !important;
+        margin: 6px 0 0 !important;
+        overflow-y: auto !important;
     }
     
     /* Stile delle 3 grandi Card - Sbloccate */
@@ -1097,13 +1108,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none !important;
     }
 
-    /* Mostra e formatta la nuova Dashboard Mobile */
+    /* Mostra e formatta la nuova Dashboard Mobile - riempie spazio */
     .mobile-dashboard-container {
+        flex: 1 !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 12px !important;
         padding: 8px 15px !important;
-        margin-top: 15px;
+        margin-top: 5px;
+        overflow-y: auto !important;
     }
 
     /* Stile delle 3 grandi Card - Sbloccate, nessun flex-grow */
