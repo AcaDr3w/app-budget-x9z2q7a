@@ -516,6 +516,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .charts-wrapper .card { flex: 1; }
     .summary-grid { grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
     .summary-box { font-size: 13px; }
+    .hide-desktop { display: none !important; }
 }
 
 /* ===== RESPONSIVE: Mobile ===== */
@@ -546,6 +547,114 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     
     span.flat-subtitle.val-previsto { color: #ff9800 !important; font-weight: bold; }
     span.flat-actual.val-sostenuto { color: #e53935 !important; font-weight: bold; }
+
+    /* ===== ANALISI TAB — SINGLE SCREEN ZERO SCROLL ===== */
+    #history-tab.active {
+        height: calc(100dvh - 65px) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        gap: 4px;
+        padding: 4px 10px 6px;
+    }
+
+    /* IA mini-pill */
+    .analisi-ia-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 4px;
+        background: #f3e8ff;
+        border: 1px solid #e9d5ff;
+        border-radius: 20px;
+        padding: 5px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b21a8;
+        white-space: nowrap;
+        cursor: pointer;
+        margin: 0;
+        width: fit-content;
+        flex-shrink: 0;
+    }
+
+    /* Records hub compact */
+    #recordsHubContainer {
+        flex-shrink: 0;
+        margin-bottom: 0;
+        padding: 6px 10px;
+    }
+    #recordsHubContainer h2 { display: none !important; }
+    #recordsHubContainer .records-hub-scroll {
+        margin-top: 0;
+        gap: 6px;
+    }
+    #recordsHubContainer .record-card {
+        padding: 6px 8px;
+        min-width: 85px;
+        max-width: 110px;
+        flex: 0 0 auto;
+    }
+    #recordsHubContainer .record-label {
+        font-size: 9px;
+        margin-bottom: 1px;
+    }
+    #recordsHubContainer .record-value {
+        font-size: 12px;
+        margin-top: 0;
+    }
+
+    /* Chart card — fills remaining vertical space */
+    #chartsCard {
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0;
+        padding: 6px 10px;
+    }
+    #chartsCard .chart-toggle-pill {
+        margin-bottom: 4px;
+        flex-shrink: 0;
+    }
+    #chartsCard .chart-toggle-btn {
+        padding: 5px 8px;
+        font-size: 10px;
+    }
+    #chartsCard .chart-panel.active {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    #chartsCard .large-chart-container {
+        flex: 1;
+        height: auto !important;
+        max-height: none;
+        margin-bottom: 0;
+    }
+    #chartsCard .chart-panel h2,
+    #chartsCard .chart-panel p {
+        display: none !important;
+    }
+
+    /* Archive mini-pill */
+    .analisi-archive-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        width: 100%;
+        cursor: pointer;
+        margin: 0;
+        flex-shrink: 0;
+    }
 }
 
 /* ===== MOBILE CATEGORY GRID ===== */

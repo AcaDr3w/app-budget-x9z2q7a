@@ -2055,6 +2055,74 @@ function initChartToggle() {
     });
 }
 
+// =====================================================================
+// MODAL FUNCTIONS (Mobile Analisi Tab)
+// =====================================================================
+function openIaModal() {
+    const modal = document.getElementById('iaModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeIaModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('iaModal');
+    if (modal) modal.classList.remove('active');
+}
+
+async function openArchiveModal() {
+    await renderArchiveModalContent();
+    const modal = document.getElementById('archiveModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeArchiveModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('archiveModal');
+    if (modal) modal.classList.remove('active');
+}
+
+async function renderArchiveModalContent() {
+    const container = document.getElementById('archiveModalBody');
+    if (!container) return;
+    let months = await db.months.toArray();
+    let hd = months.map(m => ({month:m.month, income:m.totalIncome, actual:m.totalActual, savings:m.totalIncome-m.totalActual}));
+    hd.sort((a,b) => a.month.localeCompare(b.month));
+    container.innerHTML = '';
+    if (hd.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Nessun dato storico.</div>';
+        return;
+    }
+    hd.forEach(d => {
+        const savings = d.savings;
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+            <div class="history-card-left">
+                <div class="history-card-month">${d.month.split('-').reverse().join('/')}</div>
+                <div class="history-card-savings">Risparmio: <span class="history-card-savings-val ${savings >= 0 ? 'positive' : 'negative'}">${fmtN(savings)}</span></div>
+            </div>
+            <div class="history-card-right">
+                <span class="history-card-income">+${fmtN(d.income)}</span>
+                <span class="history-card-spent">-${fmtN(d.actual)}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function runHistoryAnalysisIAModal() {
+    const months = await db.months.orderBy('month').toArray();
+    const respBox = document.getElementById('iaHistoryResponseModal');
+    if (!months.length) { if (respBox) { respBox.innerText = '❌ Nessun mese archiviato.'; respBox.style.display = 'block'; } return; }
+    let dataText = 'Dati:\n';
+    months.forEach(m => {
+        const savings = m.totalIncome - m.totalActual;
+        dataText += `- ${m.month}: Entrate ${fmtE(m.totalIncome)}, Uscite ${fmtE(m.totalActual)}, Risparmio ${fmtE(savings)}\n`;
+    });
+    const prompt = `Agisci come un analista finanziario. Lingua: Italiano. Analizza questo storico plurimensile dei saldi: ${dataText}Fornisci un quadro generale sull'andamento del patrimonio (sta crescendo, è stabile o sta calando?). Evidenzia se c'è un mese record (positivo o negativo) e scrivi una conclusione concisa (max 4 righe) sullo stato di salute generale delle finanze.`;
+    await callAIEndpoint(prompt, 'iaHistoryResponseModal', '');
+}
+
 function renderHistoryCardsMobile(data) {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
