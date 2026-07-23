@@ -550,36 +550,44 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
     /* ===== ANALISI TAB — SINGLE SCREEN ZERO SCROLL ===== */
     #history-tab.active {
-        height: calc(100dvh - 65px - env(safe-area-inset-bottom)) !important;
+        position: relative;
+        height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         display: flex !important;
         flex-direction: column !important;
         overflow: hidden !important;
         gap: 10px;
-        padding: 10px;
+        padding: 8px 12px;
+        box-sizing: border-box;
     }
 
-    /* Top action bar — pallini icona */
+    /* Top action bar — pallini icona in alto a destra */
     .analisi-top-actions {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
         flex-shrink: 0;
-        padding: 0 2px;
+        padding: 0;
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        z-index: 5;
     }
     .analisi-icon-btn {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         border: none;
-        background: #f1f5f9;
-        font-size: 20px;
+        background: rgba(241,245,249,0.9);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        font-size: 17px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0;
         padding: 0;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         transition: transform 0.15s, background 0.2s;
     }
     .analisi-icon-btn:active {
@@ -587,30 +595,39 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: #e2e8f0;
     }
 
-    /* Records hub — compact */
+    /* Records hub — griglia 3 colonne */
     #recordsHubContainer {
         flex-shrink: 0;
         margin-bottom: 0;
         padding: 8px 10px;
+        margin-top: 36px;
     }
     #recordsHubContainer h2 { display: none !important; }
     #recordsHubContainer .records-hub-scroll {
-        margin-top: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         gap: 6px;
+        width: 100%;
+        overflow: visible;
+        margin-top: 0;
     }
     #recordsHubContainer .record-card {
-        padding: 4px 6px;
-        min-width: 72px;
-        max-width: 95px;
-        flex: 0 0 auto;
+        padding: 6px 4px;
+        min-width: 0;
+        max-width: none;
+        flex: none;
+        margin: 0;
     }
     #recordsHubContainer .record-label {
-        font-size: 8px;
-        margin-bottom: 1px;
+        font-size: 10px;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
     #recordsHubContainer .record-value {
-        font-size: 11px;
+        font-size: 12px;
         margin-top: 0;
+        font-weight: 700;
     }
 
     /* Chart card — fills remaining vertical space */
