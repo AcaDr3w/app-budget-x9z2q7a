@@ -450,10 +450,18 @@ function updateActivePageSubtitle(tabId) {
 function switchTab(tabId, buttonEl) {
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const target = document.getElementById(tabId);
     target.classList.remove('hidden');
     target.classList.add('active');
-    buttonEl.classList.add('active');
+    const navMap = {
+        'current-month-tab': 'navMese',
+        'history-tab': 'navAnalisi',
+        'future-tab': 'navPrevisioni',
+        'settings-tab': 'navImpostazioni'
+    };
+    const navItem = document.getElementById(navMap[tabId]);
+    if (navItem) navItem.classList.add('active');
     updateActivePageSubtitle(tabId);
     if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); }
     if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
