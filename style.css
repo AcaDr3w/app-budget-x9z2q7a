@@ -341,6 +341,88 @@ button:active { transform: scale(0.98); }
 .chart-container { position: relative; width: 100%; height: 240px; }
 .large-chart-container { position: relative; width: 100%; height: 340px; margin-bottom: 14px; }
 
+/* ===== CHART TOGGLE PILL ===== */
+.chart-toggle-pill {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    border-radius: 20px;
+    padding: 4px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.chart-toggle-btn {
+    flex: 1;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    margin: 0;
+}
+.chart-toggle-btn.active {
+    background: white;
+    color: #1e293b;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.chart-panel {
+    display: none;
+}
+.chart-panel.active {
+    display: block;
+}
+
+/* ===== RECORDS HUB CAROUSEL ===== */
+.records-hub-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-top: 10px;
+    padding-bottom: 4px;
+}
+.records-hub-scroll::-webkit-scrollbar {
+    display: none;
+}
+.record-card {
+    flex: 0 0 45%;
+    min-width: 140px;
+    max-width: 200px;
+    scroll-snap-align: start;
+    border: 1px solid;
+    padding: 14px 10px;
+    border-radius: 12px;
+    text-align: center;
+    flex-shrink: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+.record-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-bottom: 6px;
+    line-height: 1.2;
+}
+.record-value {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 4px;
+    line-height: 1.3;
+    word-break: break-word;
+}
+.record-value-positive { color: #10b981; }
+.record-value-negative { color: #ef4444; }
+
 /* ===== TABLES ===== */
 .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 12px; }
 table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
@@ -352,6 +434,60 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .row-savings { background-color: #ecfdf5 !important; border-top: 2px solid #10b981; font-size: 13px; color: #065f46; width: 100%; box-sizing: border-box; }
 .clickable-row { cursor: pointer; transition: background 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9 !important; }
+
+/* ===== HISTORY CARDS (Mobile Table Replacement) ===== */
+.history-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 8px;
+}
+.history-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.history-card-month {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.history-card-savings {
+    font-size: 11px;
+    color: #64748b;
+}
+.history-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 12px;
+}
+.history-card-income {
+    color: #10b981;
+    font-weight: 600;
+}
+.history-card-spent {
+    color: #ef4444;
+    font-weight: 600;
+}
+.history-card-savings-val {
+    font-weight: 700;
+}
+.history-card-savings-val.positive { color: #10b981; }
+.history-card-savings-val.negative { color: #ef4444; }
+
+/* ===== IA INSIGHT CARD ===== */
+.ia-insight-card {
+    border-radius: 20px;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border: 1px solid #e9d5ff;
+    box-shadow: 0 8px 20px -4px rgba(139, 92, 246, 0.15);
+}
 
 /* ===== NOTES ===== */
 .notes-textarea { width: 100%; min-height: 90px; resize: vertical; padding: 11px; border: 1.5px solid #e2e8f0; border-radius: 9px; font-size: 14px; font-family: inherit; margin-bottom: 10px; }

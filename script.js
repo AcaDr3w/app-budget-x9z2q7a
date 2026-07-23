@@ -276,6 +276,7 @@ let searchQuery = "";
 let chartB = null, chartC = null;
 let historyBarChart = null;
 let tradingChart = null;
+let activeChartType = 'bars';
 
  // ===== VIEW MODE STATE =====
  let currentViewMode = 'full'; // 'full' or 'tabs'
@@ -463,7 +464,7 @@ function switchTab(tabId, buttonEl) {
     const navItem = document.getElementById(navMap[tabId]);
     if (navItem) navItem.classList.add('active');
     updateActivePageSubtitle(tabId);
-    if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); }
+    if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
     if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
     window.scrollTo(0, 0);
 }
@@ -2032,13 +2033,74 @@ async function depositToSavingsGoal() {
     renderSavingsGoals();
 }
 
+let chartToggleInitialized = false;
+function initChartToggle() {
+    if (chartToggleInitialized) return;
+    chartToggleInitialized = true;
+    const btns = document.querySelectorAll('.chart-toggle-btn');
+    btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeChartType = btn.dataset.chart;
+            document.querySelectorAll('.chart-panel').forEach(p => p.classList.remove('active'));
+            const panel = document.getElementById('chartPanel' + (activeChartType === 'bars' ? 'Bars' : 'Line'));
+            if (panel) panel.classList.add('active');
+            // Trigger Chart.js resize after container becomes visible
+            setTimeout(() => {
+                const chart = activeChartType === 'bars' ? historyBarChart : tradingChart;
+                if (chart && typeof chart.resize === 'function') chart.resize();
+            }, 50);
+        });
+    });
+}
+
+function renderHistoryCardsMobile(data) {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Nessun dato storico.</div>';
+        return;
+    }
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gap = '6px';
+    data.forEach(d => {
+        const savings = d.savings;
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+            <div class="history-card-left">
+                <div class="history-card-month">${d.month.split('-').reverse().join('/')}</div>
+                <div class="history-card-savings">Risparmio: <span class="history-card-savings-val ${savings >= 0 ? 'positive' : 'negative'}">${fmtN(savings)}</span></div>
+            </div>
+            <div class="history-card-right">
+                <span class="history-card-income">+${fmtN(d.income)}</span>
+                <span class="history-card-spent">-${fmtN(d.actual)}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    tbody.appendChild(container);
+}
+
 async function renderGlobalHistory() {
     let months = await db.months.toArray();
     renderRecordsHub(months);
     let hd = months.map(m => ({month:m.month, income:m.totalIncome, planned:m.totalPlanned, actual:m.totalActual, savings:m.totalIncome-m.totalActual}));
     hd.sort((a,b) => a.month.localeCompare(b.month));
     const tbody = document.getElementById('historyTableBody'); tbody.innerHTML = '';
-    if (hd.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Nessun dato storico.</td></tr>'; } else {
+    if (hd.length === 0) {
+        if (window.innerWidth < 768) {
+            tbody.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Nessun dato storico.</div>';
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Nessun dato storico.</td></tr>';
+        }
+    } else if (window.innerWidth < 768) {
+        renderHistoryCardsMobile(hd);
+    } else {
         hd.forEach(d => {
             let tr = document.createElement('tr');
             tr.innerHTML = `<td><strong>${d.month.split('-').reverse().join('/')}</strong></td><td class="text-right">${fmtN(d.income)}</td><td class="text-right" style="color:var(--previsto);">${fmtN(d.planned)}</td><td class="text-right" style="color:var(--sostenuto);font-weight:bold;">${fmtN(d.actual)}</td><td class="text-right ${d.savings>=0?'diff-plus':'diff-minus'}">${fmtN(d.savings)}</td>`;
@@ -2054,7 +2116,7 @@ async function renderGlobalHistory() {
             {label:'Budget Previsto', data:filtered.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
             {label:'Spesa Effettiva', data:filtered.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
         ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.05)'}}}}
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}}}
     });
 }
 
@@ -2074,7 +2136,7 @@ async function renderTradingChart() {
             {label:'Budget', data:filtered.map(d=>d.planned), borderColor:'#f97316', backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], tension:0.2, pointRadius:2},
             {label:'Speso', data:filtered.map(d=>d.actual), borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:3, tension:0.1, pointRadius:4}
         ]},
-        options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'}},y:{grid:{color:'rgba(0,0,0,0.04)'}}},plugins:{legend:{position:'top',labels:{font:{weight:'bold'}}}}}
+        options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}}},plugins:{legend:{position:'top',labels:{font:{size:10,weight:'bold'},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}}}
     });
 }
 

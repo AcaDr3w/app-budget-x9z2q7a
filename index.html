@@ -242,7 +242,7 @@
 
     <!-- =================== TAB 2: STORICO PLURIMENSILE =================== -->
     <div id="history-tab" class="tab-content hidden">
-        <div class="card" style="border: 2px solid var(--ia-color); background: #faf5ff;">
+        <div class="card ia-insight-card">
             <h2 class="collapsible" onclick="toggleSection('iaHistorySection', this)">🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
@@ -253,31 +253,36 @@
 
         <div class="card" id="recordsHubContainer">
             <h2>🏆 Hub dei Record Personali</h2>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
-                <div style="background: #fdfaff; border: 1px solid #e9d5ff; padding: 10px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Mese d'Oro</div>
-                    <div id="recordBestMonth" style="font-size: 16px; font-weight: bold; color: #10b981; margin-top: 4px;">-</div>
+            <div class="records-hub-scroll">
+                <div class="record-card" style="background:#fdfaff; border-color:#e9d5ff;">
+                    <div class="record-label">Mese d'Oro</div>
+                    <div id="recordBestMonth" class="record-value record-value-positive">-</div>
                 </div>
-                <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Spesa Record</div>
-                    <div id="recordHighestExp" style="font-size: 16px; font-weight: bold; color: #ef4444; margin-top: 4px;">-</div>
+                <div class="record-card" style="background:#fffbeb; border-color:#fde68a;">
+                    <div class="record-label">Spesa Record</div>
+                    <div id="recordHighestExp" class="record-value record-value-negative">-</div>
                 </div>
-                <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">Categoria Peggiore</div>
-                    <div id="recordWorstCat" style="font-size: 16px; font-weight: bold; color: #ef4444; margin-top: 4px;">-</div>
+                <div class="record-card" style="background:#fef2f2; border-color:#fecaca;">
+                    <div class="record-label">Categoria Peggiore</div>
+                    <div id="recordWorstCat" class="record-value record-value-negative">-</div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>📈 Grafico Monitoraggio Continuo</h2>
-            <p style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
-            <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
-        </div>
-
-        <div class="card">
-            <h2>📊 Andamento Storico Plurimensile</h2>
-            <div class="large-chart-container"><canvas id="historyBarChart"></canvas></div>
+        <div class="card" id="chartsCard">
+            <div class="chart-toggle-pill">
+                <button class="chart-toggle-btn active" data-chart="bars">📊 Storico Barrette</button>
+                <button class="chart-toggle-btn" data-chart="line">📈 Andamento Linee</button>
+            </div>
+            <div class="chart-panel active" id="chartPanelBars">
+                <h2>📊 Andamento Storico Plurimensile</h2>
+                <div class="large-chart-container"><canvas id="historyBarChart"></canvas></div>
+            </div>
+            <div class="chart-panel" id="chartPanelLine">
+                <h2>📈 Grafico Monitoraggio Continuo</h2>
+                <p style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
+                <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
+            </div>
         </div>
 
         <div class="card">
