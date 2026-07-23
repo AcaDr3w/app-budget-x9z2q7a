@@ -510,8 +510,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         box-sizing: border-box !important;
     }
     
-    /* Contenitore schermata Mese - Viewport full height, nessuno scroll */
-    #current-month-tab {
+    /* Contenitore schermata Mese - Viewport full height, solo quando attivo */
+    #current-month-tab.active {
         display: flex !important;
         flex-direction: column !important;
         height: calc(100dvh - 76px) !important;
