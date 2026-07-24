@@ -1155,6 +1155,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     visibility: hidden;
     pointer-events: none;
     overscroll-behavior-y: contain !important;
+    height: 85dvh;
     max-height: 85dvh;
     overflow: hidden;
     display: flex;
@@ -1358,7 +1359,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 
 /* ===== BOTTOM SHEET CONTENT (View Input) - Scroll Fix & Padding ===== */
+#viewInput {
+    display: flex;
+    flex-direction: column;
+}
 .bottom-sheet .sheet-slider .sheet-view .sheet-body {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
@@ -1370,7 +1377,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     overflow: hidden;
 }
 .bottom-sheet .sheet-slider .sheet-view {
-    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     flex: 0 0 100%;
