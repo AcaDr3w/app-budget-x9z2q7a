@@ -1169,8 +1169,8 @@ let isDragging = false;
 
 function setupSwipeToClose() {
     const sheet = document.getElementById('bottomSheet');
-    const handle = document.querySelector('.drag-handle-wrapper');
-    const header = document.querySelector('.sheet-header');
+    const handle = document.querySelector('#bottomSheet .drag-handle-wrapper');
+    const header = document.querySelector('#bottomSheet .bottom-sheet-header');
     const dragTargets = [handle, header].filter(Boolean);
     
     if (!sheet || dragTargets.length === 0) return;
