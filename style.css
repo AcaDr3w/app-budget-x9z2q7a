@@ -15,8 +15,13 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 100px; transition: background-color 0.3s, color 0.3s; }
 body.sheet-open {
-    overflow: hidden;
-    touch-action: none;
+    overflow: hidden !important;
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    width: 100% !important;
+    touch-action: none !important;
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: none !important;
 }
 
 /* ===== HEADER / NAVBAR ===== */
@@ -761,6 +766,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 
 /* Sheet body per previsioni */
+#futureSheetBody {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
 #futureSheetBody .sheet-inputs-compact {
     display: flex;
     flex-direction: column;
@@ -1143,6 +1155,23 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     visibility: hidden;
     pointer-events: none;
     overscroll-behavior-y: contain !important;
+    max-height: 85dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.bottom-sheet .drag-handle-wrapper {
+    flex-shrink: 0;
+}
+.bottom-sheet .bottom-sheet-header {
+    flex-shrink: 0;
+}
+.bottom-sheet * {
+    touch-action: auto;
+}
+.drag-handle-wrapper,
+.sheet-handle {
+    touch-action: none !important;
 }
 .bottom-sheet.open {
     transform: translateY(0);
@@ -1330,8 +1359,22 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
 /* ===== BOTTOM SHEET CONTENT (View Input) - Scroll Fix & Padding ===== */
 .bottom-sheet .sheet-slider .sheet-view .sheet-body {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
     padding-bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+}
+.bottom-sheet .sheet-slider {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.bottom-sheet .sheet-slider .sheet-view {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    flex: 0 0 100%;
+    min-width: 100%;
 }
 
 /* ===== BOTTOM SHEET HEADER (Back Button + Title) ===== */

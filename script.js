@@ -654,7 +654,6 @@ function openTransactionSheet(categoryName) {
 if (overlay && sheet && title) {
         title.textContent = categoryName;
         document.body.classList.add('sheet-open');
-        document.body.style.overflow = 'hidden';
         overlay.classList.add('open');
         sheet.classList.add('open');
         
@@ -680,7 +679,6 @@ function closeTransactionSheet() {
     const sheet = document.getElementById('bottomSheet');
     if (overlay && sheet) {
         document.body.classList.remove('sheet-open');
-        document.body.style.overflow = '';
         overlay.classList.remove('open');
         sheet.classList.remove('open');
         sheet.style.transform = '';
@@ -946,7 +944,6 @@ function openBottomSheetFromMacro(macroGroup) {
     if (!overlay || !sheet) return;
     
     document.body.classList.add('sheet-open');
-    document.body.style.overflow = 'hidden';
     overlay.classList.add('open');
     sheet.classList.add('open');
     
@@ -1877,12 +1874,14 @@ async function openRendicontoPopup(type) {
         barsContainer.innerHTML = rowsHtml + legendHtml;
     }
     overlay.classList.add('active');
+    document.body.classList.add('sheet-open');
 }
 
 function closeRendicontoPopup(event) {
     event.preventDefault();
     event.stopPropagation();
     document.getElementById('popup-rendiconto').classList.remove('active');
+    document.body.classList.remove('sheet-open');
 }
 
 async function buildRendicontoRows(type, month, prevMonth) {
@@ -2060,25 +2059,25 @@ function initChartToggle() {
 // =====================================================================
 function openIaModal() {
     const modal = document.getElementById('iaModal');
-    if (modal) modal.classList.add('active');
+    if (modal) { modal.classList.add('active'); document.body.classList.add('sheet-open'); }
 }
 
 function closeIaModal(event) {
     if (event && event.target !== event.currentTarget) return;
     const modal = document.getElementById('iaModal');
-    if (modal) modal.classList.remove('active');
+    if (modal) { modal.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
 
 async function openArchiveModal() {
     await renderArchiveModalContent();
     const modal = document.getElementById('archiveModal');
-    if (modal) modal.classList.add('active');
+    if (modal) { modal.classList.add('active'); document.body.classList.add('sheet-open'); }
 }
 
 function closeArchiveModal(event) {
     if (event && event.target !== event.currentTarget) return;
     const modal = document.getElementById('archiveModal');
-    if (modal) modal.classList.remove('active');
+    if (modal) { modal.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
 
 async function renderArchiveModalContent() {
@@ -2402,7 +2401,6 @@ function openFutureSheet(action) {
     }
 
     document.body.classList.add('sheet-open');
-    document.body.style.overflow = 'hidden';
     overlay.classList.add('open');
     sheet.classList.add('open');
 }
@@ -2412,7 +2410,6 @@ function closeFutureSheet() {
     const sheet = document.getElementById('futureBottomSheet');
     if (overlay && sheet) {
         document.body.classList.remove('sheet-open');
-        document.body.style.overflow = '';
         overlay.classList.remove('open');
         sheet.classList.remove('open');
         sheet.style.transform = '';
