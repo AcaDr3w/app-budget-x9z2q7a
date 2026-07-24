@@ -2214,7 +2214,7 @@ async function renderTradingChart() {
 async function renderFutureProjections(isSimulated = false) {
     let simAmount = 0;
     if (isSimulated) {
-        simAmount = parseFloat(document.getElementById('simulatedExpense').value) || 0;
+        simAmount = parseFloat(document.getElementById('simulatedExpense')?.value) || 0;
     }
 
     let months = await db.months.toArray();
@@ -2225,45 +2225,343 @@ async function renderFutureProjections(isSimulated = false) {
     let avgActual = numMonths > 0 ? (totalActual / numMonths) + simAmount : simAmount;
     let avgSavings = avgIncome - avgActual;
 
-    // Avviso accuratezza
+    // Avviso accuratezza (desktop)
     const warnBox = document.getElementById('futureAccuracyWarning');
     const avgBox = document.getElementById('futureAvgBox');
     if (numMonths === 0) {
-        warnBox.innerHTML = `⚠️ <strong>Nessun dato registrato.</strong> Inizia ad inserire entrate e spese per ottenere le proiezioni.`;
-        warnBox.style.display = 'block';
+        if (warnBox) { warnBox.innerHTML = `⚠️ <strong>Nessun dato registrato.</strong> Inizia ad inserire entrate e spese per ottenere le proiezioni.`; warnBox.style.display = 'block'; }
         const listContainer = document.getElementById('futureProjectionsList');
         if (listContainer) {
             listContainer.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;">Inserisci dati per attivare le proiezioni.</div>`;
         }
+        const grid = document.getElementById('futureProjectionsGrid');
+        if (grid) grid.innerHTML = `<div style="grid-column:span 2;text-align:center;color:#94a3b8;padding:40px 10px;font-size:13px;">Inserisci dati per attivare le proiezioni.</div>`;
         return;
     } else if (numMonths < 3) {
-        warnBox.innerHTML = `⚠️ <strong>Precisione limitata:</strong> I calcoli si basano su ${numMonths} mese${numMonths>1?'i':''}. Con più dati storici le proiezioni a lungo termine saranno molto più accurate.`;
-        warnBox.style.display = 'block';
-    } else { warnBox.style.display = 'none'; }
+        if (warnBox) { warnBox.innerHTML = `⚠️ <strong>Precisione limitata:</strong> I calcoli si basano su ${numMonths} mese${numMonths>1?'i':''}. Con più dati storici le proiezioni a lungo termine saranno molto più accurate.`; warnBox.style.display = 'block'; }
+    } else { if (warnBox) warnBox.style.display = 'none'; }
 
-    avgBox.innerHTML = `<strong>Base di calcolo:</strong> ${numMonths} mes${numMonths===1?'e':'i'} archiviati · Media entrate: <strong>${fmtE(avgIncome)}/mese</strong> · Media uscite: <strong>${fmtE(avgActual)}/mese</strong> · Risparmio medio: <strong style="color:${avgSavings>=0?'#10b981':'#ef4444'}">${fmtE(avgSavings)}/mese</strong>`;
+    const avgText = `<strong>Base di calcolo:</strong> ${numMonths} mes${numMonths===1?'e':'i'} archiviati · Media entrate: <strong>${fmtE(avgIncome)}/mese</strong> · Media uscite: <strong>${fmtE(avgActual)}/mese</strong> · Risparmio medio: <strong style="color:${avgSavings>=0?'#10b981':'#ef4444'}">${fmtE(avgSavings)}/mese</strong>`;
+    if (avgBox) avgBox.innerHTML = avgText;
+    const avgBoxMobile = document.getElementById('futureAvgBoxMobile');
+    if (avgBoxMobile) avgBoxMobile.innerHTML = avgText;
 
     const periods = [
         {label:'3 Mesi', m:3}, {label:'6 Mesi', m:6}, {label:'1 Anno', m:12},
         {label:'2 Anni', m:24}, {label:'5 Anni', m:60}, {label:'10 Anni', m:120}
     ];
-    const listContainer = document.getElementById('futureProjectionsList'); listContainer.innerHTML = '';
-    periods.forEach(p => {
-        let estSavings = avgSavings * p.m;
-        let row = document.createElement('div');
-        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding: 14px; background: var(--panel); border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid " + (estSavings>=0?'#10b981':'#ef4444') + ";";
-        row.className = estSavings >= 0 ? 'proj-row-positive' : 'proj-row-negative';
-        row.innerHTML = `<span style="font-weight:bold; font-size:14px; color:var(--primary);">${p.label}</span><span class="text-right" style="font-size:16px;">${fmtE(estSavings)}</span>`;
-        listContainer.appendChild(row);
-    });
+
+    // Desktop: lista verticale
+    const listContainer = document.getElementById('futureProjectionsList');
+    if (listContainer) {
+        listContainer.innerHTML = '';
+        periods.forEach(p => {
+            let estSavings = avgSavings * p.m;
+            let row = document.createElement('div');
+            row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding: 14px; background: var(--panel); border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid " + (estSavings>=0?'#10b981':'#ef4444') + ";";
+            row.className = estSavings >= 0 ? 'proj-row-positive' : 'proj-row-negative';
+            row.innerHTML = `<span style="font-weight:bold; font-size:14px; color:var(--primary);">${p.label}</span><span class="text-right" style="font-size:16px;">${fmtE(estSavings)}</span>`;
+            listContainer.appendChild(row);
+        });
+    }
+
+    // Mobile: griglia 2x3
+    const grid = document.getElementById('futureProjectionsGrid');
+    if (grid) {
+        grid.innerHTML = '';
+        periods.forEach(p => {
+            let estSavings = avgSavings * p.m;
+            let card = document.createElement('div');
+            card.className = 'proj-card';
+            card.style.borderLeftColor = estSavings >= 0 ? '#10b981' : '#ef4444';
+            card.innerHTML = `
+                <span class="proj-label">${p.label}</span>
+                <span class="proj-value" style="color:${estSavings >= 0 ? '#10b981' : '#ef4444'}">${fmtE(estSavings)}</span>
+            `;
+            grid.appendChild(card);
+        });
+    }
 }
 
 function resetFutureSimulation() {
     const input = document.getElementById('simulatedExpense');
     if (input) input.value = '';
-    // Ricalcola e ripristina i valori di default senza simulazione
+    const inputMobile = document.getElementById('simulatedExpenseMobile');
+    if (inputMobile) inputMobile.value = '';
     renderFutureProjections();
 }
+
+// =====================================================================
+// FUTURE TAB — BOTTOM SHEET (Mobile)
+// =====================================================================
+function openFutureSheet(action) {
+    const overlay = document.getElementById('futureSheetOverlay');
+    const sheet = document.getElementById('futureBottomSheet');
+    const body = document.getElementById('futureSheetBody');
+    const title = document.getElementById('futureSheetTitle');
+    if (!overlay || !sheet || !body) return;
+
+    if (action === 'simula') {
+        title.textContent = '🤔 Simulatore';
+        body.innerHTML = `
+            <p style="font-size:12px;color:#475569;margin-bottom:12px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
+            <div class="sheet-inputs-compact">
+                <input type="number" id="simulatedExpenseMobile" class="responsive-input" placeholder="Spesa mensile fissa €">
+            </div>
+            <div class="sheet-actions">
+                <button class="btn-spesa" style="background:#3b82f6;" id="simulateBtnSheet">Simula</button>
+                <button class="btn-spesa" style="background:#64748b;" id="resetSimBtnSheet">Reset</button>
+            </div>
+            <div id="futureAccuracyWarningMobile" class="proj-info-box" style="display:none;margin-top:12px;"></div>
+            <div id="futureProjectionsListMobile" style="display:flex;flex-direction:column;gap:8px;margin-top:16px;"></div>
+        `;
+        body.querySelector('#simulateBtnSheet').onclick = () => {
+            let amt = parseFloat(document.getElementById('simulatedExpenseMobile')?.value) || 0;
+            const syncInput = document.getElementById('simulatedExpense');
+            if (syncInput) syncInput.value = amt;
+            renderFutureProjections(true);
+            renderFutureProjectionsInSheet(true);
+        };
+        body.querySelector('#resetSimBtnSheet').onclick = () => {
+            document.getElementById('simulatedExpenseMobile').value = '';
+            const syncInput = document.getElementById('simulatedExpense');
+            if (syncInput) syncInput.value = '';
+            renderFutureProjections();
+            renderFutureProjectionsInSheet();
+        };
+        renderFutureProjectionsInSheet();
+    } else if (action === 'scadenze') {
+        title.textContent = '🗓️ Scadenze';
+        body.innerHTML = `
+            <div style="background:#f1f5f9;border-radius:12px;padding:14px;margin-bottom:16px;">
+                <div class="sheet-inputs-compact">
+                    <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Mese Scadenza</label><input type="month" id="annDeadlineMonthSheet"></div>
+                    <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Giorno (opz.)</label><input type="number" id="annDeadlineDaySheet" min="1" max="31" placeholder="Es. 15"></div>
+                    <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Descrizione</label><input type="text" id="annDeadlineDescSheet" placeholder="Es. Bollo Auto..."></div>
+                    <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Importo Previsto (€)</label><input type="number" id="annDeadlineAmountSheet" step="0.01" placeholder="0.00"></div>
+                </div>
+                <button class="btn-spesa" style="background:var(--warning);margin-top:6px;" id="addDeadlineBtnSheet">Salva Scadenza</button>
+            </div>
+            <h3 style="font-size:13px;font-weight:700;margin:0 0 8px;">📋 Scadenziario Programmato</h3>
+            <div id="annualDeadlinesListSheet"></div>
+        `;
+        body.querySelector('#addDeadlineBtnSheet').onclick = () => {
+            const month = document.getElementById('annDeadlineMonthSheet').value;
+            const day = document.getElementById('annDeadlineDaySheet').value;
+            const desc = document.getElementById('annDeadlineDescSheet').value.trim();
+            const amount = parseFloat(document.getElementById('annDeadlineAmountSheet').value) || 0;
+            if (!month || !desc || amount <= 0) { alert('Compila mese, descrizione e importo.'); return; }
+            const syncMonth = document.getElementById('annDeadlineMonth');
+            const syncDay = document.getElementById('annDeadlineDay');
+            const syncDesc = document.getElementById('annDeadlineDesc');
+            const syncAmount = document.getElementById('annDeadlineAmount');
+            if (syncMonth) syncMonth.value = month;
+            if (syncDay) syncDay.value = day;
+            if (syncDesc) syncDesc.value = desc;
+            if (syncAmount) syncAmount.value = amount;
+            addAnnualDeadline().then(() => renderAnnualDeadlinesInSheet());
+        };
+        renderAnnualDeadlinesInSheet();
+    } else if (action === 'ia') {
+        title.textContent = '🤖 Analisi I.A.';
+        body.innerHTML = `
+            <p style="font-size:12px;color:#475569;margin-bottom:12px;">
+                L'IA leggerà le proiezioni matematiche e indicherà le categorie di spesa critiche su cui agire per proteggere o migliorare il tuo futuro finanziario.
+            </p>
+            <button class="btn-ia" id="btnFutureIASheet">🧠 Attiva Analisi Predittiva I.A.</button>
+            <div id="iaFutureResponseSheet" class="ia-response-box"></div>
+        `;
+        body.querySelector('#btnFutureIASheet').onclick = async () => {
+            const responseBox = document.getElementById('iaFutureResponseSheet');
+            const btn = document.getElementById('btnFutureIASheet');
+            if (!responseBox) return;
+            responseBox.style.display = 'block';
+            responseBox.innerHTML = '⏳ Analisi in corso...';
+            if (btn) btn.disabled = true;
+            try {
+                const months = await db.months.toArray();
+                const numM = months.length;
+                const totalIncome = months.reduce((s, m) => s + m.totalIncome, 0);
+                const totalActual = months.reduce((s, m) => s + m.totalActual, 0);
+                const avgSavings = numM > 0 ? (totalIncome - totalActual) / numM : 0;
+                const projected1 = avgSavings * 12;
+                const projected5 = avgSavings * 60;
+                const projected10 = avgSavings * 120;
+                const categoryTotals = {};
+                (currentData.expenses || []).forEach(e => { categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.actual; });
+                const categoryLines = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([cat, val]) => `- ${cat}: ${fmtE(val)}/mese`).join('\n');
+                const dataText = `Dati Proiezioni 10 anni:\n- Risparmio medio mensile: ${fmtE(avgSavings)}\n- Patrimonio stimato a 1 anno: ${fmtE(projected1)}\n- Patrimonio stimato a 5 anni: ${fmtE(projected5)}\n- Patrimonio stimato a 10 anni: ${fmtE(projected10)}\nCategorie di spesa attuali:\n${categoryLines}`;
+                const prompt = `Agisci come un pianificatore finanziario lungimirante. Lingua: Italiano. Esamina questa proiezione matematica basata sui dati attuali: ${dataText}. Fai una considerazione critica sul risultato a lungo termine (il traguardo a 10 anni è realistico o rischioso?). Indica quali categorie di spesa attuali potrebbero minacciare questa proiezione a causa dell'inflazione o di spese impreviste. Massimo 4 frasi, stile diretto e motivazionale.`;
+                await callAIEndpoint(prompt, 'iaFutureResponseSheet', null);
+            } catch (e) {
+                responseBox.innerHTML = '❌ Errore durante l\'analisi IA.';
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        };
+    }
+
+    document.body.classList.add('sheet-open');
+    document.body.style.overflow = 'hidden';
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+}
+
+function closeFutureSheet() {
+    const overlay = document.getElementById('futureSheetOverlay');
+    const sheet = document.getElementById('futureBottomSheet');
+    if (overlay && sheet) {
+        document.body.classList.remove('sheet-open');
+        document.body.style.overflow = '';
+        overlay.classList.remove('open');
+        sheet.classList.remove('open');
+        sheet.style.transform = '';
+        sheet.classList.remove('dragging');
+    }
+}
+
+function renderFutureProjectionsInSheet(isSimulated) {
+    const body = document.getElementById('futureSheetBody');
+    if (!body) return;
+    let simAmount = 0;
+    if (isSimulated) {
+        simAmount = parseFloat(document.getElementById('simulatedExpenseMobile')?.value) || 0;
+    }
+    renderFutureProjectionsPreview(body, simAmount);
+}
+
+async function renderFutureProjectionsPreview(container, simAmount) {
+    const months = await db.months.toArray();
+    const numMonths = months.length;
+    const totalIncome = months.reduce((s, m) => s + m.totalIncome, 0);
+    const totalActual = months.reduce((s, m) => s + m.totalActual, 0);
+    const avgIncome = numMonths > 0 ? totalIncome / numMonths : 0;
+    const avgActual = numMonths > 0 ? (totalActual / numMonths) + simAmount : simAmount;
+    const avgSavings = avgIncome - avgActual;
+
+    const warnBox = container.querySelector('#futureAccuracyWarningMobile');
+    const listContainer = container.querySelector('#futureProjectionsListMobile');
+    if (!listContainer) return;
+
+    if (numMonths === 0) {
+        if (warnBox) { warnBox.innerHTML = `⚠️ <strong>Nessun dato registrato.</strong> Inizia ad inserire entrate e spese.`; warnBox.style.display = 'block'; }
+        listContainer.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Inserisci dati per attivare le proiezioni.</div>`;
+        return;
+    } else if (numMonths < 3) {
+        if (warnBox) { warnBox.innerHTML = `⚠️ <strong>Precisione limitata:</strong> Basata su ${numMonths} mese${numMonths>1?'i':''}.`; warnBox.style.display = 'block'; }
+    } else { if (warnBox) warnBox.style.display = 'none'; }
+
+    const periods = [
+        {label:'3 Mesi', m:3}, {label:'6 Mesi', m:6}, {label:'1 Anno', m:12},
+        {label:'2 Anni', m:24}, {label:'5 Anni', m:60}, {label:'10 Anni', m:120}
+    ];
+    listContainer.innerHTML = '';
+    periods.forEach(p => {
+        let estSavings = avgSavings * p.m;
+        let row = document.createElement('div');
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding: 12px; background: var(--panel); border-radius: 10px; border: 1px solid #e2e8f0; border-left: 4px solid " + (estSavings>=0?'#10b981':'#ef4444') + ";";
+        row.innerHTML = `<span style="font-weight:600; font-size:13px; color:var(--primary);">${p.label}</span><span style="font-size:15px; font-weight:800; color:${estSavings>=0?'#10b981':'#ef4444'}">${fmtE(estSavings)}</span>`;
+        listContainer.appendChild(row);
+    });
+}
+
+async function renderAnnualDeadlinesInSheet() {
+    const deadlines = await db.annualDeadlines.toArray();
+    const container = document.getElementById('annualDeadlinesListSheet');
+    if (!container) return;
+    container.innerHTML = '';
+    if (deadlines.length === 0) {
+        container.innerHTML = `<p style="color:#94a3b8;font-size:13px;text-align:center;padding:20px;">Nessuna scadenza inserita.</p>`;
+        return;
+    }
+    deadlines.sort((a,b) => {
+        let da = new Date(a.month + '-' + (a.day ? String(a.day).padStart(2,'0') : '01'));
+        let db2 = new Date(b.month + '-' + (b.day ? String(b.day).padStart(2,'0') : '01'));
+        return da - db2;
+    });
+    const today = new Date();
+    deadlines.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        let isPast = !item.isPaid && new Date(item.month + '-' + (item.day ? String(item.day).padStart(2,'0') : '01')) < today;
+        let formattedM = item.month.split('-').reverse().join('/') + (item.day ? ` (g.${item.day})` : '');
+        if (isPast) row.style.cssText = 'background:#fee2e2;border-left:4px solid #ef4444;padding-left:10px;border-radius:6px;';
+        else if (item.isPaid) row.style.opacity = '0.65';
+        row.innerHTML = `
+            <span class="item-name">${item.isPaid ? '✅' : isPast ? '🚨' : '⏰'} <strong>${item.desc}</strong><span class="item-meta">${formattedM}</span></span>
+            <span class="item-vals">
+                <span style="color:var(--previsto);font-weight:bold;font-size:13px;">${fmtE(item.amount)}</span>
+                ${!item.isPaid ? `<button class="btn-action btn-pay" style="width:auto;margin:0;">Pagato</button>` : `<button class="btn-action" style="background:#64748b;width:auto;margin:0;">Annulla</button>`}
+                <button class="btn-del" style="width:auto;margin:0;">✕</button>
+            </span>`;
+        row.querySelector('.btn-pay')?.addEventListener('click', async () => {
+            await db.annualDeadlines.update(item.id, {isPaid: true});
+            renderAnnualDeadlinesInSheet();
+            loadAnnualDeadlines();
+        });
+        row.querySelector('.btn-del')?.addEventListener('click', async () => {
+            if (confirm('Eliminare questa scadenza?')) {
+                await db.annualDeadlines.delete(item.id);
+                renderAnnualDeadlinesInSheet();
+                loadAnnualDeadlines();
+            }
+        });
+        row.querySelector('.btn-action:not(.btn-pay)')?.addEventListener('click', async () => {
+            await db.annualDeadlines.update(item.id, {isPaid: false});
+            renderAnnualDeadlinesInSheet();
+            loadAnnualDeadlines();
+        });
+        container.appendChild(row);
+    });
+}
+
+// Setup eventi Action Hub e chiusura bottom sheet previsioni
+document.addEventListener('DOMContentLoaded', () => {
+    const hub = document.getElementById('futureActionHub');
+    if (hub) {
+        hub.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            openFutureSheet(btn.dataset.action);
+        });
+    }
+    const futureOverlay = document.getElementById('futureSheetOverlay');
+    if (futureOverlay) {
+        futureOverlay.addEventListener('click', closeFutureSheet);
+    }
+    const futureSheet = document.getElementById('futureBottomSheet');
+    if (futureSheet) {
+        futureSheet.addEventListener('click', (e) => e.stopPropagation());
+    }
+});
+
+// Swipe-to-close per futureBottomSheet
+(function setupFutureSwipeToClose() {
+    const sheet = document.getElementById('futureBottomSheet');
+    const handle = document.querySelector('#futureBottomSheet .drag-handle-wrapper');
+    if (!sheet || !handle) return;
+    let startY = 0, currentY = 0, isDragging = false;
+    const onTouchStart = (e) => { isDragging = true; startY = e.touches[0].clientY; sheet.classList.add('dragging'); };
+    const onTouchMove = (e) => {
+        if (!isDragging) return;
+        currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        if (deltaY > 0) sheet.style.transform = `translateY(${deltaY}px)`;
+    };
+    const onTouchEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        const deltaY = currentY - startY;
+        const threshold = Math.min(100, sheet.offsetHeight * 0.3);
+        sheet.classList.remove('dragging');
+        if (deltaY > threshold) closeFutureSheet();
+        else sheet.style.transform = '';
+    };
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('touchmove', onTouchMove, { passive: true });
+    handle.addEventListener('touchend', onTouchEnd);
+    handle.addEventListener('touchcancel', onTouchEnd);
+})();
 
 // =====================================================================
 // PROVIDER IA

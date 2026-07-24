@@ -336,50 +336,68 @@
     <!-- =================== TAB 3: FUTURO =================== -->
     <div id="future-tab" class="tab-content hidden">
 
-        <div class="card">
-            <h2>🔮 E nel futuro come sto messo?</h2>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 14px;">
-                Proiezione matematica lineare basata sulla media reale delle tue entrate e uscite nel database.
-                Se il trend rimane costante, ecco quanto risparmio potresti accumulare nel tempo.
-            </p>
+        <!-- DESKTOP: contenuto originale -->
+        <div class="hide-mobile">
+            <div class="card">
+                <h2>🔮 E nel futuro come sto messo?</h2>
+                <p style="font-size: 13px; color: #475569; margin-bottom: 14px;">
+                    Proiezione matematica lineare basata sulla media reale delle tue entrate e uscite nel database.
+                    Se il trend rimane costante, ecco quanto risparmio potresti accumulare nel tempo.
+                </p>
 
-            <div class="card" style="background:#f1f5f9; border:1px solid #cbd5e1; margin-bottom: 16px; box-shadow: none; padding: 12px;">
-                <h3 style="margin-top:0; font-size: 14px;">🤔 Simulatore "Che succede se...?"</h3>
-                <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
-                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <input type="number" id="simulatedExpense" class="responsive-input" placeholder="Spesa mensile fissa €">
-                    <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
-                    <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="resetFutureSimulation()">Reset</button>
+                <div class="card" style="background:#f1f5f9; border:1px solid #cbd5e1; margin-bottom: 16px; box-shadow: none; padding: 12px;">
+                    <h3 style="margin-top:0; font-size: 14px;">🤔 Simulatore "Che succede se...?"</h3>
+                    <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <input type="number" id="simulatedExpense" class="responsive-input" placeholder="Spesa mensile fissa €">
+                        <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
+                        <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="resetFutureSimulation()">Reset</button>
+                    </div>
                 </div>
+
+                <div id="futureAccuracyWarning" class="proj-info-box" style="display:none;"></div>
+                <div id="futureProjectionsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
             </div>
 
-            <div id="futureAccuracyWarning" class="proj-info-box" style="display:none;"></div>
-            <div id="futureProjectionsList" style="display:flex; flex-direction:column; gap:10px;"></div>
-            <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
-        </div>
-
-        <div class="card">
-            <h2>📅 Aggiungi Scadenza Futura</h2>
-            <div class="grid-inputs">
-                <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
-                <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
+            <div class="card">
+                <h2>📅 Aggiungi Scadenza Futura</h2>
+                <div class="grid-inputs">
+                    <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
+                    <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
+                </div>
+                <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
+                <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
+                <button class="btn-spesa" onclick="addAnnualDeadline()" style="background: var(--warning);">Salva Scadenza</button>
             </div>
-            <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
-            <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
-            <button class="btn-spesa" onclick="addAnnualDeadline()" style="background: var(--warning);">Salva Scadenza</button>
-        </div>
-        <div class="card">
-            <h2>📋 Scadenziario Programmato</h2>
-            <div id="annualDeadlinesList"></div>
+            <div class="card">
+                <h2>📋 Scadenziario Programmato</h2>
+                <div id="annualDeadlinesList"></div>
+            </div>
+
+            <div class="card" style="border: 2px solid var(--ia-color); background: #fdfaff;">
+                <h2>🤖 Analisi Predittiva I.A. (Su Richiesta)</h2>
+                <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">
+                    L'IA leggerà le proiezioni matematiche qui sopra e indicherà le categorie di spesa critiche su cui agire per proteggere o migliorare il tuo futuro finanziario.
+                </p>
+                <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🧠 Attiva Analisi Predittiva I.A.</button>
+                <div id="iaFutureResponse" class="ia-response-box"></div>
+            </div>
         </div>
 
-        <div class="card" style="border: 2px solid var(--ia-color); background: #fdfaff;">
-            <h2>🤖 Analisi Predittiva I.A. (Su Richiesta)</h2>
-            <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">
-                L'IA leggerà le proiezioni matematiche qui sopra e indicherà le categorie di spesa critiche su cui agire per proteggere o migliorare il tuo futuro finanziario.
-            </p>
-            <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🧠 Attiva Analisi Predittiva I.A.</button>
-            <div id="iaFutureResponse" class="ia-response-box"></div>
+        <!-- MOBILE: Zero-Scroll Dashboard -->
+        <div class="hide-desktop future-mobile-dashboard">
+            <div class="future-header-compact">
+                <h2>🔮 E nel futuro come sto messo?</h2>
+                <div id="futureAvgBoxMobile"></div>
+            </div>
+            <div id="futureProjectionsGrid"></div>
+            <div id="futureProjectionsLegacyList" style="display:none;"></div>
+            <div id="futureActionHub">
+                <button data-action="simula">🤔 Simula</button>
+                <button data-action="scadenze">🗓️ Scadenze</button>
+                <button data-action="ia">🤖 I.A.</button>
+            </div>
         </div>
 
     </div>
@@ -457,6 +475,16 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- BOTTOM SHEET PREVISIONI (Mobile) -->
+    <div id="futureSheetOverlay" class="sheet-overlay"></div>
+    <div id="futureBottomSheet" class="bottom-sheet">
+        <div class="drag-handle-wrapper"><div class="sheet-handle"></div></div>
+        <div class="bottom-sheet-header">
+            <h3 class="sheet-title" id="futureSheetTitle">Titolo</h3>
+        </div>
+        <div id="futureSheetBody" style="padding: 0 16px 24px; overflow-y: auto; flex:1;"></div>
     </div>
 
     <!-- BOTTOM SHEET - STEP 3 (Complete) -->
