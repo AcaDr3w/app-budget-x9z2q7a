@@ -1363,9 +1363,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 #viewInput {
     display: flex;
     flex-direction: column;
+    height: 100%;
     min-height: 0;
 }
-.bottom-sheet .sheet-slider .sheet-view .sheet-body {
+#viewInput > .sheet-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto !important;

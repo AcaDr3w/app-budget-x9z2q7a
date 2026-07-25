@@ -645,7 +645,7 @@ function openTransactionSheet(categoryName) {
     sheetTransactionType = 'actual';
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
-    const title = document.getElementById('sheetCategoryTitle');
+    const title = document.getElementById('selected-category-title');
     const intInput = document.getElementById('hiddenIntegerInput');
     const decInput = document.getElementById('hiddenDecimalInput');
     const sheetDate = document.getElementById('sheetDate');
