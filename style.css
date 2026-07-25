@@ -1296,15 +1296,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     background: #f1f5f9;
     border-radius: 16px;
     padding: 4px;
-    overflow: hidden;
 }
 .toggle-option {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 12px;
-    font-size: 14px;
+    padding: 10px 8px;
+    font-size: clamp(12px, 3.5vw, 14px);
     font-weight: 600;
     color: #64748b;
     cursor: pointer;
