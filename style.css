@@ -1364,9 +1364,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 #viewInput {
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 250px;
-    background: #ff9999 !important;
 }
 #viewInput > .sheet-body {
     display: flex;
@@ -1382,23 +1380,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .bottom-sheet .sheet-slider {
     flex: 1;
     min-height: 0;
-    overflow: visible !important;
+    overflow: hidden;
 }
 
-/* DEBUG TEST C - min-height safety */
-.bottom-sheet {
-    min-height: 60dvh !important;
-}
-
-/* DEBUG TEST E - nascondi categories view per forzare viewInput visibile */
-#viewCategories { display: none !important; }
 .bottom-sheet .sheet-slider .sheet-view {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     flex: 0 0 100%;
     min-width: 100%;
     min-height: 0;
-    height: 100%;
 }
 
 /* ===== BOTTOM SHEET HEADER (Back Button + Title) ===== */
