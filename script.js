@@ -521,7 +521,7 @@ async function loadMonthData() {
     let mData = await db.months.get(month);
     document.getElementById('userNotes').value = mData?.notes || "";
     document.getElementById('iaNotes').value = mData?.iaNotes || "";
-    clearAllFilters();
+    await clearAllFilters();
     checkAnnualAlertForCurrentMonth();
     renderImportCheckboxList();
 }
@@ -1098,7 +1098,7 @@ async function saveIncomeFromSheet() {
         currentData.income.push(inc);
         await db.income.put(inc);
         closeIncomeSheet();
-        updateUI();
+        await updateUI();
         // Re-render income list if popup is still open
         if (document.getElementById('popup-rendiconto').classList.contains('active')) {
             const month2 = document.getElementById('currentMonth').value;
@@ -1120,7 +1120,7 @@ function setupViewToggle() {
     const macroTabsContainer = document.getElementById('macroTabsContainer');
     
     if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
+        toggleBtn.addEventListener('click', async () => {
             if (currentViewMode === 'full') {
                 currentViewMode = 'tabs';
                 toggleBtn.innerHTML = '<i class="fas fa-th"></i>';
@@ -1130,17 +1130,17 @@ function setupViewToggle() {
                 toggleBtn.innerHTML = '<i class="fas fa-layer-group"></i>';
                 if (macroTabsContainer) macroTabsContainer.style.display = 'none';
             }
-            updateUI();
+            await updateUI();
         });
     }
     
     // Setup macro tab clicks
     document.querySelectorAll('.macro-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', async () => {
             document.querySelectorAll('.macro-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             activeMacroGroup = tab.dataset.target;
-            updateUI();
+            await updateUI();
         });
     });
 }
@@ -1477,7 +1477,7 @@ async function saveTransactionFromSheet() {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
         closeTransactionSheet();
-        updateUI();
+        await updateUI();
         showToast('Spesa aggiunta', false);
     } catch (err) {
         console.error('[DB] Error adding expense from sheet:', err);
@@ -1685,7 +1685,7 @@ async function saveCategory() {
         renderCategoriesDropdown();
         renderCategorySettings();
         renderImportCheckboxList();
-        updateUI();
+        await updateUI();
     } catch (err) {
         console.error('[DB] Errore salvataggio categoria:', err);
         showToast('Errore nel salvare la categoria', true);
@@ -1704,7 +1704,7 @@ async function deleteCategory(cat) {
     renderCategoriesDropdown();
     renderCategorySettings();
     renderImportCheckboxList();
-    updateUI();
+    await updateUI();
 }
 function renderImportCheckboxList() {
     const container = document.getElementById('importCategoriesList');
@@ -1730,7 +1730,7 @@ async function addIncome() {
     let inc = {id: Date.now(), month, desc, amount};
     currentData.income.push(inc); await db.income.put(inc);
     document.getElementById('incDesc').value = ''; document.getElementById('incAmount').value = '';
-    updateUI(); checkDatabaseHealth();
+    await updateUI(); await checkDatabaseHealth();
 }
 async function addExpense() {
     const month = document.getElementById('currentMonth').value;
@@ -1751,8 +1751,8 @@ async function addExpense() {
         document.getElementById('expPlanned').value = '';
         document.getElementById('expActual').value = '';
         document.getElementById('expShared').value = '';
-        updateUI();
-        checkDatabaseHealth();
+        await updateUI();
+        await checkDatabaseHealth();
     } catch (err) {
         console.error('[DB] Errore salvataggio spesa:', err);
         showToast('Errore nel salvare la spesa', true);
@@ -1763,13 +1763,13 @@ async function payExpense(id) {
     const exp = currentData.expenses.find(i => i.id === id); if (!exp) return;
     const val = prompt("Importo effettivo pagato (€):", exp.planned.toFixed(2));
     if (val !== null) {
-        const p = parseFloat(val.replace(',','.')); if (!isNaN(p)) { exp.actual = p; await db.expenses.update(id, {actual: p}); updateUI(); }
+        const p = parseFloat(val.replace(',','.')); if (!isNaN(p)) { exp.actual = p; await db.expenses.update(id, {actual: p}); await updateUI(); }
     }
 }
 async function deleteEntry(type, id) {
     if (type === 'income') { currentData.income = currentData.income.filter(i => i.id !== id); await db.income.delete(id); }
     else { currentData.expenses = currentData.expenses.filter(i => i.id !== id); await db.expenses.delete(id); }
-    updateUI(); checkDatabaseHealth();
+    await updateUI(); await checkDatabaseHealth();
 }
 
 // =====================================================================
@@ -1792,7 +1792,7 @@ async function copyFromPreviousMonth() {
             currentData.expenses.push(newExp); await db.expenses.put(newExp); count++;
         }
     }
-    updateUI(); checkDatabaseHealth(); alert(`${count} voci ereditate.`);
+    await updateUI(); await checkDatabaseHealth(); alert(`${count} voci ereditate.`);
 }
 
 // =====================================================================
@@ -2098,10 +2098,10 @@ function renderCalendar() {
 // =====================================================================
 // FILTRI
 // =====================================================================
-function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDate = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); updateUI(); }
-function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); updateUI(); }
-function handleSearch() { searchQuery = document.getElementById('searchInput').value.toLowerCase(); updateUI(); }
-function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; updateUI(); }
+async function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDate = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); await updateUI(); }
+async function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); await updateUI(); }
+async function handleSearch() { searchQuery = document.getElementById('searchInput').value.toLowerCase(); await updateUI(); }
+async function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; await updateUI(); }
 function scrollToAddExpense() { switchTab('current-month-tab', document.getElementById('tab-btn-current')); setTimeout(() => { document.getElementById('addExpenseCard').scrollIntoView({behavior:'smooth',block:'start'}); }, 100); }
 function toggleSection(id, el) { document.getElementById(id).classList.toggle('show'); el.classList.toggle('active'); }
 
