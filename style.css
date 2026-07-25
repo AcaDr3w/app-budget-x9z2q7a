@@ -1383,6 +1383,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     min-height: 0;
     overflow: hidden;
 }
+
+/* DEBUG TEST A - overflow visible */
+.bottom-sheet {
+    overflow: visible !important;
+}
 .bottom-sheet .sheet-slider .sheet-view {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
