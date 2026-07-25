@@ -109,7 +109,9 @@
                         <p id="popupSubtitle">Mese corrente vs mese precedente</p>
                     </div>
                 </div>
+                <button id="btnNewIncome" class="btn-entrate popup-income-btn">➕ Nuova Entrata</button>
                 <div id="popupBars" class="popup-bars"></div>
+                <div id="incomeListContainer" class="income-list"></div>
                 <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
             </div>
         </div>
@@ -530,6 +532,39 @@
                     <button id="closeSheetBtn" class="btn-secondary">Annulla</button>
                     <button id="saveTransactionBtn" class="btn-spesa">Salva</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM SHEET NUOVA ENTRATA -->
+    <div id="incomeSheetOverlay" class="sheet-overlay"></div>
+    <div id="incomeBottomSheet" class="bottom-sheet">
+        <div class="drag-handle-wrapper"><div class="sheet-handle"></div></div>
+        <div class="bottom-sheet-header">
+            <h3 class="sheet-title">💰 Nuova Entrata</h3>
+        </div>
+        <div class="income-sheet-body">
+            <div class="sheet-amount-display">
+                <div class="wheel-container" id="incomeIntegerWheelContainer">
+                    <div class="wheel-scroll" id="incomeIntegerWheel"></div>
+                    <input type="number" id="incomeHiddenIntegerInput" class="hidden-wheel-input" min="0" max="9999" inputmode="numeric">
+                </div>
+                <span class="wheel-separator">,</span>
+                <div class="wheel-container" id="incomeDecimalWheelContainer">
+                    <div class="wheel-scroll" id="incomeDecimalWheel"></div>
+                    <input type="number" id="incomeHiddenDecimalInput" class="hidden-wheel-input" min="0" max="99" inputmode="numeric">
+                </div>
+                <span class="currency-symbol">€</span>
+            </div>
+
+            <div class="sheet-inputs">
+                <input type="date" id="incomeSheetDate" class="sheet-input">
+                <input type="text" id="incomeSheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Stipendio)">
+            </div>
+
+            <div class="sheet-footer">
+                <button id="closeIncomeSheetBtn" class="btn-secondary">Annulla</button>
+                <button id="saveIncomeSheetBtn" class="btn-entrate">Salva</button>
             </div>
         </div>
     </div>

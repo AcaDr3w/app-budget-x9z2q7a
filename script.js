@@ -898,6 +898,207 @@ function initNativeWheels() {
     }
 }
 
+// ===== INCOME BOTTOM SHEET WHEEL STATE =====
+let incomeSelectedInteger = 0;
+let incomeSelectedDecimal = 0;
+let incomeWheelDebounceTimer = null;
+let incomeIsScrollingProg = false;
+let incomeIntScrollHandler = null;
+let incomeDecScrollHandler = null;
+
+function initIncomeNativeWheels() {
+    const intWheel = document.getElementById('incomeIntegerWheel');
+    const decWheel = document.getElementById('incomeDecimalWheel');
+    const intInput = document.getElementById('incomeHiddenIntegerInput');
+    const decInput = document.getElementById('incomeHiddenDecimalInput');
+
+    if (!intWheel || !decWheel) return;
+
+    intWheel.innerHTML = '';
+    decWheel.innerHTML = '';
+
+    const intPadBefore = document.createElement('div');
+    intPadBefore.className = 'wheel-item'; intPadBefore.style.height = '50px';
+    intWheel.appendChild(intPadBefore);
+
+    for (let i = 0; i <= 9999; i++) {
+        const span = document.createElement('div');
+        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
+        span.textContent = i.toString().padStart(4, '0');
+        span.dataset.value = i.toString().padStart(4, '0');
+        intWheel.appendChild(span);
+    }
+
+    const intPadAfter = document.createElement('div');
+    intPadAfter.className = 'wheel-item'; intPadAfter.style.height = '50px';
+    intWheel.appendChild(intPadAfter);
+
+    const decPadBefore = document.createElement('div');
+    decPadBefore.className = 'wheel-item'; decPadBefore.style.height = '50px';
+    decWheel.appendChild(decPadBefore);
+
+    for (let i = 0; i <= 99; i++) {
+        const span = document.createElement('div');
+        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
+        span.textContent = i.toString().padStart(2, '0');
+        span.dataset.value = i.toString().padStart(2, '0');
+        decWheel.appendChild(span);
+    }
+
+    const decPadAfter = document.createElement('div');
+    decPadAfter.className = 'wheel-item'; decPadAfter.style.height = '50px';
+    decWheel.appendChild(decPadAfter);
+
+    incomeSelectedInteger = 0;
+    incomeSelectedDecimal = 0;
+
+    incomeIntScrollHandler = function () {
+        if (incomeIsScrollingProg) return;
+        clearTimeout(incomeWheelDebounceTimer);
+        incomeWheelDebounceTimer = setTimeout(() => {
+            const items = intWheel.querySelectorAll('.wheel-item');
+            const centerY = intWheel.scrollTop + 75;
+            let closestIdx = 0, closestDiff = Infinity;
+            items.forEach((item, idx) => {
+                const diff = Math.abs(centerY - (idx * 50 + 25));
+                if (diff < closestDiff) { closestDiff = diff; closestIdx = idx; }
+            });
+            if (closestIdx > 0 && closestIdx < items.length - 1) {
+                incomeSelectedInteger = closestIdx - 1;
+                items.forEach((item, idx) => item.classList.toggle('selected', idx === closestIdx));
+                if (intInput) intInput.value = incomeSelectedInteger;
+            }
+        }, 100);
+    };
+
+    incomeDecScrollHandler = function () {
+        if (incomeIsScrollingProg) return;
+        clearTimeout(incomeWheelDebounceTimer);
+        incomeWheelDebounceTimer = setTimeout(() => {
+            const items = decWheel.querySelectorAll('.wheel-item');
+            const centerY = decWheel.scrollTop + 75;
+            let closestIdx = 0, closestDiff = Infinity;
+            items.forEach((item, idx) => {
+                const diff = Math.abs(centerY - (idx * 50 + 25));
+                if (diff < closestDiff) { closestDiff = diff; closestIdx = idx; }
+            });
+            if (closestIdx > 0 && closestIdx < items.length - 1) {
+                incomeSelectedDecimal = closestIdx - 1;
+                items.forEach((item, idx) => item.classList.toggle('selected', idx === closestIdx));
+                if (decInput) decInput.value = incomeSelectedDecimal;
+            }
+        }, 100);
+    };
+
+    intWheel.addEventListener('scroll', incomeIntScrollHandler);
+    decWheel.addEventListener('scroll', incomeDecScrollHandler);
+
+    const intContainer = document.getElementById('incomeIntegerWheelContainer');
+    const decContainer = document.getElementById('incomeDecimalWheelContainer');
+
+    if (intInput) {
+        intInput.addEventListener('input', () => {
+            const val = parseInt(intInput.value) || 0;
+            if (val >= 0 && val <= 9999) {
+                const formatted = val.toString().padStart(4, '0');
+                const target = intWheel.querySelector(`.wheel-item[data-value="${formatted}"]`);
+                if (target) {
+                    incomeIsScrollingProg = true;
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => { incomeIsScrollingProg = false; }, 400);
+                }
+            }
+        });
+        intInput.addEventListener('focus', (e) => { if (intContainer) intContainer.classList.add('focused'); e.target.select(); });
+        intInput.addEventListener('blur', () => { if (intContainer) intContainer.classList.remove('focused'); });
+    }
+    if (decInput) {
+        decInput.addEventListener('input', () => {
+            let val = parseInt(decInput.value) || 0;
+            if (val < 0) val = 0;
+            if (val > 99) val = 99;
+            const formatted = val.toString().padStart(2, '0');
+            const target = decWheel.querySelector(`.wheel-item[data-value="${formatted}"]`);
+            if (target) {
+                incomeIsScrollingProg = true;
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => { incomeIsScrollingProg = false; }, 400);
+            }
+        });
+        decInput.addEventListener('focus', (e) => { if (decContainer) decContainer.classList.add('focused'); e.target.select(); });
+        decInput.addEventListener('blur', () => { if (decContainer) decContainer.classList.remove('focused'); });
+    }
+    if (intContainer) {
+        intContainer.addEventListener('click', () => { if (intInput) intInput.focus(); });
+    }
+    if (decContainer) {
+        decContainer.addEventListener('click', () => { if (decInput) decInput.focus(); });
+    }
+}
+
+function openIncomeSheet() {
+    const overlay = document.getElementById('incomeSheetOverlay');
+    const sheet = document.getElementById('incomeBottomSheet');
+    if (!overlay || !sheet) return;
+    document.body.classList.add('sheet-open');
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+    const dateInput = document.getElementById('incomeSheetDate');
+    if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+    const noteInput = document.getElementById('incomeSheetNote');
+    if (noteInput) noteInput.value = '';
+    initIncomeNativeWheels();
+}
+
+function closeIncomeSheet() {
+    const overlay = document.getElementById('incomeSheetOverlay');
+    const sheet = document.getElementById('incomeBottomSheet');
+    if (overlay && sheet) {
+        document.body.classList.remove('sheet-open');
+        overlay.classList.remove('open');
+        sheet.classList.remove('open');
+        sheet.style.transform = '';
+        sheet.classList.remove('dragging');
+    }
+}
+
+async function saveIncomeFromSheet() {
+    const month = document.getElementById('currentMonth').value;
+    if (!month) { showToast('Nessun mese selezionato', true); return; }
+    const intInput = document.getElementById('incomeHiddenIntegerInput');
+    const decInput = document.getElementById('incomeHiddenDecimalInput');
+    const dateInput = document.getElementById('incomeSheetDate');
+    const noteInput = document.getElementById('incomeSheetNote');
+
+    const intVal = parseInt(intInput?.value) || incomeSelectedInteger;
+    const decVal = parseInt(decInput?.value) || incomeSelectedDecimal;
+    const amount = intVal + (decVal / 100);
+
+    if (amount <= 0) { showToast('Inserisci un importo maggiore di zero', true); return; }
+
+    const date = dateInput?.value || new Date().toISOString().slice(0, 10);
+    const note = noteInput?.value.trim() || 'Entrata';
+
+    const inc = { id: Date.now(), month, date, desc: note, amount };
+
+    try {
+        currentData.income.push(inc);
+        await db.income.put(inc);
+        closeIncomeSheet();
+        updateUI();
+        // Re-render income list if popup is still open
+        if (document.getElementById('popup-rendiconto').classList.contains('active')) {
+            const month2 = document.getElementById('currentMonth').value;
+            renderIncomeList(month2);
+        }
+        showToast('Entrata aggiunta', false);
+    } catch (err) {
+        console.error('[DB] Error adding income from sheet:', err);
+        showToast('Errore salvataggio', true);
+        currentData.income.pop();
+    }
+}
+
 // =====================================================================
 // VIEW MODE & MACRO TABS
 // =====================================================================
@@ -1302,6 +1503,59 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMacroDashCards();
     setupBottomSheetBackBtn();
 });
+
+// ===== INCOME BOTTOM SHEET EVENTS =====
+(function setupIncomeSheetEvents() {
+    const closeBtn = document.getElementById('closeIncomeSheetBtn');
+    const overlay = document.getElementById('incomeSheetOverlay');
+    const sheet = document.getElementById('incomeBottomSheet');
+    const saveBtn = document.getElementById('saveIncomeSheetBtn');
+    const newIncomeBtn = document.getElementById('btnNewIncome');
+
+    if (newIncomeBtn) {
+        newIncomeBtn.addEventListener('click', openIncomeSheet);
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeIncomeSheet);
+    }
+    if (overlay) {
+        overlay.addEventListener('click', closeIncomeSheet);
+    }
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveIncomeFromSheet);
+    }
+    if (sheet) {
+        sheet.addEventListener('click', (e) => e.stopPropagation());
+    }
+})();
+
+// Swipe-to-close for income bottom sheet
+(function setupIncomeSwipeToClose() {
+    const sheet = document.getElementById('incomeBottomSheet');
+    const handle = document.querySelector('#incomeBottomSheet .drag-handle-wrapper');
+    if (!sheet || !handle) return;
+    let startY = 0, currentY = 0, isDragging = false;
+    const onTouchStart = (e) => { isDragging = true; startY = e.touches[0].clientY; sheet.classList.add('dragging'); };
+    const onTouchMove = (e) => {
+        if (!isDragging) return;
+        currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        if (deltaY > 0) sheet.style.transform = `translateY(${deltaY}px)`;
+    };
+    const onTouchEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        const deltaY = currentY - startY;
+        const threshold = Math.min(100, sheet.offsetHeight * 0.3);
+        sheet.classList.remove('dragging');
+        if (deltaY > threshold) closeIncomeSheet();
+        else sheet.style.transform = '';
+    };
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('touchmove', onTouchMove, { passive: true });
+    handle.addEventListener('touchend', onTouchEnd);
+    handle.addEventListener('touchcancel', onTouchEnd);
+})();
 
 function renderCategoriesDropdown() {
     const select = document.getElementById('expenseCategory');
@@ -1873,8 +2127,48 @@ async function openRendicontoPopup(type) {
         }).join('');
         barsContainer.innerHTML = rowsHtml + legendHtml;
     }
+    const incomeBtn = document.getElementById('btnNewIncome');
+    const incomeListContainer = document.getElementById('incomeListContainer');
+    if (type === 'entrate') {
+        if (incomeBtn) incomeBtn.style.display = 'block';
+        if (incomeListContainer) { incomeListContainer.style.display = 'block'; renderIncomeList(month); }
+    } else {
+        if (incomeBtn) incomeBtn.style.display = 'none';
+        if (incomeListContainer) incomeListContainer.style.display = 'none';
+    }
     overlay.classList.add('active');
     document.body.classList.add('sheet-open');
+}
+
+function renderIncomeList(month) {
+    const container = document.getElementById('incomeListContainer');
+    if (!container) return;
+    const incomes = currentData.income.filter(i => i.month === month);
+    if (incomes.length === 0) {
+        container.innerHTML = '<div class="income-list-empty">Nessuna entrata registrata per questo mese.</div>';
+        return;
+    }
+    container.innerHTML = '';
+    incomes.forEach(inc => {
+        const row = document.createElement('div');
+        row.className = 'income-row';
+        const dateStr = inc.date ? inc.date.split('-').reverse().slice(0,2).join('/') : inc.month.split('-').reverse().join('/');
+        row.innerHTML = `
+            <div class="income-row-left">
+                <span class="income-row-desc">💰 ${inc.desc}</span>
+                <span class="income-row-date">${dateStr}</span>
+            </div>
+            <span class="income-row-amount">+${fmtEPlain(inc.amount)}</span>
+            <button class="income-row-del" data-id="${inc.id}" title="Elimina">✕</button>
+        `;
+        row.querySelector('.income-row-del').addEventListener('click', async () => {
+            if (confirm('Eliminare questa entrata?')) {
+                await deleteEntry('income', inc.id);
+                renderIncomeList(month);
+            }
+        });
+        container.appendChild(row);
+    });
 }
 
 function closeRendicontoPopup(event) {
