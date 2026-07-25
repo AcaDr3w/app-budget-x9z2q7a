@@ -199,7 +199,15 @@ button:active { transform: scale(0.98); }
     font-size: 14px;
     font-weight: 600;
     color: var(--primary);
-    cursor: default;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.month-selector-pill:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.month-selector-pill:active {
+    transform: scale(0.97);
 }
 .month-selector-pill i {
     font-size: 11px;
@@ -237,7 +245,7 @@ button:active { transform: scale(0.98); }
 
 /* ===== SUMMARY BOXES ===== */
 .config-bar { display: none; }
-.month-selector { display: none; }
+.month-selector { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
 .summary-grid { display: flex; gap: 6px; margin-bottom: 8px; }
 .summary-box { 
     padding: 6px 4px; 
@@ -546,7 +554,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .hide-mobile { display: none !important; }
     
     .responsive-input, .responsive-select { max-width: 100%; }
-    .month-selector { width: 100%; max-width: 360px; }
+    .month-selector { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
     .day-selector { width: 100%; max-width: 120px; }
     
     .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }

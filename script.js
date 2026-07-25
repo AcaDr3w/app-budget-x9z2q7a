@@ -352,6 +352,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (monthInputEl) {
         monthInputEl.addEventListener('change', updateMonthDisplay);
     }
+    const pill = document.querySelector('.month-selector-pill');
+    if (pill) {
+        pill.addEventListener('click', () => {
+            const input = document.getElementById('currentMonth');
+            if (input) {
+                if (typeof input.showPicker === 'function') {
+                    input.showPicker();
+                } else {
+                    input.focus();
+                }
+            }
+        });
+    }
 });
 
 // =====================================================================
