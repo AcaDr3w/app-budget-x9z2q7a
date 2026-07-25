@@ -393,6 +393,11 @@ async function initApp() {
     await migrateFromLocalStorage();
     await initCategories();
     setupCategoryForm();
+    // Settings popup: delegated click on cards
+    document.getElementById('settings-tab')?.addEventListener('click', (e) => {
+        const card = e.target.closest('.settings-card');
+        if (card) openSettingsPopup(card.dataset.popup);
+    });
     await loadAnnualDeadlines();
     await loadMonthData();
     toggleIaProviderFields();
@@ -2404,6 +2409,19 @@ function closeArchiveModal(event) {
     archiveModalCharts = [];
     const modal = document.getElementById('archiveModal');
     if (modal) { modal.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+}
+
+// =====================================================================
+// SETTINGS POPUPS (Grid Cards → Modal)
+// =====================================================================
+function openSettingsPopup(name) {
+    const popup = document.getElementById('popup-' + name);
+    if (popup) { popup.classList.add('active'); document.body.classList.add('sheet-open'); }
+}
+function closePopup(name, event) {
+    if (event && event.target !== event.currentTarget) return;
+    const popup = document.getElementById('popup-' + name);
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
 
 async function renderArchiveModalContent() {
