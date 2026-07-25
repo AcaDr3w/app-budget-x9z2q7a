@@ -1157,7 +1157,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     overscroll-behavior-y: contain !important;
     height: 85dvh;
     max-height: 85dvh;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -1366,13 +1365,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 0;
+    min-height: 250px;
 }
 #viewInput > .sheet-body {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 100px;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
