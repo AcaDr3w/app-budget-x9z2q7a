@@ -714,7 +714,7 @@ function initNativeWheels() {
     
     if (!intWheel || !decWheel) return;
     
-    // Generate integer wheel (0-999) with padding
+    // Generate integer wheel (0-9999) with padding
     intWheel.innerHTML = '';
     decWheel.innerHTML = '';
     
@@ -724,11 +724,11 @@ function initNativeWheels() {
     intPaddingBefore.style.height = '50px';
     intWheel.appendChild(intPaddingBefore);
     
-    for (let i = 0; i <= 999; i++) {
+    for (let i = 0; i <= 9999; i++) {
         const span = document.createElement('div');
         span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
-        span.textContent = i.toString().padStart(3, '0');
-        span.dataset.value = i.toString().padStart(3, '0');
+        span.textContent = i.toString().padStart(4, '0');
+        span.dataset.value = i.toString().padStart(4, '0');
         intWheel.appendChild(span);
     }
     
@@ -841,7 +841,7 @@ function initNativeWheels() {
             clearTimeout(intInputDebounceTimer);
             intInputDebounceTimer = setTimeout(() => {
                 const val = parseInt(intInput.value) || 0;
-                if (val >= 0 && val <= 999) {
+                if (val >= 0 && val <= 9999) {
                     syncInputToWheel('integer', val);
                 }
             }, 150);
@@ -1118,7 +1118,7 @@ function syncInputToWheel(type, value) {
     if (type === 'integer' && intWheel) {
         selectedInteger = value;
         // Format value with padding
-        const formattedValue = value.toString().padStart(3, '0');
+        const formattedValue = value.toString().padStart(4, '0');
         // Find element by data-value
         const targetElement = intWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
         if (targetElement) {
