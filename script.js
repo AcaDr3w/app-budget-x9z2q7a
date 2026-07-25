@@ -1935,6 +1935,8 @@ const card = document.createElement('div');
 // AGGIORNAMENTO UI PRINCIPALE
 // =====================================================================
 async function updateUI() {
+    const _month = document.getElementById('currentMonth').value;
+    if (_month) currentData.income = await db.income.where('month').equals(_month).toArray();
     let totalIncome = currentData.income.reduce((s,i) => s+i.amount,0);
     let totalPlanned = currentData.expenses.reduce((s,i) => s+i.planned,0);
     let totalActual = currentData.expenses.reduce((s,i) => s+i.actual,0);
