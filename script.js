@@ -2248,8 +2248,6 @@ function closeRendicontoPopup(event) {
 }
 
 async function buildRendicontoRows(type, month, prevMonth) {
-    const currentMap = {};
-    const previousMap = {};
     if (type === 'entrate') {
         const currentIncome = await getIncomesForMonth(month);
         const prevIncome = await getIncomesForMonth(prevMonth);
@@ -2260,35 +2258,15 @@ async function buildRendicontoRows(type, month, prevMonth) {
     if (type === 'previsto') {
         const currentExpenses = await db.expenses.where('month').equals(month).toArray();
         const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
-        currentExpenses.forEach(item => {
-            if ((item.planned || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + item.planned;
-        });
-        prevExpenses.forEach(item => {
-            if ((item.planned || 0) > 0) previousMap[item.category] = (previousMap[item.category] || 0) + item.planned;
-        });
-        const rows = Object.keys(currentMap).map(key => ({
-            label: key,
-            currentValue: currentMap[key] || 0,
-            previousValue: previousMap[key] || 0,
-            color: '#f97316'
-        })).filter(r => r.currentValue > 0 || r.previousValue > 0);
-        return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
+        const currentTotal = currentExpenses.reduce((sum, item) => sum + (item.planned || 0), 0);
+        const previousTotal = prevExpenses.reduce((sum, item) => sum + (item.planned || 0), 0);
+        return [{ label: 'Spese Previste', currentValue: currentTotal, previousValue: previousTotal, color: '#f97316' }];
     }
     const currentExpenses = await db.expenses.where('month').equals(month).toArray();
     const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
-    currentExpenses.forEach(item => {
-        if ((item.actual || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + item.actual;
-    });
-    prevExpenses.forEach(item => {
-        if ((item.actual || 0) > 0) previousMap[item.category] = (previousMap[item.category] || 0) + item.actual;
-    });
-    const rows = Object.keys(currentMap).map(key => ({
-        label: key,
-        currentValue: currentMap[key] || 0,
-        previousValue: previousMap[key] || 0,
-        color: '#ef4444'
-    })).filter(r => r.currentValue > 0 || r.previousValue > 0);
-    return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
+    const currentTotal = currentExpenses.reduce((sum, item) => sum + (item.actual || 0), 0);
+    const previousTotal = prevExpenses.reduce((sum, item) => sum + (item.actual || 0), 0);
+    return [{ label: 'Spese Sostenute', currentValue: currentTotal, previousValue: previousTotal, color: '#ef4444' }];
 }
 
 // =====================================================================
