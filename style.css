@@ -1214,7 +1214,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     gap: 10px;
     height: 150px;
     position: relative;
-    margin: 10px 0;
 }
 .wheel-container {
     height: 150px;
@@ -1297,13 +1296,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     background: #f1f5f9;
     border-radius: 16px;
     padding: 4px;
-    margin: 20px 0;
     overflow: hidden;
 }
 .toggle-option {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 10px 12px;
-    text-align: center;
     font-size: 14px;
     font-weight: 600;
     color: #64748b;
@@ -1325,7 +1325,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-top: 10px;
 }
 .sheet-input {
     width: 100%;
@@ -1370,6 +1369,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 #viewInput > .sheet-body {
     display: flex;
     flex-direction: column;
+    gap: 20px;
     flex: 1 1 auto;
     min-height: 100px;
     overflow-y: auto !important;
