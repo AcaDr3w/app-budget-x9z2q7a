@@ -654,6 +654,7 @@ function getCategoryCardBorder(catName) {
 // ===== BOTTOM SHEET STATE =====
 let sheetSelectedCategory = null;
 let sheetTransactionType = 'actual'; // 'actual' for Sostenuta, 'planned' for Prevista
+let editingExpenseId = null; // null = new, number = editing existing expense
 
 function openTransactionSheet(categoryName) {
     console.log("Card cliccata:", categoryName);
@@ -703,6 +704,7 @@ function closeTransactionSheet() {
     sheetSelectedCategory = null;
     sheetTransactionType = 'actual';
     sheetCurrentMacroGroup = null;
+    editingExpenseId = null;
     
     // Reset recurring toggle
     const recToggle = document.getElementById('recurringToggle');
@@ -1452,6 +1454,80 @@ function setupToggleType() {
     });
 }
 
+// Open bottom sheet in edit mode with pre-filled data
+function editExpense(id) {
+    const exp = currentData.expenses.find(e => e.id === id);
+    if (!exp) return;
+
+    editingExpenseId = id;
+    sheetSelectedCategory = exp.category;
+    sheetTransactionType = exp.planned > 0 && exp.actual === 0 ? 'planned' : 'actual';
+
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    const slider = document.querySelector('.sheet-slider');
+    const backBtn = document.getElementById('btn-back-to-categories');
+    const sheetTitle = document.getElementById('selected-category-title');
+    const intInput = document.getElementById('hiddenIntegerInput');
+    const decInput = document.getElementById('hiddenDecimalInput');
+    const sheetDate = document.getElementById('sheetDate');
+    const sheetNote = document.getElementById('sheetNote');
+    const toggleOptions = document.querySelectorAll('.toggle-option');
+
+    if (!overlay || !sheet) return;
+
+    document.body.classList.add('sheet-open');
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+
+    // Slide directly to input view, hide back button (category not changeable in edit)
+    if (slider) slider.style.transform = 'translateX(-100%)';
+    if (backBtn) backBtn.style.display = 'none';
+
+    if (sheetTitle) sheetTitle.textContent = exp.category;
+
+    // Pre-fill amount wheels
+    const intPart = Math.floor(exp.planned || exp.actual || 0);
+    const decPart = Math.round(((exp.planned || exp.actual || 0) - intPart) * 100);
+
+    initNativeWheels();
+    // Use setTimeout to let wheels render, then scroll
+    setTimeout(() => {
+        syncInputToWheel('integer', intPart);
+        syncInputToWheel('decimal', decPart);
+        if (intInput) intInput.value = intPart;
+        if (decInput) decInput.value = decPart;
+        selectedInteger = intPart;
+        selectedDecimal = decPart;
+    }, 50);
+
+    // Pre-fill date
+    if (sheetDate && exp.date) {
+        sheetDate.value = exp.date;
+    }
+
+    // Pre-fill note
+    if (sheetNote && exp.desc) {
+        sheetNote.value = exp.desc;
+    }
+
+    // Set toggle type
+    const isPlanned = sheetTransactionType === 'planned';
+    toggleOptions.forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === sheetTransactionType);
+    });
+
+    // Reset recurring toggle in edit mode
+    const recToggle = document.getElementById('recurringToggle');
+    const recContainer = document.getElementById('recurringUntilContainer');
+    const recUntil = document.getElementById('recurringUntil');
+    if (recToggle) recToggle.checked = false;
+    if (recContainer) recContainer.classList.remove('active');
+    if (recUntil) recUntil.value = '';
+
+    sheetCurrentMacroGroup = null;
+}
+
 // Save transaction from bottom sheet
 async function saveTransactionFromSheet() {
     const intInput = document.getElementById('hiddenIntegerInput');
@@ -1472,7 +1548,50 @@ async function saveTransactionFromSheet() {
     const date = sheetDate?.value || new Date().toISOString().slice(0, 10);
     const month = date.slice(0, 7);
     const note = sheetNote?.value.trim() || '';
-    
+
+    if (editingExpenseId) {
+        // EDIT MODE
+        const originalIdx = currentData.expenses.findIndex(e => e.id === editingExpenseId);
+        if (originalIdx === -1) { editingExpenseId = null; return; }
+
+        const originalExp = currentData.expenses[originalIdx];
+        const originalType = originalExp.planned > 0 && originalExp.actual === 0 ? 'planned' : 'actual';
+        const newType = sheetTransactionType;
+
+        if (originalType === newType) {
+            // CASO A: same type → update in place
+            originalExp.month = month;
+            originalExp.date = date;
+            originalExp.category = sheetSelectedCategory;
+            originalExp.desc = note || 'Aggiunto da mobile';
+            originalExp.planned = newType === 'planned' ? amount : 0;
+            originalExp.actual = newType === 'actual' ? amount : 0;
+            currentData.expenses[originalIdx] = originalExp;
+            await db.expenses.put(originalExp);
+        } else {
+            // CASO B: type changed → keep original untouched, create new clone
+            const cloneExp = {
+                id: Date.now(),
+                month, date,
+                category: sheetSelectedCategory,
+                desc: note || 'Aggiunto da mobile',
+                planned: newType === 'planned' ? amount : 0,
+                actual: newType === 'actual' ? amount : 0,
+                sharedPercentage: 0
+            };
+            currentData.expenses.push(cloneExp);
+            await db.expenses.put(cloneExp);
+            // Original expense is NOT modified
+        }
+
+        editingExpenseId = null;
+        closeTransactionSheet();
+        await updateUI();
+        showToast('Spesa aggiornata', false);
+        return;
+    }
+
+    // NEW EXPENSE (existing logic)
     const exp = {
         id: Date.now(),
         month: month,
@@ -2183,6 +2302,11 @@ async function updateUI() {
                 ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}
                 <button class="btn-del" onclick="deleteEntry('expense',${exp.id})">✕</button>
             </span>`;
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            editExpense(exp.id);
+        });
         listContainer.appendChild(row);
     });
 
@@ -2360,11 +2484,17 @@ async function renderExpenseList(type, month) {
             <span class="income-row-amount" style="color:${amountColor}">-${fmtEPlain(isSostenuto ? exp.actual : exp.planned)}</span>
             <button class="income-row-del" data-id="${exp.id}" title="Elimina">✕</button>
         `;
-        row.querySelector('.income-row-del').addEventListener('click', async () => {
+        row.querySelector('.income-row-del').addEventListener('click', async (ev) => {
+            ev.stopPropagation();
             if (confirm('Eliminare questa spesa?')) {
                 await deleteEntry('expense', exp.id);
                 await renderExpenseList(type, month);
             }
+        });
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            editExpense(exp.id);
         });
         container.appendChild(row);
     });
