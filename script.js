@@ -2144,12 +2144,15 @@ async function openRendicontoPopup(type) {
     }
     const incomeBtn = document.getElementById('btnNewIncome');
     const incomeListContainer = document.getElementById('incomeListContainer');
+    const expenseListContainer = document.getElementById('expenseListContainer');
     if (type === 'entrate') {
         if (incomeBtn) incomeBtn.style.display = 'block';
         if (incomeListContainer) { incomeListContainer.style.display = 'block'; await renderIncomeList(month); }
+        if (expenseListContainer) expenseListContainer.style.display = 'none';
     } else {
         if (incomeBtn) incomeBtn.style.display = 'none';
         if (incomeListContainer) incomeListContainer.style.display = 'none';
+        if (expenseListContainer) { expenseListContainer.style.display = 'block'; await renderExpenseList(type, month); }
     }
     overlay.classList.add('active');
     document.body.classList.add('sheet-open');
@@ -2199,6 +2202,44 @@ async function renderIncomeList(month) {
     });
 }
 
+async function renderExpenseList(type, month) {
+    const container = document.getElementById('expenseListContainer');
+    if (!container) return;
+    const all = await db.expenses.where('month').equals(month).toArray();
+    const isSostenuto = type === 'sostenuto';
+    const expenses = all.filter(e => isSostenuto ? (e.actual || 0) > 0 : (e.planned || 0) > 0)
+        .sort((a, b) => {
+            const dateA = a.date || a.month + '-01';
+            const dateB = b.date || b.month + '-01';
+            return dateA.localeCompare(dateB);
+        });
+    if (expenses.length === 0) {
+        container.innerHTML = '<div class="income-list-empty">Nessuna spesa registrata per questo mese.</div>';
+        return;
+    }
+    const amountColor = isSostenuto ? 'var(--sostenuto)' : 'var(--previsto)';
+    container.innerHTML = '';
+    expenses.forEach(exp => {
+        const row = document.createElement('div');
+        row.className = 'income-row';
+        const dateStr = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : exp.month.split('-').reverse().join('/');
+        row.innerHTML = `
+            <div class="income-row-left">
+                <span class="income-row-desc">${getCatIcon(exp.category)} ${exp.category} · ${exp.desc}</span>
+                <span class="income-row-date">${dateStr}</span>
+            </div>
+            <span class="income-row-amount" style="color:${amountColor}">-${fmtEPlain(isSostenuto ? exp.actual : exp.planned)}</span>
+            <button class="income-row-del" data-id="${exp.id}" title="Elimina">✕</button>
+        `;
+        row.querySelector('.income-row-del').addEventListener('click', async () => {
+            if (confirm('Eliminare questa spesa?')) {
+                await deleteEntry('expense', exp.id);
+                await renderExpenseList(type, month);
+            }
+        });
+        container.appendChild(row);
+    });
+}
 function closeRendicontoPopup(event) {
     event.preventDefault();
     event.stopPropagation();
