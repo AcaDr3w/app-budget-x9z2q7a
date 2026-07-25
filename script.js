@@ -1089,7 +1089,7 @@ async function saveIncomeFromSheet() {
         // Re-render income list if popup is still open
         if (document.getElementById('popup-rendiconto').classList.contains('active')) {
             const month2 = document.getElementById('currentMonth').value;
-            renderIncomeList(month2);
+            await renderIncomeList(month2);
         }
         showToast('Entrata aggiunta', false);
     } catch (err) {
@@ -2131,7 +2131,7 @@ async function openRendicontoPopup(type) {
     const incomeListContainer = document.getElementById('incomeListContainer');
     if (type === 'entrate') {
         if (incomeBtn) incomeBtn.style.display = 'block';
-        if (incomeListContainer) { incomeListContainer.style.display = 'block'; renderIncomeList(month); }
+        if (incomeListContainer) { incomeListContainer.style.display = 'block'; await renderIncomeList(month); }
     } else {
         if (incomeBtn) incomeBtn.style.display = 'none';
         if (incomeListContainer) incomeListContainer.style.display = 'none';
@@ -2140,10 +2140,10 @@ async function openRendicontoPopup(type) {
     document.body.classList.add('sheet-open');
 }
 
-function renderIncomeList(month) {
+async function renderIncomeList(month) {
     const container = document.getElementById('incomeListContainer');
     if (!container) return;
-    const incomes = currentData.income.filter(i => i.month === month);
+    const incomes = await db.income.where('month').equals(month).toArray();
     if (incomes.length === 0) {
         container.innerHTML = '<div class="income-list-empty">Nessuna entrata registrata per questo mese.</div>';
         return;
@@ -2164,7 +2164,7 @@ function renderIncomeList(month) {
         row.querySelector('.income-row-del').addEventListener('click', async () => {
             if (confirm('Eliminare questa entrata?')) {
                 await deleteEntry('income', inc.id);
-                renderIncomeList(month);
+                await renderIncomeList(month);
             }
         });
         container.appendChild(row);
