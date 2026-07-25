@@ -253,12 +253,6 @@
             </div>
         </div>
 
-        <!-- MOBILE TOP ACTION BAR (hidden on desktop) -->
-        <div class="analisi-top-actions hide-desktop">
-            <button class="analisi-icon-btn" onclick="openIaModal()" aria-label="Analisi IA">🤖</button>
-            <button class="analisi-icon-btn" onclick="openArchiveModal()" aria-label="Archivio Mesi">📋</button>
-        </div>
-
         <div class="card" id="recordsHubContainer">
             <h2 class="hide-mobile">🏆 Hub dei Record Personali</h2>
             <div class="records-hub-scroll">
@@ -308,6 +302,12 @@
                     <tbody id="historyTableBody"></tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- MOBILE ACTION HUB (bottom) -->
+        <div id="historyActionHub" class="hide-desktop">
+            <button data-action="ia-analisi">🤖 I.A.</button>
+            <button data-action="archivio">📋 Mesi Archiviati</button>
         </div>
     </div>
 

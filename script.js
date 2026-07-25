@@ -2530,6 +2530,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (futureSheet) {
         futureSheet.addEventListener('click', (e) => e.stopPropagation());
     }
+
+    const historyHub = document.getElementById('historyActionHub');
+    if (historyHub) {
+        historyHub.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            if (btn.dataset.action === 'ia-analisi') openIaModal();
+            else if (btn.dataset.action === 'archivio') openArchiveModal();
+        });
+    }
 });
 
 // Swipe-to-close per futureBottomSheet
