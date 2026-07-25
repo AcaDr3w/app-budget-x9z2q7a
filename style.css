@@ -916,8 +916,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         overflow: hidden !important;
         min-height: 0 !important;
-        padding-bottom: 0 !important;
+        padding: 0 !important;
         margin-bottom: 0 !important;
+    }
+
+    /* Pillola mese - compatta */
+    .month-selector-pill {
+        margin: 4px 16px 6px !important;
+        padding: 8px 14px !important;
     }
     
     /* Banner pianificazioni - flex-shrink: 0 per viewport */
@@ -1012,8 +1018,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         grid-template-columns: 1fr 1fr !important;
         gap: 12px !important;
         width: 100% !important;
-        margin: 6px 0 0 !important;
-        overflow: hidden !important;
+        margin: 0 !important;
+        overflow-y: auto !important;
         align-content: start;
     }
     
@@ -1026,44 +1032,43 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         align-items: center !important;
         padding: 15px !important;
     }
-    
+
+    /* Action Hub Mese (Ricerca | I.A.) - stile identico a Analisi */
+    #mese-action-hub {
+        display: flex !important;
+        gap: 8px !important;
+        flex-shrink: 0 !important;
+        padding: 2px 16px 4px !important;
+    }
+    #mese-action-hub button {
+        flex: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        padding: 12px 8px !important;
+        border-radius: 16px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        border: none !important;
+        background: var(--panel) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        color: var(--primary) !important;
+        margin: 0 !important;
+        transition: transform 0.15s !important;
+    }
+    #mese-action-hub button:active {
+        transform: scale(0.96) !important;
+    }
+
     /* Contenitore dei 3 Riepiloghi */
     .summary-grid {
         flex-shrink: 0 !important;
         width: 100% !important;
-        margin-top: 5px !important;
-        margin-bottom: 0 !important;
+        margin: 2px 0 0 !important;
+        padding: 0 15px 4px !important;
     }
 
-    /* Toolbar azioni Mese (Ricerca + I.A.) */
-    .mese-top-actions {
-        flex-shrink: 0 !important;
-        display: flex !important;
-        justify-content: flex-end !important;
-        gap: 8px !important;
-        padding: 0 16px 4px !important;
-    }
-    .mese-action-btn {
-        width: 36px !important;
-        height: 36px !important;
-        border-radius: 50% !important;
-        background: var(--panel) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-        border: none !important;
-        font-size: 17px !important;
-        cursor: pointer !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-        line-height: 1 !important;
-    }
-    .mese-action-btn:active {
-        transform: scale(0.92) !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
-    }
 }
 
 /* ===== SMALL SCREEN ===== */
@@ -1715,8 +1720,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         grid-template-columns: 1fr 1fr;
         gap: 12px !important;
         padding: 8px 15px !important;
-        margin-top: 5px;
-        overflow: hidden !important;
+        margin-top: 0;
+        overflow-y: auto !important;
         align-content: start;
     }
 

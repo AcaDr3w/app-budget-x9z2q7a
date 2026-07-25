@@ -3314,7 +3314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const meseActions = document.querySelector('.mese-top-actions');
+    const meseActions = document.getElementById('mese-action-hub');
     if (meseActions) {
         meseActions.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-action]');
