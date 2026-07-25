@@ -1384,9 +1384,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     overflow: hidden;
 }
 
-/* DEBUG TEST A - overflow visible */
+/* DEBUG TEST B - height override */
 .bottom-sheet {
-    overflow: visible !important;
+    height: 100% !important;
+    max-height: none !important;
 }
 .bottom-sheet .sheet-slider .sheet-view {
     -webkit-overflow-scrolling: touch;
