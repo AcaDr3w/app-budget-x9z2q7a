@@ -515,7 +515,7 @@ async function checkDatabaseHealth() {
 async function loadMonthData() {
     const month = document.getElementById('currentMonth').value;
     if (!month) return;
-    let incomes = await db.income.where('month').equals(month).toArray();
+    let incomes = await getIncomesForMonth(month);
     let expenses = await db.expenses.where('month').equals(month).toArray();
     currentData = {income: incomes, expenses: expenses};
     let mData = await db.months.get(month);
@@ -1949,7 +1949,7 @@ const card = document.createElement('div');
 // =====================================================================
 async function updateUI() {
     const _month = document.getElementById('currentMonth').value;
-    if (_month) currentData.income = await db.income.where('month').equals(_month).toArray();
+    if (_month) currentData.income = await getIncomesForMonth(_month);
     let totalIncome = currentData.income.reduce((s,i) => s+i.amount,0);
     let totalPlanned = currentData.expenses.reduce((s,i) => s+i.planned,0);
     let totalActual = currentData.expenses.reduce((s,i) => s+i.actual,0);
@@ -2155,15 +2155,18 @@ async function openRendicontoPopup(type) {
     document.body.classList.add('sheet-open');
 }
 
+async function getIncomesForMonth(month) {
+    const all = await db.income.toArray();
+    return all.filter(i => {
+        const refMonth = i.date ? i.date.slice(0, 7) : i.month;
+        return refMonth === month;
+    });
+}
+
 async function renderIncomeList(month) {
     const container = document.getElementById('incomeListContainer');
     if (!container) return;
-    const allIncomes = await db.income.toArray();
-    const incomes = allIncomes
-        .filter(inc => {
-            const refMonth = inc.date ? inc.date.slice(0, 7) : inc.month;
-            return refMonth === month;
-        })
+    const incomes = (await getIncomesForMonth(month))
         .sort((a, b) => {
             const dateA = a.date || a.month + '-01';
             const dateB = b.date || b.month + '-01';
@@ -2207,8 +2210,8 @@ async function buildRendicontoRows(type, month, prevMonth) {
     const currentMap = {};
     const previousMap = {};
     if (type === 'entrate') {
-        const currentIncome = await db.income.where('month').equals(month).toArray();
-        const prevIncome = await db.income.where('month').equals(prevMonth).toArray();
+        const currentIncome = await getIncomesForMonth(month);
+        const prevIncome = await getIncomesForMonth(prevMonth);
         const currentTotal = currentIncome.reduce((sum, item) => sum + item.amount, 0);
         const previousTotal = prevIncome.reduce((sum, item) => sum + item.amount, 0);
         return [{ label: 'Entrate', currentValue: currentTotal, previousValue: previousTotal, color: '#10b981' }];
