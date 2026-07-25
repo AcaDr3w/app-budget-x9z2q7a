@@ -1570,6 +1570,10 @@ async function saveTransactionFromSheet() {
             await db.expenses.put(originalExp);
         } else {
             // CASO B: type changed → keep original untouched, create new clone
+            if (originalType === 'planned' && newType === 'actual') {
+                originalExp.settled = true;
+                await db.expenses.put(originalExp);
+            }
             const cloneExp = {
                 id: Date.now(),
                 month, date,
@@ -1581,7 +1585,7 @@ async function saveTransactionFromSheet() {
             };
             currentData.expenses.push(cloneExp);
             await db.expenses.put(cloneExp);
-            // Original expense is NOT modified
+            // Original expense is NOT modified otherwise
         }
 
         editingExpenseId = null;
@@ -1674,12 +1678,11 @@ async function saveRecurringClones(originalExp, endMonthValue) {
     let y = startDate.getFullYear();
     let m = startDate.getMonth();
     const endMonth = endMonthValue || '';
-    const maxDefault = endMonth ? Infinity : 12;
     let count = 0;
 
     while (true) {
         count++;
-        if (!endMonth && count > maxDefault) break;
+        if (!endMonth && count > 240) break;
 
         m++;
         if (m > 11) { m = 0; y++; }
@@ -2292,11 +2295,12 @@ async function updateUI() {
     filteredExp.sort((a,b) => new Date(b.date) - new Date(a.date));
     filteredExp.forEach(exp => {
         const isPending = exp.planned > 0 && exp.actual === 0;
+        const isSettled = exp.settled === true;
         const fd = exp.date.split('-').reverse().slice(0,2).join('/');
         const sharedTxt = exp.sharedPercentage > 0 ? ` <span style="font-size:9px;color:#3b82f6;">(${exp.sharedPercentage}%)</span>` : '';
         const row = document.createElement('div'); row.className = 'item-row';
         row.innerHTML = `
-            <span class="item-name">${isPending ? '⏳ ' : ''}${getCatIcon(exp.category)} <strong>${exp.category}</strong>${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
+            <span class="item-name">${isPending ? '⏳ ' : ''}${getCatIcon(exp.category)} <strong>${exp.category}</strong>${isSettled ? '<span class="settled-badge">Saldata</span>' : ''}${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
             <span class="item-vals">
                 <div><span class="val-p">Stima: ${fmtE(exp.planned)}</span><span class="val-s">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</span></div>
                 ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}
@@ -2476,9 +2480,10 @@ async function renderExpenseList(type, month) {
         const row = document.createElement('div');
         row.className = 'income-row';
         const dateStr = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : exp.month.split('-').reverse().join('/');
+        const isSettled = exp.settled === true;
         row.innerHTML = `
             <div class="income-row-left">
-                <span class="income-row-desc">${getCatIcon(exp.category)} ${exp.category} · ${exp.desc}</span>
+                <span class="income-row-desc">${getCatIcon(exp.category)} ${exp.category}${isSettled ? '<span class="settled-badge">Saldata</span>' : ''} · ${exp.desc}</span>
                 <span class="income-row-date">${dateStr}</span>
             </div>
             <span class="income-row-amount" style="color:${amountColor}">-${fmtEPlain(isSostenuto ? exp.actual : exp.planned)}</span>
