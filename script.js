@@ -274,9 +274,7 @@ let selectedFilterDate = null;
 let selectedFilterCategory = null;
 let searchQuery = "";
 let chartB = null, chartC = null;
-let historyBarChart = null;
 let tradingChart = null;
-let activeChartType = 'bars';
 
  // ===== VIEW MODE STATE =====
  let currentViewMode = 'full'; // 'full' or 'tabs'
@@ -477,7 +475,7 @@ function switchTab(tabId, buttonEl) {
     const navItem = document.getElementById(navMap[tabId]);
     if (navItem) navItem.classList.add('active');
     updateActivePageSubtitle(tabId);
-    if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
+    if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); }
     if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
     window.scrollTo(0, 0);
 }
@@ -2378,28 +2376,6 @@ async function depositToSavingsGoal() {
     renderSavingsGoals();
 }
 
-let chartToggleInitialized = false;
-function initChartToggle() {
-    if (chartToggleInitialized) return;
-    chartToggleInitialized = true;
-    const btns = document.querySelectorAll('.chart-toggle-btn');
-    btns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            btns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeChartType = btn.dataset.chart;
-            document.querySelectorAll('.chart-panel').forEach(p => p.classList.remove('active'));
-            const panel = document.getElementById('chartPanel' + (activeChartType === 'bars' ? 'Bars' : 'Line'));
-            if (panel) panel.classList.add('active');
-            // Trigger Chart.js resize after container becomes visible
-            setTimeout(() => {
-                const chart = activeChartType === 'bars' ? historyBarChart : tradingChart;
-                if (chart && typeof chart.resize === 'function') chart.resize();
-            }, 50);
-        });
-    });
-}
-
 // =====================================================================
 // MODAL FUNCTIONS (Mobile Analisi Tab)
 // =====================================================================
@@ -2453,6 +2429,68 @@ async function renderArchiveModalContent() {
         `;
         container.appendChild(card);
     });
+}
+
+// =====================================================================
+// HISTORY BARS POPUP
+// =====================================================================
+let historyBarChartInstances = [];
+
+async function openHistoryBarsPopup() {
+    let months = await db.months.toArray();
+    months.sort((a,b) => b.month.localeCompare(a.month));
+    const body = document.getElementById('historyBarsPopupBody');
+    if (!body) return;
+    body.innerHTML = '';
+    if (months.length === 0) {
+        body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px 0;font-size:13px;">Nessun mese archiviato.</div>';
+    } else {
+        for (const m of months) {
+            const sec = document.createElement('div');
+            sec.className = 'history-month-section';
+            const monthLabel = m.month.split('-').reverse().join('/');
+            sec.innerHTML = `
+                <div class="history-month-header">${monthLabel}</div>
+                <div class="history-month-chart-wrap">
+                    <canvas></canvas>
+                </div>
+            `;
+            body.appendChild(sec);
+            const canvas = sec.querySelector('canvas');
+            const ctx = canvas.getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Entrate', 'Budget', 'Speso'],
+                    datasets: [{
+                        data: [m.totalIncome || 0, m.totalPlanned || 0, m.totalActual || 0],
+                        backgroundColor: ['#10b981', '#f97316', '#ef4444'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+            historyBarChartInstances.push(chart);
+        }
+    }
+    document.getElementById('historyBarsPopup').classList.add('active');
+    document.body.classList.add('sheet-open');
+}
+
+function closeHistoryBarsPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    historyBarChartInstances.forEach(c => c.destroy());
+    historyBarChartInstances = [];
+    document.getElementById('historyBarsPopup').classList.remove('active');
+    document.body.classList.remove('sheet-open');
 }
 
 async function runHistoryAnalysisIAModal() {
@@ -2520,17 +2558,6 @@ async function renderGlobalHistory() {
             tbody.appendChild(tr);
         });
     }
-    if (historyBarChart) historyBarChart.destroy();
-    const filtered = hd.slice(-6);
-    const labels = filtered.map(d => d.month.split('-').reverse().join('/'));
-    historyBarChart = new Chart(document.getElementById('historyBarChart').getContext('2d'), {
-        type:'bar', data:{labels, datasets:[
-            {label:'Entrate', data:filtered.map(d=>d.income), backgroundColor:'#10b981', borderRadius:4},
-            {label:'Budget Previsto', data:filtered.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
-            {label:'Spesa Effettiva', data:filtered.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
-        ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}}}
-    });
 }
 
 // =====================================================================

@@ -275,19 +275,10 @@
         </div>
 
         <div class="card" id="chartsCard">
-            <div class="chart-toggle-pill">
-                <button class="chart-toggle-btn active" data-chart="bars">📊 Storico Barrette</button>
-                <button class="chart-toggle-btn" data-chart="line">📈 Andamento Linee</button>
-            </div>
-            <div class="chart-panel active" id="chartPanelBars">
-                <h2 class="hide-mobile">📊 Andamento Storico Plurimensile</h2>
-                <div class="large-chart-container"><canvas id="historyBarChart"></canvas></div>
-            </div>
-            <div class="chart-panel" id="chartPanelLine">
-                <h2 class="hide-mobile">📈 Grafico Monitoraggio Continuo</h2>
-                <p class="hide-mobile" style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
-                <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
-            </div>
+            <h2 class="hide-mobile">📈 Grafico Monitoraggio Continuo</h2>
+            <p class="hide-mobile" style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
+            <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
+            <button id="btnHistoryBars" class="history-bars-btn" onclick="openHistoryBarsPopup()">📊 Storico Barrette</button>
         </div>
 
         <!-- DESKTOP TABLE (hidden on mobile) -->
@@ -333,6 +324,15 @@
             <button class="popup-close" onclick="closeArchiveModal()">×</button>
             <h3 style="margin:0 0 12px;">📋 Registro Mesi Archiviati</h3>
             <div id="archiveModalBody" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+    </div>
+
+    <!-- HISTORY BARS POPUP -->
+    <div id="historyBarsPopup" class="popup-overlay" onclick="closeHistoryBarsPopup(event)">
+        <div class="popup-panel" onclick="event.stopPropagation()">
+            <button class="popup-close" onclick="closeHistoryBarsPopup()">×</button>
+            <h3 style="margin:0 0 12px;">📊 Storico Barrette Mensile</h3>
+            <div id="historyBarsPopupBody"></div>
         </div>
     </div>
 

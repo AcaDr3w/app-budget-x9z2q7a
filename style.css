@@ -367,40 +367,62 @@ button:active { transform: scale(0.98); }
 .chart-container { position: relative; width: 100%; height: 240px; }
 .large-chart-container { position: relative; width: 100%; height: 340px; margin-bottom: 14px; }
 
-/* ===== CHART TOGGLE PILL ===== */
-.chart-toggle-pill {
+/* ===== HISTORY BARS BUTTON ===== */
+.history-bars-btn {
     display: flex;
-    gap: 4px;
-    background: #f1f5f9;
-    border-radius: 20px;
-    padding: 4px;
-    margin-bottom: 14px;
-    overflow: hidden;
-}
-.chart-toggle-btn {
-    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 14px 12px;
     border: none;
-    padding: 10px 12px;
-    border-radius: 16px;
-    font-size: 12px;
-    font-weight: 600;
-    background: transparent;
-    color: #64748b;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: var(--primary);
     cursor: pointer;
     transition: all 0.2s;
-    white-space: nowrap;
-    margin: 0;
+    margin: 12px 0 0;
+    box-shadow: none;
 }
-.chart-toggle-btn.active {
-    background: white;
-    color: #1e293b;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.history-bars-btn:hover {
+    background: #e2e8f0;
 }
-.chart-panel {
-    display: none;
+.history-bars-btn:active {
+    transform: scale(0.98);
 }
-.chart-panel.active {
-    display: block;
+
+/* ===== HISTORY BARS POPUP ===== */
+#historyBarsPopup .popup-panel {
+    width: min(560px, 100%);
+}
+#historyBarsPopupBody {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 4px;
+}
+.history-month-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fafbfc;
+}
+.history-month-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+.history-month-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 200px;
 }
 
 /* ===== RECORDS HUB CAROUSEL ===== */
@@ -580,10 +602,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         display: flex !important;
         flex-direction: column !important;
-        overflow: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain !important;
         gap: 10px;
-        padding: 8px 12px;
+        padding: 8px 12px 4px;
         box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* Records hub — griglia 3 colonne */
@@ -629,29 +653,17 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         margin-bottom: 0;
         padding: 8px 10px;
     }
-    #chartsCard .chart-toggle-pill {
-        margin-bottom: 6px;
-        flex-shrink: 0;
-    }
-    #chartsCard .chart-toggle-btn {
-        padding: 6px 10px;
-        font-size: 11px;
-    }
-    #chartsCard .chart-panel.active {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-    }
     #chartsCard .large-chart-container {
         flex: 1;
         height: auto !important;
         max-height: none;
         margin-bottom: 0;
     }
-    #chartsCard .chart-panel h2,
-    #chartsCard .chart-panel p {
-        display: none !important;
+    #chartsCard .history-bars-btn {
+        flex-shrink: 0;
+        margin: 8px 0 0;
+        padding: 12px 10px;
+        font-size: 13px;
     }
 }
 
