@@ -154,6 +154,18 @@
                         <label>Quota a tuo carato % (opzionale)</label>
                         <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
                     </div>
+
+                    <div class="recurring-toggle-wrapper">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="recurringToggleDesktop">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Ripeti ogni mese</span>
+                    </div>
+                    <div class="recurring-until-container" id="recurringUntilContainerDesktop">
+                        <input type="month" id="recurringUntilDesktop" class="recurring-until-input" placeholder="Fino a (opzionale)">
+                    </div>
+
                     <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
                 </div>
 
@@ -568,6 +580,17 @@
                     <div class="sheet-inputs">
                         <input type="date" id="sheetDate" class="sheet-input">
                         <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Spesa Esselunga)">
+                    </div>
+
+                    <div class="recurring-toggle-wrapper">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="recurringToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Ripeti ogni mese</span>
+                    </div>
+                    <div class="recurring-until-container" id="recurringUntilContainer">
+                        <input type="month" id="recurringUntil" class="sheet-input recurring-until-input" placeholder="Fino a (opzionale)">
                     </div>
                 </div>
                 <div class="sheet-footer">

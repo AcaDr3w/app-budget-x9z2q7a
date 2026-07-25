@@ -704,6 +704,14 @@ function closeTransactionSheet() {
     sheetTransactionType = 'actual';
     sheetCurrentMacroGroup = null;
     
+    // Reset recurring toggle
+    const recToggle = document.getElementById('recurringToggle');
+    const recContainer = document.getElementById('recurringUntilContainer');
+    const recUntil = document.getElementById('recurringUntil');
+    if (recToggle) recToggle.checked = false;
+    if (recContainer) recContainer.classList.remove('active');
+    if (recUntil) recUntil.value = '';
+    
     // Reset slider position
     const slider = document.querySelector('.sheet-slider');
     if (slider) slider.style.transform = 'translateX(0)';
@@ -1479,6 +1487,14 @@ async function saveTransactionFromSheet() {
     try {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
+
+        // Recurring logic
+        const recToggle = document.getElementById('recurringToggle');
+        if (recToggle?.checked) {
+            const recUntil = document.getElementById('recurringUntil');
+            await saveRecurringClones(exp, recUntil?.value || '');
+        }
+
         closeTransactionSheet();
         await updateUI();
         showToast('Spesa aggiunta', false);
@@ -1511,8 +1527,70 @@ async function saveTransactionFromSheet() {
     }
 })();
 
+// Setup recurring toggle show/hide animation
+function setupRecurringToggle() {
+    const toggle = document.getElementById('recurringToggle');
+    const container = document.getElementById('recurringUntilContainer');
+    if (toggle && container) {
+        toggle.addEventListener('change', () => {
+            container.classList.toggle('active', toggle.checked);
+        });
+    }
+    const toggleDesktop = document.getElementById('recurringToggleDesktop');
+    const containerDesktop = document.getElementById('recurringUntilContainerDesktop');
+    if (toggleDesktop && containerDesktop) {
+        toggleDesktop.addEventListener('change', () => {
+            containerDesktop.classList.toggle('active', toggleDesktop.checked);
+        });
+    }
+}
+
+// Helper: generate recurring clones
+async function saveRecurringClones(originalExp, endMonthValue) {
+    const amount = originalExp.planned || originalExp.actual;
+    if (!amount || amount <= 0) return;
+
+    const startDate = new Date(originalExp.date);
+    const day = startDate.getDate();
+    let y = startDate.getFullYear();
+    let m = startDate.getMonth();
+    const endMonth = endMonthValue || '';
+    const maxDefault = endMonth ? Infinity : 12;
+    let count = 0;
+
+    while (true) {
+        count++;
+        if (!endMonth && count > maxDefault) break;
+
+        m++;
+        if (m > 11) { m = 0; y++; }
+
+        const nextMonth = `${y}-${String(m + 1).padStart(2, '0')}`;
+        if (endMonth && nextMonth > endMonth) break;
+
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        const cloneDate = `${nextMonth}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;
+
+        const clone = {
+            id: Date.now() + count,
+            month: nextMonth,
+            date: cloneDate,
+            category: originalExp.category,
+            desc: originalExp.desc,
+            planned: amount,
+            actual: 0,
+            sharedPercentage: originalExp.sharedPercentage || 0
+        };
+        currentData.expenses.push(clone);
+        await db.expenses.put(clone);
+    }
+}
+
 // Initialize toggle when DOM ready
-document.addEventListener('DOMContentLoaded', setupToggleType);
+document.addEventListener('DOMContentLoaded', () => {
+    setupToggleType();
+    setupRecurringToggle();
+});
 
 // Initialize macro dash cards and back button
 document.addEventListener('DOMContentLoaded', () => {
@@ -1785,10 +1863,20 @@ async function addExpense() {
     try {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
+
+        const recToggle = document.getElementById('recurringToggleDesktop');
+        if (recToggle?.checked) {
+            const recUntil = document.getElementById('recurringUntilDesktop');
+            await saveRecurringClones(exp, recUntil?.value || '');
+        }
+
         document.getElementById('expDesc').value = '';
         document.getElementById('expPlanned').value = '';
         document.getElementById('expActual').value = '';
         document.getElementById('expShared').value = '';
+        if (recToggle) recToggle.checked = false;
+        const recContainer = document.getElementById('recurringUntilContainerDesktop');
+        if (recContainer) recContainer.classList.remove('active');
         await updateUI();
         await checkDatabaseHealth();
     } catch (err) {

@@ -1353,6 +1353,81 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     flex: 1;
 }
 
+/* ===== RECURRING TOGGLE (Ripeti ogni mese) ===== */
+.recurring-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 26px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.toggle-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #cbd5e1;
+    border-radius: 26px;
+    transition: background 0.3s ease;
+}
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.toggle-switch input:checked + .toggle-slider {
+    background: #34c759;
+}
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+}
+.toggle-label {
+    font-size: 14px;
+    color: #334155;
+    user-select: none;
+}
+.recurring-until-container {
+    overflow: clip;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+                opacity 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+                margin 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    margin-top: 0;
+}
+.recurring-until-container.active {
+    max-height: 80px;
+    opacity: 1;
+    margin-top: 8px;
+}
+.recurring-until-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    box-sizing: border-box;
+}
+
 /* ===== SHEET SLIDER FOR HORIZONTAL TRANSITION ===== */
 .sheet-slider {
     display: flex;
