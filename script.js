@@ -1028,7 +1028,7 @@ function slideToInputView(categoryName) {
     sheetTransactionType = 'actual';
     
     const slider = document.querySelector('.sheet-slider');
-    if (slider) slider.style.transform = 'translateX(-100%)';
+    // if (slider) slider.style.transform = 'translateX(-100%)';  // DEBUG TEST E - bypass slide
     
     // Show back button
     const backBtn = document.getElementById('btn-back-to-categories');

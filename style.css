@@ -1389,6 +1389,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .bottom-sheet {
     min-height: 60dvh !important;
 }
+
+/* DEBUG TEST E - nascondi categories view per forzare viewInput visibile */
+#viewCategories { display: none !important; }
 .bottom-sheet .sheet-slider .sheet-view {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
