@@ -1622,6 +1622,35 @@ function setupCategoryForm() {
             }
         });
     }
+    // Emoji picker: tap button → show hidden input → native emoji keyboard
+    const pickerBtn = document.getElementById('emojiPickerBtn');
+    const emojiInput = document.getElementById('emojiInput');
+    if (pickerBtn && emojiInput) {
+        pickerBtn.addEventListener('click', () => {
+            emojiInput.value = '';
+            emojiInput.style.position = 'fixed';
+            emojiInput.style.opacity = '0';
+            emojiInput.style.pointerEvents = 'none';
+            emojiInput.focus();
+        });
+        emojiInput.addEventListener('input', () => {
+            const val = emojiInput.value.trim();
+            if (val) {
+                // Take the last character (in case multi-codepoint emoji sequence)
+                const emoji = [...val].pop() || val;
+                pickerBtn.textContent = emoji;
+            }
+            emojiInput.style.position = '';
+            emojiInput.style.opacity = '';
+            emojiInput.style.pointerEvents = '';
+            emojiInput.blur();
+        });
+        emojiInput.addEventListener('blur', () => {
+            emojiInput.style.position = '';
+            emojiInput.style.opacity = '';
+            emojiInput.style.pointerEvents = '';
+        });
+    }
 }
 
 function editCategory(cat) {
@@ -1633,6 +1662,8 @@ function editCategory(cat) {
     }
     const sel = document.getElementById('newCatMacro');
     if (sel) sel.value = macro;
+    const pickerBtn = document.getElementById('emojiPickerBtn');
+    if (pickerBtn) pickerBtn.textContent = getCatIcon(cat);
     const btn = document.getElementById('btnSaveCategory');
     if(btn) {
         btn.innerText = 'Salva';
@@ -1665,7 +1696,8 @@ async function saveCategory() {
             }
             if (!userMacroCategories[macro]) userMacroCategories[macro] = [];
             if (!userMacroCategories[macro].includes(name)) userMacroCategories[macro].push(name);
-            categoryIconMap[name] = categoryIconMap[name] || MACRO_ICON[macro] || '🏷️';
+            const chosenEmoji = document.getElementById('emojiPickerBtn')?.textContent || '';
+            categoryIconMap[name] = chosenEmoji || categoryIconMap[name] || MACRO_ICON[macro] || '🏷️';
             await db.categories.put({name, macro, icon: categoryIconMap[name]});
             
             categoryToEdit = null;
@@ -1678,13 +1710,16 @@ async function saveCategory() {
             if (userCategories.includes(name)) return;
             if (!userMacroCategories[macro]) userMacroCategories[macro] = [];
             userMacroCategories[macro].push(name);
-            categoryIconMap[name] = MACRO_ICON[macro] || '🏷️';
+            const chosenEmoji = document.getElementById('emojiPickerBtn')?.textContent || '';
+            categoryIconMap[name] = chosenEmoji && chosenEmoji !== '🏷️' ? chosenEmoji : (MACRO_ICON[macro] || '🏷️');
             await db.categories.put({name, macro, icon: categoryIconMap[name]});
         }
         rebuildUserCategories();
         saveMacroToLocalStorage();
         await updateGlobalVersion();
         input.value = '';
+        const pickerBtn = document.getElementById('emojiPickerBtn');
+        if (pickerBtn) pickerBtn.textContent = '🏷️';
         renderCategoriesDropdown();
         renderCategorySettings();
         renderImportCheckboxList();

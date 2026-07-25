@@ -108,6 +108,18 @@ body.sheet-open {
 .backup-action-grid button { width: 100%; margin: 0; }
 #btnInstallApp { max-width: 300px; width: 100%; }
 .popup-body { overflow-y: auto; overscroll-behavior: contain; max-height: 65vh; padding-right: 4px; }
+.emoji-picker-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid #cbd5e1;
+    background: #f8fafc; font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    padding: 0; margin: 0; transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.emoji-picker-btn:active { background: #e2e8f0; }
+.emoji-input-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); border: 0; opacity: 0;
+}
 
 /* Responsive form controls */
 .responsive-input, .responsive-select { width: 100%; max-width: 100%; padding: 12px 14px; font-size: 14px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; box-sizing: border-box; }
