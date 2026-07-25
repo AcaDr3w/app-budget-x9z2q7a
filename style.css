@@ -1366,6 +1366,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     flex-direction: column;
     height: 100%;
     min-height: 250px;
+    background: #ff9999 !important;
 }
 #viewInput > .sheet-body {
     display: flex;
@@ -1381,7 +1382,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .bottom-sheet .sheet-slider {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible !important;
 }
 
 /* DEBUG TEST C - min-height safety */
