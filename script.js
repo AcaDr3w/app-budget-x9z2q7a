@@ -2682,6 +2682,172 @@ function closePopup(name, event) {
     if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
 
+// =====================================================================
+// POPUP RICERCA
+// =====================================================================
+function openSearchPopup() {
+    const popup = document.getElementById('searchPopup');
+    if (!popup) return;
+    popup.classList.add('active');
+    document.body.classList.add('sheet-open');
+    document.getElementById('searchPopupInput').value = '';
+    document.getElementById('searchResultsList').innerHTML = '<div class="income-list-empty">Digita per cercare...</div>';
+    document.getElementById('searchPeriodSelect').value = 'current';
+    document.getElementById('searchCustomMonth').style.display = 'none';
+    document.getElementById('searchPopupInput').focus();
+}
+
+function closeSearchPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const popup = document.getElementById('searchPopup');
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+}
+
+function toggleSearchCustomMonth() {
+    const sel = document.getElementById('searchPeriodSelect');
+    const customInput = document.getElementById('searchCustomMonth');
+    if (!sel || !customInput) return;
+    customInput.style.display = sel.value === 'custom' ? 'block' : 'none';
+    if (sel.value === 'custom' && !customInput.value) {
+        customInput.value = document.getElementById('currentMonth').value;
+    }
+    filterSearchResults();
+}
+
+async function filterSearchResults() {
+    const query = document.getElementById('searchPopupInput').value.trim().toLowerCase();
+    const period = document.getElementById('searchPeriodSelect').value;
+    const resultsList = document.getElementById('searchResultsList');
+    if (!resultsList) return;
+
+    if (!query) {
+        resultsList.innerHTML = '<div class="income-list-empty">Digita per cercare...</div>';
+        return;
+    }
+
+    let expenses = [];
+    let incomes = [];
+
+    if (period === 'current') {
+        const _month = document.getElementById('currentMonth').value;
+        expenses = currentData.expenses;
+        incomes = await getIncomesForMonth(_month);
+    } else if (period === 'all') {
+        expenses = await db.expenses.toArray();
+        incomes = await db.income.toArray();
+    } else if (period === 'custom') {
+        const m = document.getElementById('searchCustomMonth').value;
+        if (!m) { resultsList.innerHTML = '<div class="income-list-empty">Seleziona un mese.</div>'; return; }
+        expenses = await db.expenses.where('month').equals(m).toArray();
+        incomes = await db.income.where('month').equals(m).toArray();
+    }
+
+    const filteredExp = expenses.filter(e =>
+        (e.desc || '').toLowerCase().includes(query) ||
+        (e.category || '').toLowerCase().includes(query) ||
+        (e.date || '').includes(query)
+    );
+    const filteredInc = incomes.filter(i =>
+        (i.desc || '').toLowerCase().includes(query) ||
+        (i.date || '').includes(query)
+    );
+
+    if (filteredExp.length === 0 && filteredInc.length === 0) {
+        resultsList.innerHTML = '<div class="income-list-empty">Nessun risultato trovato.</div>';
+        return;
+    }
+
+    let html = '';
+    filteredInc.forEach(inc => {
+        const fd = inc.date ? inc.date.split('-').reverse().slice(0,2).join('/') : '';
+        html += `<div class="income-row">
+            <div class="income-row-left">
+                <span class="income-row-desc">💰 ${inc.desc}</span>
+                <span class="income-row-date">${fd}</span>
+            </div>
+            <span class="income-row-amount">+${fmtEPlain(inc.amount)}</span>
+        </div>`;
+    });
+    filteredExp.forEach(exp => {
+        const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : '';
+        const catIcon = getCatIcon(exp.category);
+        const sharedTxt = exp.sharedPercentage > 0 ? ` (${exp.sharedPercentage}%)` : '';
+        html += `<div class="income-row">
+            <div class="income-row-left">
+                <span class="income-row-desc">${catIcon} ${exp.category}${sharedTxt} · ${exp.desc || ''}</span>
+                <span class="income-row-date">${fd}</span>
+            </div>
+            <span class="income-row-amount" style="color:var(--sostenuto);font-weight:600;">${exp.actual > 0 ? fmtEPlain(exp.actual) : fmtEPlain(exp.planned)}</span>
+        </div>`;
+    });
+    resultsList.innerHTML = html;
+}
+
+// =====================================================================
+// POPUP I.A. MESE
+// =====================================================================
+function openIaMonthPopup() {
+    const popup = document.getElementById('iaMonthPopup');
+    if (!popup) return;
+    popup.classList.add('active');
+    document.body.classList.add('sheet-open');
+    const respBox = document.getElementById('iaMonthResponse');
+    if (respBox) { respBox.style.display = 'none'; respBox.innerText = ''; }
+}
+
+function closeIaMonthPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const popup = document.getElementById('iaMonthPopup');
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+}
+
+async function runIaMonthAnalysis() {
+    const currentMonth = document.getElementById('currentMonth').value;
+    if (!currentMonth) { showToast('Nessun mese selezionato', true); return; }
+
+    const respBox = document.getElementById('iaMonthResponse');
+    const btn = document.getElementById('btnIaMonthAnalysis');
+    if (!respBox) return;
+
+    const incomes = await getIncomesForMonth(currentMonth);
+    const expenses = await db.expenses.where('month').equals(currentMonth).toArray();
+    const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
+    const totalActual = expenses.reduce((s, e) => s + e.actual, 0);
+    const totalPlanned = expenses.reduce((s, e) => s + e.planned, 0);
+    const savings = totalIncome - totalActual;
+    const catSums = {};
+    expenses.forEach(e => { catSums[e.category] = (catSums[e.category] || 0) + e.actual; });
+    const catLines = Object.entries(catSums)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, val]) => `  - ${cat}: ${fmtEPlain(val)}`).join('\n');
+    const pendingCount = expenses.filter(e => e.planned > 0 && e.actual === 0).length;
+
+    const dataText = [
+        `Mese: ${currentMonth}`,
+        `Entrate totali: ${fmtEPlain(totalIncome)}`,
+        `Spese sostenute: ${fmtEPlain(totalActual)}`,
+        `Spese previste: ${fmtEPlain(totalPlanned)}`,
+        `Risparmio netto: ${fmtEPlain(savings)}`,
+        `Budget rimasto: ${fmtEPlain(totalPlanned - totalActual)}`,
+        `Uscite in attesa di pagamento: ${pendingCount}`,
+        `\nDettaglio spese per categoria:\n${catLines || '  (nessuna spesa)'}`,
+        `\nEntrate del mese:\n${incomes.map(i => `  - ${i.desc}: ${fmtEPlain(i.amount)}`).join('\n') || '  (nessuna entrata)'}`
+    ].join('\n');
+
+    const prompt = `Agisci come un consulente finanziario. Lingua: Italiano. Analizza i dati del mese corrente. ${dataText}Fornisci un resoconto conciso (max 5 righe) su: 1) stato di salute del mese, 2) categoria più critica, 3) consiglio pratico per migliorare.`;
+
+    await callAIEndpoint(prompt, 'iaMonthResponse', 'btnIaMonthAnalysis');
+
+    // Salva automaticamente nelle note IA del mese
+    if (respBox && respBox.innerText && !respBox.innerText.startsWith('❌') && !respBox.innerText.startsWith('🤖')) {
+        const iaNotesField = document.getElementById('iaNotes');
+        if (iaNotesField) {
+            iaNotesField.value = respBox.innerText;
+            await saveNotes();
+        }
+    }
+}
+
 async function renderArchiveModalContent() {
     archiveModalCharts.forEach(c => c.destroy());
     archiveModalCharts = [];
@@ -3145,6 +3311,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btn) return;
             if (btn.dataset.action === 'ia-analisi') openIaModal();
             else if (btn.dataset.action === 'archivio') openArchiveModal();
+        });
+    }
+
+    const meseActions = document.querySelector('.mese-top-actions');
+    if (meseActions) {
+        meseActions.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            if (btn.dataset.action === 'search') openSearchPopup();
+            else if (btn.dataset.action === 'ia') openIaMonthPopup();
         });
     }
 });

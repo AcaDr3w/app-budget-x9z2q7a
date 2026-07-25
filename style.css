@@ -913,7 +913,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     #current-month-tab.active {
         display: flex !important;
         flex-direction: column !important;
-        height: calc(100dvh - 76px) !important;
+        height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         overflow: hidden !important;
         min-height: 0 !important;
         padding-bottom: 0 !important;
@@ -1007,17 +1007,19 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     /* Contenitore delle Macro-Card Dinamiche - Riempie spazio verticale */
     .mobile-dashboard-container {
         flex: 1 !important;
+        min-height: 0 !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 12px !important;
         width: 100% !important;
         margin: 6px 0 0 !important;
-        overflow-y: auto !important;
+        overflow: hidden !important;
+        align-content: start;
     }
     
     /* Stile delle 3 grandi Card - Sbloccate */
     .dash-card {
-        min-height: 120px !important;
+        min-height: 0 !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
@@ -1027,9 +1029,40 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     
     /* Contenitore dei 3 Riepiloghi */
     .summary-grid {
+        flex-shrink: 0 !important;
         width: 100% !important;
         margin-top: 5px !important;
         margin-bottom: 0 !important;
+    }
+
+    /* Toolbar azioni Mese (Ricerca + I.A.) */
+    .mese-top-actions {
+        flex-shrink: 0 !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        padding: 0 16px 4px !important;
+    }
+    .mese-action-btn {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 50% !important;
+        background: var(--panel) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        border: none !important;
+        font-size: 17px !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        line-height: 1 !important;
+    }
+    .mese-action-btn:active {
+        transform: scale(0.92) !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
     }
 }
 
@@ -1652,6 +1685,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
     /* Ripristino Summary Grid compatto */
     .summary-grid {
+        flex-shrink: 0 !important;
         display: flex !important;
         flex-direction: row !important;
         justify-content: space-between;
@@ -1676,12 +1710,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     /* Mostra e formatta la nuova Dashboard Mobile - riempie spazio */
     .mobile-dashboard-container {
         flex: 1 !important;
+        min-height: 0 !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 12px !important;
         padding: 8px 15px !important;
         margin-top: 5px;
-        overflow-y: auto !important;
+        overflow: hidden !important;
+        align-content: start;
     }
 
     /* Stile delle 3 grandi Card - Sbloccate, nessun flex-grow */
@@ -1695,7 +1731,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center;
         text-align: center;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        min-height: 120px !important;
+        min-height: 0 !important;
     }
     .dash-card h3 {
         margin: 0 0 15px 0;
@@ -1718,6 +1754,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .card-svago {
         grid-column: span 2;
         background: linear-gradient(135deg, #8E2DE2, #4A00E0);
-        min-height: 200px !important;
+        min-height: 0 !important;
     }
 }

@@ -63,6 +63,11 @@
               <i class="fas fa-chevron-down"></i>
           </div>
 
+          <div class="mese-top-actions hide-desktop">
+              <button data-action="search" class="mese-action-btn" aria-label="Ricerca spese">🔍</button>
+              <button data-action="ia" class="mese-action-btn" aria-label="Analisi I.A. del mese">🤖</button>
+          </div>
+
           <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
           <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
 
@@ -114,6 +119,37 @@
                 <div id="incomeListContainer" class="income-list"></div>
                 <div id="expenseListContainer" class="income-list"></div>
                 <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
+            </div>
+        </div>
+
+        <!-- POPUP RICERCA -->
+        <div id="searchPopup" class="popup-overlay" onclick="closeSearchPopup(event)">
+            <div class="popup-panel" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSearchPopup()">×</button>
+                <h3 style="margin:0 0 8px;">🔍 Ricerca Spese</h3>
+                <div class="popup-body" style="gap:8px;display:flex;flex-direction:column;">
+                    <input type="text" id="searchPopupInput" class="sheet-input" placeholder="Cerca per nome, nota o categoria..." oninput="filterSearchResults()">
+                    <select id="searchPeriodSelect" class="sheet-input" onchange="toggleSearchCustomMonth()">
+                        <option value="current">Mese corrente</option>
+                        <option value="all">Tutti i mesi</option>
+                        <option value="custom">Mese specifico</option>
+                    </select>
+                    <input type="month" id="searchCustomMonth" class="sheet-input" style="display:none;" onchange="filterSearchResults()">
+                    <div id="searchResultsList" class="income-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POPUP I.A. MESE -->
+        <div id="iaMonthPopup" class="popup-overlay" onclick="closeIaMonthPopup(event)">
+            <div class="popup-panel" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeIaMonthPopup()">×</button>
+                <h3 style="margin:0 0 8px;">🤖 Analisi I.A. del Mese</h3>
+                <div class="popup-body" style="gap:10px;display:flex;flex-direction:column;">
+                    <p style="font-size:12px;color:#475569;margin:0;">Analisi mirata sulle spese e entrate del mese corrente.</p>
+                    <button class="btn-ia" id="btnIaMonthAnalysis" onclick="runIaMonthAnalysis()" style="margin:0;">🧠 Genera Analisi Mese</button>
+                    <div id="iaMonthResponse" class="ia-response-box"></div>
+                </div>
             </div>
         </div>
 
