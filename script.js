@@ -2158,7 +2158,17 @@ async function openRendicontoPopup(type) {
 async function renderIncomeList(month) {
     const container = document.getElementById('incomeListContainer');
     if (!container) return;
-    const incomes = await db.income.where('month').equals(month).toArray();
+    const allIncomes = await db.income.toArray();
+    const incomes = allIncomes
+        .filter(inc => {
+            const refMonth = inc.date ? inc.date.slice(0, 7) : inc.month;
+            return refMonth === month;
+        })
+        .sort((a, b) => {
+            const dateA = a.date || a.month + '-01';
+            const dateB = b.date || b.month + '-01';
+            return dateA.localeCompare(dateB);
+        });
     if (incomes.length === 0) {
         container.innerHTML = '<div class="income-list-empty">Nessuna entrata registrata per questo mese.</div>';
         return;
