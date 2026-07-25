@@ -1608,3 +1608,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     opacity: 1 !important;
     min-height: 50px !important;
 }
+
+/* DEBUG STEP 1 - BOTTOM SHEET */
+.bottom-sheet {
+    min-height: 400px !important;
+    height: 400px !important;
+    overflow: visible !important;
+    background: lightgreen !important;
+}
