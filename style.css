@@ -1594,3 +1594,17 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         min-height: 200px !important;
     }
 }
+
+/* DEBUG - DA RIMUOVERE DOPO LA RISOLUZIONE */
+#viewInput { 
+    border: 4px solid red !important; 
+    min-height: 300px !important; 
+    background: #f9f9f9 !important;
+}
+#viewInput > div, #viewInput > form, .sheet-body { 
+    border: 2px dashed blue !important; 
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 50px !important;
+}
