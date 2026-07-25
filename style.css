@@ -1341,6 +1341,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     gap: 10px;
     margin-top: 20px;
+    flex-shrink: 0;
 }
 .sheet-footer button {
     flex: 1;
@@ -1362,6 +1363,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 #viewInput {
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 .bottom-sheet .sheet-slider .sheet-view .sheet-body {
     flex: 1;
@@ -1381,13 +1383,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     overscroll-behavior-y: contain;
     flex: 0 0 100%;
     min-width: 100%;
+    min-height: 0;
 }
 
 /* ===== BOTTOM SHEET HEADER (Back Button + Title) ===== */
 .bottom-sheet-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
     padding: 10px 16px;
     margin-bottom: 15px;
 }
