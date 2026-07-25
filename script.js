@@ -516,7 +516,7 @@ async function loadMonthData() {
     const month = document.getElementById('currentMonth').value;
     if (!month) return;
     let incomes = await getIncomesForMonth(month);
-    let expenses = await db.expenses.where('month').equals(month).toArray();
+    let expenses = (await db.expenses.toArray()).filter(e => (e.date || e.month).slice(0, 7) === month);
     currentData = {income: incomes, expenses: expenses};
     let mData = await db.months.get(month);
     document.getElementById('userNotes').value = mData?.notes || "";
@@ -1443,7 +1443,6 @@ function setupToggleType() {
 
 // Save transaction from bottom sheet
 async function saveTransactionFromSheet() {
-    const month = document.getElementById('currentMonth').value;
     const intInput = document.getElementById('hiddenIntegerInput');
     const decInput = document.getElementById('hiddenDecimalInput');
     const sheetDate = document.getElementById('sheetDate');
@@ -1460,6 +1459,7 @@ async function saveTransactionFromSheet() {
     }
     
     const date = sheetDate?.value || new Date().toISOString().slice(0, 10);
+    const month = date.slice(0, 7);
     const note = sheetNote?.value.trim() || '';
     
     const exp = {
@@ -1733,8 +1733,8 @@ async function addIncome() {
     await updateUI(); await checkDatabaseHealth();
 }
 async function addExpense() {
-    const month = document.getElementById('currentMonth').value;
     const date = document.getElementById('expDate').value;
+    const month = date.slice(0, 7);
     const cat = document.getElementById('expenseCategory').value;
     const desc = document.getElementById('expDesc').value.trim() || "Spesa";
     let planned = parseFloat(document.getElementById('expPlanned').value) || 0;
@@ -1949,7 +1949,10 @@ const card = document.createElement('div');
 // =====================================================================
 async function updateUI() {
     const _month = document.getElementById('currentMonth').value;
-    if (_month) currentData.income = await getIncomesForMonth(_month);
+    if (_month) {
+        currentData.income = await getIncomesForMonth(_month);
+        currentData.expenses = (await db.expenses.toArray()).filter(e => (e.date || e.month).slice(0, 7) === _month);
+    }
     let totalIncome = currentData.income.reduce((s,i) => s+i.amount,0);
     let totalPlanned = currentData.expenses.reduce((s,i) => s+i.planned,0);
     let totalActual = currentData.expenses.reduce((s,i) => s+i.actual,0);
@@ -2205,7 +2208,7 @@ async function renderIncomeList(month) {
 async function renderExpenseList(type, month) {
     const container = document.getElementById('expenseListContainer');
     if (!container) return;
-    const all = await db.expenses.where('month').equals(month).toArray();
+    const all = (await db.expenses.toArray()).filter(e => (e.date || e.month).slice(0, 7) === month);
     const isSostenuto = type === 'sostenuto';
     const expenses = all.filter(e => isSostenuto ? (e.actual || 0) > 0 : (e.planned || 0) > 0)
         .sort((a, b) => {
@@ -2256,14 +2259,16 @@ async function buildRendicontoRows(type, month, prevMonth) {
         return [{ label: 'Entrate', currentValue: currentTotal, previousValue: previousTotal, color: '#10b981' }];
     }
     if (type === 'previsto') {
-        const currentExpenses = await db.expenses.where('month').equals(month).toArray();
-        const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
+        const allExpenses = await db.expenses.toArray();
+        const currentExpenses = allExpenses.filter(e => (e.date || e.month).slice(0, 7) === month);
+        const prevExpenses = allExpenses.filter(e => (e.date || e.month).slice(0, 7) === prevMonth);
         const currentTotal = currentExpenses.reduce((sum, item) => sum + (item.planned || 0), 0);
         const previousTotal = prevExpenses.reduce((sum, item) => sum + (item.planned || 0), 0);
         return [{ label: 'Spese Previste', currentValue: currentTotal, previousValue: previousTotal, color: '#f97316' }];
     }
-    const currentExpenses = await db.expenses.where('month').equals(month).toArray();
-    const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
+    const allExpenses = await db.expenses.toArray();
+    const currentExpenses = allExpenses.filter(e => (e.date || e.month).slice(0, 7) === month);
+    const prevExpenses = allExpenses.filter(e => (e.date || e.month).slice(0, 7) === prevMonth);
     const currentTotal = currentExpenses.reduce((sum, item) => sum + (item.actual || 0), 0);
     const previousTotal = prevExpenses.reduce((sum, item) => sum + (item.actual || 0), 0);
     return [{ label: 'Spese Sostenute', currentValue: currentTotal, previousValue: previousTotal, color: '#ef4444' }];
