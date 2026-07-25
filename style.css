@@ -1159,6 +1159,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     max-height: 85dvh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 .bottom-sheet .drag-handle-wrapper {
     flex-shrink: 0;
@@ -1380,7 +1381,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .bottom-sheet .sheet-slider {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .bottom-sheet .sheet-slider .sheet-view {
