@@ -1608,14 +1608,21 @@ async function saveTransactionFromSheet() {
     };
     
     try {
+        // Recurring logic
+        const recToggle = document.getElementById('recurringToggle');
+        const recUntilEl = document.getElementById('recurringUntil');
+        const isRecurring = recToggle?.checked;
+        if (isRecurring) {
+            const groupId = Date.now();
+            exp.recurringGroupId = groupId;
+            exp.recurringEndMonth = recUntilEl?.value || '';
+        }
+
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
-        // Recurring logic
-        const recToggle = document.getElementById('recurringToggle');
-        if (recToggle?.checked) {
-            const recUntil = document.getElementById('recurringUntil');
-            await saveRecurringClones(exp, recUntil?.value || '');
+        if (isRecurring) {
+            await saveRecurringClones(exp, recUntilEl?.value || '', exp.recurringGroupId);
         }
 
         closeTransactionSheet();
@@ -1669,7 +1676,7 @@ function setupRecurringToggle() {
 }
 
 // Helper: generate recurring clones
-async function saveRecurringClones(originalExp, endMonthValue) {
+async function saveRecurringClones(originalExp, endMonthValue, groupId) {
     const amount = originalExp.planned || originalExp.actual;
     if (!amount || amount <= 0) return;
 
@@ -1695,6 +1702,8 @@ async function saveRecurringClones(originalExp, endMonthValue) {
 
         const clone = {
             id: Date.now() + count,
+            recurringGroupId: groupId,
+            recurringEndMonth: endMonth || '',
             month: nextMonth,
             date: cloneDate,
             category: originalExp.category,
@@ -1983,22 +1992,30 @@ async function addExpense() {
     let exp = {id: Date.now(), month, date, category: cat, desc, planned, actual, sharedPercentage: shared};
     
     try {
+        // Recurring logic for desktop
+        const recToggleDesktop = document.getElementById('recurringToggleDesktop');
+        const recUntilDesktop = document.getElementById('recurringUntilDesktop');
+        const isRecurringDesktop = recToggleDesktop?.checked;
+        if (isRecurringDesktop) {
+            const groupId = Date.now();
+            exp.recurringGroupId = groupId;
+            exp.recurringEndMonth = recUntilDesktop?.value || '';
+        }
+
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
-        const recToggle = document.getElementById('recurringToggleDesktop');
-        if (recToggle?.checked) {
-            const recUntil = document.getElementById('recurringUntilDesktop');
-            await saveRecurringClones(exp, recUntil?.value || '');
+        if (isRecurringDesktop) {
+            await saveRecurringClones(exp, recUntilDesktop?.value || '', exp.recurringGroupId);
         }
 
         document.getElementById('expDesc').value = '';
         document.getElementById('expPlanned').value = '';
         document.getElementById('expActual').value = '';
         document.getElementById('expShared').value = '';
-        if (recToggle) recToggle.checked = false;
-        const recContainer = document.getElementById('recurringUntilContainerDesktop');
-        if (recContainer) recContainer.classList.remove('active');
+        if (recToggleDesktop) recToggleDesktop.checked = false;
+        const recContainerDesktop = document.getElementById('recurringUntilContainerDesktop');
+        if (recContainerDesktop) recContainerDesktop.classList.remove('active');
         await updateUI();
         await checkDatabaseHealth();
     } catch (err) {
@@ -2681,6 +2698,85 @@ function closePopup(name, event) {
     const popup = document.getElementById('popup-' + name);
     if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
+
+// =====================================================================
+// RIPETIZIONI (Recurring Expenses Management)
+// =====================================================================
+async function renderRipetizioni() {
+    const container = document.getElementById('ripetizioniList');
+    if (!container) return;
+    try {
+        const all = await db.expenses.where('recurringGroupId').above(0).toArray();
+        const groups = new Map();
+        for (const exp of all) {
+            const gid = exp.recurringGroupId;
+            if (!groups.has(gid)) groups.set(gid, []);
+            groups.get(gid).push(exp);
+        }
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        let html = '';
+        for (const [gid, exps] of groups) {
+            const months = exps.map(e => e.month).sort();
+            const maxMonth = months[months.length - 1];
+            if (maxMonth < currentMonth) continue;
+            const first = exps[0];
+            const nome = first.desc || 'Spese';
+            const importo = first.planned > 0 ? first.planned : first.actual;
+            const endRaw = first.recurringEndMonth || '';
+            const durata = endRaw ? endRaw.slice(0, 7).replace('-', '/') : 'Senza scadenza';
+            html += `<div class="ripetizione-row">
+                <div class="ripetizione-info">
+                    <span class="ripetizione-nome">${nome.replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c])}</span>
+                    <span class="ripetizione-importo">${importo.toFixed(2)}€/mese</span>
+                    <span class="ripetizione-durata">${durata === 'Senza scadenza' ? 'Senza scadenza' : 'Fino a: ' + durata}</span>
+                </div>
+                <button class="ripetizione-delete" data-group-id="${gid}" title="Elimina ripetizione futura" onclick="deleteRecurringGroup(${gid})">🗑️</button>
+            </div>`;
+        }
+        container.innerHTML = html || '<div class="ripetizioni-empty">Nessuna spesa ricorrente attiva</div>';
+    } catch (err) {
+        console.error('[Ripetizioni] Error rendering:', err);
+        container.innerHTML = '<div class="ripetizioni-empty">Errore nel caricamento dei dati</div>';
+    }
+}
+
+async function deleteRecurringGroup(groupId) {
+    if (!confirm('Eliminare le ripetizioni future di questo gruppo? Le spese passate e già saldate rimarranno invariate.')) return;
+    try {
+        const all = await db.expenses.where('recurringGroupId').equals(groupId).toArray();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        let removed = 0;
+        for (const exp of all) {
+            let shouldDelete = false;
+            if (exp.month > currentMonth) shouldDelete = true;
+            else if (exp.month === currentMonth && exp.actual === 0) shouldDelete = true;
+            if (shouldDelete) {
+                await db.expenses.delete(exp.id);
+                const idx = currentData.expenses.findIndex(e => e.id === exp.id);
+                if (idx !== -1) currentData.expenses.splice(idx, 1);
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            showToast(`Ripetizione cancellata (${removed} spese future rimosse)`, false);
+            await renderRipetizioni();
+            await updateUI();
+        } else {
+            showToast('Nessuna spesa futura da eliminare', true);
+        }
+    } catch (err) {
+        console.error('[Ripetizioni] Error deleting group:', err);
+        showToast('Errore durante la cancellazione', true);
+    }
+}
+
+// Hook: refresh ripetizioni list when popup opens
+document.addEventListener('click', (e) => {
+    const card = e.target.closest('.settings-card[data-popup="ripetizioni"]');
+    if (card) setTimeout(renderRipetizioni, 50);
+});
 
 // =====================================================================
 // POPUP RICERCA

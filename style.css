@@ -108,6 +108,14 @@ body.sheet-open {
 .backup-action-grid button { width: 100%; margin: 0; }
 #btnInstallApp { max-width: 300px; width: 100%; }
 .popup-body { overflow-y: auto; overscroll-behavior: contain; max-height: 65vh; padding-right: 4px; }
+.ripetizione-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; gap: 12px; }
+.ripetizione-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.ripetizione-nome { font-weight: 600; font-size: 14px; color: #0f172a; }
+.ripetizione-importo { font-size: 13px; color: #ef4444; font-weight: 600; }
+.ripetizione-durata { font-size: 11px; color: #64748b; }
+.ripetizione-delete { width: 36px; height: 36px; border-radius: 50%; border: none; background: #fef2f2; color: #ef4444; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ripetizione-delete:active { background: #fee2e2; transform: scale(0.92); }
+.ripetizioni-empty { text-align: center; padding: 24px 16px; color: #94a3b8; font-size: 13px; }
 .emoji-picker-btn {
     width: 40px; height: 40px; border-radius: 50%; border: 1px solid #cbd5e1;
     background: #f8fafc; font-size: 20px; line-height: 1; cursor: pointer;

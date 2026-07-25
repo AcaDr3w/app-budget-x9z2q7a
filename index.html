@@ -467,6 +467,10 @@
                 <span class="settings-card-icon">⚠️</span>
                 <span class="settings-card-label">Zona Pericolo</span>
             </button>
+            <button class="settings-card" data-popup="ripetizioni">
+                <span class="settings-card-icon">🔁</span>
+                <span class="settings-card-label">Ripetizioni</span>
+            </button>
         </div>
     </div>
 
@@ -566,6 +570,17 @@
             <div class="popup-body">
                 <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Questa operazione cancella permanentemente tutti i dati. Assicurati di aver esportato un backup.</p>
                 <button class="btn-action" style="background: #ef4444; width: 100%; padding: 12px; font-size: 14px;" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP: Ripetizioni -->
+    <div id="popup-ripetizioni" class="popup-overlay" onclick="closePopup('ripetizioni', event)">
+        <div class="popup-panel" onclick="event.stopPropagation()" style="max-height: 85vh;">
+            <button class="popup-close" onclick="closePopup('ripetizioni')">×</button>
+            <h3 style="margin:0 0 12px;">🔁 Ripetizioni</h3>
+            <div class="popup-body" id="ripetizioniBody" style="max-height: none; overflow-y: auto; overscroll-behavior: contain;">
+                <div id="ripetizioniList"></div>
             </div>
         </div>
     </div>
