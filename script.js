@@ -2396,101 +2396,59 @@ async function openArchiveModal() {
     if (modal) { modal.classList.add('active'); document.body.classList.add('sheet-open'); }
 }
 
+let archiveModalCharts = [];
+
 function closeArchiveModal(event) {
     if (event && event.target !== event.currentTarget) return;
+    archiveModalCharts.forEach(c => c.destroy());
+    archiveModalCharts = [];
     const modal = document.getElementById('archiveModal');
     if (modal) { modal.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
 
 async function renderArchiveModalContent() {
+    archiveModalCharts.forEach(c => c.destroy());
+    archiveModalCharts = [];
     const container = document.getElementById('archiveModalBody');
     if (!container) return;
     let months = await db.months.toArray();
-    let hd = months.map(m => ({month:m.month, income:m.totalIncome, actual:m.totalActual, savings:m.totalIncome-m.totalActual}));
-    hd.sort((a,b) => a.month.localeCompare(b.month));
-    container.innerHTML = '';
-    if (hd.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Nessun dato storico.</div>';
+    if (months.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px 0;font-size:13px;">Nessun mese archiviato.</div>';
         return;
     }
-    hd.forEach(d => {
-        const savings = d.savings;
-        const card = document.createElement('div');
-        card.className = 'history-card';
-        card.innerHTML = `
-            <div class="history-card-left">
-                <div class="history-card-month">${d.month.split('-').reverse().join('/')}</div>
-                <div class="history-card-savings">Risparmio: <span class="history-card-savings-val ${savings >= 0 ? 'positive' : 'negative'}">${fmtN(savings)}</span></div>
-            </div>
-            <div class="history-card-right">
-                <span class="history-card-income">+${fmtN(d.income)}</span>
-                <span class="history-card-spent">-${fmtN(d.actual)}</span>
+    months.sort((a,b) => b.month.localeCompare(a.month));
+    container.innerHTML = '';
+    for (const m of months) {
+        const sec = document.createElement('div');
+        sec.className = 'archive-month-section';
+        const monthLabel = m.month.split('-').reverse().join('/');
+        const savings = (m.totalIncome || 0) - (m.totalActual || 0);
+        sec.innerHTML = `
+            <div class="archive-month-header">${monthLabel}</div>
+            <div class="archive-month-chart-wrap"><canvas></canvas></div>
+            <div class="archive-month-data">
+                <div class="history-card">
+                    <div class="history-card-left">
+                        <div class="history-card-month">${monthLabel}</div>
+                        <div class="history-card-savings">Risparmio: <span class="history-card-savings-val ${savings>=0?'positive':'negative'}">${fmtN(savings)}</span></div>
+                    </div>
+                    <div class="history-card-right">
+                        <span class="history-card-income">+${fmtN(m.totalIncome||0)}</span>
+                        <span class="history-card-spent">-${fmtN(m.totalActual||0)}</span>
+                    </div>
+                </div>
             </div>
         `;
-        container.appendChild(card);
-    });
-}
-
-// =====================================================================
-// HISTORY BARS POPUP
-// =====================================================================
-let historyBarChartInstances = [];
-
-async function openHistoryBarsPopup() {
-    let months = await db.months.toArray();
-    months.sort((a,b) => b.month.localeCompare(a.month));
-    const body = document.getElementById('historyBarsPopupBody');
-    if (!body) return;
-    body.innerHTML = '';
-    if (months.length === 0) {
-        body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px 0;font-size:13px;">Nessun mese archiviato.</div>';
-    } else {
-        for (const m of months) {
-            const sec = document.createElement('div');
-            sec.className = 'history-month-section';
-            const monthLabel = m.month.split('-').reverse().join('/');
-            sec.innerHTML = `
-                <div class="history-month-header">${monthLabel}</div>
-                <div class="history-month-chart-wrap">
-                    <canvas></canvas>
-                </div>
-            `;
-            body.appendChild(sec);
-            const canvas = sec.querySelector('canvas');
-            const ctx = canvas.getContext('2d');
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Entrate', 'Budget', 'Speso'],
-                    datasets: [{
-                        data: [m.totalIncome || 0, m.totalPlanned || 0, m.totalActual || 0],
-                        backgroundColor: ['#10b981', '#f97316', '#ef4444'],
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 10 } } }
-                    }
-                }
-            });
-            historyBarChartInstances.push(chart);
-        }
+        container.appendChild(sec);
+        const canvas = sec.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+            type:'bar',
+            data:{labels:['Entrate','Budget','Speso'],datasets:[{data:[m.totalIncome||0,m.totalPlanned||0,m.totalActual||0],backgroundColor:['#10b981','#f97316','#ef4444'],borderRadius:4}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}}}
+        });
+        archiveModalCharts.push(chart);
     }
-    document.getElementById('historyBarsPopup').classList.add('active');
-    document.body.classList.add('sheet-open');
-}
-
-function closeHistoryBarsPopup(event) {
-    if (event && event.target !== event.currentTarget) return;
-    historyBarChartInstances.forEach(c => c.destroy());
-    historyBarChartInstances = [];
-    document.getElementById('historyBarsPopup').classList.remove('active');
-    document.body.classList.remove('sheet-open');
 }
 
 async function runHistoryAnalysisIAModal() {

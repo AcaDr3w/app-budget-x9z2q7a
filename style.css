@@ -315,6 +315,29 @@ button:active { transform: scale(0.98); }
 
 .income-list-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 16px 0; flex-shrink: 0; }
 
+/* ===== ARCHIVE MODAL — MONTH SECTIONS ===== */
+.archive-month-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fafbfc;
+}
+.archive-month-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+.archive-month-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 200px;
+}
+.archive-month-data {
+    margin-top: 10px;
+}
+
 /* ===== ALERTS ===== */
 .deadline-alert { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: bold; text-align: center; }
 .annual-deadline-box { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 14px; }
@@ -366,64 +389,6 @@ button:active { transform: scale(0.98); }
 .charts-wrapper { display: flex; flex-direction: column; gap: 16px; }
 .chart-container { position: relative; width: 100%; height: 240px; }
 .large-chart-container { position: relative; width: 100%; height: 340px; margin-bottom: 14px; }
-
-/* ===== HISTORY BARS BUTTON ===== */
-.history-bars-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-    padding: 14px 12px;
-    border: none;
-    border-radius: 14px;
-    font-size: 14px;
-    font-weight: 700;
-    background: #f1f5f9;
-    color: var(--primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    margin: 12px 0 0;
-    box-shadow: none;
-}
-.history-bars-btn:hover {
-    background: #e2e8f0;
-}
-.history-bars-btn:active {
-    transform: scale(0.98);
-}
-
-/* ===== HISTORY BARS POPUP ===== */
-#historyBarsPopup .popup-panel {
-    width: min(560px, 100%);
-}
-#historyBarsPopupBody {
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding-right: 4px;
-}
-.history-month-section {
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px;
-    background: #fafbfc;
-}
-.history-month-header {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 8px;
-    text-align: center;
-}
-.history-month-chart-wrap {
-    position: relative;
-    width: 100%;
-    height: 200px;
-}
 
 /* ===== RECORDS HUB CAROUSEL ===== */
 .records-hub-scroll {
@@ -658,12 +623,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: auto !important;
         max-height: none;
         margin-bottom: 0;
-    }
-    #chartsCard .history-bars-btn {
-        flex-shrink: 0;
-        margin: 8px 0 0;
-        padding: 12px 10px;
-        font-size: 13px;
     }
 }
 

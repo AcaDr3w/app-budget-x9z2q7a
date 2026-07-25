@@ -278,7 +278,6 @@
             <h2 class="hide-mobile">📈 Grafico Monitoraggio Continuo</h2>
             <p class="hide-mobile" style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
             <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
-            <button id="btnHistoryBars" class="history-bars-btn" onclick="openHistoryBarsPopup()">📊 Storico Barrette</button>
         </div>
 
         <!-- DESKTOP TABLE (hidden on mobile) -->
@@ -323,16 +322,7 @@
         <div class="popup-panel" onclick="event.stopPropagation()">
             <button class="popup-close" onclick="closeArchiveModal()">×</button>
             <h3 style="margin:0 0 12px;">📋 Registro Mesi Archiviati</h3>
-            <div id="archiveModalBody" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
-        </div>
-    </div>
-
-    <!-- HISTORY BARS POPUP -->
-    <div id="historyBarsPopup" class="popup-overlay" onclick="closeHistoryBarsPopup(event)">
-        <div class="popup-panel" onclick="event.stopPropagation()">
-            <button class="popup-close" onclick="closeHistoryBarsPopup()">×</button>
-            <h3 style="margin:0 0 12px;">📊 Storico Barrette Mensile</h3>
-            <div id="historyBarsPopupBody"></div>
+            <div id="archiveModalBody" style="overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;padding-right:4px;"></div>
         </div>
     </div>
 
