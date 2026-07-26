@@ -1783,6 +1783,37 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .shared-person-row select {
     flex: 1;
 }
+.shared-payer-row {
+    display: flex;
+    gap: 6px;
+}
+.payer-pill {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    background: #f8fafc;
+    color: #64748b;
+}
+.payer-pill[data-payer="me"].active {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+.payer-pill[data-payer="them"].active {
+    background: #f59e0b;
+    color: white;
+    border-color: #f59e0b;
+}
+.payer-pill:active {
+    transform: scale(0.94);
+}
 .btn-small {
     width: 40px;
     height: 40px;
@@ -1899,7 +1930,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     border-radius: 12px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: background 0.15s;
 }
+.saldo-row:hover { background: #f1f5f9; }
 .saldo-dovuto {
     border-left: 4px solid #10b981;
 }
@@ -2043,6 +2077,50 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     border-radius: 10px;
     white-space: nowrap;
 }
+
+/* ===== CONDIVISE DETAIL / LEDGER VIEW ===== */
+.condivise-detail-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 16px;
+    max-height: 55vh;
+}
+.condivise-detail-view .btn-back-sheet {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #f1f5f9;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin: -4px -8px;
+}
+.condivise-detail-view .btn-back-sheet:hover { color: #3b82f6; }
+.condivise-detail-header { text-align: center; padding-bottom: 8px; border-bottom: 1px solid #334155; }
+.detail-header-name { font-size: 18px; font-weight: 700; color: #f1f5f9; }
+.detail-header-members { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+.detail-header-balance { font-size: 16px; font-weight: 700; margin-top: 4px; }
+.detail-header-balance.saldo-positive { color: #22c55e; }
+.detail-header-balance.saldo-negative { color: #f59e0b; }
+.ledger-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
+.ledger-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #1e293b; border-radius: 8px; padding: 8px 12px;
+    border-left: 3px solid #334155;
+}
+.ledger-row.ledger-settled { opacity: 0.55; border-left-color: #22c55e; }
+.ledger-row-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ledger-date { font-size: 11px; color: #64748b; }
+.ledger-desc { font-size: 14px; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ledger-type { font-size: 11px; color: #94a3b8; }
+.ledger-row-right { text-align: right; flex-shrink: 0; }
+.ledger-amount { font-size: 14px; font-weight: 700; }
+.ledger-amount.saldo-positive { color: #22c55e; }
+.ledger-amount.saldo-negative { color: #f59e0b; }
+.ledger-status { display: block; font-size: 11px; margin-top: 1px; }
+.ledger-status.ledger-status-paid { color: #22c55e; }
+.ledger-status.ledger-status-pending { color: #f59e0b; }
 
 /* ===== SHEET SLIDER FOR HORIZONTAL TRANSITION ===== */
 .sheet-slider {
