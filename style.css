@@ -16,6 +16,7 @@
 body { background-color: var(--bg); color: var(--text); padding: 0; padding-bottom: 100px; transition: background-color 0.3s, color 0.3s; }
 body.sheet-open {
     overflow: hidden !important;
+    height: 100vh !important;
     height: 100dvh !important;
     height: -webkit-fill-available !important;
     width: 100% !important;
@@ -164,7 +165,7 @@ input, select { width: 100%; padding: 11px 12px; border: 1.5px solid #e2e8f0; bo
 input:focus, select:focus { border-color: var(--accent); background-color: #fff; }
 
 /* ===== BUTTONS ===== */
-button { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; color: white; transition: opacity 0.18s, transform 0.1s; margin-top: 5px; }
+button { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; color: white; transition: opacity 0.18s, transform 0.1s; margin-top: 5px; -webkit-tap-highlight-color: transparent; }
 button:hover { opacity: 0.9; }
 button:active { transform: scale(0.98); }
 .btn-entrate { background: var(--entrate); }
@@ -189,61 +190,33 @@ button:active { transform: scale(0.98); }
 .ia-badge { background: var(--ia-color); color: white; font-size: 10px; padding: 2px 7px; border-radius: 20px; margin-left: 8px; font-weight: bold; }
 .ia-hint { font-size: 11px; color: #6b21a8; margin-top: 5px; display: block; opacity: 0.8; line-height: 1.4; }
 
-/* ===== VIEW TOGGLE BUTTON ===== */
-.view-toggle-btn {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    color: var(--primary);
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease;
-    z-index: 5;
-}
-.view-toggle-btn:hover {
-    transform: scale(1.1);
-}
-
 /* ===== MONTH SELECTOR PILL ===== */
 .month-selector-pill {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 30px;
-    padding: 10px 16px;
+    background: #fff;
+    border-radius: 15px;
+    padding: 12px 40px 12px 24px;
     margin-bottom: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    font-size: 14px;
-    font-weight: 600;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    font-size: 16px;
+    font-weight: 700;
     color: var(--primary);
     cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-}
-.month-selector-pill:hover {
-    background: rgba(255, 255, 255, 1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    transition: box-shadow 0.15s ease;
 }
 .month-selector-pill:active {
-    transform: scale(0.97);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
 }
 .month-selector-pill i {
-    font-size: 11px;
-    color: var(--accent);
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #94a3b8;
 }
 
 /* ===== MACRO TABS WRAPPER ===== */
@@ -269,6 +242,7 @@ button:active { transform: scale(0.98); }
     cursor: pointer;
     transition: all 0.25s ease;
     text-align: center;
+    -webkit-tap-highlight-color: transparent;
 }
 .macro-tab.active {
     background: var(--accent);
@@ -277,7 +251,7 @@ button:active { transform: scale(0.98); }
 
 /* ===== SUMMARY BOXES ===== */
 .config-bar { display: none; }
-.month-selector { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.month-selector { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; appearance: none; -webkit-appearance: none; -moz-appearance: none; }
 .summary-grid { display: flex; gap: 6px; margin-bottom: 8px; }
 .summary-box { 
     padding: 6px 4px; 
@@ -573,7 +547,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .hide-mobile { display: none !important; }
     
     .responsive-input, .responsive-select { max-width: 100%; }
-    .month-selector { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
     .day-selector { width: 100%; max-width: 120px; }
     
     .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -596,6 +569,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     /* ===== ANALISI TAB — SINGLE SCREEN ZERO SCROLL ===== */
     #history-tab.active {
         position: relative;
+        height: calc(100vh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         display: flex !important;
         flex-direction: column !important;
@@ -661,6 +635,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 /* ===== FUTURE TAB — MOBILE ZERO-SCROLL DASHBOARD ===== */
 @media (max-width: 767px) {
     .future-mobile-dashboard {
+        height: calc(100vh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         display: flex !important;
         flex-direction: column !important;
@@ -839,6 +814,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         border: none;
         cursor: pointer;
         transition: transform 0.15s ease, box-shadow 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
     }
     .category-card:active {
         transform: scale(0.95);
@@ -921,6 +897,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     #current-month-tab.active {
         display: flex !important;
         flex-direction: column !important;
+        height: calc(100vh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom)) !important;
         overflow: hidden !important;
         min-height: 0 !important;
@@ -931,7 +908,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     /* Pillola mese - compatta */
     .month-selector-pill {
         margin: 4px 16px 6px !important;
-        padding: 8px 14px !important;
+        padding: 10px 40px 10px 20px !important;
     }
     
     /* Banner pianificazioni - flex-shrink: 0 per viewport */
@@ -982,6 +959,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         color: #555555 !important;
         gap: 4px !important;
         flex: 1;
+        -webkit-tap-highlight-color: transparent !important;
     }
     
     /* Nav Icon Wrapper */
@@ -1039,6 +1017,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center !important;
         align-items: center !important;
         padding: 15px !important;
+        -webkit-tap-highlight-color: transparent !important;
     }
 
     /* Action Hub Mese (Ricerca | I.A.) - stile identico a Analisi */

@@ -276,8 +276,8 @@ let searchQuery = "";
 let chartB = null, chartC = null;
 let tradingChart = null;
 
- // ===== VIEW MODE STATE =====
- let currentViewMode = 'full'; // 'full' or 'tabs'
+ // ===== VIEW MODE STATE (defaults — toggle rimosso) =====
+ let currentViewMode = 'full';
  let activeMacroGroup = 'casa';
 
  // ===== BOTTOM SHEET SLIDER STATE =====
@@ -405,8 +405,6 @@ async function initApp() {
     initPWA();
     // Aggiorna il display del mese nella pillola all'avvio
     updateMonthDisplay();
-    // Inizializza il view toggle
-    setupViewToggle();
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
@@ -777,41 +775,6 @@ async function saveIncomeFromSheet() {
         currentData.income.pop();
     }
 }
-
-// =====================================================================
-// VIEW MODE & MACRO TABS
-// =====================================================================
-function setupViewToggle() {
-    const toggleBtn = document.getElementById('viewToggleBtn');
-    const macroTabsContainer = document.getElementById('macroTabsContainer');
-    
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', async () => {
-            if (currentViewMode === 'full') {
-                currentViewMode = 'tabs';
-                toggleBtn.innerHTML = '<i class="fas fa-th"></i>';
-                if (macroTabsContainer) macroTabsContainer.style.display = 'flex';
-            } else {
-                currentViewMode = 'full';
-                toggleBtn.innerHTML = '<i class="fas fa-layer-group"></i>';
-                if (macroTabsContainer) macroTabsContainer.style.display = 'none';
-            }
-            await updateUI();
-        });
-    }
-    
-    // Setup macro tab clicks
-    document.querySelectorAll('.macro-tab').forEach(tab => {
-        tab.addEventListener('click', async () => {
-            document.querySelectorAll('.macro-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            activeMacroGroup = tab.dataset.target;
-            await updateUI();
-        });
-    });
-}
-
-// setupViewToggle() è ora chiamato in initApp()
 
 // =====================================================================
 // BOTTOM SHEET WITH MACRO/MICRO CATEGORIES (ORIGINAL GRID INJECTION)
