@@ -84,6 +84,11 @@
                     <h3>Spese e Svago</h3>
                     <i class="fas fa-shopping-cart card-icon"></i>
                 </div>
+          <div class="summary-grid">
+            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
+            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
+            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
+        </div>
           </div>
 
           <input type="month" id="currentMonth" class="month-selector" onchange="loadMonthData()">
@@ -98,12 +103,6 @@
               <button data-action="search">🔍 Ricerca</button>
               <button data-action="ia">🤖 I.A.</button>
           </div>
-
-          <div class="summary-grid">
-            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
-            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
-        </div>
 
         <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
             <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" onclick="event.stopPropagation();">

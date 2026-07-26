@@ -1397,9 +1397,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
     /* Contenitore dei 3 Riepiloghi */
     .summary-grid {
+        grid-column: 1 / -1 !important;
         flex-shrink: 0 !important;
         width: 100% !important;
-        margin: 2px 0 0 !important;
+        margin: 8px 0 0 !important;
         padding: 0 15px 4px !important;
     }
 
@@ -1981,15 +1982,16 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         padding-bottom: 0 !important;
     }
 
-    /* Ripristino Summary Grid compatto */
+    /* Ripristino Summary Grid compatto - dentro mobile-dashboard-container */
     .summary-grid {
+        grid-column: 1 / -1 !important;
         flex-shrink: 0 !important;
         display: flex !important;
         flex-direction: row !important;
         justify-content: space-between;
         gap: 5px !important;
         padding: 0 15px !important;
-        margin-bottom: 0 !important;
+        margin: 8px 0 0 !important;
     }
     .summary-box {
         flex: 1 !important;
