@@ -1330,9 +1330,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
         box-shadow: 0 4px 12px rgba(99,102,241,0.35) !important;
     }
-    .bottom-nav .nav-item#navInvestimenti.active i,
-    .bottom-nav .nav-item#navInvestimenti.active .nav-label {
+    .bottom-nav .nav-item#navInvestimenti.active i {
         color: #ffffff !important;
+    }
+    .bottom-nav .nav-item#navInvestimenti.active .nav-label {
+        color: #5b50f6 !important;
+        font-weight: 700 !important;
     }
     
     /* Nascondi navigation-tabs legacy */

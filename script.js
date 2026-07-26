@@ -2154,9 +2154,9 @@ function calcInvestStats(asset, movements) {
     const deposits = movements.filter(m => m.type === 'deposit' || m.type === 'profit').reduce((s, m) => s + m.amount, 0);
     const withdrawals = movements.filter(m => m.type === 'withdrawal' || m.type === 'expense').reduce((s, m) => s + m.amount, 0);
     const currentValue = deposits - withdrawals;
-    const totalInvested = movements.filter(m => m.type === 'deposit').reduce((s, m) => s + m.amount, 0);
+    const totalInvested = (asset.initialCapital || 0) + movements.filter(m => m.type === 'deposit').reduce((s, m) => s + m.amount, 0);
     const totalProfits = movements.filter(m => m.type === 'profit').reduce((s, m) => s + m.amount, 0);
-    const roi = totalInvested > 0 ? ((currentValue - totalInvested) / totalInvested) * 100 : 0;
+    const roi = totalInvested > 0 ? (totalProfits / totalInvested) * 100 : 0;
     return { currentValue, totalInvested, totalProfits, roi };
 }
 
@@ -2254,6 +2254,8 @@ function openInvestAddSheet() {
     document.getElementById('investNewName').value = '';
     const targetInput = document.getElementById('investNewTarget');
     if (targetInput) { targetInput.style.display = 'none'; targetInput.value = ''; }
+    const initialCapitalInput = document.getElementById('investNewInitialCapital');
+    if (initialCapitalInput) { initialCapitalInput.value = ''; }
     document.getElementById('investAddPopup').classList.add('active');
     document.body.classList.add('sheet-open');
 }
@@ -2272,7 +2274,8 @@ async function saveNewInvestment() {
     }
     const targetInput = document.getElementById('investNewTarget');
     const targetAmount = selectedInvestType === 'salvadanai' ? (parseFloat(targetInput?.value) || 0) : 0;
-    const asset = { type: selectedInvestType, name, targetAmount, createdAt: Date.now() };
+    const initialCapital = parseFloat(document.getElementById('investNewInitialCapital').value) || 0;
+    const asset = { type: selectedInvestType, name, targetAmount, initialCapital, createdAt: Date.now() };
     try {
         await db.investments.put(asset);
         closeInvestAddPopup();
@@ -2282,6 +2285,24 @@ async function saveNewInvestment() {
         console.error('[Invest] Errore salvataggio:', e);
         showToast('Errore salvataggio asset', true);
     }
+}
+
+function editInvestInitialCapital(assetId) {
+    const asset = currentInvestments.find(a => a.id === assetId);
+    if (!asset) return;
+    const newVal = prompt('Capitale Investito Iniziale (€):', asset.initialCapital || '0');
+    if (newVal === null) return;
+    const parsed = parseFloat(newVal.replace(',', '.'));
+    if (isNaN(parsed) || parsed < 0) { showToast('Inserisci un valore valido', true); return; }
+    asset.initialCapital = parsed;
+    db.investments.put(asset).then(() => {
+        renderInvestAssetDetail(asset);
+        renderInvestments();
+        showToast('Capitale iniziale aggiornato', false);
+    }).catch(e => {
+        console.error('[Invest] Errore aggiornamento:', e);
+        showToast('Errore aggiornamento', true);
+    });
 }
 
 function openInvestAssetPopup(id) {
@@ -2319,7 +2340,7 @@ async function renderInvestAssetDetail(asset) {
                 <span class="invest-stat-value">${fmtEPlain(stats.currentValue,0)}</span>
             </div>
             <div class="invest-stat-box">
-                <span class="invest-stat-label">Investito</span>
+                <span class="invest-stat-label">Investito <span style="cursor:pointer;font-size:12px;color:#8b5cf6;" onclick="editInvestInitialCapital(${asset.id})" title="Modifica capitale iniziale">✏️</span></span>
                 <span class="invest-stat-value">${fmtEPlain(stats.totalInvested,0)}</span>
             </div>
             <div class="invest-stat-box">
