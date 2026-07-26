@@ -36,6 +36,10 @@
         <div class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></div>
         <span class="nav-label">Analisi</span>
     </a>
+    <a href="#" class="nav-item" id="navInvestimenti" onclick="switchTab('investimenti-tab', document.getElementById('tab-btn-investimenti'))">
+        <div class="nav-icon-wrapper"><i class="fas fa-gem"></i></div>
+        <span class="nav-label">Investimenti</span>
+    </a>
     <a href="#" class="nav-item" id="navPrevisioni" onclick="switchTab('future-tab', document.getElementById('tab-btn-future'))">
         <div class="nav-icon-wrapper"><i class="fas fa-arrow-trend-up"></i></div>
         <span class="nav-label">Previsioni</span>
@@ -440,7 +444,92 @@
 
     </div>
 
-    <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
+    <!-- =================== TAB 5: INVESTIMENTI =================== -->
+    <div id="investimenti-tab" class="tab-content hidden">
+
+        <!-- DESKTOP -->
+        <div class="hide-mobile">
+            <div class="card">
+                <h2>💎 Investimenti & Asset</h2>
+                <p style="font-size:13px;color:#475569;margin-bottom:14px;">Gestisci i tuoi investimenti: immobili, trading, salvadanai e side business.</p>
+                <button class="btn-spesa" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);margin-bottom:16px;" onclick="openInvestAddSheet()">+ Nuovo Asset / Salvadanaio</button>
+                <div id="investAssetListDesktop" style="display:flex;flex-direction:column;gap:10px;"></div>
+            </div>
+        </div>
+
+        <!-- MOBILE: Zero-Scroll Dashboard -->
+        <div class="hide-desktop invest-mobile-dashboard">
+            <div class="invest-hero-card">
+                <div class="invest-hero-stat">
+                    <span class="invest-hero-label">Patrimonio</span>
+                    <span class="invest-hero-value" id="investTotalValue">0 €</span>
+                </div>
+                <div class="invest-hero-stat">
+                    <span class="invest-hero-label">Cashflow/mese</span>
+                    <span class="invest-hero-value" id="investMonthlyCashflow">0 €</span>
+                </div>
+                <div class="invest-hero-stat">
+                    <span class="invest-hero-label">ROI Globale</span>
+                    <span class="invest-hero-value" id="investGlobalRoi">0%</span>
+                </div>
+            </div>
+
+            <button class="invest-add-btn" onclick="openInvestAddSheet()">+ Nuovo Asset / Salvadanaio</button>
+
+            <div id="investAssetGrid" class="invest-asset-grid"></div>
+        </div>
+
+        <!-- POPUP NUOVO ASSET -->
+        <div id="investAddPopup" class="popup-overlay" onclick="closeInvestAddPopup(event)">
+            <div class="popup-panel" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeInvestAddPopup()">×</button>
+                <h3 style="margin:0 0 12px;">💎 Nuovo Asset</h3>
+                <div class="popup-body" style="gap:12px;display:flex;flex-direction:column;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <button class="invest-type-btn" data-type="immobili" onclick="selectInvestType(this)">🏠 Immobili</button>
+                        <button class="invest-type-btn" data-type="trading_crypto" onclick="selectInvestType(this)">📈 Trading/Crypto</button>
+                        <button class="invest-type-btn" data-type="salvadanai" onclick="selectInvestType(this)">🐷 Salva-Danai</button>
+                        <button class="invest-type-btn" data-type="side_business" onclick="selectInvestType(this)">🚀 Side Business</button>
+                    </div>
+                    <input type="text" id="investNewName" class="sheet-input" placeholder="Nome asset (es. Casa Mainz, ETF MSCI World)">
+                    <input type="number" id="investNewTarget" class="sheet-input" step="0.01" min="0" placeholder="Obiettivo (facoltativo) €" style="display:none;">
+                    <button class="btn-spesa" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);" onclick="saveNewInvestment()">Salva Asset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- POPUP DETTAGLIO ASSET -->
+        <div id="investAssetPopup" class="popup-overlay" onclick="closeInvestAssetPopup(event)">
+            <div class="popup-panel" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeInvestAssetPopup()">×</button>
+                <h3 style="margin:0 0 8px;" id="investPopupTitle">Dettaglio Asset</h3>
+                <div id="investPopupBody" class="popup-body" style="gap:12px;display:flex;flex-direction:column;">
+                    <div id="investPopupSummary" class="invest-popup-summary"></div>
+                    <button class="btn-spesa" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);margin:0;" onclick="openInvestMovementForm()">+ Aggiungi Movimento</button>
+                    <div id="investMovementForm" style="display:none;flex-direction:column;gap:10px;padding:12px;background:#f8fafc;border-radius:12px;">
+                        <input type="number" id="investMovAmount" class="sheet-input" step="0.01" placeholder="Importo €">
+                        <select id="investMovType" class="sheet-input">
+                            <option value="deposit">💰 Deposito</option>
+                            <option value="withdrawal">💸 Prelievo</option>
+                            <option value="profit">📈 Profitto</option>
+                            <option value="expense">🔧 Spesa</option>
+                        </select>
+                        <input type="date" id="investMovDate" class="sheet-input">
+                        <input type="text" id="investMovDesc" class="sheet-input" placeholder="Nota (es. Acquisto quote)">
+                        <div style="display:flex;gap:10px;">
+                            <button class="btn-secondary" style="margin:0;flex:1;" onclick="closeInvestMovementForm()">Annulla</button>
+                            <button class="btn-entrate" style="margin:0;flex:1;" onclick="saveInvestMovement()">Salva</button>
+                        </div>
+                    </div>
+                    <h4 style="font-size:13px;font-weight:700;margin:8px 0 4px;color:var(--primary);">Storico Movimenti</h4>
+                    <div id="investMovementsList" style="display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =================== TAB 6: IMPOSTAZIONI =================== -->
     <div id="settings-tab" class="tab-content hidden">
         <div class="settings-grid">
             <button class="settings-card" data-popup="categorie">

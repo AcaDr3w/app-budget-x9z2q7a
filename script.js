@@ -52,6 +52,7 @@ const TAB_TITLES = {
     'current-month-tab': 'Mese',
     'history-tab': 'Storico',
     'future-tab': 'Futuro',
+    'investimenti-tab': 'Investimenti',
     'settings-tab': 'Impostazioni'
 };
 
@@ -72,6 +73,10 @@ db.version(2).stores({
 }).upgrade(tx => {});
 db.version(3).stores({
     syncState: 'id'
+}).upgrade(tx => {});
+db.version(4).stores({
+    investments: '++id, type',
+    investmentMovements: '++id, investmentId'
 }).upgrade(tx => {});
 
 // Device ID univoco (generato una sola volta per installazione)
@@ -236,7 +241,7 @@ async function processSilentRestore(data, cloudCounter) {
             if (data.income) await db.income.bulkPut(data.income);
             if (data.expenses) await db.expenses.bulkPut(data.expenses);
             if (data.months) await db.months.bulkPut(data.months);
-            if (data.savingsGoals) await db.savingsGoals.bulkPut(data.savingsGoals);
+
             if (data.settings) await db.settings.bulkPut(data.settings);
             
             await db.syncState.put({ id: 'versionData', counter: cloudCounter || 0, deviceId: getDeviceId(), lastUpdated: Date.now() });
@@ -472,6 +477,7 @@ function switchTab(tabId, buttonEl) {
     const navMap = {
         'current-month-tab': 'navMese',
         'history-tab': 'navAnalisi',
+        'investimenti-tab': 'navInvestimenti',
         'future-tab': 'navPrevisioni',
         'settings-tab': 'navImpostazioni'
     };
@@ -479,7 +485,8 @@ function switchTab(tabId, buttonEl) {
     if (navItem) navItem.classList.add('active');
     updateActivePageSubtitle(tabId);
     if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); }
-    if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
+    if (tabId === 'future-tab') { renderFutureProjections(); renderAnnualDeadlines(); }
+    if (tabId === 'investimenti-tab') { renderInvestments(); }
     window.scrollTo(0, 0);
 }
 
@@ -2106,88 +2113,289 @@ async function renderRecordsHub(monthsArray) {
     }
 }
 
-async function renderSavingsGoals() {
-    const goals = await db.savingsGoals.toArray();
-    const container = document.getElementById('savingsGoalsList');
-    const depositSelect = document.getElementById('depositSavingsSelect');
-    if (!container) return; // element not present in minimal UI -> nothing to render
-    container.innerHTML = '';
-    if (!goals || goals.length === 0) {
-        container.innerHTML = '<p style="color:#94a3b8;font-size:12px;">Nessun salvadanio creato.</p>';
-        if (depositSelect) {
-            depositSelect.innerHTML = '<option value="">Nessun salvadanaio disponibile</option>';
-            depositSelect.disabled = true;
-        }
-        return;
+// =====================================================================
+// INVESTIMENTI & ASSET
+// =====================================================================
+const ASSET_TYPES = {
+    immobili: { icon: '🏠', label: 'Immobili', color: '#0d9488' },
+    trading_crypto: { icon: '📈', label: 'Trading/Crypto', color: '#8b5cf6' },
+    salvadanai: { icon: '🐷', label: 'Salva-Danai', color: '#f59e0b' },
+    side_business: { icon: '🚀', label: 'Side Business', color: '#3b82f6' }
+};
+const MOVEMENT_TYPE_LABELS = {
+    deposit: '💰 Deposito',
+    withdrawal: '💸 Prelievo',
+    profit: '📈 Profitto',
+    expense: '🔧 Spesa'
+};
+let currentInvestments = [];
+let selectedInvestId = null;
+let selectedInvestType = null;
+
+async function loadInvestments() {
+    try {
+        currentInvestments = await db.investments.toArray();
+    } catch (e) {
+        console.warn('[Invest] Errore caricamento:', e);
+        currentInvestments = [];
     }
-    if (depositSelect) {
-        depositSelect.disabled = false;
-        // Show only the name of the savings goal in the dropdown
-        depositSelect.innerHTML = goals.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-    }
-    
-    goals.forEach(g => {
-        const accumulated = g.importo_accumulato || 0;
-        const pct = g.targetAmount > 0 ? Math.min(100, Math.max(0, (accumulated / g.targetAmount) * 100)) : 0;
-        const isComplete = pct >= 100;
-        container.innerHTML += `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:10px; position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
-                <div style="display:flex; align-items:center; gap:8px; font-weight:bold; font-size:15px; color:#1e293b; min-width:160px;">
-                    <span>${g.name} ${isComplete ? '🎉' : ''}</span>
-                </div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
-                    <button onclick="deleteSavingsGoal(${g.id})" title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
-                        🗑️
-                    </button>
-                </div>
-            </div>
-            <div style="height: 12px; background: #e2e8f0; border-radius: 10px; overflow:hidden; margin-bottom:8px;">
-                <div style="width: ${pct}%; height: 100%; background: ${isComplete ? '#10b981' : '#3b82f6'}; transition: width 0.3s;"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px; font-size:13px; color:#334155;">
-                <span>Avanzamento: <strong>${pct.toFixed(1)}%</strong></span>
-                ${isComplete ? '<span style="color:#10b981; font-weight:700;">Obiettivo raggiunto</span>' : ''}
-            </div>
-        </div>`;
-    });
-}
-async function addSavingsGoal() {
-    const nameEl = document.getElementById('sgName');
-    const amountEl = document.getElementById('sgAmount');
-    if (!nameEl || !amountEl) return; // UI not present
-    const name = nameEl.value.trim();
-    const amount = parseFloat(amountEl.value) || 0;
-    if (!name || amount <= 0) { alert('Inserisci un nome e un target valido.'); return; }
-    await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
-    await updateGlobalVersion();
-    nameEl.value = ''; amountEl.value = '';
-    renderSavingsGoals();
-}
-async function deleteSavingsGoal(id) {
-    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id); await updateGlobalVersion(); renderSavingsGoals(); }
 }
 
-async function depositToSavingsGoal() {
-    const select = document.getElementById('depositSavingsSelect');
-    const amountInput = document.getElementById('depositAmount');
-    if (!select || !amountInput) return;
-    const id = parseInt(select.value, 10);
-    const amount = parseFloat(amountInput.value) || 0;
-    if (!id || amount <= 0) { alert('Inserisci un importo valido da depositare.'); return; }
-    const goal = await db.savingsGoals.get(id);
-    if (!goal) { alert('Salvadanaio non trovato.'); return; }
-    const newTotal = (goal.importo_accumulato || 0) + amount;
-    await db.savingsGoals.update(id, {importo_accumulato: newTotal});
-    await updateGlobalVersion();
-    amountInput.value = '';
-    const feedback = document.getElementById('depositFeedback');
-    if (feedback) {
-        feedback.innerText = `✅ Deposito di ${fmtEPlain(amount)} eseguito su "${goal.name}".`;
-        setTimeout(() => { if (feedback) feedback.innerText = ''; }, 4000);
+async function getInvestMovements(investId) {
+    try {
+        return await db.investmentMovements.where('investmentId').equals(investId).toArray();
+    } catch (e) {
+        console.warn('[Invest] Errore movimenti:', e);
+        return [];
     }
-    renderSavingsGoals();
+}
+
+function calcInvestStats(asset, movements) {
+    const deposits = movements.filter(m => m.type === 'deposit' || m.type === 'profit').reduce((s, m) => s + m.amount, 0);
+    const withdrawals = movements.filter(m => m.type === 'withdrawal' || m.type === 'expense').reduce((s, m) => s + m.amount, 0);
+    const currentValue = deposits - withdrawals;
+    const totalInvested = movements.filter(m => m.type === 'deposit').reduce((s, m) => s + m.amount, 0);
+    const totalProfits = movements.filter(m => m.type === 'profit').reduce((s, m) => s + m.amount, 0);
+    const roi = totalInvested > 0 ? ((currentValue - totalInvested) / totalInvested) * 100 : 0;
+    return { currentValue, totalInvested, totalProfits, roi };
+}
+
+async function renderInvestments() {
+    await loadInvestments();
+    const grid = document.getElementById('investAssetGrid');
+    const desktopList = document.getElementById('investAssetListDesktop');
+    if (!grid && !desktopList) return;
+    const allMovements = [];
+    for (const asset of currentInvestments) {
+        const movs = await getInvestMovements(asset.id);
+        allMovements.push({ asset, movements: movs });
+    }
+    // Hero stats
+    let totalValue = 0, totalRoiWeighted = 0, totalInvestedWeighted = 0;
+    const now = new Date();
+    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    let monthlyCashflow = 0;
+    for (const { asset, movements } of allMovements) {
+        const stats = calcInvestStats(asset, movements);
+        totalValue += stats.currentValue;
+        if (stats.totalInvested > 0) {
+            totalRoiWeighted += stats.roi * stats.totalInvested;
+            totalInvestedWeighted += stats.totalInvested;
+        }
+        // Cashflow: last 30 days profits - expenses
+        const recent = movements.filter(m => new Date(m.date) >= oneMonthAgo);
+        const recentIn = recent.filter(m => m.type === 'profit').reduce((s, m) => s + m.amount, 0);
+        const recentOut = recent.filter(m => m.type === 'expense').reduce((s, m) => s + m.amount, 0);
+        monthlyCashflow += recentIn - recentOut;
+    }
+    const globalRoi = totalInvestedWeighted > 0 ? (totalRoiWeighted / totalInvestedWeighted) : 0;
+    document.getElementById('investTotalValue').textContent = fmtEPlain(totalValue, 0);
+    document.getElementById('investMonthlyCashflow').textContent = (monthlyCashflow >= 0 ? '+' : '') + fmtEPlain(monthlyCashflow, 0);
+    document.getElementById('investGlobalRoi').textContent = (globalRoi >= 0 ? '+' : '') + globalRoi.toFixed(1) + '%';
+
+    const renderCard = (asset, movements) => {
+        const info = ASSET_TYPES[asset.type] || { icon: '💎', label: asset.type, color: '#64748b' };
+        const stats = calcInvestStats(asset, movements);
+        const roiColor = stats.roi >= 0 ? '#10b981' : '#ef4444';
+        const isGoal = asset.type === 'salvadanai' && asset.targetAmount > 0;
+        const pct = isGoal ? Math.min(100, Math.max(0, (stats.currentValue / asset.targetAmount) * 100)) : 0;
+        return `
+            <div class="invest-asset-card" data-id="${asset.id}" style="cursor:pointer;">
+                <div class="invest-card-left" style="background:${info.color}22;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
+                    ${info.icon}
+                </div>
+                <div class="invest-card-center" style="flex:1;min-width:0;">
+                    <div class="invest-card-name">${asset.name}</div>
+                    <div class="invest-card-type">${info.label}</div>
+                    ${isGoal ? `
+                        <div class="invest-progress-track">
+                            <div class="invest-progress-bar" style="width:${pct}%;background:${info.color};"></div>
+                        </div>
+                        <div class="invest-progress-label">${fmtEPlain(stats.currentValue,0)} / ${fmtEPlain(asset.targetAmount,0)}</div>
+                    ` : ''}
+                </div>
+                <div class="invest-card-right" style="text-align:right;flex-shrink:0;">
+                    <div class="invest-card-value">${fmtEPlain(stats.currentValue,0)}</div>
+                    <div class="invest-card-roi" style="color:${roiColor};">${stats.roi >= 0 ? '+' : ''}${stats.roi.toFixed(1)}%</div>
+                </div>
+            </div>
+        `;
+    };
+    const html = allMovements.map(({ asset, movements }) => renderCard(asset, movements)).join('');
+    const empty = '<div class="invest-empty">Nessun asset. Premi "+" per crearne uno.</div>';
+    if (grid) {
+        grid.innerHTML = html || empty;
+        grid.querySelectorAll('.invest-asset-card').forEach(el => {
+            el.addEventListener('click', () => openInvestAssetPopup(parseInt(el.dataset.id)));
+        });
+    }
+    if (desktopList) {
+        desktopList.innerHTML = html || empty;
+        desktopList.querySelectorAll('.invest-asset-card').forEach(el => {
+            el.addEventListener('click', () => openInvestAssetPopup(parseInt(el.dataset.id)));
+        });
+    }
+}
+
+function selectInvestType(btn) {
+    document.querySelectorAll('.invest-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedInvestType = btn.dataset.type;
+    const targetInput = document.getElementById('investNewTarget');
+    if (targetInput) {
+        targetInput.style.display = selectedInvestType === 'salvadanai' ? 'block' : 'none';
+        if (selectedInvestType !== 'salvadanai') targetInput.value = '';
+    }
+}
+
+function openInvestAddSheet() {
+    selectedInvestType = null;
+    document.querySelectorAll('.invest-type-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('investNewName').value = '';
+    const targetInput = document.getElementById('investNewTarget');
+    if (targetInput) { targetInput.style.display = 'none'; targetInput.value = ''; }
+    document.getElementById('investAddPopup').classList.add('active');
+    document.body.classList.add('sheet-open');
+}
+
+function closeInvestAddPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('investAddPopup').classList.remove('active');
+    document.body.classList.remove('sheet-open');
+}
+
+async function saveNewInvestment() {
+    const name = document.getElementById('investNewName').value.trim();
+    if (!name || !selectedInvestType) {
+        showToast('Seleziona un tipo e inserisci un nome.', true);
+        return;
+    }
+    const targetInput = document.getElementById('investNewTarget');
+    const targetAmount = selectedInvestType === 'salvadanai' ? (parseFloat(targetInput?.value) || 0) : 0;
+    const asset = { type: selectedInvestType, name, targetAmount, createdAt: Date.now() };
+    try {
+        await db.investments.put(asset);
+        closeInvestAddPopup();
+        await renderInvestments();
+        showToast('Asset creato!', false);
+    } catch (e) {
+        console.error('[Invest] Errore salvataggio:', e);
+        showToast('Errore salvataggio asset', true);
+    }
+}
+
+function openInvestAssetPopup(id) {
+    const asset = currentInvestments.find(a => a.id === id);
+    if (!asset) return;
+    selectedInvestId = id;
+    const info = ASSET_TYPES[asset.type] || { icon: '💎', label: asset.type, color: '#64748b' };
+    document.getElementById('investPopupTitle').textContent = `${info.icon} ${asset.name}`;
+    document.getElementById('investMovementForm').style.display = 'none';
+    document.getElementById('investAddPopup').classList.remove('active');
+    document.getElementById('investAssetPopup').classList.add('active');
+    document.body.classList.add('sheet-open');
+    renderInvestAssetDetail(asset);
+}
+
+function closeInvestAssetPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('investAssetPopup').classList.remove('active');
+    document.body.classList.remove('sheet-open');
+    selectedInvestId = null;
+}
+
+async function renderInvestAssetDetail(asset) {
+    const movements = await getInvestMovements(asset.id);
+    const stats = calcInvestStats(asset, movements);
+    const info = ASSET_TYPES[asset.type] || { icon: '💎', label: asset.type, color: '#64748b' };
+    const roiColor = stats.roi >= 0 ? '#10b981' : '#ef4444';
+    const isGoal = asset.type === 'salvadanai' && asset.targetAmount > 0;
+    const pct = isGoal ? Math.min(100, Math.max(0, (stats.currentValue / asset.targetAmount) * 100)) : 0;
+
+    document.getElementById('investPopupSummary').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="invest-stat-box">
+                <span class="invest-stat-label">Valore Attuale</span>
+                <span class="invest-stat-value">${fmtEPlain(stats.currentValue,0)}</span>
+            </div>
+            <div class="invest-stat-box">
+                <span class="invest-stat-label">Investito</span>
+                <span class="invest-stat-value">${fmtEPlain(stats.totalInvested,0)}</span>
+            </div>
+            <div class="invest-stat-box">
+                <span class="invest-stat-label">Profitto</span>
+                <span class="invest-stat-value" style="color:${roiColor};">${fmtEPlain(stats.totalProfits,0)}</span>
+            </div>
+            <div class="invest-stat-box">
+                <span class="invest-stat-label">ROI</span>
+                <span class="invest-stat-value" style="color:${roiColor};">${stats.roi >= 0 ? '+' : ''}${stats.roi.toFixed(1)}%</span>
+            </div>
+        </div>
+        ${isGoal ? `
+            <div style="margin-top:8px;">
+                <div class="invest-progress-track" style="height:10px;">
+                    <div class="invest-progress-bar" style="width:${pct}%;background:${info.color};height:100%;"></div>
+                </div>
+                <div style="font-size:11px;color:#64748b;text-align:center;margin-top:4px;">${fmtEPlain(stats.currentValue,0)} / ${fmtEPlain(asset.targetAmount,0)} (${pct.toFixed(0)}%)</div>
+            </div>
+        ` : ''}
+    `;
+
+    // Render movements
+    const list = document.getElementById('investMovementsList');
+    if (movements.length === 0) {
+        list.innerHTML = '<div class="invest-empty" style="padding:12px;">Nessun movimento registrato.</div>';
+        return;
+    }
+    movements.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    list.innerHTML = movements.map(m => {
+        const sign = (m.type === 'deposit' || m.type === 'profit') ? '+' : '-';
+        const color = (m.type === 'deposit' || m.type === 'profit') ? '#10b981' : '#ef4444';
+        const dateStr = m.date ? m.date.split('-').reverse().slice(0, 2).join('/') : '';
+        return `
+            <div class="invest-mov-row">
+                <div class="invest-mov-left">
+                    <span class="invest-mov-type">${MOVEMENT_TYPE_LABELS[m.type] || m.type}</span>
+                    <span class="invest-mov-date">${dateStr}${m.desc ? ' · ' + m.desc : ''}</span>
+                </div>
+                <span class="invest-mov-amount" style="color:${color};">${sign}${fmtEPlain(Math.abs(m.amount))}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function openInvestMovementForm() {
+    const form = document.getElementById('investMovementForm');
+    form.style.display = 'flex';
+    document.getElementById('investMovAmount').value = '';
+    document.getElementById('investMovType').value = 'deposit';
+    document.getElementById('investMovDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('investMovDesc').value = '';
+}
+
+function closeInvestMovementForm() {
+    document.getElementById('investMovementForm').style.display = 'none';
+}
+
+async function saveInvestMovement() {
+    if (!selectedInvestId) return;
+    const amount = parseFloat(document.getElementById('investMovAmount').value) || 0;
+    if (amount <= 0) { showToast('Inserisci un importo maggiore di zero', true); return; }
+    const type = document.getElementById('investMovType').value;
+    const date = document.getElementById('investMovDate').value || new Date().toISOString().slice(0, 10);
+    const desc = document.getElementById('investMovDesc').value.trim() || '';
+    const mov = { investmentId: selectedInvestId, date, type, amount, desc };
+    try {
+        await db.investmentMovements.put(mov);
+        closeInvestMovementForm();
+        const asset = currentInvestments.find(a => a.id === selectedInvestId);
+        if (asset) await renderInvestAssetDetail(asset);
+        await renderInvestments();
+        showToast('Movimento registrato', false);
+    } catch (e) {
+        console.error('[Invest] Errore movimento:', e);
+        showToast('Errore salvataggio movimento', true);
+    }
 }
 
 // =====================================================================
@@ -3362,7 +3570,7 @@ async function getCompiledBackupData() {
         income: await db.income.toArray(),
         expenses: await db.expenses.toArray(),
         months: await db.months.toArray(),
-        savingsGoals: await db.savingsGoals.toArray(),
+
         settings: await db.settings.toArray(),
         syncState: await db.syncState.toArray()
     }, null, 2);
