@@ -1751,6 +1751,299 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     box-sizing: border-box;
 }
 
+/* ===== SPESE CONDIVISE — SHARED TOGGLE & PANEL ===== */
+.shared-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+.shared-panel {
+    overflow: clip;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+                opacity 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+                margin 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.shared-panel.active {
+    max-height: 400px;
+    opacity: 1;
+    margin-top: 10px;
+}
+.shared-person-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.shared-person-row select {
+    flex: 1;
+}
+.btn-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #f0f2f5;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.btn-small:active {
+    transform: scale(0.94);
+}
+.split-method-pills {
+    display: flex;
+    gap: 6px;
+}
+.split-pill {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #64748b;
+    user-select: none;
+}
+.split-pill.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+.split-pill:active {
+    transform: scale(0.94);
+}
+.shared-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin: 2px 0;
+}
+.shared-preview {
+    font-size: 13px;
+    font-weight: 600;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-align: center;
+}
+.shared-hint {
+    font-size: 13px;
+    color: #64748b;
+    padding: 8px 0;
+    text-align: center;
+}
+
+/* ===== POPUP SPESE CONDIVISE ===== */
+.condivise-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e2e8f0;
+    margin: 0 0 8px;
+}
+.condivise-tab {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+.condivise-tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+.condivise-tab-content {
+    display: none;
+}
+.condivise-tab-content.active {
+    display: block;
+}
+.condivise-empty {
+    padding: 30px 16px;
+    text-align: center;
+    font-size: 14px;
+    color: #94a3b8;
+}
+.condivise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Saldi rows */
+.saldo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.saldo-dovuto {
+    border-left: 4px solid #10b981;
+}
+.saldo-debito {
+    border-left: 4px solid #ef4444;
+}
+.saldo-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.saldo-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.saldo-detail {
+    font-size: 11px;
+    color: #64748b;
+}
+.saldo-amount {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.saldo-positive {
+    color: #10b981;
+}
+.saldo-negative {
+    color: #ef4444;
+}
+.btn-salda {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-salda:active {
+    transform: scale(0.94);
+}
+
+/* Gruppi cards */
+.gruppo-card {
+    padding: 14px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.gruppo-card:active {
+    transform: scale(0.97);
+    background: #f1f5f9;
+}
+.gruppo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.gruppo-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.gruppo-total {
+    font-size: 14px;
+    font-weight: 700;
+    color: #3b82f6;
+}
+.gruppo-members {
+    font-size: 11px;
+    color: #64748b;
+}
+.gruppo-expenses {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+.gruppo-expenses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.gruppo-expense-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12px;
+}
+.gruppo-exp-desc {
+    flex: 1;
+    font-weight: 600;
+    color: #334155;
+}
+.gruppo-exp-person {
+    color: #64748b;
+    font-size: 11px;
+}
+.gruppo-exp-amount {
+    font-weight: 700;
+    color: #ef4444;
+}
+.gruppo-empty {
+    padding: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* Inline add forms for popup */
+.condivise-add-person,
+.condivise-add-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.condivise-add-person input,
+.condivise-add-group input {
+    flex: 1;
+}
+.condivise-add-person .btn-small,
+.condivise-add-group .btn-small {
+    width: auto;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
 /* ===== SHEET SLIDER FOR HORIZONTAL TRANSITION ===== */
 .sheet-slider {
     display: flex;

@@ -102,6 +102,7 @@
           <div id="mese-action-hub" class="hide-desktop">
               <button data-action="search">🔍 Ricerca</button>
               <button data-action="ia">🤖 I.A.</button>
+              <button data-action="condivise">👥 Condividi</button>
           </div>
 
         <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
@@ -148,6 +149,22 @@
                     <p style="font-size:12px;color:#475569;margin:0;">Analisi mirata sulle spese e entrate del mese corrente.</p>
                     <button class="btn-ia" id="btnIaMonthAnalysis" onclick="runIaMonthAnalysis()" style="margin:0;">🧠 Genera Analisi Mese</button>
                     <div id="iaMonthResponse" class="ia-response-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POPUP SPESE CONDIVISE -->
+        <div id="popup-spese-condivise" class="popup-overlay" onclick="closeCondivisePopup(event)">
+            <div class="popup-panel" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeCondivisePopup()">×</button>
+                <h3 style="margin:0 0 8px;">👥 Spese Condivise</h3>
+                <div class="condivise-tabs">
+                    <button class="condivise-tab active" data-tab="saldi">💰 Saldi</button>
+                    <button class="condivise-tab" data-tab="gruppi">👥 Gruppi</button>
+                </div>
+                <div class="popup-body" id="condiviseBody" style="gap:8px;display:flex;flex-direction:column;max-height:55vh;">
+                    <div id="condiviseTabSaldi" class="condivise-tab-content active"></div>
+                    <div id="condiviseTabGruppi" class="condivise-tab-content"></div>
                 </div>
             </div>
         </div>
@@ -721,6 +738,29 @@
                     <div class="recurring-until-container" id="recurringUntilContainer">
                         <input type="month" id="recurringUntil" class="sheet-input recurring-until-input">
                         <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
+                    </div>
+
+                    <div class="shared-toggle-wrapper">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="sharedToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">👥 Dividi Spesa</span>
+                    </div>
+                    <div class="shared-panel" id="sharedPanel">
+                        <div class="shared-person-row">
+                            <select id="sharedPersonSelect" class="sheet-input">
+                                <option value="">Seleziona persona...</option>
+                            </select>
+                            <button class="btn-small" id="btnNewPerson" title="Nuova persona">➕</button>
+                        </div>
+                        <div class="split-method-pills">
+                            <label class="split-pill active" data-method="equal">Parti Uguali</label>
+                            <label class="split-pill" data-method="percentage">%</label>
+                            <label class="split-pill" data-method="fixed">€</label>
+                            <label class="split-pill" data-method="shares">Quote</label>
+                        </div>
+                        <div id="sharedDetailFields"></div>
                     </div>
                 </div>
                 <div class="sheet-footer">

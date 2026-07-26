@@ -78,6 +78,14 @@ db.version(4).stores({
     investments: '++id, type',
     investmentMovements: '++id, investmentId'
 }).upgrade(tx => {});
+db.version(5).stores({
+    people: '++id',
+    groups: '++id',
+    groupMembers: '++id, groupId',
+    sharedExpenseSplits: '++id, expenseId, personId'
+}).upgrade(tx => {});
+
+function genId() { return Date.now() + Math.floor(Math.random() * 10000); }
 
 // Device ID univoco (generato una sola volta per installazione)
 function getDeviceId() {
@@ -241,6 +249,10 @@ async function processSilentRestore(data, cloudCounter) {
             if (data.income) await db.income.bulkPut(data.income);
             if (data.expenses) await db.expenses.bulkPut(data.expenses);
             if (data.months) await db.months.bulkPut(data.months);
+            if (data.people) await db.people.bulkPut(data.people);
+            if (data.groups) await db.groups.bulkPut(data.groups);
+            if (data.groupMembers) await db.groupMembers.bulkPut(data.groupMembers);
+            if (data.sharedExpenseSplits) await db.sharedExpenseSplits.bulkPut(data.sharedExpenseSplits);
 
             if (data.settings) await db.settings.bulkPut(data.settings);
             
@@ -280,6 +292,11 @@ let selectedFilterCategory = null;
 let searchQuery = "";
 let chartB = null, chartC = null;
 let tradingChart = null;
+
+// ===== SPESE CONDIVISE STATE =====
+let people = [];
+let groups = [];
+let groupMembers = [];
 
  // ===== VIEW MODE STATE (defaults — toggle rimosso) =====
  let currentViewMode = 'full';
@@ -404,10 +421,12 @@ async function initApp() {
         if (card) openSettingsPopup(card.dataset.popup);
     });
     await loadAnnualDeadlines();
+    await loadPeopleGroups();
     await loadMonthData();
     toggleIaProviderFields();
     checkDatabaseHealth();
     initPWA();
+    setupSharedToggle();
     // Aggiorna il display del mese nella pillola all'avvio
     updateMonthDisplay();
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
@@ -718,10 +737,232 @@ function closeTransactionSheet() {
     // Reset slider position
     const slider = document.querySelector('.sheet-slider');
     if (slider) slider.style.transform = 'translateX(0)';
+    
+    // Reset shared expense toggle
+    const shToggle = document.getElementById('sharedToggle');
+    const shPanel = document.getElementById('sharedPanel');
+    if (shToggle) shToggle.checked = false;
+    if (shPanel) shPanel.classList.remove('active');
 }
 
+// ===== SPESE CONDIVISE: PEOPLE & GROUPS =====
+async function loadPeopleGroups() {
+    people = await db.people.toArray();
+    groups = await db.groups.toArray();
+    groupMembers = await db.groupMembers.toArray();
+}
 
+function populateSharedPersonSelect() {
+    const sel = document.getElementById('sharedPersonSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seleziona persona...</option>';
+    people.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+    });
+    const optGroup = document.createElement('option');
+    optGroup.value = '__group__';
+    optGroup.textContent = '👥 Assegna a Gruppo...';
+    sel.appendChild(optGroup);
+    groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = 'g_' + g.id;
+        opt.textContent = '  └ ' + g.name;
+        opt.style.fontSize = '12px';
+        sel.appendChild(opt);
+    });
+}
 
+function setupSharedToggle() {
+    const toggle = document.getElementById('sharedToggle');
+    const panel = document.getElementById('sharedPanel');
+    if (toggle && panel) {
+        toggle.addEventListener('change', () => {
+            panel.classList.toggle('active', toggle.checked);
+            if (toggle.checked) {
+                populateSharedPersonSelect();
+                updateSplitFields();
+            }
+        });
+    }
+    const methodPills = document.querySelectorAll('.split-pill');
+    methodPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            methodPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            updateSplitFields();
+        });
+    });
+    const newPersonBtn = document.getElementById('btnNewPerson');
+    if (newPersonBtn) {
+        newPersonBtn.addEventListener('click', () => {
+            const name = prompt('Nome della persona:');
+            if (name && name.trim()) {
+                saveNewPerson(name.trim());
+            }
+        });
+    }
+}
+
+async function saveNewPerson(name) {
+    const person = { id: genId(), name, createdAt: Date.now() };
+    await db.people.put(person);
+    people.push(person);
+    populateSharedPersonSelect();
+    showToast('👤 ' + name + ' aggiunto', false);
+}
+
+function updateSplitFields() {
+    const container = document.getElementById('sharedDetailFields');
+    const activeMethod = document.querySelector('.split-pill.active');
+    const method = activeMethod ? activeMethod.dataset.method : 'equal';
+    const amountEl = document.getElementById('expenseAmountInput');
+    const totalAmount = parseFloat(amountEl?.value) || 0;
+    if (!container) return;
+    
+    if (method === 'equal') {
+        container.innerHTML = '<div class="shared-hint">🧮 Diviso in parti uguali tra tutti i partecipanti</div>';
+    } else if (method === 'percentage') {
+        container.innerHTML = `
+            <label class="shared-field-label">La tua percentuale (%)</label>
+            <input type="number" id="sharedPctInput" class="sheet-input" step="1" min="1" max="100" placeholder="Es. 50" value="50">
+            <div class="shared-preview" id="sharedPreview">${fmtE(totalAmount / 2)} a tuo carico</div>
+        `;
+        const pctInput = document.getElementById('sharedPctInput');
+        if (pctInput) {
+            pctInput.addEventListener('input', () => {
+                const pct = parseFloat(pctInput.value) || 0;
+                const preview = document.getElementById('sharedPreview');
+                if (preview) {
+                    const yourPart = totalAmount * pct / 100;
+                    const otherPart = totalAmount - yourPart;
+                    preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
+                }
+            });
+        }
+    } else if (method === 'fixed') {
+        container.innerHTML = `
+            <label class="shared-field-label">Importo a carico tuo (€)</label>
+            <input type="number" id="sharedFixedInput" class="sheet-input" step="0.01" min="0" placeholder="Es. 25.00">
+            <div class="shared-preview" id="sharedPreview">Inserisci l\'importo a tuo carico</div>
+        `;
+        const fixedInput = document.getElementById('sharedFixedInput');
+        if (fixedInput) {
+            fixedInput.addEventListener('input', () => {
+                const yourPart = parseFloat(fixedInput.value) || 0;
+                const preview = document.getElementById('sharedPreview');
+                if (preview) {
+                    const otherPart = totalAmount - yourPart;
+                    preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
+                }
+            });
+        }
+    } else if (method === 'shares') {
+        container.innerHTML = `
+            <label class="shared-field-label">Le tue quote (es. 2 in un rapporto 2:3)</label>
+            <input type="number" id="sharedMyShares" class="sheet-input" step="1" min="1" placeholder="Le tue quote" value="1">
+            <label class="shared-field-label">Quote totali (es. 5 per 2:3)</label>
+            <input type="number" id="sharedTotalShares" class="sheet-input" step="1" min="1" placeholder="Quote totali" value="2">
+            <div class="shared-preview" id="sharedPreview">Inserisci quote per calcolare</div>
+        `;
+        const mySharesEl = document.getElementById('sharedMyShares');
+        const totalSharesEl = document.getElementById('sharedTotalShares');
+        const updateShares = () => {
+            const my = parseFloat(mySharesEl?.value) || 1;
+            const total = parseFloat(totalSharesEl?.value) || 2;
+            const preview = document.getElementById('sharedPreview');
+            if (preview && total > 0) {
+                const yourPart = totalAmount * my / total;
+                const otherPart = totalAmount - yourPart;
+                preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
+            }
+        };
+        if (mySharesEl) mySharesEl.addEventListener('input', updateShares);
+        if (totalSharesEl) totalSharesEl.addEventListener('input', updateShares);
+    }
+}
+
+async function saveSharedSplits(expenseId, totalAmount) {
+    const toggle = document.getElementById('sharedToggle');
+    if (!toggle || !toggle.checked) return;
+    
+    const personSelect = document.getElementById('sharedPersonSelect');
+    const selectedValue = personSelect?.value;
+    if (!selectedValue) { showToast('Seleziona una persona o gruppo', true); return false; }
+    
+    const activeMethod = document.querySelector('.split-pill.active');
+    const method = activeMethod ? activeMethod.dataset.method : 'equal';
+    let yourAmount = totalAmount;
+    let otherAmount = 0;
+    
+    if (method === 'equal') {
+        const participantCount = 2;
+        yourAmount = totalAmount / participantCount;
+        otherAmount = totalAmount - yourAmount;
+    } else if (method === 'percentage') {
+        const pct = parseFloat(document.getElementById('sharedPctInput')?.value) || 50;
+        yourAmount = totalAmount * pct / 100;
+        otherAmount = totalAmount - yourAmount;
+    } else if (method === 'fixed') {
+        yourAmount = parseFloat(document.getElementById('sharedFixedInput')?.value) || 0;
+        otherAmount = totalAmount - yourAmount;
+    } else if (method === 'shares') {
+        const myShares = parseFloat(document.getElementById('sharedMyShares')?.value) || 1;
+        const totalShares = parseFloat(document.getElementById('sharedTotalShares')?.value) || 2;
+        if (totalShares > 0) {
+            yourAmount = totalAmount * myShares / totalShares;
+            otherAmount = totalAmount - yourAmount;
+        }
+    }
+    
+    if (otherAmount <= 0) return true;
+    
+    let personId = null, groupId = null;
+    if (selectedValue === '__group__') {
+        showToast('Seleziona una persona specifica o crea un gruppo', true);
+        return false;
+    } else if (selectedValue.startsWith('g_')) {
+        groupId = parseInt(selectedValue.replace('g_', ''));
+        const members = groupMembers.filter(m => m.groupId === groupId);
+        const memberCount = members.length || 1;
+        if (method === 'equal') {
+            otherAmount = totalAmount / (memberCount + 1) * memberCount;
+        }
+        for (const member of members) {
+            const splitAmount = method === 'equal' ? totalAmount / (memberCount + 1) : otherAmount / memberCount;
+            const split = {
+                id: genId(),
+                expenseId,
+                personId: member.personId,
+                groupId,
+                amount: splitAmount,
+                splitType: method,
+                isPaid: false,
+                settled: false,
+                createdAt: Date.now()
+            };
+            await db.sharedExpenseSplits.put(split);
+        }
+    } else {
+        personId = parseInt(selectedValue);
+        const split = {
+            id: genId(),
+            expenseId,
+            personId,
+            groupId: null,
+            amount: otherAmount,
+            splitType: method,
+            isPaid: false,
+            settled: false,
+            createdAt: Date.now()
+        };
+        await db.sharedExpenseSplits.put(split);
+    }
+    
+    return true;
+}
 function openIncomeSheet() {
     const overlay = document.getElementById('incomeSheetOverlay');
     const sheet = document.getElementById('incomeBottomSheet');
@@ -1136,20 +1377,54 @@ async function saveTransactionFromSheet() {
         return;
     }
 
-    // NEW EXPENSE (existing logic)
+    // NEW EXPENSE
+    const sharedToggle = document.getElementById('sharedToggle');
+    const isShared = sharedToggle?.checked;
+    const sharedPersonSelect = document.getElementById('sharedPersonSelect');
+    const hasPersonSelected = sharedPersonSelect && sharedPersonSelect.value && sharedPersonSelect.value !== '__group__';
+    
+    let userAmount = amount;
+    let sharedPct = 0;
+    
+    if (isShared && hasPersonSelected) {
+        const activeMethod = document.querySelector('.split-pill.active');
+        const method = activeMethod ? activeMethod.dataset.method : 'equal';
+        
+        if (method === 'equal') {
+            userAmount = amount / 2;
+            sharedPct = 50;
+        } else if (method === 'percentage') {
+            const pct = parseFloat(document.getElementById('sharedPctInput')?.value) || 50;
+            userAmount = amount * pct / 100;
+            sharedPct = pct;
+        } else if (method === 'fixed') {
+            const yourPart = parseFloat(document.getElementById('sharedFixedInput')?.value) || 0;
+            userAmount = Math.min(yourPart, amount);
+            sharedPct = amount > 0 ? Math.round(userAmount / amount * 100) : 0;
+        } else if (method === 'shares') {
+            const myShares = parseFloat(document.getElementById('sharedMyShares')?.value) || 1;
+            const totalShares = parseFloat(document.getElementById('sharedTotalShares')?.value) || 2;
+            if (totalShares > 0) {
+                userAmount = amount * myShares / totalShares;
+                sharedPct = Math.round(myShares / totalShares * 100);
+            }
+        }
+        userAmount = Math.max(0, Math.min(userAmount, amount));
+    }
+    
     const exp = {
         id: Date.now(),
         month: month,
         date: date,
         category: sheetSelectedCategory,
         desc: note || 'Aggiunto da mobile',
-        planned: sheetTransactionType === 'planned' ? amount : 0,
-        actual: sheetTransactionType === 'actual' ? amount : 0,
-        sharedPercentage: 0
+        planned: sheetTransactionType === 'planned' ? userAmount : 0,
+        actual: sheetTransactionType === 'actual' ? userAmount : 0,
+        sharedPercentage: isShared ? sharedPct : 0,
+        isShared: isShared || undefined
     };
     
     try {
-        // Recurring logic
         const recToggle = document.getElementById('recurringToggle');
         const recUntilEl = document.getElementById('recurringUntil');
         const isRecurring = recToggle?.checked;
@@ -1161,6 +1436,10 @@ async function saveTransactionFromSheet() {
 
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
+
+        if (isShared && hasPersonSelected) {
+            await saveSharedSplits(exp.id, amount);
+        }
 
         if (isRecurring) {
             await saveRecurringClones(exp, recUntilEl?.value || '', exp.recurringGroupId);
@@ -2666,6 +2945,189 @@ function closeIaMonthPopup(event) {
     if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
 }
 
+// =====================================================================
+// POPUP SPESE CONDIVISE
+// =====================================================================
+function openCondivisePopup() {
+    const popup = document.getElementById('popup-spese-condivise');
+    if (!popup) return;
+    popup.classList.add('active');
+    document.body.classList.add('sheet-open');
+    switchCondiviseTab('saldi');
+}
+
+function closeCondivisePopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const popup = document.getElementById('popup-spese-condivise');
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+}
+
+function switchCondiviseTab(tab) {
+    document.querySelectorAll('.condivise-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.querySelectorAll('.condivise-tab-content').forEach(c => c.classList.toggle('active', c.id === 'condiviseTab' + tab.charAt(0).toUpperCase() + tab.slice(1)));
+    if (tab === 'saldi') renderSaldiTab();
+    else renderGruppiTab();
+}
+
+async function renderSaldiTab() {
+    const container = document.getElementById('condiviseTabSaldi');
+    if (!container) return;
+    const splits = await db.sharedExpenseSplits.toArray();
+    const pendingSplits = splits.filter(s => !s.settled);
+    
+    let html = '<div class="condivise-add-person"><input type="text" id="newPersonQuickInput" class="sheet-input" placeholder="➕ Nuova persona..."><button class="btn-small" id="btnQuickAddPerson">Aggiungi</button></div>';
+    
+    if (pendingSplits.length === 0) {
+        html += '<div class="condivise-empty">✅ Nessun debito/credito in sospeso</div>';
+    } else {
+        const balances = {};
+        for (const split of pendingSplits) {
+            if (!balances[split.personId]) {
+                const person = people.find(p => p.id === split.personId);
+                balances[split.personId] = { name: person ? person.name : 'Sconosciuto', amount: 0 };
+            }
+            balances[split.personId].amount += split.amount;
+        }
+        html += '<div class="condivise-list">';
+        for (const pid of Object.keys(balances)) {
+            const b = balances[pid];
+            const isOwed = b.amount > 0;
+            html += `
+                <div class="saldo-row ${isOwed ? 'saldo-dovuto' : 'saldo-debito'}">
+                    <div class="saldo-info">
+                        <span class="saldo-name">${b.name}</span>
+                        <span class="saldo-detail">${isOwed ? 'ti deve' : 'le devi'}</span>
+                    </div>
+                    <span class="saldo-amount ${isOwed ? 'saldo-positive' : 'saldo-negative'}">${isOwed ? '+' : '-'}${fmtE(Math.abs(b.amount))}</span>
+                    <button class="btn-salda" data-pid="${pid}">Salda</button>
+                </div>
+            `;
+        }
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.btn-salda').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const pid = parseInt(btn.dataset.pid);
+            await settleBalance(pid);
+        });
+    });
+    const quickAddBtn = document.getElementById('btnQuickAddPerson');
+    const quickAddInput = document.getElementById('newPersonQuickInput');
+    if (quickAddBtn && quickAddInput) {
+        quickAddBtn.addEventListener('click', async () => {
+            const name = quickAddInput.value.trim();
+            if (name) { await saveNewPerson(name); quickAddInput.value = ''; renderSaldiTab(); }
+        });
+        quickAddInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') { quickAddBtn.click(); }
+        });
+    }
+}
+
+async function renderGruppiTab() {
+    const container = document.getElementById('condiviseTabGruppi');
+    if (!container) return;
+    
+    let html = '<div class="condivise-add-group"><input type="text" id="newGroupQuickInput" class="sheet-input" placeholder="➕ Nuovo gruppo..."><button class="btn-small" id="btnQuickAddGroup">Crea</button></div>';
+    
+    if (groups.length === 0) {
+        html += '<div class="condivise-empty">📭 Nessun gruppo ancora. Creane uno per spese di gruppo (es. "Viaggio a Parigi").</div>';
+    } else {
+        html += '<div class="condivise-list">';
+        const splits = await db.sharedExpenseSplits.toArray();
+        for (const g of groups) {
+            const members = groupMembers.filter(m => m.groupId === g.id);
+            const memberNames = members.map(m => {
+                const p = people.find(pp => pp.id === m.personId);
+                return p ? p.name : '?';
+            }).join(', ');
+            const groupSplits = splits.filter(s => s.groupId === g.id && !s.settled);
+            const totalPool = groupSplits.reduce((sum, s) => sum + s.amount, 0);
+            html += `
+                <div class="gruppo-card" data-gid="${g.id}">
+                    <div class="gruppo-header">
+                        <span class="gruppo-name">👥 ${g.name}</span>
+                        <span class="gruppo-total">💰 ${fmtE(totalPool)}</span>
+                    </div>
+                    <div class="gruppo-members">${memberNames || 'Nessun membro'}</div>
+                    <div class="gruppo-expenses" id="gruppoExpenses_${g.id}" style="display:none;"></div>
+                </div>
+            `;
+        }
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.gruppo-card').forEach(card => {
+        card.addEventListener('click', async () => {
+            const gid = parseInt(card.dataset.gid);
+            const expContainer = document.getElementById('gruppoExpenses_' + gid);
+            if (!expContainer) return;
+            if (expContainer.style.display === 'block') {
+                expContainer.style.display = 'none';
+                return;
+            }
+            const groupSplits = splits.filter(s => s.groupId === gid && !s.settled);
+            if (groupSplits.length === 0) {
+                expContainer.innerHTML = '<div class="gruppo-empty">Nessuna spesa in sospeso</div>';
+            } else {
+                let expHtml = '<div class="gruppo-expenses-list">';
+                for (const s of groupSplits) {
+                    const person = people.find(p => p.id === s.personId);
+                    const exp = await db.expenses.get(s.expenseId);
+                    expHtml += `
+                        <div class="gruppo-expense-row">
+                            <span class="gruppo-exp-desc">${exp ? exp.desc : 'Spesa'}</span>
+                            <span class="gruppo-exp-person">${person ? person.name : '?'}</span>
+                            <span class="gruppo-exp-amount">${fmtE(s.amount)}</span>
+                        </div>
+                    `;
+                }
+                expHtml += '</div>';
+                expContainer.innerHTML = expHtml;
+            }
+            expContainer.style.display = 'block';
+        });
+    });
+    
+    const quickAddBtn = document.getElementById('btnQuickAddGroup');
+    const quickAddInput = document.getElementById('newGroupQuickInput');
+    if (quickAddBtn && quickAddInput) {
+        quickAddBtn.addEventListener('click', async () => {
+            const name = quickAddInput.value.trim();
+            if (name) { await saveNewGroup(name); quickAddInput.value = ''; renderGruppiTab(); }
+        });
+        quickAddInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') { quickAddBtn.click(); }
+        });
+    }
+}
+
+async function saveNewGroup(name) {
+    const group = { id: genId(), name, description: '', createdAt: Date.now() };
+    await db.groups.put(group);
+    groups.push(group);
+    showToast('👥 Gruppo "' + name + '" creato', false);
+}
+
+async function settleBalance(personId) {
+    const splits = await db.sharedExpenseSplits.toArray();
+    const pending = splits.filter(s => s.personId === personId && !s.settled);
+    if (pending.length === 0) { showToast('Nessun debito da saldare', true); return; }
+    const person = people.find(p => p.id === personId);
+    const total = pending.reduce((sum, s) => sum + s.amount, 0);
+    if (!confirm(`Saldo con ${person ? person.name : 'sconosciuto'}: ${fmtE(total)}. Procedere?`)) return;
+    for (const s of pending) {
+        s.settled = true;
+        s.isPaid = true;
+        await db.sharedExpenseSplits.put(s);
+    }
+    showToast(`✅ Saldo con ${person ? person.name : 'sconosciuto'} completato`, false);
+    renderSaldiTab();
+}
+
 async function runIaMonthAnalysis() {
     const currentMonth = document.getElementById('currentMonth').value;
     if (!currentMonth) { showToast('Nessun mese selezionato', true); return; }
@@ -3186,6 +3648,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btn) return;
             if (btn.dataset.action === 'search') openSearchPopup();
             else if (btn.dataset.action === 'ia') openIaMonthPopup();
+            else if (btn.dataset.action === 'condivise') openCondivisePopup();
+        });
+    }
+    
+    // Condivise tabs
+    const condiviseTabs = document.querySelector('#popup-spese-condivise .condivise-tabs');
+    if (condiviseTabs) {
+        condiviseTabs.addEventListener('click', (e) => {
+            const tab = e.target.closest('.condivise-tab');
+            if (tab) switchCondiviseTab(tab.dataset.tab);
         });
     }
 });
@@ -3593,7 +4065,11 @@ async function getCompiledBackupData() {
         months: await db.months.toArray(),
 
         settings: await db.settings.toArray(),
-        syncState: await db.syncState.toArray()
+        syncState: await db.syncState.toArray(),
+        people: await db.people.toArray(),
+        groups: await db.groups.toArray(),
+        groupMembers: await db.groupMembers.toArray(),
+        sharedExpenseSplits: await db.sharedExpenseSplits.toArray()
     }, null, 2);
 }
 async function exportBackupJSON() {
@@ -3621,13 +4097,18 @@ function importBackupJSON(event) {
             const data = JSON.parse(e.target.result);
             if (data.categories && data.months) {
                 await db.categories.clear(); await db.annualDeadlines.clear(); await db.income.clear(); await db.expenses.clear(); await db.months.clear();
+                await db.people.clear(); await db.groups.clear(); await db.groupMembers.clear(); await db.sharedExpenseSplits.clear();
                 await db.categories.bulkPut(data.categories);
                 if (data.annual_deadlines) await db.annualDeadlines.bulkPut(data.annual_deadlines);
                 if (data.income) await db.income.bulkPut(data.income);
                 if (data.expenses) await db.expenses.bulkPut(data.expenses);
                 if (data.months) await db.months.bulkPut(data.months);
+                if (data.people) await db.people.bulkPut(data.people);
+                if (data.groups) await db.groups.bulkPut(data.groups);
+                if (data.groupMembers) await db.groupMembers.bulkPut(data.groupMembers);
+                if (data.sharedExpenseSplits) await db.sharedExpenseSplits.bulkPut(data.sharedExpenseSplits);
                 alert("✅ Ripristino completato!");
-                await initCategories(); await loadAnnualDeadlines(); await loadMonthData(); checkDatabaseHealth();
+                await initCategories(); await loadAnnualDeadlines(); await loadPeopleGroups(); await loadMonthData(); checkDatabaseHealth();
             } else { alert("File non valido o formato non riconosciuto."); }
         } catch(err) { alert("❌ Errore nel leggere il file di backup."); }
     };
