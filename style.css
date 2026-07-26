@@ -1718,14 +1718,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
     /* Colori Specifici (Gradients) */
     .card-casa {
-        background: linear-gradient(135deg, #1A8699, #28B4A6);
+        background: linear-gradient(135deg, #5bb8af 0%, #008080 100%);
     }
     .card-veicoli {
-        background: linear-gradient(135deg, #5AB963, #8AD458);
+        background: linear-gradient(135deg, #d2e858 0%, #38b000 100%);
     }
     .card-svago {
         grid-column: span 2;
-        background: linear-gradient(135deg, #8E2DE2, #4A00E0);
+        background: linear-gradient(135deg, #9d4edd 0%, #240046 100%);
         min-height: 0 !important;
     }
 }
