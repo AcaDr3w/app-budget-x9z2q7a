@@ -2088,15 +2088,17 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .condivise-detail-view .btn-back-sheet {
     align-self: flex-start;
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #f1f5f9;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: #1e293b;
+    border: 1px solid #475569;
+    border-radius: 50%;
+    font-size: 18px;
+    color: #f8fafc;
     cursor: pointer;
-    padding: 4px 8px;
-    margin: -4px -8px;
+    flex-shrink: 0;
 }
-.condivise-detail-view .btn-back-sheet:hover { color: #3b82f6; }
+.condivise-detail-view .btn-back-sheet:hover { background: #334155; border-color: #64748b; }
 .condivise-detail-header { text-align: center; padding-bottom: 8px; border-bottom: 1px solid #334155; }
 .detail-header-name { font-size: 18px; font-weight: 700; color: #f1f5f9; }
 .detail-header-members { font-size: 13px; color: #94a3b8; margin-top: 2px; }

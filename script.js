@@ -3091,6 +3091,18 @@ function backToCondiviseSummary() {
     renderSaldiTab();
 }
 
+async function addPersonToGroup(groupId, personId) {
+    if (groupMembers.some(m => m.groupId === groupId && m.personId === personId)) {
+        showToast('Persona già nel gruppo', true);
+        return;
+    }
+    const member = { id: genId(), groupId, personId };
+    await db.groupMembers.put(member);
+    groupMembers.push(member);
+    showToast('✅ Persona aggiunta al gruppo', false);
+    showGroupDetail(groupId);
+}
+
 async function showPersonDetail(personId) {
     const p = people.find(pp => pp.id === personId);
     if (!p) return;
@@ -3165,11 +3177,32 @@ async function showGroupDetail(groupId) {
     const detailView = document.getElementById('condiviseDetailView');
     detailView.style.display = 'flex';
     
+    const nonMembers = people.filter(p => !members.some(m => m.personId === p.id));
+    
     document.getElementById('condiviseDetailHeader').innerHTML = `
         <div class="detail-header-name">👥 ${g.name}</div>
-        <div class="detail-header-members">${memberNames || 'Nessun membro'}</div>
+        <div class="detail-header-members">
+            Membri: ${memberNames || '<span style="color:#f59e0b">Nessun membro</span>'}
+            <div class="group-add-member" style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+                <select id="groupAddPersonSelect" class="sheet-input" style="flex:1;font-size:13px;padding:6px 8px;">
+                    <option value="">➕ Aggiungi persona...</option>
+                    ${nonMembers.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                </select>
+                <button id="btnGroupAddPerson" class="btn-small" style="flex-shrink:0;">Aggiungi</button>
+            </div>
+        </div>
         <div class="detail-header-balance saldo-positive">Cassa comune: ${fmtE(totalPool)}</div>
     `;
+    
+    const addBtn = document.getElementById('btnGroupAddPerson');
+    const addSelect = document.getElementById('groupAddPersonSelect');
+    if (addBtn && addSelect) {
+        addBtn.onclick = async () => {
+            const pid = parseInt(addSelect.value);
+            if (!pid) { showToast('Seleziona una persona', true); return; }
+            await addPersonToGroup(groupId, pid);
+        };
+    }
     
     let html = '<div class="ledger-list">';
     for (const s of groupSplits) {
@@ -3217,16 +3250,19 @@ async function settleBalance(personId) {
     const month = document.getElementById('currentMonth').value;
     
     if (totalCredit > 0 && totalDebt === 0) {
-        // CREDITO: l'altro mi deve → creo entrata "Rimborso da X"
-        if (!confirm(`💰 ${person.name} ti deve ${fmtE(totalCredit)}. Registrare come Entrata?`)) return;
-        const income = {
-            id: genId(), month, date: new Date().toISOString().slice(0, 10),
-            desc: 'Rimborso da ' + person.name, amount: totalCredit
-        };
-        await db.income.put(income);
-        for (const s of credits) { s.settled = true; s.isPaid = true; await db.sharedExpenseSplits.put(s); }
+        // CREDITO: l'altro mi deve → sottraggo dall'actual della spesa originale
+        if (!confirm(`💰 ${person.name} ti deve ${fmtE(totalCredit)}. Saldare?`)) return;
+        for (const s of credits) {
+            const exp = await db.expenses.get(s.expenseId);
+            if (exp) {
+                exp.actual = Math.max(0, (exp.actual || 0) - s.amount);
+                await db.expenses.put(exp);
+            }
+            s.settled = true; s.isPaid = true;
+            await db.sharedExpenseSplits.put(s);
+        }
         await updateUI();
-        showToast('✅ Rimborso da ' + person.name + ' registrato come Entrata', false);
+        showToast('✅ Saldo con ' + person.name + ' completato', false);
     } else if (totalDebt > 0 && totalCredit === 0) {
         // DEBITO: devo io → converto spese previste in sostenute
         if (!confirm(`💳 Devi ${fmtE(totalDebt)} a ${person.name}. Saldare le spese?`)) return;
@@ -3243,22 +3279,24 @@ async function settleBalance(personId) {
         await updateUI();
         showToast('✅ Debito verso ' + person.name + ' saldato', false);
     } else {
-        // MISTO: crediti e debiti con la stessa persona (raro ma possibile)
+        // MISTO: crediti e debiti con la stessa persona
         const net = totalCredit - totalDebt;
-        if (net > 0) {
-            if (!confirm(`💰 ${person.name} ti deve netto ${fmtE(net)}. Registrare come Entrata?`)) return;
-            await db.income.put({ id: genId(), month, date: new Date().toISOString().slice(0, 10), desc: 'Saldo con ' + person.name, amount: net });
-        } else {
-            if (!confirm(`💳 Devi netto ${fmtE(Math.abs(net))} a ${person.name}. Saldare?`)) return;
-            for (const s of debts) {
-                const exp = await db.expenses.get(s.expenseId);
-                if (exp && exp.planned > 0 && exp.actual === 0) {
-                    exp.actual = exp.planned; exp.planned = 0;
-                    await db.expenses.put(exp);
-                }
-            }
+        const msg = net >= 0
+            ? `💰 ${person.name} ti deve netto ${fmtE(net)}. Saldare?`
+            : `💳 Devi netto ${fmtE(Math.abs(net))} a ${person.name}. Saldare?`;
+        if (!confirm(msg)) return;
+        for (const s of credits) {
+            const exp = await db.expenses.get(s.expenseId);
+            if (exp) { exp.actual = Math.max(0, (exp.actual || 0) - s.amount); await db.expenses.put(exp); }
+            s.settled = true; s.isPaid = true;
+            await db.sharedExpenseSplits.put(s);
         }
-        for (const s of pending) { s.settled = true; s.isPaid = true; await db.sharedExpenseSplits.put(s); }
+        for (const s of debts) {
+            const exp = await db.expenses.get(s.expenseId);
+            if (exp && exp.planned > 0 && exp.actual === 0) { exp.actual = exp.planned; exp.planned = 0; await db.expenses.put(exp); }
+            s.settled = true; s.isPaid = true;
+            await db.sharedExpenseSplits.put(s);
+        }
         await updateUI();
         showToast('✅ Saldo con ' + person.name + ' completato', false);
     }
