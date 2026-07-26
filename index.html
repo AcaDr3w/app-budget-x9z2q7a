@@ -612,15 +612,7 @@
             <div id="viewInput" class="sheet-view">
                 <div class="sheet-body">
                     <div class="sheet-amount-display">
-                        <div class="wheel-container" id="integerWheelContainer">
-                            <div class="wheel-scroll" id="integerWheel"></div>
-                            <input type="number" id="hiddenIntegerInput" class="hidden-wheel-input" min="0" max="9999" inputmode="numeric">
-                        </div>
-                        <span class="wheel-separator">,</span>
-                        <div class="wheel-container" id="decimalWheelContainer">
-                            <div class="wheel-scroll" id="decimalWheel"></div>
-                            <input type="number" id="hiddenDecimalInput" class="hidden-wheel-input" min="0" max="99" inputmode="numeric">
-                        </div>
+                        <input type="number" id="expenseAmountInput" class="amount-input" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
                         <span class="currency-symbol">€</span>
                     </div>
                     
@@ -663,15 +655,7 @@
         </div>
         <div class="income-sheet-body">
             <div class="sheet-amount-display">
-                <div class="wheel-container" id="incomeIntegerWheelContainer">
-                    <div class="wheel-scroll" id="incomeIntegerWheel"></div>
-                    <input type="number" id="incomeHiddenIntegerInput" class="hidden-wheel-input" min="0" max="9999" inputmode="numeric">
-                </div>
-                <span class="wheel-separator">,</span>
-                <div class="wheel-container" id="incomeDecimalWheelContainer">
-                    <div class="wheel-scroll" id="incomeDecimalWheel"></div>
-                    <input type="number" id="incomeHiddenDecimalInput" class="hidden-wheel-input" min="0" max="99" inputmode="numeric">
-                </div>
+                <input type="number" id="incomeAmountInput" class="amount-input" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
                 <span class="currency-symbol">€</span>
             </div>
 
