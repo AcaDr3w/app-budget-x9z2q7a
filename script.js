@@ -2706,10 +2706,12 @@ async function renderRipetizioni() {
     const container = document.getElementById('ripetizioniList');
     if (!container) return;
     try {
-        const all = await db.expenses.where('recurringGroupId').above(0).toArray();
+        const allRaw = await db.expenses.toArray();
+        console.log('[Ripetizioni] Raw DB expenses sample:', allRaw.slice(0, 5));
+        const all = allRaw.filter(exp => exp && (exp.recurringGroupId || exp.isRecurring));
         const groups = new Map();
         for (const exp of all) {
-            const gid = exp.recurringGroupId;
+            const gid = exp.recurringGroupId || `legacy_${(exp.desc||'')}_${(exp.planned||exp.actual||0)}_${(exp.category||'')}`;
             if (!groups.has(gid)) groups.set(gid, []);
             groups.get(gid).push(exp);
         }
@@ -2717,21 +2719,24 @@ async function renderRipetizioni() {
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         let html = '';
         for (const [gid, exps] of groups) {
-            const months = exps.map(e => e.month).sort();
+            if (!exps || exps.length === 0) continue;
+            const months = exps.map(e => e.month).filter(Boolean).sort();
             const maxMonth = months[months.length - 1];
-            if (maxMonth < currentMonth) continue;
+            if (!maxMonth || maxMonth < currentMonth) continue;
             const first = exps[0];
+            if (!first) continue;
             const nome = first.desc || 'Spese';
-            const importo = first.planned > 0 ? first.planned : first.actual;
+            const importo = first.planned || first.actual || 0;
             const endRaw = first.recurringEndMonth || '';
             const durata = endRaw ? endRaw.slice(0, 7).replace('-', '/') : 'Senza scadenza';
+            const safeGid = typeof gid === 'number' ? gid : gid.replace(/'/g, "\\'");
             html += `<div class="ripetizione-row">
                 <div class="ripetizione-info">
                     <span class="ripetizione-nome">${nome.replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c])}</span>
                     <span class="ripetizione-importo">${importo.toFixed(2)}€/mese</span>
                     <span class="ripetizione-durata">${durata === 'Senza scadenza' ? 'Senza scadenza' : 'Fino a: ' + durata}</span>
                 </div>
-                <button class="ripetizione-delete" data-group-id="${gid}" title="Elimina ripetizione futura" onclick="deleteRecurringGroup(${gid})">🗑️</button>
+                <button class="ripetizione-delete" title="Elimina ripetizione futura" onclick="deleteRecurringGroup('${safeGid}')">🗑️</button>
             </div>`;
         }
         container.innerHTML = html || '<div class="ripetizioni-empty">Nessuna spesa ricorrente attiva</div>';
@@ -2744,7 +2749,8 @@ async function renderRipetizioni() {
 async function deleteRecurringGroup(groupId) {
     if (!confirm('Eliminare le ripetizioni future di questo gruppo? Le spese passate e già saldate rimarranno invariate.')) return;
     try {
-        const all = await db.expenses.where('recurringGroupId').equals(groupId).toArray();
+        const allRaw = await db.expenses.toArray();
+        const all = allRaw.filter(exp => exp && exp.recurringGroupId == groupId);
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         let removed = 0;
