@@ -1,0 +1,218 @@
+# Project Core Memory
+
+## 🛠️ Tech Stack & Architecture
+- **Structure**: Vanilla HTML5, CSS3, Modern ES6 JavaScript.
+- **Files**: `index.html`, `style.css`, `script.js`.
+
+## 📌 Global Rules & Custom Conventions
+- **Costanti globali**: SEMPRE posizionare le costanti (`const`) all'inizio del file, prima di ogni altra dichiarazione, per evitare errori di Temporal Dead Zone.
+- **Variabili globali**: Dichiarare tutte le variabili (`let`) utilizzate in callback/funzioni in testa al file, nella sezione variabili globali, per evitare errori TDZ in contesti asincroni.
+- **Funzioni**: Dichiarare funzioni dopo le costanti ma prima delle chiamate DOM immediate.
+- **Inizializzazione DOM**: Evitare operazioni DOM sincroni all'esterno di eventi `onload` o `DOMContentLoaded`.
+- **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
+
+## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-07-25**: Fix visibilità form spese nel bottom sheet (Slide Destra)
+  - Rimosso `overflow: hidden` da `.sheet-slider` che tagliava `#viewInput`.
+  - Aggiunto `overflow-x: hidden` su `.bottom-sheet`.
+- **2026-07-12**: Fix errore "Cannot access 'categoryToEdit' before initialization"
+  - Spostato `let categoryToEdit = null;` dalla sezione CATEGORIE (riga 429) alla sezione variabili globali (riga 262)
+  - Rimossa dichiarazione duplicata
+  - Evita Temporal Dead Zone in `saveCategory()` async
+- **2026-07-11**: Fix errore "Cannot access 'TAB_TITLES' before initialization"
+  - Spostato `TAB_TITLES` dalla sezione NAVIGAZIONE TABS (riga ~331) all'inizio file (riga 50)
+  - Rimosso duplicato di dichiarazione
+  - Separata funzione `updateActivePageSubtitle` da `switchTab`
+- **2026-07-11**: Fix errore "Cannot read properties of null (reading 'value')" in toggleIaProviderFields
+  - **Problema**: Funzione chiamata da initApp() tentava di leggere `.value` da elementi inesistenti
+  - **Elementi mancanti**: `iaProviderSelect`, `aiModelGroup`, `geminiKeyGroup`, `openRouterKeyGroup`, `iaProviderBadge`, `iaStatusHint`, `ollamaModelSelect`
+  - **Soluzione**: Aggiunto controllo `if (!providerEl) return;` all'inizio della funzione
+
+## 📊 Categories Map (2026-07-20 - Updated)
+
+### Macro Categories & Subcategories
+
+| Macro | Nome | Icona | Colore | Totale |
+|-------|------|-------|--------|--------|
+| **casa_utenze** | Casa e Utenze | `fa-home` | `#2a9d8f` | 9 |
+| - | Alimentari | `fa-shopping-cart` | `#2a9d8f` | |
+| - | Bolletta Acqua | `fa-tint` | `#2a9d8f` | |
+| - | Bolletta Condominio | `fa-building` | `#2a9d8f` | |
+| - | Bolletta Gas | `fa-fire` | `#2a9d8f` | |
+| - | Bolletta Luce | `fa-lightbulb` | `#2a9d8f` | |
+| - | Bolletta Rifiuti | `fa-trash-alt` | `#2a9d8f` | |
+| - | Bolletta Telefonia | `fa-phone` | `#2a9d8f` | |
+| - | Igiene e Pulizia | `fa-pump-soap` | `#2a9d8f` | |
+| - | Mutuo | `fa-home` | `#2a9d8f` | |
+| **veicoli** | Veicoli | `fa-car` | `#7bc043` | 5 |
+| - | Carburante Auto | `fa-gas-pump` | `#7bc043` | |
+| - | Carburante Moto | `fa-motorcycle` | `#7bc043` | |
+| - | Manutenzioni | `fa-wrench` | `#7bc043` | |
+| - | Tasse Auto (Assic.) | `fa-car` | `#7bc043` | |
+| - | Tasse Moto (Assic.) | `fa-shield-alt` | `#7bc043` | |
+| **spese_svago** | Spese e Svago | `fa-shopping-cart` | `#6f42c1` | 6 |
+| - | Abbigliamento | `fa-tshirt` | `#6f42c1` | |
+| - | Cane | `fa-dog` | `#6f42c1` | |
+| - | Formazione | `fa-book-open` | `#6f42c1` | |
+| - | Imprevisti e Svago | `fa-glass-cheers` | `#6f42c1` | |
+| - | Sanitarie | `fa-stethoscope` | `#6f42c1` | |
+| - | Varie | `fa-box` | `#6f42c1` | |
+
+**Totale categorie**: 20
+
+### CATEGORIES_MAP Structure (Dashboard / Bottom Sheet)
+```javascript
+const CATEGORIES_MAP = {
+    "casa_utenze": [{ id, nome, icona, colore }, ...],  // 9 subcategories
+    "veicoli": [{ id, nome, icona, colore }, ...],      // 5 subcategories
+    "spese_svago": [{ id, nome, icona, colore }, ...]  // 6 subcategories
+};
+```
+
+### defaultCategories Structure (Settings / Seed Data)
+```javascript
+const defaultCategories = {
+    casa_utenze: [ "Alimentari", "Bolletta Acqua", ... ],  // 9
+    veicoli: [ "Carburante Auto", ... ],                    // 5
+    spese_svago: [ "Abbigliamento", ... ]                  // 6
+};
+```
+
+### Variabili Globali Categorie
+- `userMacroCategories` — oggetto `{ macro: [nomi] }`, fonte di verità
+- `userCategories` — array flat derivato (retro-compatibile)
+- `categoryIconMap` — mapping nome → emoji icona
+
+### Bottom Sheet Grid (renderMicroCategoriesGrid)
+- `getFaIcon(catName)`: cerca nome in `CATEGORIES_MAP` → restituisce classe FontAwesome (es. `fa-shopping-cart`), fallback `fa-tag`
+- `renderMicroCategoriesGrid(macroGroup)`: legge da `userMacroCategories[macroGroup]`, genera `.bottom-sheet-grid` con `.bottom-sheet-cat-card`
+- Ogni card: `data-id="NOME"`, `.cat-icon-wrap` con `<i class="fas FA_ICON">`, `.cat-name`, sfondo pastello via `getCategoryCardBg(cat)`
+- Empty state: "Nessuna categoria presente. Aggiungila nelle Impostazioni"
+
+### Bottom Sheet Grid CSS
+- `.bottom-sheet-grid`: 3 colonne, gap 12px, max-height 60vh, overflow-y auto
+- `.bottom-sheet-cat-card`: 18px radius, flex column, box-shadow, `:active` scale(0.94)
+- `.cat-icon-wrap`: font-size 1.5rem
+- `.cat-name`: font-size 0.75rem, weight 600
+- `#microCategoriesGrid`: override `display: block !important` (visibile dentro bottom sheet)
+
+### Bottom Sheet UX - Drag Handle & Scroll Isolation
+- `.drag-handle-wrapper`: `padding: 20px 0`, `touch-action: none`, `cursor: grab` (area tocco 40px)
+- `.sheet-handle`: solo visivo (40px × 5px, `#d1d5db`, `border-radius: 10px`)
+- `setupSwipeToClose()`: eventi agganciati a `#bottomSheet .drag-handle-wrapper` + `#bottomSheet .bottom-sheet-header`
+  - **⚠ Importante**: i selettori devono essere scoped con `#bottomSheet` perché ci sono due bottom sheet nel DOM (future + spese)
+  - `querySelector('.drag-handle-wrapper')` senza scope prende il primo handle nel DOM (future sheet)
+- Z-index `.bottom-sheet`: `10000 !important` (sopra navbar)
+- Scroll chaining bloccato: `.sheet-body` con `overscroll-behavior-y: contain !important`
+- Bottone Salva visibile: `padding-bottom: calc(85px + env(safe-area-inset-bottom))` sul `.sheet-body`
+- Body scroll disabilitato con `body.sheet-open` class (CSS), rimosso `style.overflow` inline per coerenza
+
+### Bottom Sheet Header (Back Button)
+- `.bottom-sheet-header`: flexbox, gap 15px, padding 10px 16px
+- `.btn-back-sheet #btn-back-to-categories`: 36×36 circle, `#f0f2f5`, `:active` `#e0e2e5`
+- `#selected-category-title`: titolo categoria affiancato alla freccia
+- Titolo macro in `openBottomSheetFromMacro()` → mostra nome macro (es. "Casa e Utenze")
+
+### Category Tile Progress Bar
+- Ogni `.bottom-sheet-cat-card` include `.cat-progress-track` + `.cat-progress-bar`
+- Calcolo: `perc = Math.min((actualSum / plannedSum) * 100, 100)` se planned > 0, altrimenti 0%
+- Colori: `#2a9d8f` (≤70%), `#e9c46a` (71-99%), `#e76f51` (≥100%)
+- Dati da `currentData.expenses` filtrati per categoria
+
+## 📐 Layout Mobile: Tab Analisi (Zero-Scroll)
+- `#history-tab.active`: `height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom))` (header 60px + navbar ~60px)
+- `position: relative` con `overflow: hidden` — blocca scroll pagina
+- `.analisi-top-actions`: `position: absolute; top: 8px; right: 12px; z-index: 5` — icone fluttuanti in alto a destra
+
+## 🃏 Records Hub: Griglia 3 Colonne
+- `.records-hub-scroll`: `display: grid; grid-template-columns: repeat(3, 1fr)` invece di flex orizzontale
+- Label card: `font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px`
+- Value card: `font-size: 12px; font-weight: 700`
+- Padding card: `6px 4px`
+
+## 📱 Tab Previsioni — Zero-Scroll Mobile Dashboard (2026-07-24)
+
+### Viewport
+- `.future-mobile-dashboard`: `height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom))`
+- `display: flex; flex-direction: column; overflow: hidden`
+- Stesso pattern di `#history-tab`
+
+### Header Compatto
+- `.future-header-compact h2`: font-size 15px
+- `#futureAvgBoxMobile`: font-size 10px, colore #64748b
+
+### Griglia 2×3 Proiezioni
+- `#futureProjectionsGrid`: `display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex: 1; min-height: 0`
+- `.proj-card`: flex column centered, border-left 4px colored, border-radius 16px
+- Label: 11px uppercase, Value: 18px bold
+
+### Action Hub (3 bottoni)
+- `#futureActionHub`: `display: flex; gap: 8px; flex-shrink: 0`
+- 3 bottoni con `data-action`: `simula`, `scadenze`, `ia`
+
+### Bottom Sheet Previsioni
+- `#futureSheetOverlay` + `#futureBottomSheet` (pattern identico al bottom sheet spese)
+- `#futureSheetBody` con contenuto iniettato via JS
+- `openFutureSheet(action)`: popola body in base a action, apre sheet
+- `closeFutureSheet()`: chiude e resetta
+- `renderFutureProjectionsPreview()`: proiezioni dentro il sheet
+- `renderAnnualDeadlinesInSheet()`: scadenziario dentro il sheet
+
+### JS Refactor
+- `renderFutureProjections()` ora popola sia `#futureProjectionsList` (desktop) che `#futureProjectionsGrid` (mobile)
+- `resetFutureSimulation()` ora resetta anche `#simulatedExpenseMobile`
+- `openFutureSheet('ia')` chiama `callAIEndpoint` con responseBoxId `iaFutureResponseSheet`
+- Swipe-to-close su `#futureBottomSheet`
+
+## 🚫 Body Scroll Lock & Scroll Chaining Fix (2026-07-24)
+
+### CSS body.sheet-open (rafforzato)
+```css
+overflow: hidden !important;
+height: 100dvh !important;
+height: -webkit-fill-available !important;
+width: 100% !important;
+touch-action: none !important;
+overscroll-behavior: none !important;
+-webkit-overflow-scrolling: none !important;
+```
+
+### Bottom Sheet structure (flex + height)
+- `.bottom-sheet`: `height: 85dvh; max-height: 85dvh; display: flex; flex-direction: column; overflow: hidden`
+- `.drag-handle-wrapper`, `.bottom-sheet-header`: `flex-shrink: 0`
+- `.sheet-slider`: `flex: 1; min-height: 0; overflow: hidden`
+- `#viewInput`: `display: flex; flex-direction: column; min-height: 0` — fa da flex column per body + footer
+- `.sheet-body`: `flex: 1; min-height: 0; overflow-y: auto !important` — scroll contenuto, footer sempre visibile
+- `.sheet-view`: `overscroll-behavior-y: contain; min-height: 0` (NO overflow-y, gestito da .sheet-body)
+- `#futureSheetBody`: identico a .sheet-body
+
+### Touch-action riabilitato dentro il sheet
+- `.bottom-sheet * { touch-action: auto }` — permette scroll/input dentro il foglio
+- Drag handle mantiene `touch-action: none !important`
+
+### Popup modali con body lock
+- `openIaModal/closeIaModal` → `classList.add/remove('sheet-open')`
+- `openArchiveModal/closeArchiveModal` → `classList.add/remove('sheet-open')`
+- `openRendicontoPopup/closeRendicontoPopup` → `classList.add/remove('sheet-open')`
+- `style.overflow` inline rimosso (ridondante, gestito da CSS)
+
+## ✅ Completed Tasks
+- **2026-08-08**: Recovery sezione Previsioni mobile dopo corruzione worktree — ripristinata base staged (Drive OAuth + sync intatti), ricostruito bottom sheet Previsioni (`openFutureSheet`/`closeFutureSheet`/`renderFutureProjectionsPreview`/`renderAnnualDeadlinesInSheet`/`setupFutureSwipeToClose`), `renderFutureProjections` estesa a mobile, binding action hub. `node --check` OK (3037 righe).
+- **2026-07-25**: Ruota importo estesa a 4 cifre (0-9999) — loop, padStart, validazione, CSS width
+- **2026-07-25**: Layout cleanup — toggle text flex-centered, uniform `gap: 20px` in sheet-body
+- **2026-07-24**: Body scroll lock robusto per bottom sheet e popup modali
+- **2026-07-24**: Tab Previsioni mobile zero-scroll — griglia 2×3, action hub, 3 bottom sheet
+- **2026-07-23**: Fix scroll tab Analisi — altezza viewport corretta (header 60px + nav 60px)
+- **2026-07-23**: Records hub convertito da carosello orizzontale a griglia 3 colonne
+- **2026-07-23**: Icone IA/Archivio posizionate absolute in alto a destra
+- **2026-07-22**: DEFAULT_CATEGORIES sostituito con `defaultCategories` (oggetto con macro)
+- **2026-07-22**: Nuova UI gerarchica impostazioni con 3 blocchi macro e form con select macro
+- **2026-07-22**: Migrazione automatica categorie flat → strutturate con campo `macro` in DB
+- **2026-07-22**: Bottom Sheet griglia dinamica colorata — lettura da localStorage, card con icone FA, empty-state
+- **2026-07-22**: Bottom Sheet UX — drag handle wrapper, overscroll-behavior, z-index 10000, padding-bottom bottone
+- **2026-07-22**: Back button flexbox fix + progress bar colorata sulle tessere categoria
+
+---
+ # #   =��  D e p l o y   R u l e   ( G i t H u b   P a g e s ) 
+ -   * * A u t o m a t i c   P u s h * * :   A l   t e r m i n e   d i   o g n i   t a s k   o   m o d i f i c a   d i   c o d i c e ,   l ' A I   d e v e   a u t o n o m a m e n t e   f a r e   c o m m i t   e   p u s h   s u   G i t H u b   p e r   s c a t e n a r e   l a   b u i l d   d i   G i t H u b   P a g e s .  
+ 
