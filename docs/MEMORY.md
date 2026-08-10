@@ -12,6 +12,11 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-10**: Fix pagina bianca su GitHub Pages
+  - Causa: `main` remoto senza cartella `js/` (push parziale migrazione Supabase) → 404 `js/supabase-adapter.js`
+  - Causa crash: righe 321-322 `script.js` senza guardia null su `iaProviderSelect`/`geminiApiKeyInput` (elementi assenti: IA hub usa `ai-engine-select`)
+  - Fix: guardie null-safe + `<link rel="icon" href="icon-512.png">` + force-push `master` → `main`
+  - **Regola deploy**: ogni push deve includere anche le cartelle/file NUOVI (`git add -A`, mai file selettivi), altrimenti Pages rompe la reference
 - **2026-07-25**: Fix visibilità form spese nel bottom sheet (Slide Destra)
   - Rimosso `overflow: hidden` da `.sheet-slider` che tagliava `#viewInput`.
   - Aggiunto `overflow-x: hidden` su `.bottom-sheet`.
@@ -213,6 +218,6 @@ overscroll-behavior: none !important;
 - **2026-07-22**: Back button flexbox fix + progress bar colorata sulle tessere categoria
 
 ---
- # #   =��  D e p l o y   R u l e   ( G i t H u b   P a g e s ) 
+ # #   =��  D e p l o y   R u l e   ( G i t H u b   P a g e s ) 
  -   * * A u t o m a t i c   P u s h * * :   A l   t e r m i n e   d i   o g n i   t a s k   o   m o d i f i c a   d i   c o d i c e ,   l ' A I   d e v e   a u t o n o m a m e n t e   f a r e   c o m m i t   e   p u s h   s u   G i t H u b   p e r   s c a t e n a r e   l a   b u i l d   d i   G i t H u b   P a g e s .  
  

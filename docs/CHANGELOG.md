@@ -1,6 +1,22 @@
 # Session Logs & Progress
 
-## [2026-08-08] - Recovery Feature Previsioni Mobile dopo corruzione worktree
+## [2026-08-10] - Fix Pagina Bianca su GitHub Pages (404 supabase-adapter + crash script.js:321)
+
+### 🔧 Situazione
+- GitHub Pages serviva pagina bianca: 404 `js/supabase-adapter.js`, `TypeError` a `script.js:321`, 404 `favicon.ico`.
+- **Causa 404**: il branch remoto `main` (quello servito da Pages) conteneva `index.html` che referenzia `js/supabase-adapter.js` ma la cartella `js/` non era mai stata committata (push parziale/selectivo della migrazione Supabase). Il commit completo esisteva localmente su `master` (821405b) ma non era su `main` (alberi con storia diversa).
+- **Causa crash**: righe 321-322 di script.js eseguivano `getElementById('iaProviderSelect').value`/`geminiApiKeyInput` senza guardia — elementi non presenti in index.html (l'IA hub usa `ai-engine-select`, `openrouter-model-select`, `openrouter-key-input`) → TypeError → script.js si fermava → app mai inizializzata.
+
+### ✅ Completed Changes
+- **script.js**: guardie null-safe su righe 321-324 (convenzione "controlli difensivi" di MEMORY.md) per `iaProviderSelect` e `geminiApiKeyInput`.
+- **index.html**: aggiunto `<link rel="icon" href="icon-512.png" type="image/png">` (elimina 404 favicon.ico).
+- **Git**: force-push del commit completo locale su `origin/main` (branch rinominato da `master` a `main`).
+
+### 🎯 Status: COMPLETATO
+- `node --check script.js` OK.
+- Deploy Pages ora contiene `js/supabase-adapter.js` + `js/ui-dialogs.js` + `supabase/functions/`.
+
+---
 
 ### 🔧 Situazione
 - Il worktree di `script.js` era stato corrotto (blocco Previsioni mobile perso, `const defaultCategories = {` cancellato → SyntaxError, blocco Google Drive OAuth rimosso → ReferenceError `gapiLoaded` a runtime, `showAlertDialog` usato ma mai definito).

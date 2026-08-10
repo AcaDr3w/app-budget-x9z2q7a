@@ -318,8 +318,10 @@ let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
 document.getElementById('currentMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 document.getElementById('annDeadlineMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 document.getElementById('expDate').value = dateNow.toISOString().slice(0,10);
-if (localStorage.getItem('ia_provider')) document.getElementById('iaProviderSelect').value = localStorage.getItem('ia_provider');
-if (localStorage.getItem('gemini_api_key')) document.getElementById('geminiApiKeyInput').value = localStorage.getItem('gemini_api_key');
+const iaProviderEl = document.getElementById('iaProviderSelect');
+if (iaProviderEl && localStorage.getItem('ia_provider')) iaProviderEl.value = localStorage.getItem('ia_provider');
+const geminiKeyEl = document.getElementById('geminiApiKeyInput');
+if (geminiKeyEl && localStorage.getItem('gemini_api_key')) geminiKeyEl.value = localStorage.getItem('gemini_api_key');
 
 // Aggiorna il display del mese nella pillola
 function updateMonthDisplay() {
