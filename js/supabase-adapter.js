@@ -23,7 +23,25 @@ class SupabaseTable {
         if (this.tableName === 'categories' && mapped.name) {
             mapped.name = mapped.name; // name is unique
         }
+        const allowed = this._allowedColumns();
+        if (allowed) {
+            mapped = Object.fromEntries(Object.entries(mapped).filter(([k]) => allowed.includes(k)));
+        }
         return mapped;
+    }
+
+    _allowedColumns() {
+        const map = {
+            months: ['month_id', 'totalIncome', 'totalPlanned', 'totalActual', 'notes', 'iaNotes'],
+            income: ['id', 'month', 'desc', 'amount'],
+            expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage'],
+            categories: ['name', 'macro', 'icon'],
+            annual_deadlines: ['id', 'month', 'day', 'desc', 'amount', 'isPaid'],
+            savings_goals: ['name', 'targetAmount', 'importo_accumulato', 'createdAt'],
+            sync_state: ['id', 'counter', 'deviceId', 'lastUpdated'],
+            settings: ['key', 'value']
+        };
+        return map[this.tableName] || null;
     }
 
     _mapOut(item) {
@@ -55,7 +73,7 @@ class SupabaseTable {
             query = query.eq(this.primaryKey, id);
         }
 
-        const { data, error } = await query.single();
+        const { data, error } = await query.maybeSingle();
         return this._mapOut(data || null);
     }
 
@@ -63,7 +81,7 @@ class SupabaseTable {
         if (!window.supabaseUser) return;
         const payload = { ...this._mapIn(item), user_id: window.supabaseUser.id };
         const { error } = await supabaseClient.from(this.tableName).upsert(payload);
-        if (error) console.error(error);
+        if (error) console.warn('[DB] put fallito su ' + this.tableName + ':', error.message);
     }
 
     async update(id, changes) {
@@ -79,7 +97,7 @@ class SupabaseTable {
             query = query.eq(this.primaryKey, id);
         }
         const { error } = await query;
-        if (error) console.error(error);
+        if (error) console.warn('[DB] update fallito su ' + this.tableName + ':', error.message);
     }
 
     async delete(id) {
@@ -113,7 +131,7 @@ class SupabaseTable {
         if (!window.supabaseUser || !items.length) return;
         const payload = items.map(i => ({ ...this._mapIn(i), user_id: window.supabaseUser.id }));
         const { error } = await supabaseClient.from(this.tableName).upsert(payload);
-        if (error) console.error(error);
+        if (error) console.warn('[DB] bulkPut fallito su ' + this.tableName + ':', error.message);
     }
 
     async bulkDelete(ids) {
@@ -175,44 +193,12 @@ class SupabaseTable {
     }
 }
 
-// LocalStorage mock for tables not in Supabase (settings, savingsGoals, syncState)
-class LocalMockTable {
-    constructor(tableName) {
-        this.tableName = tableName;
-    }
-    _getData() {
-        return JSON.parse(localStorage.getItem('mock_' + this.tableName) || '[]');
-    }
-    _saveData(data) {
-        localStorage.setItem('mock_' + this.tableName, JSON.stringify(data));
-    }
-    async toArray() { return this._getData(); }
-    async get(id) { return this._getData().find(x => x.id === id || x.key === id || x.name === id) || null; }
-    async put(item) { 
-        let data = this._getData(); 
-        let idx = data.findIndex(x => x.id === item.id || x.key === item.key || x.name === item.name);
-        if(idx >= 0) data[idx] = item; else data.push(item);
-        this._saveData(data);
-    }
-    async update(id, changes) {
-        let data = this._getData(); 
-        let idx = data.findIndex(x => x.id === id || x.key === id || x.name === id);
-        if(idx >= 0) { data[idx] = { ...data[idx], ...changes }; this._saveData(data); }
-    }
-    async delete(id) {
-        let data = this._getData(); 
-        data = data.filter(x => x.id !== id && x.key !== id && x.name !== id);
-        this._saveData(data);
-    }
-    async clear() { this._saveData([]); }
-    async count() { return this._getData().length; }
-    async bulkPut(items) { 
-        let data = this._getData();
-        items.forEach(item => {
-            let idx = data.findIndex(x => x.id === item.id || x.key === item.key || x.name === item.name);
-            if(idx >= 0) data[idx] = item; else data.push(item);
-        });
-        this._saveData(data);
+// Settings: record {key, value}; i record legacy con name/id vengono normalizzati su key
+class SettingTable extends SupabaseTable {
+    _mapIn(item) {
+        if (!item) return item;
+        const norm = { key: item.key || item.name || item.id, value: item.value != null ? item.value : '' };
+        return super._mapIn(norm);
     }
 }
 
@@ -224,9 +210,9 @@ window.db = {
     months: new SupabaseTable('months', 'month_id'),
     income: new SupabaseTable('income', 'id'),
     expenses: new SupabaseTable('expenses', 'id'),
-    savingsGoals: new LocalMockTable('savingsGoals'),
-    settings: new LocalMockTable('settings'),
-    syncState: new LocalMockTable('syncState')
+    savingsGoals: new SupabaseTable('savings_goals', 'name'),
+    settings: new SettingTable('settings', 'key'),
+    syncState: new SupabaseTable('sync_state', 'id')
 };
 
 // Autenticazione Auth Modal Logic

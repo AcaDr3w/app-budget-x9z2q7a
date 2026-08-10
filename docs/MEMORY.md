@@ -12,6 +12,10 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-10**: Fix sync dati su Supabase (PGRST204 su `iaNotes`)
+  - Migrazione: `supabase/migrations/20260810_full_sync.sql` — `ALTER TABLE months ADD COLUMN "iaNotes" TEXT` + tabelle `settings`, `savings_goals`, `sync_state` (prima erano localStorage-only via `LocalMockTable`, ora SupabaseTable)
+  - Adapter: allowlist colonne per tabella (`_allowedColumns`) → strip campi ignoti prima dell'upsert; `.maybeSingle()` al posto di `.single()` (via 406); `SettingTable` normalizza record legacy `name/id` → `key`
+  - **Regola**: ogni campo JS scritto su Supabase deve esistere come colonna (case-sensitive, quoted in SQL) — usare l'allowlist come unica fonte di verità
 - **2026-08-10**: Fix SyntaxError "Identifier 'supabase' has already been declared"
   - **Causa**: il bundle UMD di `@supabase/supabase-js@2` (jsdelivr) dichiara `var supabase` globale → il `const supabase` in supabase-adapter.js era un conflitto
   - **Fix**: istanza rinominata `supabaseClient` in tutto supabase-adapter.js; `script.js:2514` usa `window.supabase.functions.invoke`

@@ -1,6 +1,25 @@
 # Session Logs & Progress
 
-## [2026-08-10] - Fix SyntaxError supabase-adapter + Pulizia Repository Git
+## [2026-08-10] - Fix Sync Supabase (colonna iaNotes mancante + tabelle settings/savingsGoals/syncState su DB)
+
+### 🔧 Situazione
+- Dati non salvati su Supabase: `POST 400 PGRST204 "Could not find the 'iaNotes' column of 'months' in the schema cache"` → salvataggio mesi falliva; `GET 406` da `.single()` su righe inesistenti.
+- `settings`, `savingsGoals`, `syncState` erano su localStorage (`LocalMockTable`) → mai sincronizzati tra dispositivi.
+
+### ✅ Completed Changes
+- **supabase/migrations/20260810_full_sync.sql (NUOVO)**: `ALTER TABLE months ADD COLUMN IF NOT EXISTS "iaNotes" TEXT;` + `CREATE TABLE IF NOT EXISTS` per `settings (key,value,user_id)`, `savings_goals (name PK, targetAmount, importo_accumulato, createdAt, user_id)`, `sync_state (id PK, counter, deviceId, lastUpdated, user_id)` — da eseguire nell'SQL Editor (idempotente, nota RLS inclusa).
+- **js/supabase-adapter.js**:
+  - `_allowedColumns()`: allowlist colonne per tabella in `_mapIn()` — i campi sconosciuti vengono scartati prima dell'upsert → mai più PGRST204, il salvataggio non si rompe su campi opzionali.
+  - `.single()` → `.maybeSingle()` in `get()` → via il 406 su mesi/righe inesistenti (GET 200 + null).
+  - `put/update/bulkPut`: `console.warn` contestuale (non bloccanti).
+  - Rimosso `LocalMockTable`; nuovo `SettingTable` (normalizza record legacy `name/id` → `key`).
+  - `window.db`: `savingsGoals → SupabaseTable('savings_goals','name')`, `settings → SettingTable('settings','key')`, `syncState → SupabaseTable('sync_state','id')`.
+
+### 🎯 Status: COMPLETATO (in attesa di esecuzione SQL)
+- `node --check` OK su adapter e script.js.
+- **DOPO aver eseguito lo SQL nell'editor Supabase**: refresh → i dati devono persistere e sincronizzarsi tra dispositivi.
+
+---
 
 ### 🔧 Situazione
 - Dopo il push precedente, pagina ancora bianca: `Uncaught SyntaxError: Identifier 'supabase' has already been declared (at supabase-adapter.js:1:1)`.
