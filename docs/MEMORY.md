@@ -12,6 +12,11 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-10**: Fix SyntaxError "Identifier 'supabase' has already been declared"
+  - **Causa**: il bundle UMD di `@supabase/supabase-js@2` (jsdelivr) dichiara `var supabase` globale → il `const supabase` in supabase-adapter.js era un conflitto
+  - **Fix**: istanza rinominata `supabaseClient` in tutto supabase-adapter.js; `script.js:2514` usa `window.supabase.functions.invoke`
+  - **Regola**: NON dichiarare mai variabili globali con nomi dei namespace dei bundle CDN (supabase, Chart, etc.)
+  - **Pulizia repo**: creato `.gitignore` (`.codegraph/`, `.opencode/`, `supabase/.temp/`, `*.log`, `.DS_Store`), rimosso `.codegraph/` dall'indice con `git rm -r --cached`
 - **2026-08-10**: Fix pagina bianca su GitHub Pages
   - Causa: `main` remoto senza cartella `js/` (push parziale migrazione Supabase) → 404 `js/supabase-adapter.js`
   - Causa crash: righe 321-322 `script.js` senza guardia null su `iaProviderSelect`/`geminiApiKeyInput` (elementi assenti: IA hub usa `ai-engine-select`)

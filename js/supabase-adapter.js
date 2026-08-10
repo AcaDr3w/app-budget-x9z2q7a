@@ -1,7 +1,8 @@
 // Supabase Dexie Adapter
 const supabaseUrl = 'https://bkviudppelulwufzhrat.supabase.co';
 const supabaseKey = 'sb_publishable_bPVweV54mHiYuQSTZd7e-A_2DGbZr-j';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+window.supabaseClient = supabaseClient;
 
 // Global user state for the adapter
 window.supabaseUser = null;
@@ -37,14 +38,14 @@ class SupabaseTable {
 
     async toArray() {
         if (!window.supabaseUser) return [];
-        const { data, error } = await supabase.from(this.tableName).select('*').eq('user_id', window.supabaseUser.id);
+        const { data, error } = await supabaseClient.from(this.tableName).select('*').eq('user_id', window.supabaseUser.id);
         if (error) console.error(error);
         return (data || []).map(this._mapOut.bind(this));
     }
 
     async get(id) {
         if (!window.supabaseUser) return null;
-        let query = supabase.from(this.tableName).select('*').eq('user_id', window.supabaseUser.id);
+        let query = supabaseClient.from(this.tableName).select('*').eq('user_id', window.supabaseUser.id);
         
         if (this.tableName === 'months') {
             query = query.eq('month_id', id);
@@ -61,14 +62,14 @@ class SupabaseTable {
     async put(item) {
         if (!window.supabaseUser) return;
         const payload = { ...this._mapIn(item), user_id: window.supabaseUser.id };
-        const { error } = await supabase.from(this.tableName).upsert(payload);
+        const { error } = await supabaseClient.from(this.tableName).upsert(payload);
         if (error) console.error(error);
     }
 
     async update(id, changes) {
         if (!window.supabaseUser) return;
         const payload = this._mapIn(changes);
-        let query = supabase.from(this.tableName).update(payload).eq('user_id', window.supabaseUser.id);
+        let query = supabaseClient.from(this.tableName).update(payload).eq('user_id', window.supabaseUser.id);
         
         if (this.tableName === 'months') {
             query = query.eq('month_id', id);
@@ -83,7 +84,7 @@ class SupabaseTable {
 
     async delete(id) {
         if (!window.supabaseUser) return;
-        let query = supabase.from(this.tableName).delete().eq('user_id', window.supabaseUser.id);
+        let query = supabaseClient.from(this.tableName).delete().eq('user_id', window.supabaseUser.id);
         
         if (this.tableName === 'months') {
             query = query.eq('month_id', id);
@@ -98,26 +99,26 @@ class SupabaseTable {
 
     async clear() {
         if (!window.supabaseUser) return;
-        const { error } = await supabase.from(this.tableName).delete().eq('user_id', window.supabaseUser.id);
+        const { error } = await supabaseClient.from(this.tableName).delete().eq('user_id', window.supabaseUser.id);
         if (error) console.error(error);
     }
 
     async count() {
         if (!window.supabaseUser) return 0;
-        const { count, error } = await supabase.from(this.tableName).select('*', { count: 'exact', head: true }).eq('user_id', window.supabaseUser.id);
+        const { count, error } = await supabaseClient.from(this.tableName).select('*', { count: 'exact', head: true }).eq('user_id', window.supabaseUser.id);
         return count || 0;
     }
 
     async bulkPut(items) {
         if (!window.supabaseUser || !items.length) return;
         const payload = items.map(i => ({ ...this._mapIn(i), user_id: window.supabaseUser.id }));
-        const { error } = await supabase.from(this.tableName).upsert(payload);
+        const { error } = await supabaseClient.from(this.tableName).upsert(payload);
         if (error) console.error(error);
     }
 
     async bulkDelete(ids) {
         if (!window.supabaseUser || !ids.length) return;
-        const { error } = await supabase.from(this.tableName).delete().in(this.primaryKey, ids).eq('user_id', window.supabaseUser.id);
+        const { error } = await supabaseClient.from(this.tableName).delete().in(this.primaryKey, ids).eq('user_id', window.supabaseUser.id);
         if (error) console.error(error);
     }
 
@@ -130,7 +131,7 @@ class SupabaseTable {
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
-                    const { data, error } = await supabase.from(self.tableName).select('*').eq(f, val).eq('user_id', window.supabaseUser.id);
+                    const { data, error } = await supabaseClient.from(self.tableName).select('*').eq(f, val).eq('user_id', window.supabaseUser.id);
                     if (error) console.error(error);
                     return (data || []).map(self._mapOut.bind(self));
                 },
@@ -139,7 +140,7 @@ class SupabaseTable {
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
-                    const { data, error } = await supabase.from(self.tableName).select(self.primaryKey).eq(f, val).eq('user_id', window.supabaseUser.id);
+                    const { data, error } = await supabaseClient.from(self.tableName).select(self.primaryKey).eq(f, val).eq('user_id', window.supabaseUser.id);
                     if (error) console.error(error);
                     return data ? data.map(d => d[self.primaryKey]) : [];
                 }
@@ -150,7 +151,7 @@ class SupabaseTable {
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
-                    const { data, error } = await supabase.from(self.tableName).select('*').in(f, arr).eq('user_id', window.supabaseUser.id);
+                    const { data, error } = await supabaseClient.from(self.tableName).select('*').in(f, arr).eq('user_id', window.supabaseUser.id);
                     if (error) console.error(error);
                     return (data || []).map(self._mapOut.bind(self));
                 }
@@ -166,7 +167,7 @@ class SupabaseTable {
                 let f = field;
                 if (self.tableName === 'months' && field === 'month') f = 'month_id';
                 
-                const { data, error } = await supabase.from(self.tableName).select('*').eq('user_id', window.supabaseUser.id).order(f);
+                const { data, error } = await supabaseClient.from(self.tableName).select('*').eq('user_id', window.supabaseUser.id).order(f);
                 if (error) console.error(error);
                 return (data || []).map(self._mapOut.bind(self));
             }
@@ -230,7 +231,7 @@ window.db = {
 
 // Autenticazione Auth Modal Logic
 window.addEventListener('DOMContentLoaded', () => {
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
         if (session) {
             window.supabaseUser = session.user;
             document.getElementById('authModal').style.display = 'none';
@@ -253,7 +254,7 @@ window.handleLogin = async () => {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
     const msg = document.getElementById('authMessage');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) msg.innerText = error.message;
 };
 
@@ -261,7 +262,7 @@ window.handleSignup = async () => {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
     const msg = document.getElementById('authMessage');
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabaseClient.auth.signUp({ email, password });
     if (error) msg.innerText = error.message;
     else msg.innerText = "Controlla la tua email per confermare la registrazione!";
 };

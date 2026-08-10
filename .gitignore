@@ -1,0 +1,8 @@
+# Strumenti di sviluppo locali
+.codegraph/
+.opencode/
+supabase/.temp/
+
+# Log e file di sistema
+*.log
+.DS_Store

@@ -1,6 +1,23 @@
 # Session Logs & Progress
 
-## [2026-08-10] - Fix Pagina Bianca su GitHub Pages (404 supabase-adapter + crash script.js:321)
+## [2026-08-10] - Fix SyntaxError supabase-adapter + Pulizia Repository Git
+
+### 🔧 Situazione
+- Dopo il push precedente, pagina ancora bianca: `Uncaught SyntaxError: Identifier 'supabase' has already been declared (at supabase-adapter.js:1:1)`.
+- **Causa verificata**: il bundle UMD di `@supabase/supabase-js@2` (v2.112.2, `dist/umd/supabase.js` servito da jsdelivr) dichiara `var supabase` a livello globale (`var supabase=(function(e){...})({...})`). La riga 4 dell'adapter (`const supabase = window.supabase.createClient(...)`) entrava in conflitto → SyntaxError → `window.db` mai creato → `initApp()` mai chiamato → pagina bianca.
+- Inoltre su GitHub erano stati pushati file non essenziali (`.codegraph/`).
+
+### ✅ Completed Changes
+- **js/supabase-adapter.js**: istanza client rinominata `supabase` → `supabaseClient` (riga 4 + `window.supabaseClient`), aggiornati tutti i riferimenti interni (`supabaseClient.from` ×12, `supabaseClient.auth` ×3).
+- **script.js:2514**: `supabase.functions.invoke` → `window.supabase.functions.invoke` (esplicito; il `var supabase` globale del bundle CDN resta disponibile).
+- **.gitignore (NUOVO)**: `.codegraph/`, `.opencode/`, `supabase/.temp/`, `*.log`, `.DS_Store`.
+- **Git**: `git rm -r --cached .codegraph/` (file locali intatti) — repo pulita con solo file essenziali.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK su script.js, supabase-adapter.js, ui-dialogs.js.
+- Repository contiene ora solo file essenziali per GH Pages (index.html, js/, script.js, style.css, asset, docs).
+
+---
 
 ### 🔧 Situazione
 - GitHub Pages serviva pagina bianca: 404 `js/supabase-adapter.js`, `TypeError` a `script.js:321`, 404 `favicon.ico`.

@@ -2513,7 +2513,7 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     if (errorBox) errorBox.style.display = 'none';
 
     try {
-        const { data, error } = await supabase.functions.invoke('chat-openrouter', {
+        const { data, error } = await window.supabase.functions.invoke('chat-openrouter', {
             body: { messages: [{ role: 'user', content: promptText }] }
         });
         
