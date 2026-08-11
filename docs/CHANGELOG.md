@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Fix "Cannot read properties of undefined (reading 'invoke')"
+
+### 🔧 Situazione
+- Clic su "Analisi Strategica Mese": `Errore: Cannot read properties of undefined (reading 'invoke')`.
+- **Causa**: `window.supabase` è il namespace UMD del bundle CDN (espone `createClient`, per cui l'auth funziona) ma NON `.functions`; l'istanza client con `.functions` è `window.supabaseClient` (js/supabase-adapter.js:4-5). Il fix precedente era parziale: `supabase.functions` → `window.supabase.functions`, ancora namespace.
+
+### ✅ Completed Changes
+- **script.js**: `window.supabase.functions.invoke` → `window.supabaseClient.functions.invoke` in `callAIEndpoint` (riga ~2517) e `runFinancialAnalysisIA` (riga ~2584).
+
+---
+
 ## [2026-08-11] - Edge Function chat-openrouter: JWT auth + lock modelli free
 
 ### 🔧 Situazione

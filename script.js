@@ -2514,7 +2514,7 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     try {
         const modelSelect = document.getElementById('openrouter-model-select');
         const model = modelSelect && modelSelect.value ? modelSelect.value : undefined;
-        const { data, error } = await window.supabase.functions.invoke('chat-openrouter', {
+        const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
             body: { model, messages: [{ role: 'user', content: promptText }] }
         });
         
@@ -2581,7 +2581,7 @@ async function runFinancialAnalysisIA() {
             document.getElementById('btn-analisi-strategica').textContent = "Elaborazione in corso...";
             document.getElementById('btn-analisi-strategica').disabled = true;
 
-            const { data, error } = await window.supabase.functions.invoke('chat-openrouter', {
+            const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
                 body: { model, messages: [{ role: 'user', content: promptTesto }] }
             });
             if (error) throw new Error(error.message);

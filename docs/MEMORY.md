@@ -12,6 +12,8 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-11**: Fix `reading 'invoke'` — `window.supabase` (namespace UMD CDN) non ha `.functions`; usare sempre `window.supabaseClient.functions.invoke` (istanza creata in supabase-adapter.js)
+  - **Regola**: `.functions` esiste solo sull'istanza `createClient()` (→ `window.supabaseClient`), mai sul namespace `window.supabase`
 - **2026-08-11**: Edge Function `chat-openrouter` — JWT auth obbligatorio + whitelist modelli free (`openrouter/free` o regex `:free$`); rimosso fetch diretto a OpenRouter da `runFinancialAnalysisIA` (chiave mai lato client); rimosso input API key da index.html
   - **Regola**: mai fare fetch a OpenRouter DAL BROWSER; la key vive solo in `Deno.env` dell'Edge Function; deploy manuale via CLI (`supabase functions deploy chat-openrouter`)
 - **2026-08-11**: Pulizia repo per GH Pages — rimossi `db_usages.txt` (artifact debug) e script CDN `dexie.js` da index.html (dipendenza morta dall'adapter Supabase)
