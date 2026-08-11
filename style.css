@@ -1166,6 +1166,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .bottom-sheet .bottom-sheet-header {
     flex-shrink: 0;
+    touch-action: none;
 }
 .bottom-sheet * {
     touch-action: auto;
@@ -1181,6 +1182,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .bottom-sheet.dragging {
     transition: none !important;
+    will-change: transform;
 }
 .drag-handle-wrapper {
     padding: 20px 0;

@@ -2088,58 +2088,63 @@ function syncInputToWheel(type, value) {
     }
 }
 
-// Swipe-to-dismiss for bottom sheet
-let dragStartY = 0;
-let dragCurrentY = 0;
-let isDragging = false;
+// Swipe-to-dismiss per bottom sheet (pointer events: touch + mouse)
+function setupSheetSwipe(sheetId, closeFn) {
+    const sheet = document.getElementById(sheetId);
+    if (!sheet) return;
+    const dragTargets = [
+        sheet.querySelector('.drag-handle-wrapper'),
+        sheet.querySelector('.bottom-sheet-header')
+    ].filter(Boolean);
+    if (dragTargets.length === 0) return;
 
-function setupSwipeToClose() {
-    const sheet = document.getElementById('bottomSheet');
-    const handle = document.querySelector('.drag-handle-wrapper');
-    const header = document.querySelector('.sheet-header');
-    const dragTargets = [handle, header].filter(Boolean);
-    
-    if (!sheet || dragTargets.length === 0) return;
-    
-    const onTouchStart = (e) => {
-        isDragging = true;
-        dragStartY = e.touches[0].clientY;
+    let startY = 0;
+    let deltaY = 0;
+    let dragging = false;
+
+    const onStart = (e) => {
+        if (!sheet.classList.contains('open') || e.button > 0) return;
+        dragging = true;
+        startY = e.clientY;
+        deltaY = 0;
         sheet.classList.add('dragging');
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
     };
-    
-    const onTouchMove = (e) => {
-        if (!isDragging) return;
-        dragCurrentY = e.touches[0].clientY;
-        const deltaY = dragCurrentY - dragStartY;
-        if (deltaY > 0) {
-            sheet.style.transform = `translateY(${deltaY}px)`;
-        }
+
+    const onMove = (e) => {
+        if (!dragging) return;
+        deltaY = e.clientY - startY;
+        if (deltaY < 0) deltaY = 0;
+        sheet.style.transform = `translate3d(0, ${deltaY}px, 0)`;
+        e.preventDefault();
     };
-    
-    const onTouchEnd = () => {
-        if (!isDragging) return;
-        isDragging = false;
-        const deltaY = dragCurrentY - dragStartY;
-        const sheetHeight = sheet.offsetHeight;
-        const threshold = Math.min(100, sheetHeight * 0.3);
+
+    const onEnd = () => {
+        if (!dragging) return;
+        dragging = false;
+        const threshold = Math.min(120, sheet.offsetHeight * 0.35);
         sheet.classList.remove('dragging');
+        sheet.style.transform = '';
         if (deltaY > threshold) {
-            closeTransactionSheet();
-        } else {
-            sheet.style.transform = '';
+            closeFn();
         }
+        deltaY = 0;
     };
-    
+
     dragTargets.forEach(el => {
-        el.addEventListener('touchstart', onTouchStart, { passive: true });
-        el.addEventListener('touchmove', onTouchMove, { passive: true });
-        el.addEventListener('touchend', onTouchEnd);
-        el.addEventListener('touchcancel', onTouchEnd);
+        el.addEventListener('pointerdown', onStart);
+        el.addEventListener('pointermove', onMove);
+        el.addEventListener('pointerup', onEnd);
+        el.addEventListener('pointercancel', onEnd);
     });
 }
 
 // Initialize swipe handlers when DOM ready
-document.addEventListener('DOMContentLoaded', setupSwipeToClose);
+document.addEventListener('DOMContentLoaded', () => {
+    setupSheetSwipe('bottomSheet', closeTransactionSheet);
+    setupSheetSwipe('incomeBottomSheet', closeIncomeSheet);
+    setupSheetSwipe('futureBottomSheet', closeFutureSheet);
+});
 
 // Toggle transaction type (Segmented control)
 function setupToggleType() {
@@ -4065,7 +4070,11 @@ function closeFutureSheet() {
     const overlay = document.getElementById('futureSheetOverlay');
     const sheet = document.getElementById('futureBottomSheet');
     if (overlay) overlay.classList.remove('open');
-    if (sheet) sheet.classList.remove('open');
+    if (sheet) {
+        sheet.classList.remove('open');
+        sheet.style.transform = '';
+        sheet.classList.remove('dragging');
+    }
     document.body.classList.remove('sheet-open');
 }
 

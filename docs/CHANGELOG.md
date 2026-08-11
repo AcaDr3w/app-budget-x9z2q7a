@@ -1,5 +1,23 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Bottom sheet swipe-to-close completo + rimozione legacy_version
+
+### ✅ Completed Changes
+- **Rimossa cartella `legacy_version/`** (importate tutte le funzionalità, ROADMAP 7/7 fasi complete; nessun riferimento nel codice attivo).
+- **script.js**: `setupSwipeToClose` (solo `#bottomSheet`, selettore header errato `.sheet-header`, solo touch) sostituita con `setupSheetSwipe(sheetId, closeFn)` generica:
+  - Wiring su TUTTI e 3 i sheet: `#bottomSheet`→`closeTransactionSheet`, `#incomeBottomSheet`→`closeIncomeSheet`, `#futureBottomSheet`→`closeFutureSheet`.
+  - Pointer Events (touch + mouse) + `setPointerCapture` → drag fluido anche da desktop.
+  - Selettore corretto `.bottom-sheet-header` scoped al singolo sheet.
+  - Clamp delta ≥ 0, `translate3d` per GPU, `e.preventDefault()` durante il move.
+  - **Chiusura fluida**: release oltre soglia (min 120px / 35% altezza) → si toglie `.dragging` + `.open` e si libera la transform inline nello stesso frame: la transizione CSS (0.35s) scivola da delta a 100%; sotto soglia → snap-back animato.
+- **script.js**: `closeFutureSheet` ora pulisce anche `transform` inline e classe `.dragging` (uniforme a `closeTransactionSheet`/`closeIncomeSheet`).
+- **style.css**: `.bottom-sheet-header` con `touch-action: none` (draggabile su touch, specificity 0,2,0 > `.bottom-sheet *`); `.bottom-sheet.dragging` con `will-change: transform`.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK.
+
+---
+
 ## [2026-08-11] - ROADMAP ripristino legacy + Fase 1: Spese Ricorrenti
 
 ### ✅ Completed Changes
