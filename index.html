@@ -36,6 +36,20 @@
 <!-- MAIN APP WRAPPER -->
 <div id="mainAppWrapper" style="display: none;">
 
+<!-- TOP NAVBAR (DESKTOP ONLY) -->
+<nav class="top-nav hide-mobile" aria-label="Navigazione principale">
+    <a class="top-nav-brand" href="#" onclick="switchTab('current-month-tab')">
+        <i class="fas fa-chart-line"></i> Bilancio Pro
+    </a>
+    <div class="top-nav-links">
+        <a href="#" class="top-nav-link active" data-tab="current-month-tab" onclick="switchTab('current-month-tab')">Mese</a>
+        <a href="#" class="top-nav-link" data-tab="history-tab" onclick="switchTab('history-tab')">Analisi</a>
+        <a href="#" class="top-nav-link" data-tab="investimenti-tab" onclick="switchTab('investimenti-tab')">Investimenti</a>
+        <a href="#" class="top-nav-link" data-tab="future-tab" onclick="switchTab('future-tab')">Previsioni</a>
+        <a href="#" class="top-nav-link" data-tab="settings-tab" onclick="switchTab('settings-tab')">Impostazioni</a>
+    </div>
+</nav>
+
 <!-- TOP BAR (MOBILE ONLY) -->
 <div class="header">
     <h1>📊 Bilancio Pro</h1>
@@ -78,15 +92,26 @@
      <!-- =================== TAB 1: MESE CORRENTE =================== -->
       <div id="current-month-tab" class="tab-content active">
 
-          <div class="month-selector-pill">
-              <span id="currentMonthDisplay"></span>
-              <i class="fas fa-chevron-down"></i>
+          <div class="month-head">
+              <div class="kpi-cluster kpi-left">
+                  <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
+                  <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
+              </div>
+
+              <div class="month-selector-pill" id="monthSelectorPill" role="button" tabindex="0" aria-label="Seleziona mese">
+                  <button type="button" class="month-arrow hide-mobile" id="btnPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left"></i></button>
+                  <span id="currentMonthDisplay"></span>
+                  <i class="fas fa-chevron-down"></i>
+                  <button type="button" class="month-arrow hide-mobile" id="btnNextMonth" aria-label="Mese successivo"><i class="fas fa-chevron-right"></i></button>
+              </div>
+
+              <div class="kpi-cluster kpi-right">
+                  <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
+              </div>
           </div>
 
           <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
           <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
-
-          <!-- NUOVA DASHBOARD MOBILE -->
           <div class="mobile-dashboard-container">
 <div class="dash-card card-casa" data-category="casa_utenze">
                     <h3>Casa e Utenze</h3>
@@ -102,23 +127,7 @@
                 </div>
           </div>
 
-          <button id="viewToggleBtn" class="view-toggle-btn" aria-label="Cambia vista">
-              <i class="fas fa-layer-group"></i>
-          </button>
-
           <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">
-
-<div id="macroTabsContainer" class="macro-tabs-wrapper" style="display: none;">
-    <button class="macro-tab active" data-target="casa">🏠 Casa & Servizi</button>
-    <button class="macro-tab" data-target="auto">🚗 Auto & Vita</button>
-    <button class="macro-tab" data-target="svago">🎉 Svago & Altro</button>
-</div>
-
-        <div class="summary-grid">
-            <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-            <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
-            <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
-        </div>
 
         <div id="mese-action-hub" class="hide-desktop">
             <button data-action="search">🔍 Ricerca</button>
@@ -174,62 +183,175 @@
             </div>
         </div>
 
+        <!-- POPUP IA + NOTE MESE (DESKTOP) -->
+        <div id="iaNotesModal" class="popup-overlay ia-notes-overlay" onclick="closeIaNotesModal(event)">
+            <div class="popup-panel ia-notes-panel" role="dialog" aria-modal="true" aria-labelledby="iaNotesModalTitle" onclick="event.stopPropagation();">
+                <button class="popup-close" onclick="closeIaNotesModal()" aria-label="Chiudi">×</button>
+                <h3 id="iaNotesModalTitle" style="margin:0 0 8px;">🤖 IA &amp; Note del Mese</h3>
+                <div class="form-tabs ia-notes-tabs" role="tablist" aria-label="Pannello IA e note">
+                    <button type="button" class="form-tab active" data-iatab="hub">🧠 HUB IA</button>
+                    <button type="button" class="form-tab" data-iatab="note">📝 Note</button>
+                    <button type="button" class="form-tab" data-iatab="charts">📈 Grafici</button>
+                </div>
+                <div class="ia-notes-body">
+                    <div class="ia-notes-pane active" id="iaPaneHub">
+                        <div id="hub-ia-container" class="hub-ia-card">
+                            <h2>🤖 HUB IA</h2>
+                            <p class="hub-ia-hint">Analisi strategica del mese con intelligenza artificiale.</p>
+                            <button id="btn-analisi-strategica" class="btn-ia" onclick="runFinancialAnalysisIA()">✨ Analisi Strategica Mese</button>
+                            <details class="hub-ia-advanced">
+                                <summary>⚙️ Opzioni avanzate</summary>
+                                <div class="hub-ia-grid">
+                                    <div class="input-group">
+                                        <label>Motore</label>
+                                        <select id="ai-engine-select">
+                                            <option value="openrouter" selected>OpenRouter (Default)</option>
+                                            <option value="ollama">Ollama</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Modello OpenRouter</label>
+                                        <select id="openrouter-model-select">
+                                            <option value="random">🎲 Casuale (Free)</option>
+                                            <option value="google/gemini-2.5-flash:free">google/gemini-2.5-flash:free</option>
+                                            <option value="meta-llama/llama-3.3-70b-instruct:free">meta-llama/llama-3.3-70b-instruct:free</option>
+                                            <option value="deepseek/deepseek-chat:free">deepseek/deepseek-chat:free</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </details>
+                            <div id="hub-ia-error-box" class="hub-ia-error-box"></div>
+                        </div>
+                    </div>
+                    <div class="ia-notes-pane" id="iaPaneNote">
+                        <div class="input-group"><label>Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..." onchange="saveNotes()"></textarea></div>
+                        <div class="input-group"><label>Note I.A.</label><textarea id="iaNotes" class="notes-textarea notes-ia-textarea" readonly placeholder="Qui verrà salvato l'ultimo resoconto IA..."></textarea></div>
+                    </div>
+                    <div class="ia-notes-pane" id="iaPaneCharts">
+                        <div class="ia-chart-block">
+                            <div class="pane-title">📈 Stato Budget</div>
+                            <div class="chart-container ia-mini-chart"><canvas id="budgetChart"></canvas></div>
+                        </div>
+                        <div class="ia-chart-block">
+                            <div class="pane-title">🍕 Speso per Categoria</div>
+                            <div class="chart-container ia-mini-chart"><canvas id="categoryChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="main-layout">
             <!-- LEFT PANEL -->
             <div class="layout-column left-panel">
 
-                <div class="card hide-mobile" id="importSectionCard">
-                    <h2 class="collapsible" onclick="toggleSection('importSection', this)">🔄 Pianificazione Ciclo</h2>
-                    <div class="collapsible-content" id="importSection">
-                        <p style="font-size: 11px; color:#64748b; margin-bottom:8px;">Eredita voci dal ciclo precedente:</p>
-                        <div class="import-checkbox-list" id="importCategoriesList"></div>
-                        <button class="btn-copy" style="width:100%; margin-top:10px;" onclick="copyFromPreviousMonth()">🔄 Genera Stime Selezionate</button>
-                    </div>
+                <!-- LEFTPANEL: CALENDARIO COMPATTO -->
+                <div class="card comp-card hide-mobile">
+                    <div class="pane-title">📅 Calendario</div>
+                    <div class="calendar-grid" id="calendarGridCompact"></div>
                 </div>
 
-                <div class="card hide-mobile" id="incomeCard">
-                    <h2>💰 Nuova Entrata</h2>
-                    <div class="grid-inputs">
-                        <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
+                <!-- LEFTPANEL: FORMS A TAB (ENTRATA | SPESA | CONDIVISE) -->
+                <div class="card comp-card hide-mobile">
+                    <div class="pane-title">➕ Nuova Voce</div>
+                    <div class="form-tabs" role="tablist" aria-label="Form di inserimento">
+                        <button type="button" class="form-tab active" data-formtab="entrata">💰 Entrata</button>
+                        <button type="button" class="form-tab" data-formtab="spesa">💳 Spesa</button>
+                        <button type="button" class="form-tab" data-formtab="condivise">👥 Condivise</button>
+                    </div>
+
+                    <div class="form-pane active" id="formPaneEntrata">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Data</label><input type="date" id="incDate"></div>
+                            <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
+                        </div>
                         <div class="input-group"><label>Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
+                        <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
                     </div>
-                    <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
+
+                    <div class="form-pane" id="formPaneSpesa">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Data</label><input type="date" id="expDate"></div>
+                            <div class="input-group"><label>Categoria</label><select id="expenseCategory"></select></div>
+                        </div>
+                        <div class="input-group"><label>Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
+                            <div class="input-group"><label>Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
+                        </div>
+                        <div class="input-group">
+                            <label>Quota a tuo carico % (opzionale)</label>
+                            <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
+                        </div>
+                        <div class="recurring-toggle-wrapper">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="recurringToggleDesktop">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Ripeti ogni mese</span>
+                        </div>
+                        <div class="recurring-until-container" id="recurringUntilContainerDesktop">
+                            <input type="month" id="recurringUntilDesktop" class="recurring-until-input">
+                            <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
+                        </div>
+
+                        <details class="form-advanced">
+                            <summary>⚙️ Opzioni avanzate</summary>
+                            <div class="form-advanced-body">
+                                <div class="adv-section">
+                                    <span class="shared-field-label">Tipo voce</span>
+                                    <div class="split-method-pills">
+                                        <button type="button" class="split-pill active" data-exp-type="planned" onclick="setExpenseTypePill(this)">📌 Prevista</button>
+                                        <button type="button" class="split-pill" data-exp-type="actual" onclick="setExpenseTypePill(this)">💸 Sostenuta</button>
+                                    </div>
+                                    <p class="comp-hint" style="margin:6px 0 0;">Evidenzia il campo complementare: Prevista → Stima, Sostenuta → Pagato.</p>
+                                </div>
+                                <div class="shared-toggle-wrapper">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="sharedToggleDesktop">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="toggle-label">Spesa condivisa</span>
+                                </div>
+                                <div class="shared-panel" id="sharedPanelDesktop">
+                                    <div class="shared-person-row">
+                                        <select id="sharedPersonDesktop" style="flex:1;"></select>
+                                        <button type="button" class="btn-small" id="btnNewPersonDesktop" title="Nuova persona">➕</button>
+                                    </div>
+                                    <div class="shared-payer-row">
+                                        <button type="button" class="payer-pill active" data-payer="me">🙋 Ho pagato io</button>
+                                        <button type="button" class="payer-pill" data-payer="them" id="payerThemLblDesktop">👥 Ha pagato...</button>
+                                    </div>
+                                    <div class="split-method-pills">
+                                        <button type="button" class="split-pill active" data-method="equal">🤝 Metà</button>
+                                        <button type="button" class="split-pill" data-method="percentage">%</button>
+                                        <button type="button" class="split-pill" data-method="fixed">€</button>
+                                    </div>
+                                    <div class="shared-detail-fields" id="sharedDetailFieldsDesktop"></div>
+                                </div>
+                            </div>
+                        </details>
+                        <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
+                    </div>
+
+                    <div class="form-pane" id="formPaneCondivise">
+                        <p class="comp-hint">Gestisci debiti e crediti con persone o gruppi.</p>
+                        <button class="btn-spesa" style="background: linear-gradient(135deg,#8b5cf6,#6366f1);" onclick="openCondivisePopup()">Apri Saldi & Gruppi</button>
+                    </div>
                 </div>
 
-                <div class="card hide-mobile" id="condiviseCard">
-                    <h2>👥 Spese Condivise</h2>
-                    <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">Gestisci debiti e crediti con persone o gruppi.</p>
-                    <button class="btn-spesa" style="background: linear-gradient(135deg,#8b5cf6,#6366f1);" onclick="openCondivisePopup()">Apri Saldi & Gruppi</button>
-                </div>
+            </div>
 
-                <div class="card hide-mobile" id="addExpenseCard">
-                    <h2>📝 Registra Spesa</h2>
-                    <div class="grid-inputs">
-                        <div class="input-group"><label>Data</label><input type="date" id="expDate"></div>
-                        <div class="input-group"><label>Categoria</label><select id="expenseCategory"></select></div>
-                    </div>
-                    <div class="input-group"><label>Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
-                    <div class="grid-inputs">
-                        <div class="input-group"><label>Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
-                        <div class="input-group"><label>Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
-                    </div>
-                    <div class="input-group">
-                        <label>Quota a tuo carato % (opzionale)</label>
-                        <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
-                    </div>
+            <!-- CENTER PANEL -->
+            <div class="layout-column center-panel">
 
-                    <div class="recurring-toggle-wrapper">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="recurringToggleDesktop">
-                            <span class="toggle-slider"></span>
-                        </label>
-                        <span class="toggle-label">Ripeti ogni mese</span>
-                    </div>
-                    <div class="recurring-until-container" id="recurringUntilContainerDesktop">
-                        <input type="month" id="recurringUntilDesktop" class="recurring-until-input">
-                        <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
-                    </div>
-                    <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
+                <!-- CATEGORY GRID (MOBILE ONLY) -->
+                <div id="categoryGridContainer" class="category-grid-mobile hide-desktop"></div>
+
+                <!-- GRIGLIA MICROCATEGORIE + RISPARMIO -->
+                <div class="card comp-card hide-mobile" id="rendicontoCard">
+                    <div class="pane-title">📊 Categorie & Budget <span class="pane-hint">Tocca una card per filtrare il registro</span></div>
+                    <div id="categoryGridDesktop" class="category-grid-desktop"></div>
                 </div>
 
             </div>
@@ -237,78 +359,23 @@
             <!-- RIGHT PANEL -->
             <div class="layout-column right-panel">
 
-<!-- HUB IA -->
-<div id="hub-ia-container" class="hide-mobile" style="border: 1px solid #9061f9; padding: 15px; border-radius: 8px; background: #f9f5ff;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <strong>HUB IA</strong>
-    <span style="background: #9061f9; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">OPENROUTER</span>
-  </div>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-    <div>
-      <label>MOTORE:</label>
-      <select id="ai-engine-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="openrouter" selected>OpenRouter (Default)</option>
-        <option value="ollama">Ollama</option>
-      </select>
-    </div>
-    <div>
-      <label>MODELLO OPENROUTER:</label>
-      <select id="openrouter-model-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="random">🎲 Casuale (Free)</option>
-        <option value="google/gemini-2.5-flash:free">google/gemini-2.5-flash:free</option>
-        <option value="meta-llama/llama-3.3-70b-instruct:free">meta-llama/llama-3.3-70b-instruct:free</option>
-        <option value="deepseek/deepseek-chat:free">deepseek/deepseek-chat:free</option>
-      </select>
-    </div>
-  </div>
-  <button id="btn-analisi-strategica" style="width: 100%; background: #9061f9; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="runFinancialAnalysisIA()">Analisi Strategica Mese</button>
-  <div id="hub-ia-error-box" style="margin-top: 10px; padding: 10px; background: #fde8e8; color: #e02424; border-radius: 4px; display: none;"></div>
-</div>
-
-                <!-- GRAFICI -->
-                <div class="charts-wrapper hide-mobile">
-                    <div class="card"><h2>📈 Stato Budget</h2><div class="chart-container"><canvas id="budgetChart"></canvas></div></div>
-                    <div class="card"><h2>🍕 Speso per Categoria</h2><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
-                </div>
-
-                <!-- CATEGORY GRID (MOBILE ONLY) -->
-                <div id="categoryGridContainer" class="category-grid-mobile hide-desktop"></div>
-
-                <!-- RENDICONTO CICLO -->
-                <div class="card hide-mobile" id="rendicontoCard">
-                    <h2>📋 Rendiconto Ciclo Corrente</h2>
-                    <p style="font-size: 11px; color:#64748b; margin-bottom:10px;">Tocca una riga per filtrare le voci.</p>
-                    <div class="table-responsive">
-                    <div class="table-responsive" style="overflow: visible;">
-                        <div id="overviewTableBody" class="flat-list-container"></div>
-                        <div id="overviewTableFoot" class="flat-list-footer" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;"></div>
-                    </div>
-                    </div>
-                </div>
-
-                <!-- VOCI DEL PERIODO -->
-                <div class="card hide-mobile" id="entriesCard">
-                    <h2 id="listTitle">📅 Distribuzione & Registro Spese</h2>
-                    <div class="calendar-grid" id="calendarGrid"></div>
+                <!-- REGISTRO SPESE -->
+                <div class="card comp-card hide-mobile" id="entriesCard">
+                    <div class="pane-title" id="listTitle">📋 Registro Spese</div>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()">
                         <button class="btn-clear-filters" id="btnClearAllFilters" onclick="clearAllFilters()">✕ Filtri</button>
                     </div>
-                    <h3 style="margin-top: 14px; font-size:13px; font-weight:700; color:#475569;">📋 Registro Spese</h3>
-                    <div id="entriesList" style="margin-top: 8px; padding-bottom: 10px;"></div>
-                    <div class="grid-inputs" style="margin-top: 14px;">
+                    <div id="entriesList" style="padding-bottom: 10px;"></div>
+                    <div class="grid-inputs" style="margin-bottom: 0;">
                         <button class="btn-csv" onclick="exportCSV()">📥 CSV</button>
                         <button class="btn-csv" style="background: #8b5cf6;" onclick="exportPDF()">📄 PDF</button>
                     </div>
                 </div>
 
-                <!-- NOTE MESE -->
-                <div class="card hide-mobile" id="notesCard">
-                    <h2 class="collapsible" onclick="toggleSection('notesSection', this)">📝 Note del Mese</h2>
-                    <div class="collapsible-content" id="notesSection">
-                        <div class="input-group"><label>Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..." onchange="saveNotes()"></textarea></div>
-                        <div class="input-group"><label>Note I.A.</label><textarea id="iaNotes" class="notes-textarea notes-ia-textarea" readonly placeholder="Qui verrà salvato l'ultimo resoconto IA..."></textarea></div>
-                    </div>
+                <!-- IA + NOTE QUICK CARD -->
+                <div class="card comp-card hide-mobile ia-quick-card">
+                    <button type="button" class="ia-month-trigger ia-quick-trigger" onclick="openIaNotesModal()"><i class="fas fa-robot"></i> IA &amp; Note del Mese</button>
                 </div>
 
             </div>
@@ -566,81 +633,167 @@
     <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
     <div id="settings-tab" class="tab-content hidden">
         <div class="settings-grid">
-            <div class="settings-col-left">
-                <div class="card">
-                    <h2 class="collapsible show" onclick="toggleSection('categoriesSection', this)">🛠️ Categorie</h2>
-                    <div class="collapsible-content show" id="categoriesSection">
+            <button type="button" class="settings-tile" onclick="openSettingsPopup('categorie')">
+                <span class="settings-tile-icon">🛠️</span>
+                <span class="settings-tile-text">
+                    <span class="settings-tile-title">Categorie</span>
+                    <span class="settings-tile-desc">Aggiungi, modifica o elimina le categorie di spesa</span>
+                </span>
+                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+            </button>
+            <button type="button" class="settings-tile" onclick="openSettingsPopup('app')">
+                <span class="settings-tile-icon">📱</span>
+                <span class="settings-tile-text">
+                    <span class="settings-tile-title">App &amp; Notifiche</span>
+                    <span class="settings-tile-desc">Notifiche scadenze e installazione dell'app</span>
+                </span>
+                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+            </button>
+            <button type="button" class="settings-tile" onclick="openSettingsPopup('backup')">
+                <span class="settings-tile-icon">💾</span>
+                <span class="settings-tile-text">
+                    <span class="settings-tile-title">Backup Dati</span>
+                    <span class="settings-tile-desc">Esporta o importa i tuoi dati (.json)</span>
+                </span>
+                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+            </button>
+            <button type="button" class="settings-tile" onclick="openSettingsPopup('cloud')">
+                <span class="settings-tile-icon">☁️</span>
+                <span class="settings-tile-text">
+                    <span class="settings-tile-title">Sincronizzazione Cloud</span>
+                    <span class="settings-tile-desc">Copia di sicurezza su Google Drive</span>
+                </span>
+                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+            </button>
+            <button type="button" class="settings-tile" onclick="openSettingsPopup('ripetizioni')">
+                <span class="settings-tile-icon">🔁</span>
+                <span class="settings-tile-text">
+                    <span class="settings-tile-title">Ripetizioni</span>
+                    <span class="settings-tile-desc">Gestisci le spese ricorrenti mensili</span>
+                </span>
+                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+            </button>
+            <button type="button" class="settings-tile settings-tile-danger" onclick="openSettingsPopup('danger')">
+                <span class="settings-tile-icon">⚠️</span>
+                <span class="settings-tile-text">
+                    <span class="settings-tile-title">Zona Pericolo</span>
+                    <span class="settings-tile-desc">Elimina tutti i dati dell'app</span>
+                </span>
+                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+            </button>
+        </div>
 
-                        <div class="macro-group" data-macro="casa_utenze">
-                            <div class="macro-group-header" style="border-left-color: #2a9d8f;">
-                                <span>🏠 Casa e Utenze</span>
-                                <span class="macro-group-count" id="count-casa_utenze">0</span>
-                            </div>
-                            <ul class="macro-group-list" id="catList-casa_utenze"></ul>
+        <!-- POPUP: CATEGORIE -->
+        <div id="settingsPopup-categorie" class="popup-overlay" onclick="closeSettingsPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Categorie" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+                <h3 style="margin:0 0 4px;">🛠️ Categorie</h3>
+                <div class="popup-body">
+                    <div class="macro-group" data-macro="casa_utenze">
+                        <div class="macro-group-header" style="border-left-color: #2a9d8f;">
+                            <span>🏠 Casa e Utenze</span>
+                            <span class="macro-group-count" id="count-casa_utenze">0</span>
                         </div>
+                        <ul class="macro-group-list" id="catList-casa_utenze"></ul>
+                    </div>
 
-                        <div class="macro-group" data-macro="veicoli">
-                            <div class="macro-group-header" style="border-left-color: #7bc043;">
-                                <span>🚗 Veicoli</span>
-                                <span class="macro-group-count" id="count-veicoli">0</span>
-                            </div>
-                            <ul class="macro-group-list" id="catList-veicoli"></ul>
+                    <div class="macro-group" data-macro="veicoli">
+                        <div class="macro-group-header" style="border-left-color: #7bc043;">
+                            <span>🚗 Veicoli</span>
+                            <span class="macro-group-count" id="count-veicoli">0</span>
                         </div>
+                        <ul class="macro-group-list" id="catList-veicoli"></ul>
+                    </div>
 
-                        <div class="macro-group" data-macro="spese_svago">
-                            <div class="macro-group-header" style="border-left-color: #6f42c1;">
-                                <span>🎉 Spese e Svago</span>
-                                <span class="macro-group-count" id="count-spese_svago">0</span>
-                            </div>
-                            <ul class="macro-group-list" id="catList-spese_svago"></ul>
+                    <div class="macro-group" data-macro="spese_svago">
+                        <div class="macro-group-header" style="border-left-color: #6f42c1;">
+                            <span>🎉 Spese e Svago</span>
+                            <span class="macro-group-count" id="count-spese_svago">0</span>
                         </div>
+                        <ul class="macro-group-list" id="catList-spese_svago"></ul>
+                    </div>
 
-                        <div class="grid-inputs" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 16px;">
-                            <button type="button" class="emoji-picker-btn" id="emojiPickerBtn" title="Scegli emoji">🍀</button>
-                            <input type="text" id="emojiInput" class="emoji-input-hidden" maxlength="2" inputmode="text" autocomplete="off">
-                            <input type="text" id="newCatName" placeholder="Nuova categoria..." style="flex: 1; min-width: 120px;">
-                            <select id="newCatMacro" class="responsive-select" style="flex: 0 0 auto; min-width: 160px; padding: 11px 12px;">
-                                <option value="casa_utenze">🏠 Casa e Utenze</option>
-                                <option value="veicoli">🚗 Veicoli</option>
-                                <option value="spese_svago">🎉 Spese e Svago</option>
-                            </select>
-                            <button class="btn-spesa" id="btnSaveCategory" style="margin:0; white-space: nowrap;">Aggiungi</button>
-                        </div>
+                    <div class="grid-inputs" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 16px;">
+                        <button type="button" class="emoji-picker-btn" id="emojiPickerBtn" title="Scegli emoji">🍀</button>
+                        <input type="text" id="emojiInput" class="emoji-input-hidden" maxlength="2" inputmode="text" autocomplete="off">
+                        <input type="text" id="newCatName" placeholder="Nuova categoria..." style="flex: 1; min-width: 120px;">
+                        <select id="newCatMacro" class="responsive-select" style="flex: 0 0 auto; min-width: 160px; padding: 11px 12px;">
+                            <option value="casa_utenze">🏠 Casa e Utenze</option>
+                            <option value="veicoli">🚗 Veicoli</option>
+                            <option value="spese_svago">🎉 Spese e Svago</option>
+                        </select>
+                        <button class="btn-spesa" id="btnSaveCategory" style="margin:0; white-space: nowrap;">Aggiungi</button>
                     </div>
                 </div>
             </div>
-            <div class="settings-col-right">
-                <div class="card">
-                    <h2>📱 App & Notifiche</h2>
+        </div>
+
+        <!-- POPUP: APP & NOTIFICHE -->
+        <div id="settingsPopup-app" class="popup-overlay" onclick="closeSettingsPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="App e Notifiche" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+                <h3 style="margin:0 0 4px;">📱 App &amp; Notifiche</h3>
+                <div class="popup-body">
                     <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                         <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
                         <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
                     </div>
                     <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa App</button>
                 </div>
-                <div class="card">
-                    <h2>💾 Backup Dati</h2>
+            </div>
+        </div>
+
+        <!-- POPUP: BACKUP DATI -->
+        <div id="settingsPopup-backup" class="popup-overlay" onclick="closeSettingsPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Backup Dati" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+                <h3 style="margin:0 0 4px;">💾 Backup Dati</h3>
+                <div class="popup-body">
                     <div class="backup-action-grid">
                         <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Esporta JSON</button>
                         <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
                     </div>
                     <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
+                    <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Esporta un backup completo o ripristina i dati da un file .json salvato in precedenza.</p>
                 </div>
-                <div class="card">
-                    <h2>☁️ Sincronizzazione Cloud</h2>
+            </div>
+        </div>
+
+        <!-- POPUP: SINCRO CLOUD -->
+        <div id="settingsPopup-cloud" class="popup-overlay" onclick="closeSettingsPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Sincronizzazione Cloud" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+                <h3 style="margin:0 0 4px;">☁️ Sincronizzazione Cloud</h3>
+                <div class="popup-body">
                     <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Salva una copia sicura su Google Drive.</p>
                     <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()">🔑 Connetti a Google Drive</button>
                     <button class="btn-gdrive" id="btnGDriveSync" onclick="syncToDrive()" style="display: none;">☁️ Sincronizza ora</button>
                 </div>
-                <div class="card">
-                    <h2 class="collapsible" onclick="toggleSection('ripetizioniSection', this)">🔁 Ripetizioni</h2>
-                    <div class="collapsible-content" id="ripetizioniSection">
-                        <div id="ripetizioniList"></div>
-                    </div>
+            </div>
+        </div>
+
+        <!-- POPUP: RIPETIZIONI -->
+        <div id="settingsPopup-ripetizioni" class="popup-overlay" onclick="closeSettingsPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Ripetizioni" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+                <h3 style="margin:0 0 4px;">🔁 Ripetizioni</h3>
+                <div class="popup-body">
+                    <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Qui trovi le spese ricorrenti attive e puoi eliminarle.</p>
+                    <div id="ripetizioniList"></div>
                 </div>
-                <div class="card" style="border: 2px solid #ef4444; background: #fef2f2;">
-                    <h2 style="color: #ef4444; border-left-color: #ef4444;">⚠️ Zona Pericolo</h2>
-                    <button class="btn-action" style="background: #ef4444; width: 100%; padding: 12px; font-size: 14px;" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
+            </div>
+        </div>
+
+        <!-- POPUP: ZONA PERICOLO -->
+        <div id="settingsPopup-danger" class="popup-overlay" onclick="closeSettingsPopup(event)">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Zona Pericolo" onclick="event.stopPropagation()">
+                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+                <h3 style="margin:0 0 4px; color:#ef4444;">⚠️ Zona Pericolo</h3>
+                <div class="popup-body">
+                    <div style="background:#fef2f2; border:2px solid #ef4444; border-radius:14px; padding:16px; text-align:center;">
+                        <p style="font-size:12px; color:#7f1d1d; margin-bottom:14px;">Elimina definitivamente tutti i dati: spese, entrate, categorie e scadenze. Consigliato un backup prima di procedere.</p>
+                        <button class="btn-action" style="background:#ef4444; width:100%; padding:13px; font-size:14px;" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -655,7 +808,7 @@
                 <button class="condivise-tab active" data-tab="saldi" onclick="switchCondiviseTab('saldi')">💶 Saldi</button>
                 <button class="condivise-tab" data-tab="gruppi" onclick="switchCondiviseTab('gruppi')">👥 Gruppi</button>
             </div>
-            <div class="popup-body" id="condiviseBody" style="gap:8px;display:flex;flex-direction:column;max-height:55vh;">
+            <div class="popup-body" id="condiviseBody" style="gap:8px;display:flex;flex-direction:column;">
                 <div id="condiviseTabSaldi" class="condivise-tab-content active"></div>
                 <div id="condiviseTabGruppi" class="condivise-tab-content"></div>
             </div>
@@ -785,6 +938,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     </div> <!-- END MAIN APP WRAPPER -->

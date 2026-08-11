@@ -267,10 +267,6 @@ let historyBarChart = null;
 let tradingChart = null;
 let activeChartType = 'bars';
 
- // ===== VIEW MODE STATE =====
- let currentViewMode = 'full'; // 'full' or 'tabs'
- let activeMacroGroup = 'casa';
-
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
 
@@ -343,11 +339,37 @@ function updateMonthDisplay() {
 }
 
 // Aggiorna il display del mese quando cambia la selezione
+function setupMonthNavigation() {
+    const pill = document.getElementById('monthSelectorPill');
+    const input = document.getElementById('currentMonth');
+    const prevBtn = document.getElementById('btnPrevMonth');
+    const nextBtn = document.getElementById('btnNextMonth');
+    if (!pill || !input) return;
+
+    const openPicker = () => {
+        if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (e) { input.click(); } }
+        else input.click();
+    };
+    pill.addEventListener('click', (e) => { if (e.target.closest('.month-arrow')) return; openPicker(); });
+    pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } });
+
+    const shiftMonth = (delta) => {
+        const [y, m] = input.value.split('-').map(Number);
+        const d = new Date(y, m - 1 + delta, 1);
+        input.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        updateMonthDisplay();
+        loadMonthData();
+    };
+    if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(-1); });
+    if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(1); });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const monthInputEl = document.getElementById('currentMonth');
     if (monthInputEl) {
         monthInputEl.addEventListener('change', updateMonthDisplay);
     }
+    setupMonthNavigation();
 });
 
 // =====================================================================
@@ -386,11 +408,10 @@ async function initApp() {
     initPWA();
     // Aggiorna il display del mese nella pillola all'avvio
     updateMonthDisplay();
-    // Inizializza il view toggle
-    setupViewToggle();
     renderRipetizioni();
     await loadPeopleGroups();
     setupSharedToggle();
+    setupSharedPanelDesktop();
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
@@ -452,9 +473,14 @@ function switchTab(tabId, buttonEl) {
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.top-nav-link').forEach(l => l.classList.remove('active'));
     const target = document.getElementById(tabId);
     target.classList.remove('hidden');
     target.classList.add('active');
+    document.querySelectorAll('#settings-tab .popup-overlay.active').forEach(p => p.classList.remove('active'));
+    document.body.classList.remove('sheet-open', 'popup-open');
+    const topLink = document.querySelector(`.top-nav-link[data-tab="${tabId}"]`);
+    if (topLink) topLink.classList.add('active');
     const navMap = {
         'current-month-tab': 'navMese',
         'history-tab': 'navAnalisi',
@@ -470,13 +496,6 @@ function switchTab(tabId, buttonEl) {
     if (tabId === 'investimenti-tab') { renderInvestments(); }
     window.scrollTo(0, 0);
 }
-
-// Mobile FAB click listener
-(function() {
-    const addBtn = document.getElementById('nav-btn-add');
-    if (!addBtn) return;
-    addBtn.addEventListener('click', scrollToAddExpense);
-})();
 
 // =====================================================================
 // UTILITY - MESE SOLARE STANDARD
@@ -512,7 +531,6 @@ async function loadMonthData() {
     document.getElementById('iaNotes').value = mData?.iaNotes || "";
     clearAllFilters();
     checkAnnualAlertForCurrentMonth();
-    renderImportCheckboxList();
 }
 
 // =====================================================================
@@ -1090,6 +1108,160 @@ async function saveNewPerson(name) {
     showToast('👤 ' + name + ' aggiunto', false);
 }
 
+// =====================================================================
+// SPESE CONDIVISE - Pannello desktop (parity bottom sheet)
+// =====================================================================
+function setupSharedPanelDesktop() {
+    const toggle = document.getElementById('sharedToggleDesktop');
+    const panel = document.getElementById('sharedPanelDesktop');
+    if (toggle && panel) {
+        toggle.addEventListener('change', () => {
+            panel.classList.toggle('active', toggle.checked);
+            if (toggle.checked) {
+                populateSharedPersonSelectDesktop();
+                updateSplitFieldsDesktop();
+                updatePayerLabelDesktop();
+            }
+        });
+    }
+    if (panel) {
+        panel.querySelectorAll('.split-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                panel.querySelectorAll('.split-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                updateSplitFieldsDesktop();
+            });
+        });
+        panel.querySelectorAll('.payer-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                panel.querySelectorAll('.payer-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+            });
+        });
+    }
+    document.getElementById('sharedPersonDesktop')?.addEventListener('change', updatePayerLabelDesktop);
+    document.getElementById('btnNewPersonDesktop')?.addEventListener('click', async () => {
+        const name = prompt('Nome della persona:');
+        if (name && name.trim()) {
+            const person = { id: genId(), name, createdAt: Date.now() };
+            await db.people.put(person);
+            people.push(person);
+            populateSharedPersonSelectDesktop();
+            showToast('👤 ' + name + ' aggiunto', false);
+        }
+    });
+}
+
+function populateSharedPersonSelectDesktop() {
+    const sel = document.getElementById('sharedPersonDesktop');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seleziona persona...</option>';
+    people.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+    });
+    if (groups.length > 0) {
+        const og = document.createElement('optgroup');
+        og.label = '👥 Gruppi';
+        groups.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = 'g_' + g.id;
+            opt.textContent = g.name;
+            og.appendChild(opt);
+        });
+        sel.appendChild(og);
+    }
+}
+
+function updatePayerLabelDesktop() {
+    const sel = document.getElementById('sharedPersonDesktop');
+    const themPill = document.getElementById('payerThemLblDesktop');
+    const mePill = document.querySelector('#sharedPanelDesktop .payer-pill[data-payer="me"]');
+    if (!sel || !themPill) return;
+    const val = sel.value;
+    if (!val || val === '') {
+        themPill.textContent = '👥 Ha pagato...';
+        themPill.style.opacity = '0.4';
+        themPill.style.pointerEvents = 'none';
+        if (themPill.classList.contains('active')) {
+            themPill.classList.remove('active');
+            if (mePill) mePill.classList.add('active');
+        }
+    } else if (val.startsWith('g_')) {
+        themPill.textContent = '👥 Spesa di gruppo';
+        themPill.style.opacity = '0.4';
+        themPill.style.pointerEvents = 'none';
+        if (themPill.classList.contains('active')) {
+            themPill.classList.remove('active');
+            if (mePill) mePill.classList.add('active');
+        }
+    } else {
+        const p = people.find(pp => pp.id === parseInt(val));
+        themPill.textContent = '👤 Ha pagato ' + (p ? p.name : '...');
+        themPill.style.opacity = '1';
+        themPill.style.pointerEvents = 'auto';
+    }
+}
+
+function getDesktopSharedTotal() {
+    const a = parseFloat(document.getElementById('expActual').value) || 0;
+    const p = parseFloat(document.getElementById('expPlanned').value) || 0;
+    return a || p;
+}
+
+function updateSplitFieldsDesktop() {
+    const container = document.getElementById('sharedDetailFieldsDesktop');
+    if (!container) return;
+    const activeMethod = document.querySelector('#sharedPanelDesktop .split-pill.active');
+    const method = activeMethod ? activeMethod.dataset.method : 'equal';
+    const totalAmount = getDesktopSharedTotal();
+
+    if (method === 'equal') {
+        container.innerHTML = '<div class="shared-hint">🤝 Diviso in parti uguali tra tutti i partecipanti</div>';
+    } else if (method === 'percentage') {
+        container.innerHTML = `
+            <label class="shared-field-label">La tua percentuale (%)</label>
+            <input type="number" id="sharedPctDesktop" step="1" min="1" max="100" placeholder="Es. 50" value="50">
+            <div class="shared-preview" id="sharedPreviewDesktop">${fmtE(totalAmount / 2)} a tuo carico</div>
+        `;
+        document.getElementById('sharedPctDesktop')?.addEventListener('input', () => updateSharedPreviewDesktop('percentage'));
+    } else if (method === 'fixed') {
+        container.innerHTML = `
+            <label class="shared-field-label">Importo a carico tuo (€)</label>
+            <input type="number" id="sharedFixedDesktop" step="0.01" min="0" placeholder="Es. 25.00">
+            <div class="shared-preview" id="sharedPreviewDesktop">Inserisci l'importo a tuo carico</div>
+        `;
+        document.getElementById('sharedFixedDesktop')?.addEventListener('input', () => updateSharedPreviewDesktop('fixed'));
+    }
+}
+
+function updateSharedPreviewDesktop(method) {
+    const preview = document.getElementById('sharedPreviewDesktop');
+    if (!preview) return;
+    const totalAmount = getDesktopSharedTotal();
+    let yourPart = 0;
+    if (method === 'percentage') {
+        const pct = parseFloat(document.getElementById('sharedPctDesktop')?.value) || 0;
+        yourPart = totalAmount * pct / 100;
+    } else if (method === 'fixed') {
+        yourPart = parseFloat(document.getElementById('sharedFixedDesktop')?.value) || 0;
+    }
+    yourPart = Math.max(0, Math.min(yourPart, totalAmount));
+    const otherPart = totalAmount - yourPart;
+    preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
+}
+
+function setExpenseTypePill(el) {
+    document.querySelectorAll('.form-advanced [data-exp-type]').forEach(p => p.classList.toggle('active', p === el));
+    const type = el.dataset.expType;
+    const stima = document.getElementById('expPlanned');
+    const pagato = document.getElementById('expActual');
+    if (stima) stima.style.borderColor = type === 'planned' ? '#f59e0b' : '';
+    if (pagato) pagato.style.borderColor = type === 'actual' ? '#ef4444' : '';
+}
+
 function getWheelSheetAmount() {
     const intInput = document.getElementById('hiddenIntegerInput');
     const decInput = document.getElementById('hiddenDecimalInput');
@@ -1177,14 +1349,14 @@ async function openCondivisePopup() {
     const popup = document.getElementById('popup-spese-condivise');
     if (!popup) return;
     popup.classList.add('active');
-    document.body.classList.add('sheet-open');
+    document.body.classList.add('popup-open');
     switchCondiviseTab('saldi');
 }
 
 function closeCondivisePopup(event) {
     if (event && event.target !== event.currentTarget) return;
     const popup = document.getElementById('popup-spese-condivise');
-    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('popup-open'); }
 }
 
 function switchCondiviseTab(tab) {
@@ -1822,41 +1994,6 @@ function initNativeWheels() {
         });
     }
 }
-
-// =====================================================================
-// VIEW MODE & MACRO TABS
-// =====================================================================
-function setupViewToggle() {
-    const toggleBtn = document.getElementById('viewToggleBtn');
-    const macroTabsContainer = document.getElementById('macroTabsContainer');
-    
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            if (currentViewMode === 'full') {
-                currentViewMode = 'tabs';
-                toggleBtn.innerHTML = '<i class="fas fa-th"></i>';
-                if (macroTabsContainer) macroTabsContainer.style.display = 'flex';
-            } else {
-                currentViewMode = 'full';
-                toggleBtn.innerHTML = '<i class="fas fa-layer-group"></i>';
-                if (macroTabsContainer) macroTabsContainer.style.display = 'none';
-            }
-            updateUI();
-        });
-    }
-    
-    // Setup macro tab clicks
-    document.querySelectorAll('.macro-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.macro-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            activeMacroGroup = tab.dataset.target;
-            updateUI();
-        });
-    });
-}
-
-// setupViewToggle() è ora chiamato in initApp()
 
 // =====================================================================
 // BOTTOM SHEET WITH MACRO/MICRO CATEGORIES (ORIGINAL GRID INJECTION)
@@ -2525,7 +2662,6 @@ async function saveCategory() {
         input.value = '';
         renderCategoriesDropdown();
         renderCategorySettings();
-        renderImportCheckboxList();
         updateUI();
     } catch (err) {
         console.error('[DB] Errore salvataggio categoria:', err);
@@ -2544,20 +2680,7 @@ async function deleteCategory(cat) {
     saveMacroToLocalStorage();
     renderCategoriesDropdown();
     renderCategorySettings();
-    renderImportCheckboxList();
     updateUI();
-}
-function renderImportCheckboxList() {
-    const container = document.getElementById('importCategoriesList');
-    if (!container) return; container.innerHTML = '';
-    const autoChecked = ["Alimentari","Carburante Auto","Mutuo","Bolletta Luce","Varie"];
-    const flat = [...userCategories].sort();
-    flat.forEach(cat => {
-        const icon = getCatIcon(cat);
-        const label = document.createElement('label'); label.className = 'import-checkbox-item';
-        label.innerHTML = `<input type="checkbox" value="${cat}" ${autoChecked.includes(cat)?'checked':''}> ${icon} ${cat}`;
-        container.appendChild(label);
-    });
 }
 
 // =====================================================================
@@ -2565,26 +2688,72 @@ function renderImportCheckboxList() {
 // =====================================================================
 async function addIncome() {
     const month = document.getElementById('currentMonth').value;
+    const date = document.getElementById('incDate').value || new Date().toISOString().slice(0, 10);
     const desc = document.getElementById('incDesc').value.trim() || "Entrata";
     const amount = parseFloat(document.getElementById('incAmount').value) || 0;
-    if (amount <= 0) return;
-    let inc = {id: Date.now(), month, desc, amount};
+    if (amount <= 0) { showToast('Inserisci un importo maggiore di zero', true); return; }
+    let inc = {id: Date.now(), month, date, desc, amount};
     currentData.income.push(inc); await db.income.put(inc);
+    document.getElementById('incDate').value = '';
     document.getElementById('incDesc').value = ''; document.getElementById('incAmount').value = '';
     updateUI(); checkDatabaseHealth();
 }
 async function addExpense() {
     const month = document.getElementById('currentMonth').value;
-    const date = document.getElementById('expDate').value;
+    const date = document.getElementById('expDate').value || new Date().toISOString().slice(0, 10);
     const cat = document.getElementById('expenseCategory').value;
     const desc = document.getElementById('expDesc').value.trim() || "Spesa";
     let planned = parseFloat(document.getElementById('expPlanned').value) || 0;
     let actual = parseFloat(document.getElementById('expActual').value) || 0;
     let shared = parseFloat(document.getElementById('expShared').value) || 0;
-    if (planned === 0 && actual === 0) return;
-    if (shared > 0 && shared < 100) { planned *= (shared/100); actual *= (shared/100); }
-    let exp = {id: Date.now(), month, date, category: cat, desc, planned, actual, sharedPercentage: shared};
-    
+    if (planned === 0 && actual === 0) { showToast('Inserisci Stima o Pagato', true); return; }
+
+    // Split con persona (parity col bottom sheet mobile)
+    const sharedToggle = document.getElementById('sharedToggleDesktop');
+    const isShared = sharedToggle?.checked;
+    const sel = document.getElementById('sharedPersonDesktop');
+    const selVal = sel?.value;
+    const hasPersonSelected = isShared && selVal && selVal !== '';
+    let myPart = 0, otherPart = 0, sharedPct = 0, payer = 'me';
+    let sharedGroupId = null;
+    if (hasPersonSelected) {
+        const total = actual > 0 ? actual : planned;
+        const activePayer = document.querySelector('#sharedPanelDesktop .payer-pill.active');
+        payer = activePayer ? activePayer.dataset.payer : 'me';
+        const activeMethod = document.querySelector('#sharedPanelDesktop .split-pill.active');
+        const method = activeMethod ? activeMethod.dataset.method : 'equal';
+        if (method === 'equal') { myPart = total / 2; otherPart = total - myPart; sharedPct = 50; }
+        else if (method === 'percentage') {
+            const pct = parseFloat(document.getElementById('sharedPctDesktop')?.value) || 50;
+            myPart = total * pct / 100; otherPart = total - myPart; sharedPct = pct;
+        } else {
+            const yourPart = parseFloat(document.getElementById('sharedFixedDesktop')?.value) || 0;
+            myPart = Math.min(yourPart, total); otherPart = total - myPart;
+            sharedPct = total > 0 ? Math.round(myPart / total * 100) : 0;
+        }
+        myPart = Math.max(0, Math.min(myPart, total));
+        otherPart = Math.max(0, total - myPart);
+        if (selVal.startsWith('g_')) sharedGroupId = parseInt(selVal.replace('g_', ''));
+    }
+
+    if (hasPersonSelected) {
+        if (payer === 'them') { planned = myPart; actual = 0; }
+        else { planned = planned > 0 ? myPart : 0; actual = actual > 0 ? myPart : 0; }
+        shared = sharedPct;
+    } else if (shared > 0 && shared <= 100) {
+        planned = Math.round(planned * shared / 100 * 100) / 100;
+        actual = Math.round(actual * shared / 100 * 100) / 100;
+    }
+
+    let exp = {
+        id: Date.now(), month, date, category: cat, desc, planned, actual,
+        sharedPercentage: shared,
+        isShared: hasPersonSelected ? true : undefined,
+        sharedPayer: hasPersonSelected ? payer : undefined,
+        sharedPersonId: hasPersonSelected && !sharedGroupId ? parseInt(selVal) : undefined,
+        sharedGroupId: hasPersonSelected ? sharedGroupId : undefined
+    };
+
     try {
         // Recurring logic for desktop
         const recToggleDesktop = document.getElementById('recurringToggleDesktop');
@@ -2599,6 +2768,10 @@ async function addExpense() {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
+        if (hasPersonSelected && otherPart > 0) {
+            await saveSharedSplits(exp.id, otherPart, payer, selVal);
+        }
+
         if (isRecurringDesktop) {
             await saveRecurringClones(exp, recUntilDesktop?.value || '', exp.recurringGroupId);
         }
@@ -2611,12 +2784,25 @@ async function addExpense() {
         const recContainerDesktop = document.getElementById('recurringUntilContainerDesktop');
         if (recContainerDesktop) recContainerDesktop.classList.remove('active');
         if (recUntilDesktop) recUntilDesktop.value = '';
+        resetExpenseAdvancedForm();
         updateUI();
         checkDatabaseHealth();
     } catch (err) {
         console.error('[DB] Errore salvataggio spesa:', err);
+        currentData.expenses = currentData.expenses.filter(e => e.id !== exp.id);
         showToast('Errore nel salvare la spesa', true);
     }
+}
+
+function resetExpenseAdvancedForm() {
+    const toggle = document.getElementById('sharedToggleDesktop');
+    const panel = document.getElementById('sharedPanelDesktop');
+    const sel = document.getElementById('sharedPersonDesktop');
+    const fields = document.getElementById('sharedDetailFieldsDesktop');
+    if (toggle) toggle.checked = false;
+    if (panel) panel.classList.remove('active');
+    if (sel) sel.value = '';
+    if (fields) fields.innerHTML = '';
 }
 async function payExpense(id) {
     const exp = currentData.expenses.find(i => i.id === id); if (!exp) return;
@@ -2629,29 +2815,6 @@ async function deleteEntry(type, id) {
     if (type === 'income') { currentData.income = currentData.income.filter(i => i.id !== id); await db.income.delete(id); }
     else { currentData.expenses = currentData.expenses.filter(i => i.id !== id); await db.expenses.delete(id); }
     updateUI(); checkDatabaseHealth();
-}
-
-// =====================================================================
-// COPIA DAL MESE PRECEDENTE
-// =====================================================================
-async function copyFromPreviousMonth() {
-    const currentMonthVal = document.getElementById('currentMonth').value;
-    let year = parseInt(currentMonthVal.split('-')[0]); let month = parseInt(currentMonthVal.split('-')[1]) - 1;
-    if (month === 0) { month = 12; year--; }
-    const prevMonthStr = `${year}-${String(month).padStart(2,'0')}`;
-    let prevExpenses = await db.expenses.where('month').equals(prevMonthStr).toArray();
-    if (prevExpenses.length === 0) { alert("Nessun dato nel ciclo precedente."); return; }
-    const checkboxes = document.querySelectorAll('#importCategoriesList input[type="checkbox"]');
-    let sel = []; checkboxes.forEach(cb => { if (cb.checked) sel.push(cb.value); });
-    if (sel.length === 0) { alert("Seleziona almeno una categoria."); return; }
-    let count = 0; const range = getMonthRange(currentMonthVal);
-    for (let e of prevExpenses) {
-        if (sel.includes(e.category) && !currentData.expenses.some(x => x.category === e.category)) {
-            let newExp = {id: Date.now()+count, month: currentMonthVal, date: range.start.toISOString().slice(0,10), category: e.category, desc: "Stima ereditata", planned: e.planned||e.actual, actual: 0, sharedPercentage: 0};
-            currentData.expenses.push(newExp); await db.expenses.put(newExp); count++;
-        }
-    }
-    updateUI(); checkDatabaseHealth(); alert(`${count} voci ereditate.`);
 }
 
 // =====================================================================
@@ -2763,14 +2926,6 @@ function renderCategoryGrid(catSums) {
         const aVal = catSums[cat]?.actual || 0;
         const icon = getCatIcon(cat);
         
-        // Filtra per macro-gruppo in modalità tabs
-        if (currentViewMode === 'tabs') {
-            const macroGroup = getCategoryMacroGroup(cat);
-            if (macroGroup !== activeMacroGroup && macroGroup !== 'altro') {
-                return; // Salta questa categoria
-            }
-        }
-        
         // Calcolo percentuale con logica corretta
         let pct = 0;
         let barClass = 'default';
@@ -2804,6 +2959,61 @@ const card = document.createElement('div');
 }
 
 // =====================================================================
+// GRIGLIA CATEGORIE DESKTOP (gauge a semicerchio)
+// =====================================================================
+function renderCategoryGridDesktop(catSums) {
+    const grid = document.getElementById('categoryGridDesktop');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    const sorted = [...userCategories].sort();
+
+    sorted.forEach(cat => {
+        const pVal = catSums[cat]?.planned || 0;
+        const aVal = catSums[cat]?.actual || 0;
+        const hasActivity = pVal > 0 || aVal > 0;
+        const over = pVal > 0 && aVal > pVal;
+
+        let status = 'ok';
+        if (!hasActivity) status = 'empty';
+        else if (over) status = 'over';
+        else if (pVal > 0 && aVal / pVal > 0.8) status = 'warning';
+
+        const pct = pVal > 0 ? Math.min(100, Math.round((aVal / pVal) * 100)) : (aVal > 0 ? 100 : 0);
+        const color = status === 'over' ? '#ef4444' : status === 'warning' ? '#f59e0b' : '#10b981';
+        const isSelected = selectedFilterCategory === cat;
+
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `cat-grid-card status-${status}`;
+        if (isSelected) card.classList.add('selected');
+        card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        card.dataset.category = cat;
+
+        card.innerHTML = `
+            <span class="cat-arc-wrap">
+                ${gaugeArcSVG(pct, color)}
+                <span class="cat-arc-icon">${getCatIcon(cat)}</span>
+            </span>
+            <span class="cat-grid-name" title="${cat}">${cat}</span>
+            <span class="cat-grid-vals">${hasActivity ? fmtE(aVal) : '—'} <span style="color:#94a3b8;">/</span> <b class="${over ? 'over-budget' : ''}">${hasActivity ? fmtE(pVal) : '—'}</b></span>
+            ${over ? `<span class="cat-grid-diff diff-minus">⚠ Sforato di ${fmtE(aVal - pVal)}</span>` : ''}
+        `;
+        card.onclick = () => filterByCategory(cat);
+        grid.appendChild(card);
+    });
+}
+
+function gaugeArcSVG(pct, color) {
+    const LEN = 125.66; // π * raggio 40 (semicirconferenza)
+    const dash = Math.max(0, Math.min(100, pct)) / 100 * LEN;
+    return `<svg class="cat-arc" viewBox="0 0 100 50" aria-hidden="true">
+        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#eef2f7" stroke-width="9"/>
+        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="butt" stroke-dasharray="${dash.toFixed(2)} ${LEN.toFixed(2)}"/>
+    </svg>`;
+}
+
+// =====================================================================
 // AGGIORNAMENTO UI PRINCIPALE
 // =====================================================================
 async function updateUI() {
@@ -2815,9 +3025,6 @@ async function updateUI() {
     document.getElementById('sumPrevisto').innerText = fmtE(totalPlanned,0);
     document.getElementById('sumSostenuto').innerText = fmtE(totalActual,0);
 
-    let netSavings = totalIncome - totalActual;
-    let savingsPercent = totalIncome > 0 ? ((netSavings/totalIncome)*100).toFixed(1) : 0;
-
     const month = document.getElementById('currentMonth').value;
     let mData = await db.months.get(month);
     await db.months.put({month, totalIncome, totalPlanned, totalActual, notes: mData?.notes||"", iaNotes: mData?.iaNotes||""});
@@ -2827,55 +3034,12 @@ async function updateUI() {
     const alertBox = document.getElementById('deadlineAlert');
     if (pending > 0) { alertBox.innerText = `⏳ ${pending} uscite pianificate in attesa di saldo.`; alertBox.style.display = 'block'; } else { alertBox.style.display = 'none'; }
 
-    // Tabella categorie - responsive: full list on desktop, filtered on mobile/tabs
+    // Sommario categorie - la griglia desktop legge gli stessi dati
     let catSums = {}; userCategories.forEach(c => catSums[c] = {planned:0, actual:0});
     currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
-    const tableBody = document.getElementById('overviewTableBody'); tableBody.innerHTML = '';
-    const showAllCategories = isDesktop() && currentViewMode !== 'tabs'; // Desktop shows all, mobile only active, tabs filters by macro group
-    userCategories.sort().forEach(cat => {
-        const pVal = catSums[cat].planned, aVal = catSums[cat].actual, diff = pVal - aVal;
-        let diffClass = '', diffText = '';
-        if (pVal > 0 || aVal > 0) { diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus'; diffText = `${diff >= 0 ? '+' : ''}${fmtE(diff)}`; }
-        
-        // Filtra per macro-gruppo in modalità tabs (sia desktop che mobile)
-        if (currentViewMode === 'tabs') {
-            const macroGroup = getCategoryMacroGroup(cat);
-            if (macroGroup !== activeMacroGroup && macroGroup !== 'altro') {
-                return; // Salta questa categoria
-            }
-        }
-        
-        // On desktop, show all categories (even with 0 values); on mobile, only show those with activity
-        if (showAllCategories || pVal > 0 || aVal > 0) {
-            const icon = getCatIcon(cat);
-            let row = document.createElement('div');
-            row.className = 'flat-row';
-            if (selectedFilterCategory === cat) row.classList.add('selected');
-            row.onclick = () => filterByCategory(cat);
-            row.innerHTML = `
-                <div class="flat-left">
-                    <div class="flat-icon">${icon}</div>
-                    <div class="flat-title-group">
-                        <span class="flat-title">${cat}</span>
-                        <span class="flat-subtitle val-previsto">Prev: ${fmtE(pVal)}</span>
-                    </div>
-                </div>
-                <div class="flat-right">
-                    <span class="flat-actual val-sostenuto">${fmtE(aVal)}</span>
-                    <span class="flat-margin ${diffClass}">${diffText}</span>
-                </div>
-            `;
-            tableBody.appendChild(row);
-        }
-    });
 
-    const tableFoot = document.getElementById('overviewTableFoot'); tableFoot.innerHTML = '';
-    let savingsDiv = document.createElement('div'); savingsDiv.className = 'flat-footer-row';
-    savingsDiv.innerHTML = `
-        <div class="flat-footer-title">💰 RISPARMIO NETTO <span class="savings-badge">${savingsPercent}%</span></div>
-        <div class="flat-footer-actual">${fmtE(netSavings)}</div>
-    `;
-    tableFoot.appendChild(savingsDiv);
+    // Griglia categorie con arco SVG (desktop)
+    renderCategoryGridDesktop(catSums);
 
     // Render griglia categorie per mobile
     renderCategoryGrid(catSums);
@@ -2889,28 +3053,54 @@ async function updateUI() {
     const listContainer = document.getElementById('entriesList'); listContainer.innerHTML = '';
     if (!selectedFilterDate && !selectedFilterCategory && searchQuery === "") {
         currentData.income.forEach(inc => {
+            const incDate = inc.date ? inc.date.split('-').reverse().slice(0,2).join('/') : '–';
             const row = document.createElement('div'); row.className = 'item-row';
-            row.innerHTML = `<span class="item-name">💰 <strong>${inc.desc}</strong></span><span class="item-vals"><span style="color:var(--entrate);font-weight:bold;">+${fmtE(inc.amount)}</span><button class="btn-del" onclick="deleteEntry('income',${inc.id})">✕</button></span>`;
+            row.innerHTML = `
+                <span class="reg-left">
+                    <span class="reg-dot" style="background:rgba(16,185,129,0.14);">💰</span>
+                    <span class="reg-main">
+                        <span class="reg-title"><strong>${inc.desc}</strong></span>
+                        <span class="item-meta">${incDate}</span>
+                    </span>
+                </span>
+                <span class="item-vals">
+                    <div><span class="val-s" style="color:var(--entrate);font-weight:bold;">+${fmtE(inc.amount)}</span></div>
+                    <div class="reg-actions"><button class="btn-del" onclick="deleteEntry('income',${inc.id})">✕</button></div>
+                </span>`;
             listContainer.appendChild(row);
         });
     }
     let filteredExp = currentData.expenses;
     if (selectedFilterDate) filteredExp = filteredExp.filter(e => e.date === selectedFilterDate);
     if (selectedFilterCategory) filteredExp = filteredExp.filter(e => e.category === selectedFilterCategory);
-    if (searchQuery !== "") filteredExp = filteredExp.filter(e => e.desc.toLowerCase().includes(searchQuery) || e.category.toLowerCase().includes(searchQuery) || e.date.includes(searchQuery));
-    filteredExp.sort((a,b) => new Date(b.date) - new Date(a.date));
+    if (searchQuery !== "") filteredExp = filteredExp.filter(e => (e.desc || '').toLowerCase().includes(searchQuery) || e.category.toLowerCase().includes(searchQuery) || (e.date || '').includes(searchQuery));
+    filteredExp.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+    if (filteredExp.length === 0 && currentData.expenses.length === 0 && currentData.income.length === 0) {
+        listContainer.innerHTML = '<div class="comp-hint" style="text-align:center;padding:14px 0;">Nessuna voce per questo mese. Inserisci la prima spesa o entrata.</div>';
+    }
     filteredExp.forEach(exp => {
         const isPending = exp.planned > 0 && exp.actual === 0;
         const isSettled = exp.settled === true;
-        const fd = exp.date.split('-').reverse().slice(0,2).join('/');
-        const sharedTxt = exp.sharedPercentage > 0 ? ` <span style="font-size:9px;color:#3b82f6;">(${exp.sharedPercentage}%)</span>` : '';
+        const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : '–';
+        const sharedTxt = exp.sharedPercentage > 0 ? `<span class="reg-shared-pill">${exp.sharedPercentage}%</span>` : '';
         const row = document.createElement('div'); row.className = 'item-row';
         row.innerHTML = `
-            <span class="item-name">${isPending ? '⏳ ' : ''}${getCatIcon(exp.category)} <strong>${exp.category}</strong>${isSettled ? '<span class="settled-badge">Saldata</span>' : ''}${sharedTxt}<span class="item-meta">${fd} · ${exp.desc}</span></span>
+            <span class="reg-left">
+                <span class="reg-dot" style="background:${getCategoryCardBg(exp.category)}">${getCatIcon(exp.category)}</span>
+                <span class="reg-main">
+                    <span class="reg-title">${exp.category}${isSettled ? '<span class="settled-badge">✓ Saldata</span>' : ''}${sharedTxt}</span>
+                    <span class="item-meta">${fd} · ${exp.desc || 'senza nota'}</span>
+                </span>
+            </span>
             <span class="item-vals">
-                <div><span class="val-p">Stima: ${fmtE(exp.planned)}</span><span class="val-s">${exp.actual > 0 ? fmtE(exp.actual) : 'Da pagare'}</span></div>
-                ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}
-                <button class="btn-del" onclick="deleteEntry('expense',${exp.id})">🗑</button>
+                <div>
+                    ${exp.planned > 0 ? `<span class="val-p">Stima: ${fmtE(exp.planned)}</span>` : ''}
+                    <span class="val-s ${isPending ? 'val-pending' : ''}">${exp.actual > 0 ? fmtE(exp.actual) : (isPending ? '⏳ Da pagare' : '—')}</span>
+                </div>
+                <div class="reg-actions">
+                    ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}
+                    <button class="btn-del" onclick="deleteEntry('expense',${exp.id})">🗑</button>
+                </div>
             </span>`;
         row.style.cursor = 'pointer';
         row.addEventListener('click', (e) => {
@@ -2920,15 +3110,24 @@ async function updateUI() {
         listContainer.appendChild(row);
     });
 
-    // Grafici
+    // Grafici (solo con modal IA aperto; canvas nascosti = dimensione 0 per Chart.js)
+    if (document.getElementById('iaNotesModal')?.classList.contains('active')) {
+        renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums);
+    }
+}
+
+function renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums) {
+    const budgetCnv = document.getElementById('budgetChart');
+    const categoryCnv = document.getElementById('categoryChart');
+    if (!budgetCnv || !categoryCnv) return;
     if (chartB) chartB.destroy();
-    chartB = new Chart(document.getElementById('budgetChart').getContext('2d'), {
+    chartB = new Chart(budgetCnv.getContext('2d'), {
         type:'bar', data:{labels:['Entrate','Spese Previste','Spese Sostenute'],datasets:[{data:[totalIncome,totalPlanned,totalActual],backgroundColor:['#10b981','#f97316','#ef4444'],borderRadius:6}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
     });
     if (chartC) chartC.destroy();
     const activeCats = Object.keys(catSums).filter(c => catSums[c].actual > 0);
-    chartC = new Chart(document.getElementById('categoryChart').getContext('2d'), {
+    chartC = new Chart(categoryCnv.getContext('2d'), {
         type:'doughnut', data:{labels:activeCats,datasets:[{data:activeCats.map(c => catSums[c].actual),backgroundColor:['#3b82f6','#8b5cf6','#475569','#0d9488','#10b981','#f59e0b','#f97316','#ef4444']}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:9}}}}}
     });
@@ -2938,7 +3137,8 @@ async function updateUI() {
 // CALENDARIO
 // =====================================================================
 function renderCalendar() {
-    const grid = document.getElementById('calendarGrid'); if (!grid) return; grid.innerHTML = '';
+    const grid = document.getElementById('calendarGridCompact') || document.getElementById('calendarGrid');
+    if (!grid) return; grid.innerHTML = '';
     const monthVal = document.getElementById('currentMonth').value; if (!monthVal) return;
     const range = getMonthRange(monthVal);
     ['L','M','M','G','V','S','D'].forEach(d => { let h = document.createElement('div'); h.className = 'calendar-day-header'; h.innerText = d; grid.appendChild(h); });
@@ -2961,11 +3161,21 @@ function renderCalendar() {
 // =====================================================================
 // FILTRI
 // =====================================================================
-function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDate = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); updateUI(); }
-function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; document.getElementById('listTitle').scrollIntoView({behavior:'smooth'}); updateUI(); }
+function scrollToRegistry() {
+    const card = document.getElementById('entriesCard');
+    const panel = card ? card.closest('.layout-column') : null;
+    if (panel && isDesktop()) panel.scrollTo({ top: 0, behavior: 'smooth' });
+    else document.getElementById('listTitle')?.scrollIntoView({ behavior: 'smooth' });
+}
+function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDate = null; scrollToRegistry(); updateUI(); }
+function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; scrollToRegistry(); updateUI(); }
 function handleSearch() { searchQuery = document.getElementById('searchInput').value.toLowerCase(); updateUI(); }
 function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; updateUI(); }
-function scrollToAddExpense() { switchTab('current-month-tab', document.getElementById('tab-btn-current')); setTimeout(() => { document.getElementById('addExpenseCard').scrollIntoView({behavior:'smooth',block:'start'}); }, 100); }
+function switchFormTab(name) {
+    const cap = name.charAt(0).toUpperCase() + name.slice(1);
+    document.querySelectorAll('.layout-column.left-panel .form-tab').forEach(t => t.classList.toggle('active', t.dataset.formtab === name));
+    document.querySelectorAll('.layout-column.left-panel .form-pane').forEach(p => p.classList.toggle('active', p.id === 'formPane' + cap));
+}
 function toggleSection(id, el) { document.getElementById(id).classList.toggle('show'); el.classList.toggle('active'); }
 
 // =====================================================================
@@ -3068,7 +3278,7 @@ function openSearchPopup() {
     const popup = document.getElementById('searchPopup');
     if (!popup) return;
     popup.classList.add('active');
-    document.body.classList.add('sheet-open');
+    document.body.classList.add('popup-open');
     const input = document.getElementById('searchPopupInput');
     if (input) input.value = '';
     const resultsList = document.getElementById('searchResultsList');
@@ -3083,7 +3293,7 @@ function openSearchPopup() {
 function closeSearchPopup(event) {
     if (event && event.target !== event.currentTarget) return;
     const popup = document.getElementById('searchPopup');
-    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('popup-open'); }
 }
 
 function toggleSearchCustomMonth() {
@@ -3173,7 +3383,7 @@ function openIaMonthPopup() {
     const popup = document.getElementById('iaMonthPopup');
     if (!popup) return;
     popup.classList.add('active');
-    document.body.classList.add('sheet-open');
+    document.body.classList.add('popup-open');
     const respBox = document.getElementById('iaMonthResponse');
     if (respBox) { respBox.style.display = 'none'; respBox.innerText = ''; }
 }
@@ -3181,8 +3391,65 @@ function openIaMonthPopup() {
 function closeIaMonthPopup(event) {
     if (event && event.target !== event.currentTarget) return;
     const popup = document.getElementById('iaMonthPopup');
-    if (popup) { popup.classList.remove('active'); document.body.classList.remove('sheet-open'); }
+    if (popup) { popup.classList.remove('active'); document.body.classList.remove('popup-open'); }
 }
+
+// =====================================================================
+// MODAL IA & NOTE MESE (DESKTOP)
+// =====================================================================
+function openIaNotesModal() {
+    const modal = document.getElementById('iaNotesModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.classList.add('popup-open');
+    const currentMonth = document.getElementById('currentMonth').value;
+    if (currentMonth) {
+        const totals = { income: 0, planned: 0, actual: 0 };
+        currentData.income.forEach(i => { totals.income += i.amount; });
+        currentData.expenses.forEach(e => { totals.planned += e.planned; totals.actual += e.actual; });
+        const catSums = {};
+        userCategories.forEach(c => catSums[c] = { planned: 0, actual: 0 });
+        currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
+        renderDashboardCharts(totals.income, totals.planned, totals.actual, catSums);
+    }
+}
+
+function closeIaNotesModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('iaNotesModal');
+    if (modal) { modal.classList.remove('active'); document.body.classList.remove('popup-open'); }
+}
+
+// =====================================================================
+// SETTINGS POPUPS (griglia a pulsanti → popup per sezione)
+// =====================================================================
+function openSettingsPopup(name) {
+    const pop = document.getElementById('settingsPopup-' + name);
+    if (!pop) return;
+    pop.classList.add('active');
+    document.body.classList.add('popup-open');
+}
+function closeSettingsPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.querySelectorAll('#settings-tab .popup-overlay.active').forEach(p => p.classList.remove('active'));
+    document.body.classList.remove('popup-open');
+}
+
+// Wiring tabs forms (pannello sinistro) + modal IA (desktop)
+(function () {
+    const wireTabs = (tabsSel, panesSel, key) => {
+        const tabs = document.querySelectorAll(tabsSel);
+        if (!tabs.length) return;
+        tabs.forEach(tab => tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const cap = tab.dataset[key].charAt(0).toUpperCase() + tab.dataset[key].slice(1);
+            document.querySelectorAll(panesSel).forEach(p => p.classList.toggle('active', p.id === key + cap));
+        }));
+    };
+    wireTabs('.layout-column.left-panel .form-tab', '.layout-column.left-panel .form-pane', 'formPane');
+    wireTabs('.ia-notes-tabs .form-tab', '.ia-notes-pane', 'iaPane');
+})();
 
 async function runIaMonthAnalysis() {
     const currentMonth = document.getElementById('currentMonth').value;
@@ -3295,14 +3562,14 @@ async function openRendicontoPopup(type) {
         if (expenseListContainer) { expenseListContainer.style.display = 'block'; await renderExpenseList(type, month); }
     }
     overlay.classList.add('active');
-    document.body.classList.add('sheet-open');
+    document.body.classList.add('popup-open');
 }
 
 function closeRendicontoPopup(event) {
     event.preventDefault();
     event.stopPropagation();
     document.getElementById('popup-rendiconto').classList.remove('active');
-    document.body.classList.remove('sheet-open');
+    document.body.classList.remove('popup-open');
 }
 
 async function buildRendicontoRows(type, month, prevMonth) {
@@ -3602,13 +3869,13 @@ function openInvestAddSheet() {
     const initialCapitalInput = document.getElementById('investNewInitialCapital');
     if (initialCapitalInput) { initialCapitalInput.value = ''; }
     document.getElementById('investAddPopup').classList.add('active');
-    document.body.classList.add('sheet-open');
+    document.body.classList.add('popup-open');
 }
 
 function closeInvestAddPopup(event) {
     if (event && event.target !== event.currentTarget) return;
     document.getElementById('investAddPopup').classList.remove('active');
-    document.body.classList.remove('sheet-open');
+    document.body.classList.remove('popup-open');
 }
 
 async function saveNewInvestment() {
@@ -3659,14 +3926,14 @@ function openInvestAssetPopup(id) {
     document.getElementById('investMovementForm').style.display = 'none';
     document.getElementById('investAddPopup').classList.remove('active');
     document.getElementById('investAssetPopup').classList.add('active');
-    document.body.classList.add('sheet-open');
+    document.body.classList.add('popup-open');
     renderInvestAssetDetail(asset);
 }
 
 function closeInvestAssetPopup(event) {
     if (event && event.target !== event.currentTarget) return;
     document.getElementById('investAssetPopup').classList.remove('active');
-    document.body.classList.remove('sheet-open');
+    document.body.classList.remove('popup-open');
     selectedInvestId = null;
 }
 

@@ -1,5 +1,105 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Fix: scroll touch bloccato nei popup (body.popup-open separato da sheet-open)
+
+### ✅ Completed Changes
+- **Bug preesistente risolto**: `body.sheet-open{touch-action:none !important}` (necessario per il drag del bottom sheet) veniva applicato anche a TUTTI i popup/modal → scroll touch impossibile dentro i popup su mobile (liste categorie/Ripetizioni dei nuovi popup Impostazioni sarebbero state inutilizzabili).
+- **Nuova classe `body.popup-open`** (style.css, accanto a `sheet-open`): lock solo `overflow:hidden` + `height` (niente `touch-action:none`/`overscroll-behavior`/`-webkit-overflow-scrolling:none`). Braces 653→654.
+- **9 coppie open/close convertite a `popup-open`** in script.js: condivise (1352/1359), search (3281/3296), IA mese (3386/3394), IA note modal (3404/3420), settings popup (3430/3435), rendiconto (3565/3572), invest add (3872/3878), invest asset (3929/3936).
+- **`sheet-open` resta SOLO sui bottom sheet reali** (drag richiede touch-action:none): transaction (677/703), edit expense (765→703 via `closeTransactionSheet`), income (823/838), macro sheet (2008→703), future (4331/4345).
+- **`switchTab` (481)** ora rimuove entrambe le classi (`remove('sheet-open','popup-open')`).
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; 25 occorrenze riclassificate (9 popup pairs `popup-open`, 6 sheet `sheet-open`, 1 switchTab dual-clear); braces CSS 654/654. **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring layout mobile: zero-scroll di pagina, proporzionalità clamp(), Impostazioni a popup
+
+### ✅ Completed Changes
+- **Zero-page-scroll system (≤767px)**: `html{height:100%}` + `body{height:100dvh;overflow:hidden}` → la pagina non scrolla MAI; `.container` = `height:calc(100dvh - var(--header-h,60px))` + `padding-bottom: var(--nav-h-mobile)` (71px+safe-area) → i tab ereditano `height:100%`. Scroll SOLO dentro i menu interni (`flex:1; overflow-y:auto`). Nuove variabili in `:root`: `--header-h:60px`, `--nav-h-mobile:calc(71px + env(safe-area-inset-bottom))`; rimossa `--nav-h:130px` (morta).
+- **Fissate 3 formule di altezza incoerenti**: Mese usava `100dvh-76` (senza safe-area → banda vuota sopra la nav, contenuto sotto il notch), Analisi/Future/Invest usavano `100dvh-60-60-safe` (~12px di contenuto sotto la nav) → tutte ora `height:100%` derivata dal container. `#settings-tab` allineato (height 100% + overflow-y auto interno).
+- **Proporzionalità `clamp()`**: `.mobile-dashboard-container{grid-template-rows:repeat(2,minmax(0,1fr))}` + `.dash-card{min-height:0;height:100%}` → le 3 card macro riempiono SEMPRE lo spazio (zero scroll forzato, zero buchi su schermi grandi); paddings/icone/titoli `clamp(vh/vw)`. Idem: pill mese, KPI summary, action hub Mese/Future, bottom-nav (label `clamp` + `white-space:nowrap` + ellipsis per evitare wrap che alza la nav), proj-card, hero investimenti.
+- **Popup robusti**: `.popup-body` → `flex:1; min-height:0; max-height:none` (prima `max-height:65vh` fisso poteva sbordare il panel su schermi piccoli); idem `.ia-notes-body` (62vh) e `#condiviseBody` (55vh inline rimosso); `.popup-bars` flessibile.
+- **Impostazioni = pulsanti → popup (mobile E desktop)**: griglia `.settings-tile` (6 card: Categorie, App & Notifiche, Backup, Cloud, Ripetizioni, Zona Pericolo) con icona+titolo+descrizione+freccia e hover/active/focus-visible; contenuti spostati in 6 popup `#settingsPopup-*` dentro il tab con **id interni invariati** (zero duplicazione logica JS). Nuove `openSettingsPopup(name)`/`closeSettingsPopup(event)`; `switchTab` chiude i popup settings (overlay `.active` dentro tab nascosto riapparirebbe aperto). Rimossi `.settings-col-left/right`.
+- **Cleanup**: eliminato blocco legacy `@media (max-width:768px)` "MOBILE-ONLY DASHBOARD" (`.dash-card` 35px/50px/200px in conflitto col blocco 767, `.category-grid-mobile display:none !important` duplicata) → header mobile pulito nel blocco 767; rimosso `@media (max-width:400px)` (fuso nei clamp), `.summary-pct`, `body{padding-bottom:100px}`, `.container{padding-bottom:130px}`, `#nav-btn-add` (CSS+JS), `scrollToAddExpense` (morto).
+- **Nota (decisione utente)**: griglia micro-categorie mobile confermata NASCOSTA — regola esplicita `display:none !important` nel nuovo blocco (vince sull'inline di `renderCategoryGrid`); il menu del tab Mese restano le 3 card macro.
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK, braces CSS 653/653, stack HTML bilanciato, 210 id unici (zero duplicati). **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring radicale desktop Tab Mese: pill centrata, card ad arco SVG, split completo, cleanup legacy
+
+### ✅ Completed Changes
+- **Bug "sidebar verticale" risolto**: non esisteva una sidebar — gli artefatti sotto la navbar erano la vecchia barra `.header` (mai nascosta ≥768) e la nav mobile `.bottom-nav` (nessuna regola CSS base → renderizzata come striscia di link su desktop). Ora: `.header { display:none }` ≥768, `.bottom-nav { display:none }` base (compare solo ≤767), rimossi CSS morti `.navigation-tabs/.tab-button/.add-button/.nav-spacer`.
+- **Pill mese VERA centrale**: `.month-head` ristrutturato con 2 `.kpi-cluster` (`display:contents`) — sinistra `[Entrate][Previste]`, destra `[Sostenute]`, pill `flex:1` al centro esatto. **Risparmio rimosso** (`#summaryRisparmio` + `#sumRisparmio`/`#sumRisparmioPct` + CSS `.box-risparmio`/`.summary-pct` + write in `updateUI`). Mobile: ordine identico (pill → 3 box) via `display:contents` + pill 100%.
+- **Tab Mese = griglia CSS ≥1200px**: `#current-month-tab.active` = grid `260px | 1fr | 320px`, righe `auto auto 1fr` → alert row1 (1/-1), `.month-head` row2 **solo colonna centrale**, `.main-layout` row3 (griglia interna 3 colonne). `body{overflow:hidden}` + `.container{height:calc(100dvh-56px)}` + altri tab a scroll interno. Fallback impilato 768-1199 intatto.
+- **Card ad arco a mezza luna SVG** (Chart.js eliminato dalla griglia, ~20 gauge risparmiati per render): `gaugeArcSVG()` path `M 10 50 A 40 40 0 0 1 90 50` stroke 9, progress `stroke-dasharray = pct/100·125.66`, `linecap:butt` (niente finto punto a 0%), colori stato verdi/ambra/rossi; icona nel cavo dell'arco (top 56%, 18px, nessuna collisione: band interna y=14.5 vs icona y≈17-38); sotto: nome + **Speso / Budget** in una riga (`412,00 € / 500,00 €`), **budget rosso + badge "⚠ Sforato di X"** quando si sfora; carta vuota → arco grigio + "— / —". `renderCategoryGridDesktop` riscritta (template string, onclick → `filterByCategory`).
+- **Registro ridisegnato**: righe compatte con pallino colore categoria (`.reg-dot` via `getCategoryCardBg`), nome+badge ✓ Saldata+pill `%` condivisa, sottotitolo `fd · nota`, Stima/Da pagare impilati, `⏳ Da pagare` ambra (`.val-pending`), azioni Paga/🗑 su colonna destra; guardia `exp.date` (legacy senza data → "–"); sort ISO sulla stringa data (niente NaN); stato vuoto con hint. Righe entrate con dot verde + data.
+- **IA & Note spostato**: pulsante rimosso dal month-head → card compatta in **fondo colonna destra** (`.ia-quick-card` + `.ia-quick-trigger`) che apre `#iaNotesModal` esistente.
+- **Striscia risparmio rimossa**: `#overviewTableFoot` (markup + write `updateUI` + `.flat-footer-*` + `.savings-badge` + `.row-savings`/`#overviewTableFoot` mobile dead rules). Risparmio resta in Analisi/db.
+- **Form desktop — parity completa col bottom sheet mobile**:
+  - **Entrata**: + campo **Data** (`#incDate`, default oggi, registrato in `inc.date`), controllo importo con toast.
+  - **Spesa**: `<details class="form-advanced">` con **Tipo voce** (pills Prevista teal/Sostenuta rossa, accentua Stima/Pagato) e **pannello Spesa Condivisa completo**: `#sharedToggleDesktop`, `#sharedPersonDesktop` (persone + gruppi `g_`, `populateSharedPersonSelectDesktop`), pills pagatore (`#payerThemLblDesktop`), metodo equal/%/€ (`#sharedDetailFieldsDesktop`, `updateSplitFieldsDesktop`/`updateSharedPreviewDesktop`), `+` nuova persona (`#btnNewPersonDesktop`). `addExpense` ricalcola quote come la sheet (`saveSharedSplits(exp.id, otherPart, payer, selVal)`) + salva `isShared/sharedPayer/sharedPersonId/sharedGroupId`; quota % legacy applicata solo senza persona; `resetExpenseAdvancedForm()` al salvataggio.
+  - **Bugfix invio dati**: `expDate` vuota → default oggi (prima: righe senza data, sort/registro rotti); catch di `addExpense` ora rollback `currentData.expenses`; `addIncome` validata.
+- **Cleanup legacy JS**: rimossi `renderImportCheckboxList` (e le 3 chiamate) + `copyFromPreviousMonth` + sezione "COPIA DAL MESE PRECEDENTE" + CSS `.import-checkbox-list`, `.navigation-tabs` mobile, `.add-button`/`.tab-button` (media 968).
+- **Fix HTML pre-esistente**: bottom sheet aveva UN div non chiuso (`div` opens 257/closes 256, presente anche in HEAD) → aggiunto `</div>` finale, ora bilanciato.
+- **Mobile NON TOCCATO**: tutte le modifiche dentro media ≥768/≥1200 o classi `hide-mobile`; ordine mobile (pill→alert→dash→summary→grid) invariato.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK, braces CSS 643/643, HTML bilanciato (stack check), zero id duplicati (206), cross-ref getElementById audit: residui tutti pre-esistenti con null-guard. **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring visivo completo desktop Tab Mese: viewport-first zero-scroll
+
+### ✅ Completed Changes
+- **Top navbar orizzontale (desktop ≥768)**: nuovo `<nav class="top-nav hide-mobile">` con brand "Bilancio Pro" + 5 link (`data-tab` Mese/Analisi/Investimenti/Previsioni/Impostazioni). `switchTab` sincronizza `.top-nav-link.active` (aggiunta regola). Mobile invariato (bottom-nav).
+- **Header Mese compatto** `.month-head`: pill mese + KPI (4 box) + pulsante `🤖 IA & Note` → apre la nuova modal.
+- **Layout 3 pannelli ≥1200px zero-scroll**: `#current-month-tab.active` = `height: calc(100dvh - 56px)`, flex column, overflow hidden; `.main-layout` = grid `270px | 1fr | minmax(360px,400px)`; i 3 pannelli scrollano internamente (`overflow-y:auto`, scrollbar sottile). Fallback impilato 768-1199px.
+- **Colonna sinistra**: calendario compatto `#calendarGridCompact` (L M M G V S D, tile 30px, span M/YY nascosto, click → filtra registro) + forms a tab **Entrata | Spesa | Condivise** (`.form-tabs`/`.form-pane`, wiring IIFE scoped); campi ultra-compatti (padding 8px, label 10px).
+- **Rimosso "Pianificazione Ciclo"**: `#importSectionCard`/`#importSection` eliminati dall'HTML (JS `renderImportCheckboxList`/`copyFromPreviousMonth` restano, no-op sicuri con null-guard).
+- **Griglia microcategorie ridisegnata**: card più dense (`minmax(148px,1fr)`, gap 10px, padding 12px) con **icona della categoria centrata DENTRO l'arco** (`.cat-grid-gauge-icon` absolute nel wrap 140×70), `%` sotto l'icona, nome 1 riga, chips prev/att 11px, diff micro-badge. Stessa config gauge Chart.js (nessun tooltip).
+- **Registro Spese**: card `#entriesCard` nel pannello destro con righe moderne (`.item-row` card-like, hover lift, tinta sfondo, radius 10px), toolbar ricerca + CSV/PDF in testa; `scrollToRegistry()` scrolla il pannello invece di `scrollIntoView` pagina.
+- **Modal IA & Note (desktop)**: `#iaNotesModal` (pattern popup, 640px, `z-index:2500`) con tab **HUB IA | Note | Grafici**. HUB IA + textarea `userNotes`/`iaNotes` spostati qui dal pannello; **mini-chart** (`#budgetChart`/`#categoryChart` → `.ia-mini-chart` 130px) con ricreazione al open: estratta `renderDashboardCharts()` da `updateUI` (chiamata solo con modal aperto — canvas hidden = size 0 per Chart.js).
+- **CSS cleanup**: rimossi `.charts-wrapper`, `.calendar-details`, `.cat-grid-icon` (dead), div duplicato `#currentMonth` (bug: duplicato inserito durante restyle, rimosso). Net balance div edit = 0.
+- **Mobile NON TOCCATO**: tutte le nuove sezioni `hide-mobile`; feature mobile (bottom sheet, action hub, dash) intatte.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK (script.js + adapter), braces CSS 649/649, zero id duplicati (203), cross-ref onclick/getElementById verificato (missing residui = pre-esistenti/by-design, documentati in MEMORY). **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring totale Tab Mese (desktop): navigazione mese, HUB IA, layout
+
+### ✅ Completed Changes
+- **BUG FIX — mese non cambiabile**: la pillola `#monthSelectorPill` non aveva alcun handler e `#currentMonth` era `display:none` → tab Mese bloccato sul mese corrente. Ora: pill cliccabile (`showPicker()` con fallback `click()`), tastiera (Enter/Space), frecce **‹ ›** (`#btnPrevMonth`/`#btnNextMonth`, classe `hide-mobile`) con `shiftMonth(±1)` → `loadMonthData()` + `updateMonthDisplay()`. Nuova `setupMonthNavigation()` chiamata nel DOMContentLoaded esistente.
+- **HUB IA restyled**: rimosso markup inline-styled → `.hub-ia-card` (card gradient, h2 con bordo `--ia-color`), hint, `.btn-ia` in evidenza, select Motore/Modello in `<details class="hub-ia-advanced">` collassato (zero JS), `.hub-ia-error-box` con classe CSS (JS usa `style.display` inline → compatibile). ID invariati (`ai-engine-select`, `openrouter-model-select`, `btn-analisi-strategica`, `hub-ia-error-box`).
+- **Colonna sinistra riordinata**: Registra Spesa → Nuova Entrata → Spese Condivise → Pianificazione Ciclo (collassabile, ultima). Sticky desktop (`top:118px`, `max-height`, overflow-y auto, scrollbar sottile). Fix typo "carato" → "carico".
+- **KPI strip 4ª cella**: `#summaryRisparmio` (desktop-only `hide-mobile`) con importo + `#sumRisparmioPct` (+% / vuoto se nessuna entrata); `updateUI` aggiorna; summary-grid desktop ora `display:grid; repeat(4,1fr)`.
+- **Voci del Periodo**: calendario in `<details class="calendar-details">` collassato di default (ricerca+registro+CSV/PDF sempre visibili).
+- **CSS cleanup**: rimossi blocchi orfani `.flat-list-container/.flat-row/.flat-left/.flat-right/.flat-icon/.flat-title-group/.flat-title/.flat-subtitle/.flat-actual/.flat-margin` (zero consumer; `.flat-footer-*` conservati per la strip risparmio); `.card` → `border-radius: var(--radius-card)`; `:focus-visible` globale per button/input/select/textarea; `.month-arrow` 28px; `.box-risparmio` gradient blu-indaco; `summary-pct`.
+- **Mobile NON TOCCATO** (tutte le aggiunte con `hide-mobile`, le card modificate sono `hide-mobile`).
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK, braces CSS 572/572, zero id duplicati, tutti i nuovi id presenti. **Nessun commit/push**.
+
+---
+
+## [2026-08-11] - Refactor desktop Tab Mese: griglia categorie con gauge a semicerchio
+
+### ✅ Completed Changes
+- **index.html**: rimossi `#viewToggleBtn` + `#macroTabsContainer` (le 3 macrocategorie desktop Casa/Auto/Svago; su mobile i macro-tab erano già `display:none`, il toggle era un bottone morto). `#rendicontoCard` → titolo "📊 Categorie & Budget", `#overviewTableBody` sostituito con `#categoryGridDesktop`; `#overviewTableFoot` (risparmio netto) conservato.
+- **script.js**: eliminati `setupViewToggle` (+ chiamata in `initApp`), stato `currentViewMode`/`activeMacroGroup` e tutti i branch `=== 'tabs'` (codice morto). Nuova `renderCategoryGridDesktop(catSums)` chiamata da `updateUI`: card per OGNI categoria (anche a zero) con bg pastello, icona, **gauge semicerchio** Chart.js (`doughnut`, `rotation:-Math.PI`, `circumference:Math.PI`, `cutout:'72%'`, `animation:false`, `events:[]`), % centrale, valori Prev/Sost, badge diff (green/red), stati ok/warning/over/empty; click → `filterByCategory(cat)` + stato `.selected` (`aria-pressed`).
+- **style.css**: rimossi blocchi orfani `.view-toggle-btn`, `.macro-tabs-wrapper`, `.macro-tab` e reference in media query mobile. Nuovi token `:root` `--radius-card`, `--shadow-card`, `--shadow-card-hover`. `.category-grid-desktop` (`repeat(auto-fill, minmax(230px,1fr))`, gap 16px), `.cat-grid-card` (button 18px radius, hover lift -3px, active scale, `:focus-visible` outline accent, `.selected` ring) — solo desktop (card già `hide-mobile`). Canvas gauge 168×84 fisso (zero CLS), `clamp()` sulla %.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK, braces CSS 553/553, zero reference residue a view-toggle/macro-tab/overviewTableBody. **Nessun commit/push** (richiesto dall'utente).
+
+---
+
 ## [2026-08-11] - Bottom sheet swipe-to-close completo + rimozione legacy_version
 
 ### ✅ Completed Changes
