@@ -30,7 +30,10 @@ function enqueueOutbox(tableName, item) {
 const DB_ACCESSOR = {
     sync_state: 'syncState', settings: 'settings', categories: 'categories',
     months: 'months', income: 'income', expenses: 'expenses',
-    annual_deadlines: 'annualDeadlines', savings_goals: 'savingsGoals'
+    annual_deadlines: 'annualDeadlines', savings_goals: 'savingsGoals',
+    investments: 'investments', investment_movements: 'investmentMovements',
+    people: 'people', groups: 'groups',
+    group_members: 'groupMembers', shared_expense_splits: 'sharedExpenseSplits'
 };
 async function flushOutbox() {
     if (!window.supabaseUser) return;
@@ -75,12 +78,18 @@ class SupabaseTable {
         const map = {
             months: ['month_id', 'totalIncome', 'totalPlanned', 'totalActual', 'notes', 'iaNotes'],
             income: ['id', 'month', 'desc', 'amount'],
-            expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage'],
+            expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage', 'isShared', 'sharedPayer', 'settled'],
             categories: ['name', 'macro', 'icon'],
             annual_deadlines: ['id', 'month', 'day', 'desc', 'amount', 'isPaid'],
             savings_goals: ['name', 'targetAmount', 'importo_accumulato', 'createdAt'],
             sync_state: ['id', 'counter', 'deviceId', 'lastUpdated'],
-            settings: ['key', 'value']
+            settings: ['key', 'value'],
+            investments: ['id', 'type', 'name', 'targetAmount', 'initialCapital', 'createdAt'],
+            investment_movements: ['id', 'investmentId', 'date', 'type', 'amount', 'desc'],
+            people: ['id', 'name', 'createdAt'],
+            groups: ['id', 'name', 'description', 'createdAt'],
+            group_members: ['id', 'groupId', 'personId'],
+            shared_expense_splits: ['id', 'expenseId', 'personId', 'groupId', 'amount', 'splitType', 'paidBy', 'isPaid', 'settled', 'createdAt']
         };
         return map[this.tableName] || null;
     }
@@ -272,7 +281,13 @@ window.db = {
     expenses: new SupabaseTable('expenses', 'id'),
     savingsGoals: new SupabaseTable('savings_goals', 'name'),
     settings: new SettingTable('settings', 'key'),
-    syncState: new SupabaseTable('sync_state', 'id')
+    syncState: new SupabaseTable('sync_state', 'id'),
+    investments: new SupabaseTable('investments', 'id'),
+    investmentMovements: new SupabaseTable('investment_movements', 'id'),
+    people: new SupabaseTable('people', 'id'),
+    groups: new SupabaseTable('groups', 'id'),
+    groupMembers: new SupabaseTable('group_members', 'id'),
+    sharedExpenseSplits: new SupabaseTable('shared_expense_splits', 'id')
 };
 
 // Autenticazione Auth Modal Logic
