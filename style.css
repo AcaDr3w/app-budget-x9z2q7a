@@ -884,7 +884,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
    viewport (header 60px + nav ~71px + safe-area). Lo scroll esiste solo
    dentro i contenitori-menu interni ai tab. */
 @media (max-width: 767px) {
-    html { height: 100% !important; }
+    html {
+        height: 100% !important;
+        overflow-x: hidden !important;
+    }
     body {
         height: 100dvh !important;
         overflow: hidden !important;
@@ -1043,8 +1046,17 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .dash-card:active { transform: scale(0.96); }
     .dash-card:hover { transform: translateY(-1px); }
     .dash-card:focus-visible { outline: 2px solid rgba(0, 0, 0, 0.35); outline-offset: 2px; }
+    .card-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        min-width: 0;
+        flex-shrink: 0;
+    }
     .dash-card .card-title {
-        margin: 0 0 12px;
+        margin: 0;
         font-size: clamp(12px, 3.6vw, 16px);
         font-weight: 700;
         text-align: center;
@@ -1054,9 +1066,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         white-space: nowrap;
     }
     .card-badge {
-        position: absolute;
-        top: 12px;
-        right: 10px;
         border-radius: 99px;
         padding: 2px clamp(7px, 2vw, 10px);
         font-size: clamp(7.5px, 2.2vw, 9.5px);
@@ -1064,7 +1073,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         letter-spacing: 0.3px;
         text-transform: uppercase;
         white-space: nowrap;
-        z-index: 1;
     }
     .card-body {
         display: flex !important;
@@ -1115,6 +1123,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
     .card-micro-grid {
         display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(56px, 100%), 1fr));
+        grid-template-rows: repeat(2, minmax(0, 1fr));
         gap: 6px;
         justify-items: center;
         align-content: center;
@@ -1123,11 +1133,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         min-width: 0;
         max-width: 100%;
     }
-    .card-micro-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
-    .card-micro-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
     .micro-cell {
-        width: 42px;
-        height: 42px;
+        width: clamp(32px, 10vw, 42px);
+        height: clamp(32px, 10vw, 42px);
         aspect-ratio: 1/1;
         display: flex;
         align-items: center;
@@ -1138,13 +1146,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         border-radius: 10px;
     }
     .micro-cell i {
-        font-size: 16px;
+        font-size: clamp(13px, 4vw, 16px);
         line-height: 1;
         color: inherit;
     }
     .micro-more {
-        width: 42px;
-        height: 42px;
+        width: clamp(32px, 10vw, 42px);
+        height: clamp(32px, 10vw, 42px);
         aspect-ratio: 1/1;
         display: flex;
         align-items: center;
@@ -1152,7 +1160,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         border: 1px dashed rgba(0, 0, 0, 0.25);
         border-radius: 10px;
         color: #374151;
-        font-size: 18px;
+        font-size: clamp(14px, 4.5vw, 18px);
         line-height: 1;
     }
     .micro-empty {
@@ -1209,6 +1217,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     #mese-action-hub { padding: 2px 0 0; gap: clamp(6px, 1.8vw, 8px); }
     #mese-action-hub button,
     #futureActionHub button {
+        flex: 1 1 0;
         padding: clamp(10px, 3vh, 14px) 8px;
         font-size: clamp(12px, 3.4vw, 13px);
     }

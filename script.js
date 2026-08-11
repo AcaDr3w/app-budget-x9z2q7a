@@ -3582,20 +3582,17 @@ function renderMacroCards() {
 
         if (grid) {
             grid.innerHTML = '';
+            grid.className = 'card-micro-grid';
             if (cats.length === 0) {
-                grid.className = 'card-micro-grid cols-2';
                 grid.innerHTML = '<div class="micro-empty">✏️ Aggiungi categorie</div>';
             } else {
-                const shown = cats.slice(0, 5);
-                const hasMore = cats.length > 5;
-                grid.className = 'card-micro-grid ' + ((shown.length + (hasMore ? 1 : 0)) <= 4 ? 'cols-2' : 'cols-3');
-                shown.forEach(cat => {
+                cats.slice(0, 5).forEach(cat => {
                     const cell = document.createElement('div');
                     cell.className = 'micro-cell';
                     cell.innerHTML = `<i class="fas ${faIconFor(cat, macro)}"></i>`;
                     grid.appendChild(cell);
                 });
-                if (hasMore) {
+                if (cats.length > 5) {
                     const more = document.createElement('div');
                     more.className = 'micro-more';
                     more.innerHTML = '⋯';

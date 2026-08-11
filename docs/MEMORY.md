@@ -1,6 +1,15 @@
 # Project Core Memory
 
-## 🎨 LIGHT PASTEL mobile — FIX v2: micro-categorie SOLO icone FA quadrate + card ristrutturate (2026-08-11, STATO ATTUALE)
+## 🎨 LIGHT PASTEL mobile — STATO ATTUALE: badge stacked, griglia auto-fit fluida (2026-08-11)
+- **Card macro**: `.card-header` = `flex column; align-items:center; gap:4px` → **badge sopra, titolo centrato sotto** (MAI più position:absolute sul badge — sovrapposizioni risolte). `.card-title` `margin:0`, ellipsis nowrap. Corpo: `card-body` flex row space-between (icona `flex:0 0 25%` + glass). Padding card `clamp(8px,2vh,10px) 10px`.
+- **Griglia micro-celle**: `.card-micro-grid` = `repeat(auto-fit, minmax(min(56px, 100%), 1fr))` + 2 righe max → wrap automatico (Svago full-width), 2 col sulle mezze card, **niente classi cols-2/cols-3** (rimosse). `min(56px,100%)` = difesa anti-esplosione a 320px (un 60px fisso rompeva).
+- **Celle**: quadrate `clamp(32px,10vw,42px)` + `aspect-ratio:1/1`, solo icone FA (`faIconFor` → `FA_ICON_MAP`/`MACRO_FA`/`fa-tag`), MAI testo nelle celle (regola assoluta: il nome ha causato il bug overflow a lista). `.micro-more` = solo `⋯`.
+- **Hub Mese/Future**: bottoni `flex:1 1 0` + `gap: clamp(6px,1.8vw,8px)`.
+- **Fallback**: `html{overflow-x:hidden !important}` nel blocco 767.
+- **Colori invariati**: Casa `#B2DFDB`/`#004D40`/badge `#80CBC4`; Veicoli `#C8E6C9`/`#1B5E20`/`#A5D6A7`; Svago `#E1BEE7`/`#4A148C`/badge `#4A148C`+bianco. Body gradiente `#E0F2F1→#FFF3E0→#E8F5E9` + `background-attachment:fixed`; hero panna `rgba(255,255,255,0.6)`; KPI `repeat(3,1fr)` (`heroEntrateTotal`/`heroSpesePreviste`/`heroSpeseSostenute`); insight fade 250ms (`heroInsightFadeT`).
+- **Banner gialli RIMOSSI** (pill oro + deadlineAlert); `annualMonthAlert` blu INVARIATO; `.month-head` nascosto ≤767; label corretta "Casa e Utenze" (nessun typo).
+
+## 🎨 LIGHT PASTEL mobile — FIX v2: micro-categorie SOLO icone FA quadrate + card ristrutturate (2026-08-11, SOSTITUITO da badge stacked + auto-fit qui sopra)
 - **Celle micro = solo icone FontAwesome, MAI testo**: `renderMacroCards` genera `<i class="fas fa-...">`; la cella è QUADRATA rigida (`width/height:42px; aspect-ratio:1/1; flex center`, bg `rgba(255,255,255,0.5)`). Testo label + `+N altre` RIMOSSI (solo `⋯` nel more-cell). Se rivedi la griglia: MAI reintrodurre nomi testuali nelle celle (causa del bug overflow a lista).
 - **Icone**: `FA_ICON_MAP` (20 default by name) + `MACRO_FA` fallback + `faIconFor(cat,macro)` → `fa-tag` per custom. `categoryIconMap` emoji RESTA per lista voci/registri/`getCatIcon` — non toccare.
 - **Griglia rigida**: `.card-micro-grid.cols-2{repeat(2,1fr)}` / `.cols-3{repeat(3,1fr)}`, `gap:6px; justify-items:center; align-content:center`; classe scelta in `renderMacroCards` (≤4 → 2 col, 5/6 → 3 col). `.card-glass` QUASI INVISIBILE: `rgba(255,255,255,0.15)` + bordo 0.2 + radius 12 + padding 6 (niente blur).

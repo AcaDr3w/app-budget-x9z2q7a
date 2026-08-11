@@ -1,5 +1,21 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Refactoring Responsive UI fluida: badge stacked sopra titolo (zero sovrapposizioni), griglia auto-fit con celle fluide clamp, hub flessibile flex:1 1 0
+
+### ✅ Completed Changes (SOLO mobile, blocco ≤767)
+- **Badge/titolo separati semanticamente**: nuovo `.card-header` (`flex column; align-items:center; gap:4px`) con badge sopra e titolo centrato sotto → **mai più sovrapposizioni** (badge prima era `position:absolute`; ora statico). `card-title` `margin:0` (gap dal header), ellipsis anti-troncamento invariato.
+- **Griglia micro-celle adattiva (wrap)**: `.card-micro-grid` = `grid-template-columns: repeat(auto-fit, minmax(min(56px, 100%), 1fr))` + `grid-template-rows: repeat(2, minmax(0, 1fr))` → wrap automatico sulle card larghe (Svago full-width), 2 colonne su quelle strette (Casa/Veicoli), mai overflow (il `min(56px,100%)` evita l'esplosione del 60px fisso a 320px). RIMOSSE classi runtime `cols-2`/`cols-3` (JS sempre `card-micro-grid`).
+- **Celle fluide quadrate**: `.micro-cell`/`.micro-more` = `clamp(32px, 10vw, 42px)` + `aspect-ratio:1/1`; icone `clamp(13px,4vw,16px)`, `⋯` `clamp(14px,4.5vw,18px)`. Niente più 42px fissi.
+- **Hub flessibile**: `#mese-action-hub button`/`#futureActionHub button` → `flex: 1 1 0` esplicito (crescita/restrizione equa, gap clamp invariato).
+- **Fallback overflow**: `html { overflow-x: hidden !important; }` nel blocco mobile (body già `overflow:hidden`).
+- **Contenitori già fluidi** (verificato, nessuna modifica): hero card e dash-card `width:100%`/grid `1fr`, padding/gap `clamp()`/%; KPI 3-colonne e insight fade invariati.
+- **Typo check**: "Casa e Utenze" corretto ovunque (index:145, script:246/2049/2154/3566) — nessun "Casa e Utile" nel codice.
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; div 293/293; braces CSS 690/690; zero residui `cols-2`/`cols-3` nel codice (solo docs).
+
+---
+
 ## [2026-08-11] - FIX overflow micro-categorie + card macro ristrutturate: solo icone FA in celle quadrate, titolo centrato, badge assoluto, glass quasi invisibile
 
 ### ✅ Completed Changes (SOLO mobile, blocco ≤767)
