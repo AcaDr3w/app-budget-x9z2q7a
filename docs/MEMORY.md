@@ -1,5 +1,12 @@
 # Project Core Memory
 
+## 📱 Mobile tab Mese — Macro-card glass 2x3 + AI Insight carousel (2026-08-11, STATO ATTUALE)
+- **`.dash-card`**: titolo+icona inline, `.card-glass` (`rgba(255,255,255,.12)`+blur(10px), `flex:1; min-height:0`), `.card-progress` in fondo. `.card-micro-grid` = **SEMPRE 2×3 celle senza scroll**: ≤6 cat → tutte; >6 → prime 5 + badge `⋯ +N altre`; 0 → `micro-empty`. Regola da rispettare: MAI scroll interno alle card (zero-scroll invariato).
+- **`renderMacroCards()`**: da `userMacroCategories[macro]` + `categoryIconMap` (emoji fallback 📌), totals da `currentData.expenses` via `catSet`; fill `.fill-warn` (≥80%)/`.fill-over` (sforato); label `Budget {title}: speso / previsto`. `MACRO_CARD_META` = alias titoli. Hook: `updateUI()` DOPO i 3 KPI (riga ~3027). Click card/badge → `openBottomSheetFromMacro` (delegation invariata).
+- **AI Daily Insight (`#ai-insight-carousel`, solo ≤767, `display:none` ≥768)**: carousel `scroll-snap-type:x mandatory` (pill 86%), dots, auto 4s, pausa su pointerdown + resume 6s (`startAIInsightLoop`/`stopAIInsightLoop`/`scheduleAIInsightResume`, flag `aiInsightWired` per eventi una sola volta, stop su `document.hidden`). `renderAIInsightSlides()` = **solo matematica locale** (5 regole: miglioramento cat vs mese prec. / media giornaliera macro / proiezione lineare fine mese / sforo budget / onboarding). Chiamata in `updateUI` (fire-and-forget, è async per il prev month via `getPreviousMonthStrings(month,1)[0]`).
+- **I.A. vera = popup `#iaMonthPopup`** (pulsante pill "Assistente I.A."): `runIaMonthAnalysis` include ora blocco "Dati mese precedente" + variazioni % (`pctDiff`/`fmtDiff`), resoconto max 6 righe richiesto nel prompt → `callAIEndpoint` (OpenRouter).
+- **Overlay bottom sheet mobile**: `.sheet-overlay.open` ≤767 = `rgba(0,0,0,0.3)` + `backdrop-filter:blur(8px)` (desktop invariato).
+
 ## 📱 Body lock: `sheet-open` vs `popup-open` (2026-08-11)
 - **`body.sheet-open`** = SOLO bottom sheet veri (transaction/edit/income/macro/future): include `touch-action:none` (obbligatorio per il drag via Pointer Events). NON applicare ai popup.
 - **`body.popup-open`** = popup/modal (condivise, search, IA mese, IA note, settings, rendiconto, invest add/asset): lock `overflow:hidden` + height SOLO, niente touch-action → lo scroll touch interno ai popup funziona.

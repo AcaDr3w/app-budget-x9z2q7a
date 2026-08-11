@@ -3024,6 +3024,8 @@ async function updateUI() {
     document.getElementById('sumEntrate').innerText = fmtE(totalIncome,0);
     document.getElementById('sumPrevisto').innerText = fmtE(totalPlanned,0);
     document.getElementById('sumSostenuto').innerText = fmtE(totalActual,0);
+    renderMacroCards();
+    renderAIInsightSlides();
 
     const month = document.getElementById('currentMonth').value;
     let mData = await db.months.get(month);
@@ -3472,6 +3474,22 @@ async function runIaMonthAnalysis() {
         .map(([cat, val]) => `  - ${cat}: ${fmtEPlain(val)}`).join('\n');
     const pendingCount = expenses.filter(e => e.planned > 0 && e.actual === 0).length;
 
+    // Dati mese precedente per il confronto
+    const prevMonth = getPreviousMonthStrings(currentMonth, 1)[0];
+    let prevIncomeTot = 0, prevActualTot = 0, prevPlannedTot = 0;
+    if (prevMonth) {
+        const prevIncomes = await getIncomesForMonth(prevMonth);
+        const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
+        prevIncomeTot = prevIncomes.reduce((s, i) => s + i.amount, 0);
+        prevActualTot = prevExpenses.reduce((s, e) => s + e.actual, 0);
+        prevPlannedTot = prevExpenses.reduce((s, e) => s + e.planned, 0);
+    }
+    const pctDiff = (base, cur) => base > 0 ? Math.round(((cur - base) / base) * 100) : null;
+    const fmtDiff = (d) => d === null ? 'n/d' : (d >= 0 ? '+' : '') + d + '%';
+    const incDiff = pctDiff(prevIncomeTot, totalIncome);
+    const actDiff = pctDiff(prevActualTot, totalActual);
+    const plaDiff = pctDiff(prevPlannedTot, totalPlanned);
+
     const dataText = [
         `Mese: ${currentMonth}`,
         `Entrate totali: ${fmtEPlain(totalIncome)}`,
@@ -3481,10 +3499,16 @@ async function runIaMonthAnalysis() {
         `Budget rimasto: ${fmtEPlain(totalPlanned - totalActual)}`,
         `Uscite in attesa di pagamento: ${pendingCount}`,
         `\nDettaglio spese per categoria:\n${catLines || '  (nessuna spesa)'}`,
-        `\nEntrate del mese:\n${incomes.map(i => `  - ${i.desc}: ${fmtEPlain(i.amount)}`).join('\n') || '  (nessuna entrata)'}`
+        `\nEntrate del mese:\n${incomes.map(i => `  - ${i.desc}: ${fmtEPlain(i.amount)}`).join('\n') || '  (nessuna entrata)'}`,
+        prevMonth ? [
+            `\nDati mese precedente (${prevMonth}):`,
+            `  Entrate: ${fmtEPlain(prevIncomeTot)} (variazione vs mese corrente: ${fmtDiff(incDiff)})`,
+            `  Spese sostenute: ${fmtEPlain(prevActualTot)} (variazione: ${fmtDiff(actDiff)})`,
+            `  Spese previste: ${fmtEPlain(prevPlannedTot)} (variazione: ${fmtDiff(plaDiff)})`
+        ].join('\n') : '  (nessun mese precedente disponibile)'
     ].join('\n');
 
-    const prompt = `Agisci come un consulente finanziario. Lingua: Italiano. Analizza i dati del mese corrente. ${dataText}Fornisci un resoconto conciso (max 5 righe) su: 1) stato di salute del mese, 2) categoria più critica, 3) consiglio pratico per migliorare.`;
+    const prompt = `Agisci come un consulente finanziario. Lingua: Italiano. Analizza i dati del mese corrente e confrontali con il mese precedente. ${dataText}Fornisci un resoconto conciso (max 6 righe) su: 1) stato di salute del mese, 2) categoria più critica, 3) confronto col mese precedente (miglioramenti/peggioramenti evidenziati dai dati), 4) consiglio pratico per migliorare.`;
 
     await callAIEndpoint(prompt, 'iaMonthResponse', 'btnIaMonthAnalysis');
 
@@ -3511,6 +3535,224 @@ async function runIaMonthAnalysis() {
         else if (btn.dataset.action === 'condivise') openCondivisePopup();
     });
 })();
+
+// =====================================================================
+// MACRO CARDS MOBILE: glass micro-grid (2x3) + progress bar (speso/budget)
+// =====================================================================
+const MACRO_CARD_META = {
+    casa_utenze: { title: 'Casa e Utenze', icon: 'fas fa-home' },
+    veicoli: { title: 'Veicoli', icon: 'fas fa-car' },
+    spese_svago: { title: 'Spese e Svago', icon: 'fas fa-shopping-cart' }
+};
+
+function renderMacroCards() {
+    for (const [macro, meta] of Object.entries(MACRO_CARD_META)) {
+        const grid = document.getElementById('microGrid-' + macro);
+        const fill = document.getElementById('progressFill-' + macro);
+        const label = document.getElementById('budgetLabel-' + macro);
+        const cats = userMacroCategories[macro] || [];
+        const catSet = new Set(cats);
+        let planned = 0, actual = 0;
+        currentData.expenses.forEach(e => {
+            if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
+        });
+
+        if (grid) {
+            grid.innerHTML = '';
+            if (cats.length === 0) {
+                grid.innerHTML = '<div class="micro-empty">✏️ Aggiungi categorie</div>';
+            } else {
+                cats.slice(0, 5).forEach(cat => {
+                    const cell = document.createElement('div');
+                    cell.className = 'micro-cell';
+                    const icon = categoryIconMap[cat] || '📌';
+                    cell.innerHTML = `<span class="micro-emoji">${icon}</span><span class="micro-name">${cat}</span>`;
+                    grid.appendChild(cell);
+                });
+                if (cats.length > 5) {
+                    const more = document.createElement('div');
+                    more.className = 'micro-more';
+                    more.innerHTML = `<span class="more-icon">⋯</span><span class="more-text">+${cats.length - 5} altre</span>`;
+                    grid.appendChild(more);
+                }
+            }
+        }
+
+        const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+        if (fill) {
+            fill.classList.remove('fill-warn', 'fill-over');
+            if (planned > 0 && actual > planned) fill.classList.add('fill-over');
+            else if (pct >= 80) fill.classList.add('fill-warn');
+            fill.style.width = pct + '%';
+        }
+        if (label) label.textContent = `Budget ${meta.title}: ${fmtEPlain(actual, 0)} / ${fmtEPlain(planned, 0)}`;
+    }
+}
+
+// =====================================================================
+// AI DAILY INSIGHT: pillole calcolate in locale (carousel swipeable)
+// =====================================================================
+let aiInsightTimer = null;
+let aiInsightResumeT = null;
+let aiInsightWired = false;
+
+async function renderAIInsightSlides() {
+    const track = document.getElementById('aiInsightTrack');
+    const dotsWrap = document.getElementById('aiInsightDots');
+    if (!track || !dotsWrap) return;
+
+    const month = document.getElementById('currentMonth').value;
+    if (!month) { track.innerHTML = ''; dotsWrap.innerHTML = ''; return; }
+
+    const [y, m] = month.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const today = new Date();
+    const isCurrent = today.getFullYear() === y && (today.getMonth() + 1) === m;
+    const daysElapsed = isCurrent ? Math.min(today.getDate(), daysInMonth) : daysInMonth;
+
+    const totalIncome = currentData.income.reduce((s, i) => s + i.amount, 0);
+    const catActual = {};
+    const catPlanned = {};
+    currentData.expenses.forEach(e => {
+        catActual[e.category] = (catActual[e.category] || 0) + e.actual;
+        catPlanned[e.category] = (catPlanned[e.category] || 0) + e.planned;
+    });
+
+    let prevExpenses = [];
+    try {
+        const prevMonth = getPreviousMonthStrings(month, 1)[0];
+        if (prevMonth) prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
+    } catch (e) { prevExpenses = []; }
+    const prevCatActual = {};
+    prevExpenses.forEach(e => { prevCatActual[e.category] = (prevCatActual[e.category] || 0) + e.actual; });
+
+    const macroStats = {};
+    for (const [macro, cats] of Object.entries(userMacroCategories)) {
+        macroStats[macro] = { actual: 0, planned: 0 };
+        cats.forEach(c => {
+            macroStats[macro].actual += catActual[c] || 0;
+            macroStats[macro].planned += catPlanned[c] || 0;
+        });
+    }
+
+    const slides = [];
+
+    // Regola 1: categoria più migliorata vs mese scorso
+    let bestCat = null, bestDelta = 0;
+    for (const [cat, cur] of Object.entries(catActual)) {
+        const prev = prevCatActual[cat] || 0;
+        if (prev > cur && (prev - cur) > bestDelta) { bestDelta = prev - cur; bestCat = cat; }
+    }
+    if (bestCat && bestDelta >= 1) {
+        slides.push({ icon: '🎉', text: `Oggi sei stato bravo con ${bestCat}! Risparmiati ${fmtEPlain(Math.round(bestDelta), 0)}` });
+    }
+
+    // Regola 2: media giornaliera della macro più attiva
+    let bestMacro = null, bestAvg = 0;
+    for (const [macro, st] of Object.entries(macroStats)) {
+        const avg = st.actual / Math.max(1, daysElapsed);
+        if (avg > bestAvg) { bestAvg = avg; bestMacro = macro; }
+    }
+    if (bestMacro && bestAvg > 0) {
+        const title = MACRO_CARD_META[bestMacro] ? MACRO_CARD_META[bestMacro].title : bestMacro;
+        slides.push({ icon: '📅', text: `Spesa per ${title} media: ${fmtEPlain(Math.round(bestAvg), 0)}/giorno` });
+    }
+
+    // Regola 3: proiezione lineare di risparmio a fine mese
+    if (totalIncome > 0 || Object.keys(catActual).length > 0) {
+        const remaining = daysInMonth - daysElapsed;
+        const totalActual = Object.values(catActual).reduce((s, v) => s + v, 0);
+        const projSpese = totalActual + (daysElapsed > 0 ? (totalActual / daysElapsed) * remaining : 0);
+        const projSavings = Math.round(totalIncome - projSpese);
+        if (projSavings >= 0) slides.push({ icon: '🚀', text: `Se continui così, a fine mese avrai +${fmtEPlain(projSavings, 0)}` });
+        else slides.push({ icon: '⚠️', text: `Al ritmo attuale, a fine mese ti mancheranno ${fmtEPlain(Math.abs(projSavings), 0)}` });
+    }
+
+    // Regola 4: macro che ha superato il budget
+    let overMacro = null, overAmt = 0;
+    for (const [macro, st] of Object.entries(macroStats)) {
+        if (st.planned > 0 && st.actual > st.planned && (st.actual - st.planned) > overAmt) {
+            overAmt = st.actual - st.planned; overMacro = macro;
+        }
+    }
+    if (overMacro) {
+        const title = MACRO_CARD_META[overMacro] ? MACRO_CARD_META[overMacro].title : overMacro;
+        slides.push({ icon: '🔥', text: `${title} ha superato il budget di ${fmtEPlain(Math.round(overAmt), 0)}` });
+    }
+
+    // Regola 5: onboarding se nessun dato
+    if (slides.length === 0) {
+        slides.push({ icon: '🤖', text: 'Inizia a registrare spese ed entrate: ogni giorno avrai insight personali!' });
+        slides.push({ icon: '💡', text: 'Il budget si costruisce spesa dopo spesa: parti dalle spese fisse.' });
+    }
+
+    track.innerHTML = '';
+    dotsWrap.innerHTML = '';
+    slides.forEach((s, i) => {
+        const pill = document.createElement('div');
+        pill.className = 'ai-insight-pill';
+        pill.innerHTML = `<span class="insight-icon">${s.icon}</span><span class="insight-text">${s.text}</span>`;
+        track.appendChild(pill);
+        const dot = document.createElement('button');
+        dot.className = 'dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', 'Vai a insight ' + (i + 1));
+        dot.addEventListener('click', () => {
+            const el = track.children[i];
+            if (el) track.scrollTo({ left: Math.max(0, el.offsetLeft - 2), behavior: 'smooth' });
+        });
+        dotsWrap.appendChild(dot);
+    });
+
+    wireAIInsightEvents();
+    startAIInsightLoop();
+}
+
+function wireAIInsightEvents() {
+    const track = document.getElementById('aiInsightTrack');
+    if (!track || aiInsightWired) return;
+    aiInsightWired = true;
+    track.addEventListener('pointerdown', stopAIInsightLoop);
+    track.addEventListener('scroll', () => { updateAIInsightDots(); scheduleAIInsightResume(); });
+    track.addEventListener('scrollend', scheduleAIInsightResume);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopAIInsightLoop(); else startAIInsightLoop();
+    });
+}
+
+function updateAIInsightDots() {
+    const track = document.getElementById('aiInsightTrack');
+    const dotsWrap = document.getElementById('aiInsightDots');
+    if (!track || !dotsWrap || !track.children.length) return;
+    let idx = 0;
+    for (let i = 0; i < track.children.length; i++) {
+        if (Math.abs(track.children[i].offsetLeft - track.scrollLeft) < Math.abs(track.children[idx].offsetLeft - track.scrollLeft)) idx = i;
+    }
+    [...dotsWrap.children].forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+function startAIInsightLoop() {
+    stopAIInsightLoop();
+    if (document.hidden) return;
+    aiInsightTimer = setInterval(() => {
+        const track = document.getElementById('aiInsightTrack');
+        if (!track || !track.children.length) return;
+        let idx = 0;
+        for (let i = 0; i < track.children.length; i++) {
+            if (Math.abs(track.children[i].offsetLeft - track.scrollLeft) < Math.abs(track.children[idx].offsetLeft - track.scrollLeft)) idx = i;
+        }
+        const next = (idx + 1) % track.children.length;
+        track.scrollTo({ left: Math.max(0, track.children[next].offsetLeft - 2), behavior: 'smooth' });
+    }, 4000);
+}
+
+function stopAIInsightLoop() {
+    if (aiInsightTimer) { clearInterval(aiInsightTimer); aiInsightTimer = null; }
+}
+
+function scheduleAIInsightResume() {
+    if (aiInsightResumeT) clearTimeout(aiInsightResumeT);
+    aiInsightResumeT = setTimeout(startAIInsightLoop, 6000);
+}
 
 async function openRendicontoPopup(type) {
     const month = document.getElementById('currentMonth').value;

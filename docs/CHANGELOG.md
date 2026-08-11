@@ -1,5 +1,19 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Mobile tab Mese: macro-card glassmorphism (2x3 + progress), AI Daily Insight carousel locale, IA "vera" nel popup mese + confronto col mese precedente
+
+### ✅ Completed Changes (SOLO mobile, blocco ≤767)
+- **Macro-card ridisegnate** (`#current-month-tab`): titolo con icona inline, **sub-container glass** `.card-glass` (`rgba(255,255,255,.12)` + `backdrop-filter:blur(10px)` + bordo 18%) al centro, **progress bar** in fondo. Griglia `.card-micro-grid` tassativa **2 righe × 3 colonne senza scroll**: ≤6 micro-categorie → tutte; >6 → prime 5 + badge 6° slot `⋯ +N altre` (dashed); 0 → "✏️ Aggiungi categorie". `renderMacroCards()` legge `userMacroCategories` + `categoryIconMap` (emoji, fallback 📌), calcola speso/budget per macro da `currentData.expenses`, fill con stati colore (`fill-warn` ≥80%, `fill-over` sforato), label `Budget {Macro}: speso / previsto` (fmtEPlain 0 dec). Click card O badge → stesso bottom sheet (delegation 2149-2154 invariata, il badge sta dentro la card).
+- **AI Daily Insight = carousel locale** (`#ai-insight-carousel`, tra grid e action hub, `display:none` ≥768): pillole swipeable (`scroll-snap-type:x mandatory`, snap 86%), dots indicatori, **auto-avanzamento 4s** (`startAIInsightLoop` → scrollTo smooth; pausa su pointerdown, resume 6s dopo lo scroll; stop quando tab nascosto). `renderAIInsightSlides()` — 100% matematica locale, zero API: 1) 🎉 miglioramento categoria vs mese precedente, 2) 📅 media giornaliera macro più attiva, 3) 🚀/⚠️ proiezione lineare risparmio a fine mese (ritmo attuale × giorni restanti), 4) 🔥 superamento budget macro, 5) onboarding se nessun dato. Hook in `updateUI()` (riga 3027-3028, dopo i KPI). `MACRO_CARD_META` = alias titoli/icone delle 3 macro.
+- **I.A. "vera" al clic**: label pill azione → "🤖 Assistente I.A." (apre sempre `#iaMonthPopup` esistente con `runIaMonthAnalysis` → `callAIEndpoint`/OpenRouter). `runIaMonthAnalysis` estesa: il prompt ora include **blocco "Dati mese precedente"** (entrate/spese previste+sostenute via `getPreviousMonthStrings(month,1)[0]`) con **variazioni %** (`pctDiff`, `fmtDiff` +n%/-n%/n/d) e richiesta esplicita di confronto (resoconto max 6 righe).
+- **Overlay bottom sheet blur (solo ≤767)**: `.sheet-overlay.open` = `rgba(0,0,0,0.3)` + `backdrop-filter:blur(8px)` (regola desktop globale invariata).
+- **Micro-polish**: `.dash-card` `justify-content:space-evenly` + padding clamp ridotti; hover `translateY(-1px)` + `:focus-visible` outline bianco sulle card (a11y, `role="button" tabindex="0"`).
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; div HTML 284/284; braces CSS 684/684; 222 id unici (0 duplicati); 25 occorrenze `sheet-open`/`popup-open` invariati. **Nessun commit/push.**
+
+---
+
 ## [2026-08-11] - Fix: scroll touch bloccato nei popup (body.popup-open separato da sheet-open)
 
 ### ✅ Completed Changes

@@ -113,25 +113,48 @@
           <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
           <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
           <div class="mobile-dashboard-container">
-<div class="dash-card card-casa" data-category="casa_utenze">
-                    <h3>Casa e Utenze</h3>
-                    <i class="fas fa-home card-icon"></i>
+                <div class="dash-card card-casa" data-category="casa_utenze" role="button" tabindex="0" aria-label="Apri Casa e Utenze">
+                    <h3><i class="fas fa-home card-icon"></i>Casa e Utenze</h3>
+                    <div class="card-glass">
+                        <div class="card-micro-grid" id="microGrid-casa_utenze"></div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-casa_utenze"></div></div>
+                        <span class="card-progress-label" id="budgetLabel-casa_utenze">Budget Casa e Utenze: 0 € / 0 €</span>
+                    </div>
                 </div>
-                <div class="dash-card card-veicoli" data-category="veicoli">
-                    <h3>Veicoli</h3>
-                    <i class="fas fa-car card-icon"></i>
+                <div class="dash-card card-veicoli" data-category="veicoli" role="button" tabindex="0" aria-label="Apri Veicoli">
+                    <h3><i class="fas fa-car card-icon"></i>Veicoli</h3>
+                    <div class="card-glass">
+                        <div class="card-micro-grid" id="microGrid-veicoli"></div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-veicoli"></div></div>
+                        <span class="card-progress-label" id="budgetLabel-veicoli">Budget Veicoli: 0 € / 0 €</span>
+                    </div>
                 </div>
-                <div class="dash-card card-svago" data-category="spese_svago">
-                    <h3>Spese e Svago</h3>
-                    <i class="fas fa-shopping-cart card-icon"></i>
+                <div class="dash-card card-svago" data-category="spese_svago" role="button" tabindex="0" aria-label="Apri Spese e Svago">
+                    <h3><i class="fas fa-shopping-cart card-icon"></i>Spese e Svago</h3>
+                    <div class="card-glass">
+                        <div class="card-micro-grid" id="microGrid-spese_svago"></div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-spese_svago"></div></div>
+                        <span class="card-progress-label" id="budgetLabel-spese_svago">Budget Spese e Svago: 0 € / 0 €</span>
+                    </div>
                 </div>
+          </div>
+
+          <div id="ai-insight-carousel" class="hide-desktop" aria-label="Insight I.A. giornalieri">
+              <div class="ai-insight-track" id="aiInsightTrack"></div>
+              <div class="ai-insight-dots" id="aiInsightDots"></div>
           </div>
 
           <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">
 
         <div id="mese-action-hub" class="hide-desktop">
             <button data-action="search">🔍 Ricerca</button>
-            <button data-action="ia">🤖 I.A.</button>
+<button data-action="ia">🤖 I.A.</button>
             <button data-action="condivise">👥 Condividi</button>
         </div>
 
@@ -538,7 +561,7 @@
             <div id="futureActionHub">
                 <button data-action="simula">🤔 Simula</button>
                 <button data-action="scadenze">🗓️ Scadenze</button>
-                <button data-action="ia">🤖 I.A.</button>
+<button data-action="ia">🤖 Assistente I.A.</button>
             </div>
         </div>
 
