@@ -1,5 +1,18 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Edge Function chat-openrouter: JWT auth + lock modelli free
+
+### 🔧 Situazione
+- La chiave OpenRouter era gestita **lato client**: `runFinancialAnalysisIA()` faceva fetch diretto a `openrouter.ai` con la key dell'input (esposta) — buco di sicurezza; inoltre la funzione non verificava l'autenticazione (chiunque con la chiave anon poteva chiamarla e bruciare la quota).
+
+### ✅ Completed Changes
+- **supabase/functions/chat-openrouter/index.ts**: check JWT obbligatorio (`supabase.auth.getUser`, 401 se assente/invalido); validazione server-side di `model` (solo `openrouter/free` o regex `:free$`, default `openrouter/free`); la chiave resta in `Deno.env.get('OPENROUTER_API_KEY')`.
+- **script.js**: `runFinancialAnalysisIA()` ora usa `window.supabase.functions.invoke('chat-openrouter', { body: { model, ... } })` (mai più fetch diretto né key client); `callAIEndpoint` passa il modello selezionato (`openrouter-model-select`).
+- **index.html**: rimosso input "OPENROUTER API KEY" (morto/convenzione errata).
+- **Deploy manuale necessario**: `supabase functions deploy chat-openrouter` + `supabase secrets set OPENROUTER_API_KEY=...` (il push GitHub non deploya le Edge Function).
+
+---
+
 ## [2026-08-11] - Pulizia repo per GitHub Pages
 
 ### ✅ Completed Changes

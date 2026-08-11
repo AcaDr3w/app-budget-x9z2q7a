@@ -2512,8 +2512,10 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     if (errorBox) errorBox.style.display = 'none';
 
     try {
+        const modelSelect = document.getElementById('openrouter-model-select');
+        const model = modelSelect && modelSelect.value ? modelSelect.value : undefined;
         const { data, error } = await window.supabase.functions.invoke('chat-openrouter', {
-            body: { messages: [{ role: 'user', content: promptText }] }
+            body: { model, messages: [{ role: 'user', content: promptText }] }
         });
         
         if (error) throw new Error(error.message);
@@ -2565,50 +2567,26 @@ async function runFinancialAnalysisIA() {
 
     const engineSelect = document.getElementById('ai-engine-select');
     const modelSelect = document.getElementById('openrouter-model-select');
-    const keyInput = document.getElementById('openrouter-key-input');
 
-    if (!engineSelect || !modelSelect || !keyInput) {
+    if (!engineSelect || !modelSelect) {
         console.error("Elementi non trovati nel DOM!");
         return;
     }
 
     const engine = engineSelect.value;
     const model = modelSelect.value;
-    const apiKey = keyInput.value.trim();
 
     if (engine === 'openrouter') {
-        if (!apiKey) {
-            if(errorBox) {
-                errorBox.textContent = "Errore: Inserire la OpenRouter API Key nell'apposito campo.";
-                errorBox.style.display = 'block';
-            }
-            return;
-        }
-
         try {
             document.getElementById('btn-analisi-strategica').textContent = "Elaborazione in corso...";
             document.getElementById('btn-analisi-strategica').disabled = true;
 
-            const response = await window.fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + apiKey,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: model,
-                    messages: [{ role: 'user', content: promptTesto }]
-                })
+            const { data, error } = await window.supabase.functions.invoke('chat-openrouter', {
+                body: { model, messages: [{ role: 'user', content: promptTesto }] }
             });
+            if (error) throw new Error(error.message);
 
-            if (!response.ok) {
-                throw new Error('Server risponde con status ' + response.status);
-            }
-
-            const data = await response.json();
-            const rispostaTesto = data.choices[0].message.content;
-            
-            document.getElementById('iaNotes').value = rispostaTesto; 
+            document.getElementById('iaNotes').value = data.content; 
             await saveNotes();
 
         } catch (err) {
