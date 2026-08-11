@@ -1,5 +1,13 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Pulizia repo per GitHub Pages
+
+### ✅ Completed Changes
+- **`db_usages.txt`**: rimosso dal repo (`git rm`) — artifact di debug mai referenziato, inutile pubblicamente su Pages.
+- **`index.html`**: rimossa `<script src=".../dexie.js">` (dipendenza morta dall'adapter Supabase, ~120 KB scaricati inutilmente ad ogni load).
+
+---
+
 ## [2026-08-11] - Schema completo Supabase + Outbox antifragile
 
 ### 🔧 Situazione

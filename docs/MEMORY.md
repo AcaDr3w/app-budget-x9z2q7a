@@ -12,6 +12,7 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-11**: Pulizia repo per GH Pages — rimossi `db_usages.txt` (artifact debug) e script CDN `dexie.js` da index.html (dipendenza morta dall'adapter Supabase)
 - **2026-08-11**: Fix 400 schema cache PostgREST (`months.totalActual`, `sync_state.deviceId`)
   - **Causa**: `CREATE TABLE IF NOT EXISTS` non aggiunge colonne a tabelle esistenti; la cache schema di PostgREST non viene ricaricata
   - **Fix**: `supabase/migrations/20260811_schema_completo.sql` — `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` per OGNI colonna di OGNI tabella (quoted camelCase) + DO-block PK mancanti + `NOTIFY pgrst, 'reload schema';`
