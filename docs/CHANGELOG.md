@@ -1,5 +1,21 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Surfacing errori Edge Function + hardening chat-openrouter
+
+### 🔧 Situazione
+- Clic su "Analisi Strategica Mese": `Errore: Edge Function returned a non-2xx status code` — il client non mostrava il motivo reale (401 JWT / 500 OpenRouter).
+- Sonda read-only: funzione deployata, check JWT attivo (401 "Non autenticato" senza token). Restava da distinguere 401 da 500 e rendere visibili i dettagli.
+
+### ✅ Completed Changes
+- **script.js**: nuovo helper `extractFunctionError(err)` — estrae `err.context` (Response del `FunctionsHttpError`) e compone `Status <code>: <body>`; usato nei catch di `callAIEndpoint` e `runFinancialAnalysisIA` (errore reale ora visibile nell'error box).
+- **supabase/functions/chat-openrouter/index.ts**: guardia `OPENROUTER_API_KEY` assente → 500 con messaggio esplicito; `req.json()` malformato → 400; `messages` vuoto → 400; errore OpenRouter → 502 con body (primi 500 caratteri) invece di 500 generico; lettura chiave estratta prima del fetch.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK.
+- **Deploy manuale necessario**: `supabase functions deploy chat-openrouter` + verifica `supabase secrets list`.
+
+---
+
 ## [2026-08-11] - Fix "Cannot read properties of undefined (reading 'invoke')"
 
 ### 🔧 Situazione

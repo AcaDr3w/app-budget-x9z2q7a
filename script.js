@@ -2518,14 +2518,28 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
             body: { model, messages: [{ role: 'user', content: promptText }] }
         });
         
-        if (error) throw new Error(error.message);
+        if (error) throw error;
         
         if (box) box.innerText = data.content;
-    } catch(err) { 
-        if (box) box.innerText = "❌ Errore: " + err.message; 
-        if (errorBox) { errorBox.textContent = "Errore: " + err.message; errorBox.style.display = 'block'; }
+    } catch(err) {
+        const msg = await extractFunctionError(err);
+        if (box) box.innerText = "❌ Errore: " + msg;
+        if (errorBox) { errorBox.textContent = "Errore: " + msg; errorBox.style.display = 'block'; }
     }
     finally { if (btn) btn.disabled = false; }
+}
+
+// Estrae il messaggio reale da un errore di invoke Edge Function
+// (FunctionsHttpError espone err.context = Response con status e body)
+async function extractFunctionError(err) {
+    if (err && err.context && typeof err.context.text === 'function') {
+        try {
+            const status = err.context.status || '?';
+            const body = await err.context.text();
+            return `Status ${status}: ${body || err.message}`;
+        } catch (e) {}
+    }
+    return err && err.message ? err.message : String(err);
 }
 
 function getPreviousMonthStrings(month, count) {
@@ -2584,14 +2598,14 @@ async function runFinancialAnalysisIA() {
             const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
                 body: { model, messages: [{ role: 'user', content: promptTesto }] }
             });
-            if (error) throw new Error(error.message);
+            if (error) throw error;
 
             document.getElementById('iaNotes').value = data.content; 
             await saveNotes();
 
         } catch (err) {
             if(errorBox) {
-                errorBox.textContent = "Errore: " + err.message;
+                errorBox.textContent = "Errore: " + await extractFunctionError(err);
                 errorBox.style.display = 'block';
             }
         } finally {

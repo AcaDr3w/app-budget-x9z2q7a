@@ -12,6 +12,7 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-11**: Surfacing errori invoke — helper `extractFunctionError(err)` in script.js (legge `err.context` di `FunctionsHttpError` → `Status <code>: <body>`); Edge Function chat-openrouter: guardia secret mancante → 500 esplicito, JSON malformato → 400, errori OpenRouter → 502 con dettaglio
 - **2026-08-11**: Fix `reading 'invoke'` — `window.supabase` (namespace UMD CDN) non ha `.functions`; usare sempre `window.supabaseClient.functions.invoke` (istanza creata in supabase-adapter.js)
   - **Regola**: `.functions` esiste solo sull'istanza `createClient()` (→ `window.supabaseClient`), mai sul namespace `window.supabase`
 - **2026-08-11**: Edge Function `chat-openrouter` — JWT auth obbligatorio + whitelist modelli free (`openrouter/free` o regex `:free$`); rimosso fetch diretto a OpenRouter da `runFinancialAnalysisIA` (chiave mai lato client); rimosso input API key da index.html

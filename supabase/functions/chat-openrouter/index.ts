@@ -40,16 +40,33 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 });
     }
 
-    const { messages, system_instruction, model } = await req.json()
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: 'Body JSON non valido' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 });
+    }
+    const { messages, system_instruction, model } = body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: 'messages mancante o vuoto' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 });
+    }
+
+    const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+    if (!apiKey) {
+      console.error('OPENROUTER_API_KEY non configurato: usa `supabase secrets set OPENROUTER_API_KEY=...`');
+      return new Response(JSON.stringify({ error: 'OPENROUTER_API_KEY non configurato sul server' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 });
+    }
 
     // Build the request body for OpenRouter
     const openRouterMessages = [];
     if (system_instruction) {
       openRouterMessages.push({ role: 'system', content: system_instruction });
     }
-    if (messages && Array.isArray(messages)) {
-      openRouterMessages.push(...messages);
-    }
+    openRouterMessages.push(...messages);
 
     const payload = {
       model: isValidFreeModel(model) ? model : "openrouter/free",
@@ -61,7 +78,7 @@ serve(async (req) => {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://acadr3w.github.io/app-budget-x9z2q7a/", // Your site URL
         "X-Title": "Bilancio Pro" // Your site name
@@ -72,7 +89,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorStr = await response.text();
       console.error("OpenRouter API error:", errorStr);
-      throw new Error(`OpenRouter API error: ${response.status}`);
+      return new Response(
+        JSON.stringify({ error: `OpenRouter API error: ${response.status} - ${errorStr.slice(0, 500)}` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 }
+      );
     }
 
     const data = await response.json()
