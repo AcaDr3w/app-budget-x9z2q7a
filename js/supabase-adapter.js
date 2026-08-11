@@ -7,6 +7,50 @@ window.supabaseClient = supabaseClient;
 // Global user state for the adapter
 window.supabaseUser = null;
 
+// =====================================================================
+// OUTBOX: dati non sincronizzabili (rete/colonne mancanti) vengono
+// accodati in localStorage e ritentati al login / su evento 'online'.
+// Nulla viene mai perso in silenzio.
+// =====================================================================
+function outboxKey(tableName) { return 'eb_outbox_' + tableName; }
+function readOutbox(tableName) {
+    try { return JSON.parse(localStorage.getItem(outboxKey(tableName)) || '[]') || []; }
+    catch (e) { return []; }
+}
+function writeOutbox(tableName, items) {
+    try { localStorage.setItem(outboxKey(tableName), JSON.stringify(items)); } catch (e) {}
+}
+function enqueueOutbox(tableName, item) {
+    const queue = readOutbox(tableName);
+    queue.push(item);
+    writeOutbox(tableName, queue);
+    console.warn('[OUTBOX] ' + tableName + ': 1 voce in attesa (' + queue.length + ' totali)');
+    if (typeof showToast === 'function') showToast('⚠️ Salvataggio offline: dati in coda', true);
+}
+const DB_ACCESSOR = {
+    sync_state: 'syncState', settings: 'settings', categories: 'categories',
+    months: 'months', income: 'income', expenses: 'expenses',
+    annual_deadlines: 'annualDeadlines', savings_goals: 'savingsGoals'
+};
+async function flushOutbox() {
+    if (!window.supabaseUser) return;
+    for (const tableName of Object.keys(DB_ACCESSOR)) {
+        const queue = readOutbox(tableName);
+        if (!queue.length) continue;
+        const table = window.db[DB_ACCESSOR[tableName]];
+        const failed = [];
+        for (const item of queue) {
+            const error = (item && item.__update)
+                ? await table._update(item.__id, item.__changes)
+                : await table._upsert(item);
+            if (error) failed.push(item);
+        }
+        writeOutbox(tableName, failed);
+        console.log('[OUTBOX] ' + tableName + ': flush (' + (queue.length - failed.length) + ' ok, ' + failed.length + ' ancora in coda)');
+    }
+}
+window.addEventListener('online', flushOutbox);
+
 class SupabaseTable {
     constructor(tableName, primaryKey = 'id') {
         this.tableName = tableName;
@@ -19,9 +63,6 @@ class SupabaseTable {
         if (this.tableName === 'months' && mapped.month) {
             mapped.month_id = mapped.month;
             delete mapped.month;
-        }
-        if (this.tableName === 'categories' && mapped.name) {
-            mapped.name = mapped.name; // name is unique
         }
         const allowed = this._allowedColumns();
         if (allowed) {
@@ -77,15 +118,23 @@ class SupabaseTable {
         return this._mapOut(data || null);
     }
 
-    async put(item) {
-        if (!window.supabaseUser) return;
+    async _upsert(item) {
+        if (!window.supabaseUser) return { message: 'utente non autenticato' };
         const payload = { ...this._mapIn(item), user_id: window.supabaseUser.id };
         const { error } = await supabaseClient.from(this.tableName).upsert(payload);
-        if (error) console.warn('[DB] put fallito su ' + this.tableName + ':', error.message);
+        return error;
     }
 
-    async update(id, changes) {
-        if (!window.supabaseUser) return;
+    async put(item) {
+        const error = await this._upsert(item);
+        if (error) {
+            console.warn('[DB] put fallito su ' + this.tableName + ':', error.message);
+            enqueueOutbox(this.tableName, item);
+        }
+    }
+
+    async _update(id, changes) {
+        if (!window.supabaseUser) return { message: 'utente non autenticato' };
         const payload = this._mapIn(changes);
         let query = supabaseClient.from(this.tableName).update(payload).eq('user_id', window.supabaseUser.id);
         
@@ -97,7 +146,15 @@ class SupabaseTable {
             query = query.eq(this.primaryKey, id);
         }
         const { error } = await query;
-        if (error) console.warn('[DB] update fallito su ' + this.tableName + ':', error.message);
+        return error;
+    }
+
+    async update(id, changes) {
+        const error = await this._update(id, changes);
+        if (error) {
+            console.warn('[DB] update fallito su ' + this.tableName + ':', error.message);
+            enqueueOutbox(this.tableName, { __update: true, __id: id, __changes: changes });
+        }
     }
 
     async delete(id) {
@@ -128,10 +185,13 @@ class SupabaseTable {
     }
 
     async bulkPut(items) {
-        if (!window.supabaseUser || !items.length) return;
-        const payload = items.map(i => ({ ...this._mapIn(i), user_id: window.supabaseUser.id }));
-        const { error } = await supabaseClient.from(this.tableName).upsert(payload);
-        if (error) console.warn('[DB] bulkPut fallito su ' + this.tableName + ':', error.message);
+        for (const item of items) {
+            const error = await this._upsert(item);
+            if (error) {
+                console.warn('[DB] bulkPut fallito su ' + this.tableName + ':', error.message);
+                enqueueOutbox(this.tableName, item);
+            }
+        }
     }
 
     async bulkDelete(ids) {
@@ -222,6 +282,7 @@ window.addEventListener('DOMContentLoaded', () => {
             window.supabaseUser = session.user;
             document.getElementById('authModal').style.display = 'none';
             document.getElementById('mainAppWrapper').style.display = 'block';
+            flushOutbox();
             if (window.initApp) {
                 if (!window.appInitialized) {
                     window.appInitialized = true;

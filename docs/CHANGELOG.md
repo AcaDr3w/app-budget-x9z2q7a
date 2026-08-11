@@ -1,5 +1,24 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Schema completo Supabase + Outbox antifragile
+
+### 🔧 Situazione
+- Dopo l'esecuzione della migrazione `20260810_full_sync.sql`, nuovi 400: `Could not find the 'totalActual' column of 'months' in the schema cache` e `Could not find the 'deviceId' column of 'sync_state'`.
+- **Causa**: `CREATE TABLE IF NOT EXISTS` salta le tabelle già esistenti senza aggiungere le colonne mancanti; + cache schema PostgREST non ricaricata.
+- Tutti i dati sparivano al refresh: i put fallivano silenziosamente e non esisteva memoria locale di recupero.
+
+### ✅ Completed Changes
+- **supabase/migrations/20260811_schema_completo.sql (NUOVO, da eseguire)**: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` per OGNI colonna inviata dal frontend su TUTTE le tabelle (months, income, expenses, categories, annual_deadlines, savings_goals, settings, sync_state) con nomi quoted camelCase + tipi corretti; DO-block per PK mancanti (`months.month_id`, `id` su income/expenses/annual_deadlines); `NOTIFY pgrst, 'reload schema';` in fondo.
+- **js/supabase-adapter.js**: **Outbox su localStorage** (`eb_outbox_<tabella>`) — put/update/bulkPut in caso di errore accodano la voce (nessun dato perso), toast "⚠️ Salvataggio offline"; flush automatico all'autenticazione e su evento `online` (`flushOutbox()`); nuovi metodi interni `_upsert`/`_update` che restituiscono l'errore; rimosso no-op `mapped.name = mapped.name` in `_mapIn`.
+- **script.js**: rimosso `currentData.expenses.pop()` (rollback) in `addExpense` — con l'outbox il dato va preservato in memoria.
+- **service-worker.js**: `CACHE_NAME` → `bilancio-pwa-v2` (invalida cache JS sul nuovo deploy).
+
+### 🎯 Status: COMPLETATO (in attesa di esecuzione SQL)
+- `node --check` OK.
+- **DOPO aver eseguito lo SQL**: hard refresh (Ctrl+F5) → se banner "Database vuoto": 📥 Carica Backup (.json) → verificare Network 200/201.
+
+---
+
 ## [2026-08-10] - Fix Sync Supabase (colonna iaNotes mancante + tabelle settings/savingsGoals/syncState su DB)
 
 ### 🔧 Situazione

@@ -1500,7 +1500,6 @@ async function addExpense() {
     } catch (err) {
         console.error('[DB] Errore salvataggio spesa:', err);
         showToast('Errore nel salvare la spesa', true);
-        currentData.expenses.pop(); // Rollback from memory
     }
 }
 async function payExpense(id) {

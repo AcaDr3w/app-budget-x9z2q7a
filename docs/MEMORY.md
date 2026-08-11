@@ -12,6 +12,11 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-11**: Fix 400 schema cache PostgREST (`months.totalActual`, `sync_state.deviceId`)
+  - **Causa**: `CREATE TABLE IF NOT EXISTS` non aggiunge colonne a tabelle esistenti; la cache schema di PostgREST non viene ricaricata
+  - **Fix**: `supabase/migrations/20260811_schema_completo.sql` — `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` per OGNI colonna di OGNI tabella (quoted camelCase) + DO-block PK mancanti + `NOTIFY pgrst, 'reload schema';`
+  - **Adapter**: Outbox localStorage (`eb_outbox_<tabella>`): put/update/bulkPut falliti → accodati e ritentati al login/`online` (`flushOutbox()`); `_upsert`/`_update` restituiscono l'errore; rimosso rollback `pop()` in `addExpense` (i dati non vanno MAI scartati dalla memoria)
+  - **Regola**: ogni migrazione Supabase deve sempre usare `ADD COLUMN IF NOT EXISTS` (mai solo `CREATE TABLE IF NOT EXISTS`) e terminare con `NOTIFY pgrst, 'reload schema';`
 - **2026-08-10**: Fix sync dati su Supabase (PGRST204 su `iaNotes`)
   - Migrazione: `supabase/migrations/20260810_full_sync.sql` — `ALTER TABLE months ADD COLUMN "iaNotes" TEXT` + tabelle `settings`, `savings_goals`, `sync_state` (prima erano localStorage-only via `LocalMockTable`, ora SupabaseTable)
   - Adapter: allowlist colonne per tabella (`_allowedColumns`) → strip campi ignoti prima dell'upsert; `.maybeSingle()` al posto di `.single()` (via 406); `SettingTable` normalizza record legacy `name/id` → `key`
