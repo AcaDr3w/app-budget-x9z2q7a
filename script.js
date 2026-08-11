@@ -374,6 +374,7 @@ async function initApp() {
     await loadMonthData();
     toggleIaProviderFields();
     checkDatabaseHealth();
+    populateFreeModelSelect();
     initPWA();
     // Aggiorna il display del mese nella pillola all'avvio
     updateMonthDisplay();
@@ -2502,6 +2503,53 @@ async function checkLocalLLM() {
 // =====================================================================
 // CHIAMATE AI
 // =====================================================================
+let freeModelsCache = null;
+
+// Elenco dinamico dei modelli :free attualmente attivi su OpenRouter
+async function fetchFreeModels() {
+    if (freeModelsCache) return freeModelsCache;
+    try {
+        const res = await window.fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const list = (data.data || [])
+            .map(m => m.id)
+            .filter(id => typeof id === 'string' && id.endsWith(':free'))
+            .sort();
+        freeModelsCache = list.length ? list : null;
+    } catch (e) {
+        console.warn('[IA] Fetch modelli free fallito:', e);
+        freeModelsCache = null;
+    }
+    return freeModelsCache;
+}
+
+// Popola il dropdown con "Casuale (Free)" + modelli :free attivi
+async function populateFreeModelSelect() {
+    const select = document.getElementById('openrouter-model-select');
+    if (!select) return;
+    const prevValue = select.value;
+    const models = await fetchFreeModels();
+    const options = '<option value="random">🎲 Casuale (Free)</option>' +
+        (models ? models.map(m => `<option value="${m}">${m}</option>`).join('') : '');
+    select.innerHTML = options;
+    if (prevValue && models && models.includes(prevValue)) {
+        select.value = prevValue;
+    } else if (models && models.length > 0) {
+        select.value = models[0];
+    }
+}
+
+// Risolve il valore del select: "random" sceglie un modello :free a caso
+async function resolveAIModel(model) {
+    if (model === 'random') {
+        const models = await fetchFreeModels();
+        if (models && models.length) return models[Math.floor(Math.random() * models.length)];
+        return 'random'; // il server gestisce il caso random
+    }
+    return model;
+}
+
 async function callAIEndpoint(promptText, responseBoxId, btnId) {
     const errorBox = document.getElementById('hub-ia-error-box');
     const box = document.getElementById(responseBoxId);
@@ -2513,7 +2561,8 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
 
     try {
         const modelSelect = document.getElementById('openrouter-model-select');
-        const model = modelSelect && modelSelect.value ? modelSelect.value : undefined;
+        const selected = modelSelect && modelSelect.value ? modelSelect.value : undefined;
+        const model = await resolveAIModel(selected);
         const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
             body: { model, messages: [{ role: 'user', content: promptText }] }
         });
@@ -2595,8 +2644,9 @@ async function runFinancialAnalysisIA() {
             document.getElementById('btn-analisi-strategica').textContent = "Elaborazione in corso...";
             document.getElementById('btn-analisi-strategica').disabled = true;
 
+            const resolvedModel = await resolveAIModel(model);
             const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
-                body: { model, messages: [{ role: 'user', content: promptTesto }] }
+                body: { model: resolvedModel, messages: [{ role: 'user', content: promptTesto }] }
             });
             if (error) throw error;
 

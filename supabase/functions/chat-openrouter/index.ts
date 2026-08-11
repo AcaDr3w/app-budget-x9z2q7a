@@ -16,6 +16,41 @@ function isValidFreeModel(model) {
   return typeof model === 'string' && /^[a-z0-9-]+\/[a-z0-9.\-]+:free$/i.test(model);
 }
 
+// Backup automatici quando il modello richiesto fallisce o sparisce
+const FALLBACK_MODELS = [
+  'google/gemini-2.5-flash-exp:free',
+  'google/gemini-2.0-flash-exp:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'qwen/qwen-2.5-coder-32b-instruct:free'
+];
+
+function shuffle(list) {
+  const arr = [...list];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+async function callOpenRouter(apiKey, payload) {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://acadr3w.github.io/app-budget-x9z2q7a/",
+      "X-Title": "Bilancio Pro"
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(30000)
+  });
+  const text = await response.text();
+  let parsed = null;
+  try { parsed = JSON.parse(text); } catch (e) {}
+  return { ok: response.ok, status: response.status, text, parsed };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -68,40 +103,54 @@ serve(async (req) => {
     }
     openRouterMessages.push(...messages);
 
-    const payload = {
-      model: isValidFreeModel(model) ? model : "openrouter/free",
-      messages: openRouterMessages,
-      temperature: 0.7
+    // Lista dei modelli da provare in ordine (fallback automatico):
+    // 1) il modello richiesto dal client (se valido, ossia :free)
+    // 2) "random" -> fallback in ordine casuale
+    // 3) altrimenti il fallback statico, senza duplicati
+    let candidates;
+    if (model === 'random') {
+      candidates = shuffle(FALLBACK_MODELS);
+    } else {
+      candidates = [isValidFreeModel(model) ? model : 'openrouter/free', ...FALLBACK_MODELS];
+      candidates = [...new Set(candidates)];
     }
 
-    // Call OpenRouter
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://acadr3w.github.io/app-budget-x9z2q7a/", // Your site URL
-        "X-Title": "Bilancio Pro" // Your site name
-      },
-      body: JSON.stringify(payload)
-    })
+    let lastError = null;
+    for (const candidate of candidates) {
+      const payload = {
+        model: candidate,
+        messages: openRouterMessages,
+        temperature: 0.7
+      };
 
-    if (!response.ok) {
-      const errorStr = await response.text();
-      console.error("OpenRouter API error:", errorStr);
-      return new Response(
-        JSON.stringify({ error: `OpenRouter API error: ${response.status} - ${errorStr.slice(0, 500)}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 }
-      );
+      try {
+        const result = await callOpenRouter(apiKey, payload);
+        if (result.ok) {
+          const content = result.parsed?.choices?.[0]?.message?.content || '';
+          return new Response(
+            JSON.stringify({ content }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // 401/403 = problema di chiave, non del modello: stop immediato
+        if (result.status === 401 || result.status === 403) {
+          return new Response(
+            JSON.stringify({ error: `OpenRouter API error: ${result.status} - ${result.text.slice(0, 500)}` }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 }
+          );
+        }
+        lastError = { status: result.status, text: result.text };
+        console.warn(`[OR] Modello ${candidate} fallito (${result.status}), provo il backup...`);
+      } catch (e) {
+        lastError = { status: 'timeout/network', text: e.message };
+        console.warn(`[OR] Modello ${candidate} errore: ${e.message}, provo il backup...`);
+      }
     }
-
-    const data = await response.json()
-    const content = data.choices?.[0]?.message?.content || "";
 
     return new Response(
-      JSON.stringify({ content }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    )
+      JSON.stringify({ error: `Tutti i modelli free falliti. Ultimo errore: ${lastError?.status} - ${(lastError?.text || '').slice(0, 300)}` }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 }
+    );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),

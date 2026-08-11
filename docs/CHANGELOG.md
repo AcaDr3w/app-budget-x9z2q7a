@@ -1,5 +1,18 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Fallback dinamico modelli :free (client + Edge Function)
+
+### ✅ Completed Changes
+- **script.js**: `fetchFreeModels()` (fetch `https://openrouter.ai/api/v1/models`, filtro `id.endsWith(':free')`, cache in variabile, timeout 10s, fallback silenzioso); `populateFreeModelSelect()` (dropdown = "🎲 Casuale (Free)" + modelli attivi, mantiene la selezione se ancora valida, chiamato in `initApp`); `resolveAIModel()` (valore `random` → scelto a caso dalla lista attiva; se lista vuota passa `random` al server).
+- **supabase/functions/chat-openrouter/index.ts**: `FALLBACK_MODELS` (gemini-2.5-flash-exp, gemini-2.0-flash-exp, llama-3.3-70b, qwen-2.5-coder); loop sui candidati `[modello client] + fallback` (dedup, shuffle se `random`), timeout 30s per tentativo (`AbortSignal.timeout`); stop immediato su 401/403 (problema chiave); 502 solo dopo esaurimento di tutti i candidati.
+- **index.html**: opzione statica `<option value="random">🎲 Casuale (Free)</option>`.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK.
+- **Deploy manuale necessario**: `supabase functions deploy chat-openrouter`.
+
+---
+
 ## [2026-08-11] - Surfacing errori Edge Function + hardening chat-openrouter
 
 ### 🔧 Situazione
