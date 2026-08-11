@@ -3033,21 +3033,18 @@ async function updateUI() {
     document.getElementById('sumPrevisto').innerText = fmtE(totalPlanned,0);
     document.getElementById('sumSostenuto').innerText = fmtE(totalActual,0);
     const heroEntrateEl = document.getElementById('heroEntrateTotal');
+    const heroPrevisteEl = document.getElementById('heroSpesePreviste');
     const heroSpeseEl = document.getElementById('heroSpeseSostenute');
     if (heroEntrateEl) heroEntrateEl.innerText = fmtE(totalIncome, 0);
+    if (heroPrevisteEl) heroPrevisteEl.innerText = fmtE(totalPlanned, 0);
     if (heroSpeseEl) heroSpeseEl.innerText = fmtE(totalActual, 0);
     renderMacroCards();
     renderHeroInsight();
-    renderUpcomingPayments();
 
     const month = document.getElementById('currentMonth').value;
     let mData = await db.months.get(month);
     await db.months.put({month, totalIncome, totalPlanned, totalActual, notes: mData?.notes||"", iaNotes: mData?.iaNotes||""});
     await updateGlobalVersion();
-
-    let pending = currentData.expenses.filter(e => e.planned > 0 && e.actual === 0).length;
-    const alertBox = document.getElementById('deadlineAlert');
-    if (pending > 0) { alertBox.innerText = `⏳ ${pending} uscite pianificate in attesa di saldo.`; alertBox.style.display = 'block'; } else { alertBox.style.display = 'none'; }
 
     // Sommario categorie - la griglia desktop legge gli stessi dati
     let catSums = {}; userCategories.forEach(c => catSums[c] = {planned:0, actual:0});
@@ -3607,6 +3604,7 @@ function renderMacroCards() {
 // =====================================================================
 let heroInsightTimer = null;
 let heroInsightResumeT = null;
+let heroInsightFadeT = null;
 let heroInsightSlides = [];
 let heroInsightIndex = 0;
 let heroInsightEventsWired = false;
@@ -3722,7 +3720,13 @@ function showHeroInsight(i) {
     const textEl = document.querySelector('#heroInsightPill .hero-insight-text');
     if (!textEl || !heroInsightSlides.length) return;
     heroInsightIndex = ((i % heroInsightSlides.length) + heroInsightSlides.length) % heroInsightSlides.length;
-    textEl.textContent = heroInsightSlides[heroInsightIndex];
+    if (heroInsightFadeT) clearTimeout(heroInsightFadeT);
+    textEl.style.opacity = '0';
+    heroInsightFadeT = setTimeout(() => {
+        textEl.textContent = heroInsightSlides[heroInsightIndex];
+        textEl.style.opacity = '1';
+        heroInsightFadeT = null;
+    }, 250);
 }
 
 function nextHeroInsight() { showHeroInsight(heroInsightIndex + 1); }
@@ -3740,21 +3744,6 @@ function stopHeroInsightLoop() {
 function scheduleHeroInsightResume() {
     if (heroInsightResumeT) clearTimeout(heroInsightResumeT);
     heroInsightResumeT = setTimeout(startHeroInsightLoop, 6000);
-}
-
-// =====================================================================
-// PROSSIMI PAGAMENTI (pill oro, dati reali)
-// =====================================================================
-function renderUpcomingPayments() {
-    const pill = document.getElementById('upcoming-payments-pill');
-    const textEl = document.getElementById('upcomingPaymentsText');
-    if (!pill || !textEl) return;
-    const month = document.getElementById('currentMonth').value;
-    const pending = currentData.expenses.filter(e => e.planned > 0 && e.actual === 0).length;
-    const unpaidDeadlines = (annualDeadlines || []).filter(d => d.month === month && !d.isPaid).length;
-    const total = pending + unpaidDeadlines;
-    textEl.textContent = `Prossimi Pagamenti Previsti: ${total}`;
-    pill.style.display = total > 0 ? 'flex' : 'none';
 }
 
 async function openRendicontoPopup(type) {

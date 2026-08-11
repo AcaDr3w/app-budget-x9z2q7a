@@ -108,6 +108,10 @@
                       <span class="hero-mini-label">Entrate Totali</span>
                       <span class="hero-mini-value" id="heroEntrateTotal">0 €</span>
                   </div>
+                  <div class="hero-mini-pill clickable" role="button" onclick="openRendicontoPopup('previsto')">
+                      <span class="hero-mini-label">Spese Previste</span>
+                      <span class="hero-mini-value" id="heroSpesePreviste">0 €</span>
+                  </div>
                   <div class="hero-mini-pill clickable" role="button" onclick="openRendicontoPopup('sostenuto')">
                       <span class="hero-mini-label">Spese Sostenute</span>
                       <span class="hero-mini-value" id="heroSpeseSostenute">0 €</span>
@@ -134,16 +138,17 @@
           </div>
 
           <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
-          <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
           <div class="mobile-dashboard-container">
                 <div class="dash-card card-casa" data-category="casa_utenze" role="button" tabindex="0" aria-label="Apri Casa e Utenze">
                     <div class="card-title-row">
                         <h3>Casa e Utenze</h3>
                         <span class="card-badge">Gestione</span>
                     </div>
-                    <i class="fas fa-home card-hero-icon"></i>
-                    <div class="card-glass">
-                        <div class="card-micro-grid" id="microGrid-casa_utenze"></div>
+                    <div class="card-body">
+                        <i class="fas fa-home card-hero-icon"></i>
+                        <div class="card-glass">
+                            <div class="card-micro-grid" id="microGrid-casa_utenze"></div>
+                        </div>
                     </div>
                     <div class="card-progress">
                         <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-casa_utenze"></div></div>
@@ -155,9 +160,11 @@
                         <h3>Veicoli</h3>
                         <span class="card-badge">Flotta</span>
                     </div>
-                    <i class="fas fa-car card-hero-icon"></i>
-                    <div class="card-glass">
-                        <div class="card-micro-grid" id="microGrid-veicoli"></div>
+                    <div class="card-body">
+                        <i class="fas fa-car card-hero-icon"></i>
+                        <div class="card-glass">
+                            <div class="card-micro-grid" id="microGrid-veicoli"></div>
+                        </div>
                     </div>
                     <div class="card-progress">
                         <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-veicoli"></div></div>
@@ -169,20 +176,17 @@
                         <h3>Spese e Svago</h3>
                         <span class="card-badge">Lifestyles</span>
                     </div>
-                    <i class="fas fa-shopping-cart card-hero-icon"></i>
-                    <div class="card-glass">
-                        <div class="card-micro-grid" id="microGrid-spese_svago"></div>
+                    <div class="card-body">
+                        <i class="fas fa-shopping-cart card-hero-icon"></i>
+                        <div class="card-glass">
+                            <div class="card-micro-grid" id="microGrid-spese_svago"></div>
+                        </div>
                     </div>
                     <div class="card-progress">
                         <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-spese_svago"></div></div>
                         <span class="card-progress-label" id="budgetLabel-spese_svago">Budget Spese e Svago: 0 € / 0 €</span>
                     </div>
                 </div>
-          </div>
-
-          <div id="upcoming-payments-pill" class="hide-desktop" style="display:none;">
-              <span class="upcoming-icon">📅</span>
-              <span class="upcoming-text" id="upcomingPaymentsText">Prossimi Pagamenti Previsti: 0</span>
           </div>
 
           <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">

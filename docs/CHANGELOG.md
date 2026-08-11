@@ -1,5 +1,24 @@
 # Session Logs & Progress
 
+## [2026-08-11] - LIGHT PASTEL THEME mobile: palette pastello, hero card panna con KPI 3-colonne, insight con fade, macro-card 2 colonne (icona+glass), rimossi banner gialli
+
+### ✅ Completed Changes (SOLO mobile, blocco ≤767)
+- **Palette "Light Pastel"**: `body` mobile = gradiente `linear-gradient(135deg,#E0F2F1,#FFF3E0,#E8F5E9)` (+ `background-attachment:fixed`); testo scuro su sfondi chiari ovunque; niente testo bianco tranne badge LIFESTYLES.
+- **Hero card `#mobile-hero-card`**: da gradiente scuro a **panna semitrasparente** `rgba(255,255,255,0.6)` + bordo `rgba(255,255,255,0.7)`, testo scuro (#111827/#1F2937), shadow morbida. **KPI = griglia 3 colonne uguali** (`grid-template-columns:repeat(3,1fr); gap:8px`): Entrate Totali / **Spese Previste (NUOVO id `heroSpesePreviste`, onclick → `openRendicontoPopup('previsto')`)** / Spese Sostenute. Pillole interne (`hero-month-pill`, `hero-insight-pill`, `hero-mini-pill`) → `rgba(255,255,255,0.8)` + bordo leggero + testo scuro; focus-visible outline scuro.
+- **AI Daily Insight**: stessa logica locale rotante (`setInterval` 4s, tap = prossimo + pausa 6s) ma **transizione fade-in-out** (`transition:opacity 0.25s ease` + `heroInsightFadeT` in `showHeroInsight`: opacity 0 → 250ms → cambio testo + opacity 1; `clearTimeout` anti-race con il tap).
+- **Macro-card ristrutturate (layout a 2 colonne rigide)**:
+  - `card-body` wrapper (`flex row; align-items:center; gap:12px; flex:1; min-width:0`): **icona macro a sinistra `flex:0 0 25%`** (più grande, clamp 28-42px), **glass a destra `flex:1; min-width:0`** (`rgba(255,255,255,0.5)` + `border:1px solid rgba(255,255,255,0.8)`).
+  - Micro-grid → `repeat(auto-fit, minmax(60px,1fr)); gap:6px`; `.micro-cell` = `rgba(255,255,255,0.5)` + bordo bianco, emoji nativa + nome scuro con ellipsis; `.micro-more`/`.micro-empty` testo scuro.
+  - **Colori**: Casa `#B2DFDB` + testo/icona `#004D40` + badge `#80CBC4`; Veicoli `#C8E6C9` + `#1B5E20` + badge `#A5D6A7`; Spese e Svago (full width) `#E1BEE7` + `#4A148C` + badge **`#4A148C` con testo bianco**.
+  - Progress bar full-width fuori dal flex: track `rgba(0,0,0,0.12)`, fill `#10b981`, warn `#f59e0b`, over `#ef4444`, label scura.
+- **Rimossi banner gialli "uscite pianificate"**: pill oro `#upcoming-payments-pill` (HTML/CSS/JS: `renderUpcomingPayments` + call in `updateUI`) e `#deadlineAlert` `.deadline-alert` (JS blocco "⏳ N uscite pianificate in attesa di saldo" + CSS + regola desktop riga 2990). `#annualMonthAlert` blu (scadenze annuali) INVARIATO.
+- `updateUI` ora scrive anche `heroSpesePreviste` (stessa riga degli altri hero id).
+
+### ⚙ Status: COMPLETATO + PUSHATO (`git push origin main`)
+- `node --check` OK; braces CSS 692/692; 293 div HTML bilanciati; id unici senza duplicati; zero residui `upcoming`/`deadlineAlert` nel codice (solo docs).
+
+---
+
 ## [2026-08-11] - Mobile tab Mese v2: hero card "Riepilogo" (insight rotante + mini-pill), card con badge/icona grande, pill pagamenti oro, overlay blur 10px
 
 ### ✅ Completed Changes (SOLO mobile, blocco ≤767)

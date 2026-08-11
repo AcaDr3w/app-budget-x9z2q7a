@@ -318,7 +318,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .popup-note { font-size: 11px; color: #64748b; text-align: center; padding-top: 4px; }
 
 /* ===== ALERTS ===== */
-.deadline-alert { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: bold; text-align: center; }
 .annual-deadline-box { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 14px; }
 
 /* ===== CALENDAR ===== */
@@ -891,6 +890,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         overflow: hidden !important;
         overscroll-behavior: none !important;
         padding-bottom: 0 !important;
+        background: linear-gradient(135deg, #E0F2F1, #FFF3E0, #E8F5E9) !important;
+        background-attachment: fixed !important;
     }
 
     /* .container = riempie l'area tra header e bottom-nav → i tab ereditano il 100% */
@@ -942,7 +943,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
 
     /* Banner pianificazioni - flex-shrink: 0 per viewport */
-    .deadline-alert, .annual-deadline-box {
+    .annual-deadline-box {
         flex-shrink: 0 !important;
         margin: 6px 0 !important;
     }
@@ -1030,20 +1031,19 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         align-items: stretch !important;
         padding: clamp(7px, 2.2vh, 12px) clamp(8px, 2.5vw, 14px) !important;
         border-radius: 20px;
-        color: #fff;
+        color: #1F2937;
         text-align: center;
-        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.10);
         -webkit-tap-highlight-color: transparent;
         transition: transform 0.15s ease;
     }
     .dash-card:active { transform: scale(0.96); }
     .dash-card:hover { transform: translateY(-1px); }
-    .dash-card:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.9); outline-offset: 2px; }
+    .dash-card:focus-visible { outline: 2px solid rgba(0, 0, 0, 0.35); outline-offset: 2px; }
     .dash-card h3 {
         margin: 0 !important;
         font-size: clamp(12px, 3.6vw, 16px);
         font-weight: 700;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1060,39 +1060,55 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
     .card-badge {
         flex-shrink: 0;
-        background: rgba(0, 0, 0, 0.28);
-        border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 99px;
         padding: 2px clamp(7px, 2vw, 10px);
         font-size: clamp(7.5px, 2.2vw, 9.5px);
         font-weight: 700;
         letter-spacing: 0.3px;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.95);
         white-space: nowrap;
     }
-    .dash-card .card-hero-icon {
-        align-self: flex-start;
-        font-size: clamp(24px, 8vw, 36px);
-        text-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-        flex-shrink: 0;
-        margin: clamp(2px, 0.8vh, 6px) 0 0;
-        line-height: 1;
+    .card-body {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 12px;
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+        width: 100%;
     }
-    .card-casa { background: linear-gradient(135deg, #0E4B56, #1B6B78); }
-    .card-veicoli { background: linear-gradient(135deg, #2E8B57, #4CAF50); }
-    .card-svago { grid-column: span 2; background: linear-gradient(135deg, #3B1E7B, #5E2B97); }
+    .dash-card .card-hero-icon {
+        flex: 0 0 25%;
+        font-size: clamp(28px, 9vw, 42px);
+        flex-shrink: 0;
+        line-height: 1;
+        text-align: center;
+    }
+    .card-casa { background: #B2DFDB; }
+    .card-casa .card-hero-icon,
+    .card-casa h3 { color: #004D40; }
+    .card-casa .card-badge { background: #80CBC4; color: #004D40; }
+    .card-veicoli { background: #C8E6C9; }
+    .card-veicoli .card-hero-icon,
+    .card-veicoli h3 { color: #1B5E20; }
+    .card-veicoli .card-badge { background: #A5D6A7; color: #1B5E20; }
+    .card-svago { grid-column: span 2; background: #E1BEE7; }
+    .card-svago .card-hero-icon,
+    .card-svago h3 { color: #4A148C; }
+    .card-svago .card-badge { background: #4A148C; color: #ffffff; }
 
     /* ===== CARD GLASS GLASSMORPHISM + MICRO-GRID (2x3 senza scroll) ===== */
     .card-glass {
         flex: 1 1 auto;
+        min-width: 0;
         min-height: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border-radius: 16px;
@@ -1102,9 +1118,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
     .card-micro-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
         grid-template-rows: repeat(2, minmax(0, 1fr));
-        gap: clamp(2px, 0.8vh, 5px);
+        gap: 6px;
         width: 100%;
         height: 100%;
         min-height: 0;
@@ -1116,7 +1132,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center;
         min-width: 0;
         min-height: 0;
-        background: rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.8);
         border-radius: 10px;
         padding: 2px clamp(1px, 0.5vw, 4px);
         gap: 1px;
@@ -1126,8 +1143,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .micro-cell .micro-name {
         font-size: clamp(6.5px, 2vw, 9px);
         font-weight: 600;
-        color: #fff;
-        opacity: 0.95;
+        color: #374151;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1138,12 +1154,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        border: 1px dashed rgba(255, 255, 255, 0.55);
+        border: 1px dashed rgba(0, 0, 0, 0.25);
         border-radius: 10px;
         gap: 1px;
         min-width: 0;
         min-height: 0;
-        color: #fff;
+        color: #374151;
         overflow: hidden;
     }
     .micro-more .more-icon { font-size: clamp(10px, 3vw, 14px); line-height: 1.1; }
@@ -1154,7 +1170,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center;
         font-size: clamp(7.5px, 2.3vw, 10px);
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.9);
+        color: #374151;
         text-align: center;
         padding: 2px;
         width: 100%;
@@ -1174,23 +1190,22 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         width: 100%;
         height: 5px;
         border-radius: 99px;
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(0, 0, 0, 0.12);
         overflow: hidden;
     }
     .card-progress-fill {
         height: 100%;
         border-radius: 99px;
         width: 0%;
-        background: #34d399;
+        background: #10b981;
         transition: width 0.5s ease;
     }
-    .card-progress-fill.fill-warn { background: #fbbf24; }
-    .card-progress-fill.fill-over { background: #f87171; }
+    .card-progress-fill.fill-warn { background: #f59e0b; }
+    .card-progress-fill.fill-over { background: #ef4444; }
     .card-progress-label {
         font-size: clamp(8px, 2.3vw, 10px);
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.95);
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        color: #374151;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1208,19 +1223,20 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
     #futureActionHub { padding: 8px 0 0; gap: clamp(6px, 1.8vw, 8px); }
 
-    /* ===== HERO CARD "Riepilogo" (gradiente scuro, solo mobile) ===== */
+    /* ===== HERO CARD "Riepilogo" (panna semitrasparente, solo mobile) ===== */
     #mobile-hero-card {
         flex-shrink: 0;
         width: 100%;
-        background: linear-gradient(135deg, #0F172A, #1E293B);
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.7);
         border-radius: 24px;
         padding: clamp(10px, 2.6vh, 16px) clamp(12px, 3.4vw, 18px);
-        box-shadow: 0 12px 26px -8px rgba(15, 23, 42, 0.45);
+        box-shadow: 0 12px 26px -10px rgba(15, 23, 42, 0.15);
         margin: 0;
         display: flex;
         flex-direction: column;
         gap: clamp(6px, 1.6vh, 10px);
-        color: #fff;
+        color: #1F2937;
     }
     .hero-head {
         display: flex;
@@ -1233,31 +1249,32 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         font-size: clamp(14px, 4.2vw, 18px);
         font-weight: 700;
         letter-spacing: 0.2px;
+        color: #111827;
     }
     .hero-month-pill {
         display: flex;
         align-items: center;
         gap: 6px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         border-radius: 99px;
         padding: clamp(4px, 1.2vh, 6px) clamp(10px, 2.6vw, 14px);
         font-size: clamp(10.5px, 3vw, 12.5px);
         font-weight: 600;
-        color: #e2e8f0;
+        color: #1F2937;
         cursor: pointer;
         transition: transform 0.15s ease;
     }
     .hero-month-pill:active { transform: scale(0.96); }
-    .hero-month-pill:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.8); outline-offset: 2px; }
+    .hero-month-pill:focus-visible { outline: 2px solid rgba(0, 0, 0, 0.35); outline-offset: 2px; }
     .hero-insight-pill {
         display: flex;
         align-items: center;
         gap: clamp(6px, 1.8vw, 10px);
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border-radius: 16px;
@@ -1267,73 +1284,50 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         transition: transform 0.15s ease;
     }
     .hero-insight-pill:active { transform: scale(0.98); }
-    .hero-insight-pill:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.8); outline-offset: 2px; }
+    .hero-insight-pill:focus-visible { outline: 2px solid rgba(0, 0, 0, 0.35); outline-offset: 2px; }
     .hero-insight-text {
         font-size: clamp(10.5px, 3vw, 12.5px);
-        color: rgba(255, 255, 255, 0.95);
+        color: #1F2937;
         font-weight: 500;
         line-height: 1.35;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        transition: opacity 0.25s ease;
     }
     .hero-mini-row {
-        display: flex;
-        gap: clamp(6px, 1.8vw, 10px);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
         width: 100%;
     }
     .hero-mini-pill {
-        flex: 1;
         min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 1px;
-        background: rgba(0, 0, 0, 0.28);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.7);
         border-radius: 14px;
-        padding: clamp(5px, 1.4vh, 9px) clamp(8px, 2vw, 12px);
+        padding: clamp(5px, 1.4vh, 9px) clamp(6px, 1.8vw, 10px);
         text-align: left;
         cursor: pointer;
         transition: transform 0.15s ease;
     }
     .hero-mini-pill:active { transform: scale(0.97); }
     .hero-mini-label {
-        font-size: clamp(8.5px, 2.4vw, 10px);
+        font-size: clamp(8px, 2.3vw, 10px);
         font-weight: 500;
-        color: #94a3b8;
+        color: #6B7280;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     .hero-mini-value {
-        font-size: clamp(12px, 3.6vw, 15px);
+        font-size: clamp(11px, 3.3vw, 14px);
         font-weight: 700;
-        color: #fff;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* ===== PROSSIMI PAGAMENTI (pill oro full-width) ===== */
-    #upcoming-payments-pill {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: clamp(6px, 1.8vw, 10px);
-        width: 100%;
-        background: #E5B83B;
-        border-radius: 99px;
-        padding: clamp(7px, 1.8vh, 10px) clamp(12px, 3vw, 16px);
-        box-shadow: 0 8px 18px -6px rgba(229, 184, 59, 0.55);
-        margin: clamp(4px, 1vh, 8px) 0 0;
-    }
-    .upcoming-icon { font-size: clamp(13px, 3.8vw, 16px); }
-    .upcoming-text {
-        font-size: clamp(10.5px, 3vw, 12.5px);
-        font-weight: 700;
-        color: #3b2f0e;
+        color: #111827;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -2991,8 +2985,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         overflow: hidden !important;
         min-height: 0;
     }
-    #current-month-tab.active > .annual-deadline-box,
-    #current-month-tab.active > .deadline-alert { grid-column: 1 / -1; grid-row: 1; margin-bottom: 0; }
+    #current-month-tab.active > .annual-deadline-box { grid-column: 1 / -1; grid-row: 1; margin-bottom: 0; }
     #current-month-tab.active > .month-head { grid-column: 2; grid-row: 2; margin: 0; align-self: end; }
     #current-month-tab.active > .main-layout {
         grid-column: 1 / -1;
