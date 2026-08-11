@@ -1,5 +1,22 @@
 # Session Logs & Progress
 
+## [2026-08-11] - Mobile tab Mese v2: hero card "Riepilogo" (insight rotante + mini-pill), card con badge/icona grande, pill pagamenti oro, overlay blur 10px
+
+### ✅ Completed Changes (SOLO mobile, blocco ≤767)
+- **Hero card `#mobile-hero-card`** (`.hide-desktop`, primo figlio del tab, `flex-shrink:0`): gradiente blu/antracite `#0F172A→#1E293B`, radius 24px, tutto `clamp()`. Contiene: titolo "Riepilogo" + **pill mese cliccabile** (`heroMonthPill`/`heroMonthDisplay` → apre il picker, binding aggiunto in `setupMonthNavigation`; `updateMonthDisplay` scrive anche il hero), **AI Insight rotante** (`heroInsightPill` glass `rgba(255,255,255,.12)`+`blur(12px)`, testo che ruota ogni 4s tra le 5 regole locali, tap = prossimo + pausa 6s, stop su `document.hidden`), **2 mini-pill** "Entrate Totali" (`heroEntrateTotal`) e "Spese Sostenute" (`heroSpeseSostenute`) con onclick → `openRendicontoPopup('entrate'|'sostenuto')`.
+- **`.month-head` nascosto su mobile** (`display:none !important` nel blocco ≤767): le 3 box KPI sostituite dal hero (Previste visibile nelle barre budget). DESKTOP invariato (month-head + `sum*` restano attivi, `updateUI` scrive entrambi i set di id).
+- **Carousel standalone RIMOSSO** (HTML/CSS/JS: `ai-insight-carousel`, `aiInsightTrack/Dots`, `renderAIInsightSlides`, loop/dots) → sostituito da `renderHeroInsight()` (stesse 5 regole locali, slide ora stringhe `icona+testo` in un'unica pill).
+- **Macro-card**: badge a pillola top-right statici (Gestione/Flotta/Lifestyles) + titolo a sinistra + **icona grande** (`.card-hero-icon` clamp 24-36px, allineata a sinistra sotto il titolo) + nuovi gradienti: Casa `#0E4B56→#1B6B78`, Veicoli `#2E8B57→#4CAF50`, Svago `#3B1E7B→#5E2B97`. Glass aggiornato a spec: `rgba(255,255,255,0.15)` + `blur(12px)`, radius 16px. Micro-grid 2×3 + progress invariati (dati reali da `renderMacroCards`).
+- **Pill "Prossimi Pagamenti"** `#upcoming-payments-pill` (oro `#E5B83B`, radius 99px, tra griglia e hub, `flex-shrink:0`): `N = spese in sospeso (planned>0, actual==0) + scadenze annuali non pagate del mese` (`annualDeadlines.filter(d => d.month===mese && !d.isPaid)` — stessa fonte di `checkAnnualAlertForCurrentMonth`); nascosta se N=0 (`renderUpcomingPayments`).
+- **Action hub**: label "🔍 Ricerca Spese" e "👥 Condividi Budget" (data-action invariati).
+- **Overlay sheet ≤767**: `rgba(0,0,0,0.35)` + `blur(10px)`.
+- Fix minori: etichette hub Mese/Future riallineate (erano state cross-applicate in una sessione precedente).
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; braces CSS 689/689; 227 id unici (0 duplicati); zero residui `ai-insight`/`carousel` nel codice (solo docs). **Nessun commit/push.**
+
+---
+
 ## [2026-08-11] - Mobile tab Mese: macro-card glassmorphism (2x3 + progress), AI Daily Insight carousel locale, IA "vera" nel popup mese + confronto col mese precedente
 
 ### ✅ Completed Changes (SOLO mobile, blocco ≤767)

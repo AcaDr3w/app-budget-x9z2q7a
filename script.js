@@ -331,11 +331,14 @@ if (geminiKeyEl && localStorage.getItem('gemini_api_key')) geminiKeyEl.value = l
 function updateMonthDisplay() {
     const monthInput = document.getElementById('currentMonth');
     const display = document.getElementById('currentMonthDisplay');
+    const heroDisplay = document.getElementById('heroMonthDisplay');
     if (!monthInput || !display) return;
     const [year, month] = monthInput.value.split('-');
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     const monthName = monthNames[parseInt(month, 10) - 1] || '';
-    display.textContent = `${monthName} ${year}`;
+    const label = `${monthName} ${year}`;
+    display.textContent = label;
+    if (heroDisplay) heroDisplay.textContent = label;
 }
 
 // Aggiorna il display del mese quando cambia la selezione
@@ -352,6 +355,11 @@ function setupMonthNavigation() {
     };
     pill.addEventListener('click', (e) => { if (e.target.closest('.month-arrow')) return; openPicker(); });
     pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } });
+    const heroPill = document.getElementById('heroMonthPill');
+    if (heroPill) {
+        heroPill.addEventListener('click', (e) => { e.stopPropagation(); openPicker(); });
+        heroPill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } });
+    }
 
     const shiftMonth = (delta) => {
         const [y, m] = input.value.split('-').map(Number);
@@ -3024,8 +3032,13 @@ async function updateUI() {
     document.getElementById('sumEntrate').innerText = fmtE(totalIncome,0);
     document.getElementById('sumPrevisto').innerText = fmtE(totalPlanned,0);
     document.getElementById('sumSostenuto').innerText = fmtE(totalActual,0);
+    const heroEntrateEl = document.getElementById('heroEntrateTotal');
+    const heroSpeseEl = document.getElementById('heroSpeseSostenute');
+    if (heroEntrateEl) heroEntrateEl.innerText = fmtE(totalIncome, 0);
+    if (heroSpeseEl) heroSpeseEl.innerText = fmtE(totalActual, 0);
     renderMacroCards();
-    renderAIInsightSlides();
+    renderHeroInsight();
+    renderUpcomingPayments();
 
     const month = document.getElementById('currentMonth').value;
     let mData = await db.months.get(month);
@@ -3590,19 +3603,21 @@ function renderMacroCards() {
 }
 
 // =====================================================================
-// AI DAILY INSIGHT: pillole calcolate in locale (carousel swipeable)
+// AI DAILY INSIGHT: insight locale nella hero card (rotazione automatica)
 // =====================================================================
-let aiInsightTimer = null;
-let aiInsightResumeT = null;
-let aiInsightWired = false;
+let heroInsightTimer = null;
+let heroInsightResumeT = null;
+let heroInsightSlides = [];
+let heroInsightIndex = 0;
+let heroInsightEventsWired = false;
 
-async function renderAIInsightSlides() {
-    const track = document.getElementById('aiInsightTrack');
-    const dotsWrap = document.getElementById('aiInsightDots');
-    if (!track || !dotsWrap) return;
+async function renderHeroInsight() {
+    const pill = document.getElementById('heroInsightPill');
+    const textEl = document.querySelector('#heroInsightPill .hero-insight-text');
+    if (!pill || !textEl) return;
 
     const month = document.getElementById('currentMonth').value;
-    if (!month) { track.innerHTML = ''; dotsWrap.innerHTML = ''; return; }
+    if (!month) { textEl.textContent = 'Seleziona un mese per vedere gli insight'; return; }
 
     const [y, m] = month.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
@@ -3644,7 +3659,7 @@ async function renderAIInsightSlides() {
         if (prev > cur && (prev - cur) > bestDelta) { bestDelta = prev - cur; bestCat = cat; }
     }
     if (bestCat && bestDelta >= 1) {
-        slides.push({ icon: '🎉', text: `Oggi sei stato bravo con ${bestCat}! Risparmiati ${fmtEPlain(Math.round(bestDelta), 0)}` });
+        slides.push(`🎉 Oggi sei stato bravo con ${bestCat}! Risparmiati ${fmtEPlain(Math.round(bestDelta), 0)}`);
     }
 
     // Regola 2: media giornaliera della macro più attiva
@@ -3655,7 +3670,7 @@ async function renderAIInsightSlides() {
     }
     if (bestMacro && bestAvg > 0) {
         const title = MACRO_CARD_META[bestMacro] ? MACRO_CARD_META[bestMacro].title : bestMacro;
-        slides.push({ icon: '📅', text: `Spesa per ${title} media: ${fmtEPlain(Math.round(bestAvg), 0)}/giorno` });
+        slides.push(`📅 Spesa per ${title} media: ${fmtEPlain(Math.round(bestAvg), 0)}/giorno`);
     }
 
     // Regola 3: proiezione lineare di risparmio a fine mese
@@ -3664,8 +3679,8 @@ async function renderAIInsightSlides() {
         const totalActual = Object.values(catActual).reduce((s, v) => s + v, 0);
         const projSpese = totalActual + (daysElapsed > 0 ? (totalActual / daysElapsed) * remaining : 0);
         const projSavings = Math.round(totalIncome - projSpese);
-        if (projSavings >= 0) slides.push({ icon: '🚀', text: `Se continui così, a fine mese avrai +${fmtEPlain(projSavings, 0)}` });
-        else slides.push({ icon: '⚠️', text: `Al ritmo attuale, a fine mese ti mancheranno ${fmtEPlain(Math.abs(projSavings), 0)}` });
+        if (projSavings >= 0) slides.push(`🚀 Se continui così, a fine mese avrai +${fmtEPlain(projSavings, 0)}`);
+        else slides.push(`⚠️ Al ritmo attuale, a fine mese ti mancheranno ${fmtEPlain(Math.abs(projSavings), 0)}`);
     }
 
     // Regola 4: macro che ha superato il budget
@@ -3677,81 +3692,69 @@ async function renderAIInsightSlides() {
     }
     if (overMacro) {
         const title = MACRO_CARD_META[overMacro] ? MACRO_CARD_META[overMacro].title : overMacro;
-        slides.push({ icon: '🔥', text: `${title} ha superato il budget di ${fmtEPlain(Math.round(overAmt), 0)}` });
+        slides.push(`🔥 ${title} ha superato il budget di ${fmtEPlain(Math.round(overAmt), 0)}`);
     }
 
     // Regola 5: onboarding se nessun dato
     if (slides.length === 0) {
-        slides.push({ icon: '🤖', text: 'Inizia a registrare spese ed entrate: ogni giorno avrai insight personali!' });
-        slides.push({ icon: '💡', text: 'Il budget si costruisce spesa dopo spesa: parti dalle spese fisse.' });
+        slides.push('🤖 Inizia a registrare spese ed entrate: ogni giorno avrai insight personali!');
+        slides.push('💡 Il budget si costruisce spesa dopo spesa: parti dalle spese fisse.');
     }
 
-    track.innerHTML = '';
-    dotsWrap.innerHTML = '';
-    slides.forEach((s, i) => {
-        const pill = document.createElement('div');
-        pill.className = 'ai-insight-pill';
-        pill.innerHTML = `<span class="insight-icon">${s.icon}</span><span class="insight-text">${s.text}</span>`;
-        track.appendChild(pill);
-        const dot = document.createElement('button');
-        dot.className = 'dot' + (i === 0 ? ' active' : '');
-        dot.setAttribute('aria-label', 'Vai a insight ' + (i + 1));
-        dot.addEventListener('click', () => {
-            const el = track.children[i];
-            if (el) track.scrollTo({ left: Math.max(0, el.offsetLeft - 2), behavior: 'smooth' });
-        });
-        dotsWrap.appendChild(dot);
-    });
-
-    wireAIInsightEvents();
-    startAIInsightLoop();
+    heroInsightSlides = slides;
+    heroInsightIndex = 0;
+    textEl.textContent = slides[0];
+    wireHeroInsightEvents();
+    startHeroInsightLoop();
 }
 
-function wireAIInsightEvents() {
-    const track = document.getElementById('aiInsightTrack');
-    if (!track || aiInsightWired) return;
-    aiInsightWired = true;
-    track.addEventListener('pointerdown', stopAIInsightLoop);
-    track.addEventListener('scroll', () => { updateAIInsightDots(); scheduleAIInsightResume(); });
-    track.addEventListener('scrollend', scheduleAIInsightResume);
+function wireHeroInsightEvents() {
+    const pill = document.getElementById('heroInsightPill');
+    if (!pill || heroInsightEventsWired) return;
+    heroInsightEventsWired = true;
+    pill.addEventListener('click', () => { nextHeroInsight(); scheduleHeroInsightResume(); });
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) stopAIInsightLoop(); else startAIInsightLoop();
+        if (document.hidden) stopHeroInsightLoop(); else startHeroInsightLoop();
     });
 }
 
-function updateAIInsightDots() {
-    const track = document.getElementById('aiInsightTrack');
-    const dotsWrap = document.getElementById('aiInsightDots');
-    if (!track || !dotsWrap || !track.children.length) return;
-    let idx = 0;
-    for (let i = 0; i < track.children.length; i++) {
-        if (Math.abs(track.children[i].offsetLeft - track.scrollLeft) < Math.abs(track.children[idx].offsetLeft - track.scrollLeft)) idx = i;
-    }
-    [...dotsWrap.children].forEach((d, i) => d.classList.toggle('active', i === idx));
+function showHeroInsight(i) {
+    const textEl = document.querySelector('#heroInsightPill .hero-insight-text');
+    if (!textEl || !heroInsightSlides.length) return;
+    heroInsightIndex = ((i % heroInsightSlides.length) + heroInsightSlides.length) % heroInsightSlides.length;
+    textEl.textContent = heroInsightSlides[heroInsightIndex];
 }
 
-function startAIInsightLoop() {
-    stopAIInsightLoop();
-    if (document.hidden) return;
-    aiInsightTimer = setInterval(() => {
-        const track = document.getElementById('aiInsightTrack');
-        if (!track || !track.children.length) return;
-        let idx = 0;
-        for (let i = 0; i < track.children.length; i++) {
-            if (Math.abs(track.children[i].offsetLeft - track.scrollLeft) < Math.abs(track.children[idx].offsetLeft - track.scrollLeft)) idx = i;
-        }
-        const next = (idx + 1) % track.children.length;
-        track.scrollTo({ left: Math.max(0, track.children[next].offsetLeft - 2), behavior: 'smooth' });
-    }, 4000);
+function nextHeroInsight() { showHeroInsight(heroInsightIndex + 1); }
+
+function startHeroInsightLoop() {
+    stopHeroInsightLoop();
+    if (document.hidden || heroInsightSlides.length < 2) return;
+    heroInsightTimer = setInterval(() => nextHeroInsight(), 4000);
 }
 
-function stopAIInsightLoop() {
-    if (aiInsightTimer) { clearInterval(aiInsightTimer); aiInsightTimer = null; }
+function stopHeroInsightLoop() {
+    if (heroInsightTimer) { clearInterval(heroInsightTimer); heroInsightTimer = null; }
 }
 
-function scheduleAIInsightResume() {
-    if (aiInsightResumeT) clearTimeout(aiInsightResumeT);
-    aiInsightResumeT = setTimeout(startAIInsightLoop, 6000);
+function scheduleHeroInsightResume() {
+    if (heroInsightResumeT) clearTimeout(heroInsightResumeT);
+    heroInsightResumeT = setTimeout(startHeroInsightLoop, 6000);
+}
+
+// =====================================================================
+// PROSSIMI PAGAMENTI (pill oro, dati reali)
+// =====================================================================
+function renderUpcomingPayments() {
+    const pill = document.getElementById('upcoming-payments-pill');
+    const textEl = document.getElementById('upcomingPaymentsText');
+    if (!pill || !textEl) return;
+    const month = document.getElementById('currentMonth').value;
+    const pending = currentData.expenses.filter(e => e.planned > 0 && e.actual === 0).length;
+    const unpaidDeadlines = (annualDeadlines || []).filter(d => d.month === month && !d.isPaid).length;
+    const total = pending + unpaidDeadlines;
+    textEl.textContent = `Prossimi Pagamenti Previsti: ${total}`;
+    pill.style.display = total > 0 ? 'flex' : 'none';
 }
 
 async function openRendicontoPopup(type) {

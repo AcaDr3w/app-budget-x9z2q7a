@@ -92,6 +92,29 @@
      <!-- =================== TAB 1: MESE CORRENTE =================== -->
       <div id="current-month-tab" class="tab-content active">
 
+          <div id="mobile-hero-card" class="hide-desktop" aria-label="Riepilogo mese">
+              <div class="hero-head">
+                  <h2 class="hero-title">Riepilogo</h2>
+                  <button type="button" class="hero-month-pill" id="heroMonthPill" aria-label="Seleziona mese">
+                      <span id="heroMonthDisplay"></span>
+                      <i class="fas fa-chevron-down"></i>
+                  </button>
+              </div>
+              <div class="hero-insight-pill" id="heroInsightPill" role="button" tabindex="0" aria-label="Insight I.A. giornaliero, tocca per il prossimo">
+                  <span class="hero-insight-text"></span>
+              </div>
+              <div class="hero-mini-row">
+                  <div class="hero-mini-pill clickable" role="button" onclick="openRendicontoPopup('entrate')">
+                      <span class="hero-mini-label">Entrate Totali</span>
+                      <span class="hero-mini-value" id="heroEntrateTotal">0 €</span>
+                  </div>
+                  <div class="hero-mini-pill clickable" role="button" onclick="openRendicontoPopup('sostenuto')">
+                      <span class="hero-mini-label">Spese Sostenute</span>
+                      <span class="hero-mini-value" id="heroSpeseSostenute">0 €</span>
+                  </div>
+              </div>
+          </div>
+
           <div class="month-head">
               <div class="kpi-cluster kpi-left">
                   <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
@@ -114,7 +137,11 @@
           <div id="deadlineAlert" class="deadline-alert" style="display:none; margin-bottom: 14px;"></div>
           <div class="mobile-dashboard-container">
                 <div class="dash-card card-casa" data-category="casa_utenze" role="button" tabindex="0" aria-label="Apri Casa e Utenze">
-                    <h3><i class="fas fa-home card-icon"></i>Casa e Utenze</h3>
+                    <div class="card-title-row">
+                        <h3>Casa e Utenze</h3>
+                        <span class="card-badge">Gestione</span>
+                    </div>
+                    <i class="fas fa-home card-hero-icon"></i>
                     <div class="card-glass">
                         <div class="card-micro-grid" id="microGrid-casa_utenze"></div>
                     </div>
@@ -124,7 +151,11 @@
                     </div>
                 </div>
                 <div class="dash-card card-veicoli" data-category="veicoli" role="button" tabindex="0" aria-label="Apri Veicoli">
-                    <h3><i class="fas fa-car card-icon"></i>Veicoli</h3>
+                    <div class="card-title-row">
+                        <h3>Veicoli</h3>
+                        <span class="card-badge">Flotta</span>
+                    </div>
+                    <i class="fas fa-car card-hero-icon"></i>
                     <div class="card-glass">
                         <div class="card-micro-grid" id="microGrid-veicoli"></div>
                     </div>
@@ -134,7 +165,11 @@
                     </div>
                 </div>
                 <div class="dash-card card-svago" data-category="spese_svago" role="button" tabindex="0" aria-label="Apri Spese e Svago">
-                    <h3><i class="fas fa-shopping-cart card-icon"></i>Spese e Svago</h3>
+                    <div class="card-title-row">
+                        <h3>Spese e Svago</h3>
+                        <span class="card-badge">Lifestyles</span>
+                    </div>
+                    <i class="fas fa-shopping-cart card-hero-icon"></i>
                     <div class="card-glass">
                         <div class="card-micro-grid" id="microGrid-spese_svago"></div>
                     </div>
@@ -145,17 +180,17 @@
                 </div>
           </div>
 
-          <div id="ai-insight-carousel" class="hide-desktop" aria-label="Insight I.A. giornalieri">
-              <div class="ai-insight-track" id="aiInsightTrack"></div>
-              <div class="ai-insight-dots" id="aiInsightDots"></div>
+          <div id="upcoming-payments-pill" class="hide-desktop" style="display:none;">
+              <span class="upcoming-icon">📅</span>
+              <span class="upcoming-text" id="upcomingPaymentsText">Prossimi Pagamenti Previsti: 0</span>
           </div>
 
           <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()">
 
         <div id="mese-action-hub" class="hide-desktop">
-            <button data-action="search">🔍 Ricerca</button>
-<button data-action="ia">🤖 I.A.</button>
-            <button data-action="condivise">👥 Condividi</button>
+<button data-action="search">🔍 Ricerca Spese</button>
+            <button data-action="ia">🤖 Assistente I.A.</button>
+            <button data-action="condivise">👥 Condividi Budget</button>
         </div>
 
         <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
@@ -561,7 +596,7 @@
             <div id="futureActionHub">
                 <button data-action="simula">🤔 Simula</button>
                 <button data-action="scadenze">🗓️ Scadenze</button>
-<button data-action="ia">🤖 Assistente I.A.</button>
+                <button data-action="ia">🤖 I.A.</button>
             </div>
         </div>
 
