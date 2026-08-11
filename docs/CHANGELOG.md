@@ -1,5 +1,32 @@
 # Session Logs & Progress
 
+## [2026-08-11] - ROADMAP ripristino legacy + Fase 1: Spese Ricorrenti
+
+### ✅ Completed Changes
+- **docs/ROADMAP.md** (nuovo): piano 7 fasi per riportare le feature mancanti da `legacy_version/` (audit comparativo 11-08-2026), con riferimenti riga al codice sorgente legacy e checkbox di stato.
+- **Fase 1 — Spese Ricorrenti (COMPLETATA)**:
+  - **index.html**: toggle "Ripeti ogni mese" + input mese-fine nel bottom sheet mobile (`recurringToggle`/`recurringUntil`) e nel form desktop (`recurringToggleDesktop`/`recurringUntilDesktop`).
+  - **script.js**: `setupRecurringToggle()` (animazione show/hide per mobile+desktop, init nel DOMContentLoaded), `saveRecurringClones()` (cloni mensili con `recurringGroupId`/`recurringEndMonth`, cap 240 mesi, giorno clampato all'ultimo del mese); integrati in `saveTransactionFromSheet` e `addExpense` (incl. reset toggle dopo il salvataggio); `closeTransactionSheet` resetta il toggle mobile.
+  - **style.css**: blocco CSS ricorrenza riportato dal legacy (`.recurring-toggle-wrapper`, `.toggle-switch`/`.toggle-slider`, `.recurring-until-container(.active)`, `.recurring-until-input`, `.recurring-hint`).
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK.
+- Nota: le spese ricorrenti create restano gestibili (visibili/edit) solo tramite dati `recurringGroupId` in DB; il popup "Ripetizioni" di gestione è la Fase 2 della roadmap.
+
+---
+
+## [2026-08-11] - Fase 2 ROADMAP: Gestione Ripetizioni (Impostazioni)
+
+### ✅ Completed Changes
+- **index.html**: card inline "🔁 Ripetizioni" in `settings-col-right` (pattern attuale, non popup come nel legacy) con sezione collapsible `#ripetizioniSection` e container `#ripetizioniList`.
+- **script.js**: `renderRipetizioni()` (raggruppa spese con `recurringGroupId`/`isRecurring`, mostra nome/importo/durata, bottone 🗑️) e `deleteRecurringGroup()` (rimuove solo spese future o del mese corrente non saldate); init in `initApp()`.
+- **style.css**: blocco `.ripetizione-*`/`.ripetizioni-empty` (7 regole) riportato dal legacy.
+
+### 🎯 Status: COMPLETATO
+- `node --check` OK.
+
+---
+
 ## [2026-08-11] - Fallback dinamico modelli :free (client + Edge Function)
 
 ### ✅ Completed Changes
@@ -782,3 +809,33 @@
 - Dashboard mobile visibile esclusivamente su schermi ≤768px
 - Header e navbar funzionanti correttamente
 - Summary cards compatte mostrate tra mese e macro-card
+## [2026-08-11] Investimenti tab polish
+- Restyled Investimenti tab: hero stat card, asset grid (mobile scroll) + desktop list, type buttons, movements rows, premium purple active nav state.
+- Restored `.popup-body`/`.btn-small` utilities.
+- Verified id/function cross-references and JS syntax.
+
+## [2026-08-11] Fase 4 - Spese Condivise
+- Pannello Dividi Spesa nel bottom sheet mobile: toggle, persona/gruppo, payer pills, split pills (equal/%/fixed), preview importo.
+- Popup Spese Condivise: tab Saldi (debiti/crediti, salda), tab Gruppi (crea, membri, cassa comune), detail ledger dark per persona/gruppo.
+- Logica quota propria in saveTransactionFromSheet (planned/actual per payer) + saveSharedSplits.
+- settleBalance: credito sottrae actual, debito converte planned->actual.
+- Migrazione SQL + adapter Supabase + backup estesi.
+
+## [2026-08-11] Fase 5 - Rendiconto esteso + Modifica spesa
+- Nuova Entrata mobile (income bottom sheet, swipe-to-close, btn nel popup rendiconto).
+- Liste entrate/spese nel popup rendiconto con delete; righe cliccabili -> modifica.
+- editExpense + saveTransactionFromSheet edit mode (update in-place o clone con settled).
+- Badge "Saldata" su expenses (settled) da edit type-change e settleBalance.
+- FIX: bottom sheet mobile spese non si apriva (id sbagliato sheetCategoryTitle).
+
+## [2026-08-11] Fase 6 - Popup mobile: Ricerca, IA Mese, Action Hub
+- Action hub mese mobile (#mese-action-hub, 3 pulsanti Ricerca/IA/Condividi) al posto di condivise-entry-btn; "Condividi" riusa openCondivisePopup.
+- Popup Ricerca (searchPopup): input + periodo (corrente/tutti/mese specifico) + risultati spese/entrate con icona categoria e % condivisa.
+- Popup IA Mese (iaMonthPopup): runIaMonthAnalysis costruisce il prompt dai dati del mese (categorie, risparmio, budget) e riusa callAIEndpoint esistente; salva l'esito nelle note IA (months.iaNotes via saveNotes).
+- FIX: tab Saldi/Gruppi popup Spese Condivise non commutable (mancava onclick su switchCondiviseTab).
+- CSS: #mese-action-hub + bottoni (pills flessibili); rimossa classe orfana .condivise-entry-btn.
+
+## [2026-08-11] Fase 7 - Rifiniture Impostazioni (Emoji picker categorie)
+- HTML: emojiPickerBtn + emojiInput (input nascosto) nel grid-inputs categorie impostazioni, prima di newCatName.
+- JS: IIFE setupEmojiPicker (tap -> focus input nascosto con tastiera emoji nativa; input -> ultimo codepoint -> testo bottone; blur -> reset style); saveCategory usa chosenEmoji in entrambi i branch (edit: chosenEmoji || icona esistente || MACRO_ICON; nuovo: emoji scelta se != placeholder); editCategory prefill bottone con getCatIcon(cat).
+- CSS: .emoji-picker-btn (cerchio 40px) + :active + .emoji-input-hidden (clip tecnica). Braces bilanciate.

@@ -12,6 +12,7 @@
 - **Controlli difensivi**: quando si usa `getElementById`, sempre verificare il risultato non sia null prima di accedere a proprietà/metodi.
 
 ## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-11**: ROADMAP ripristino feature da `legacy_version/` in `docs/ROADMAP.md` — 7 fasi con riferimenti riga al codice legacy; Fase 1 (Spese Ricorrenti: toggle mobile+desktop, `saveRecurringClones`, `setupRecurringToggle`) e Fase 2 (Gestione Ripetizioni: `renderRipetizioni`, `deleteRecurringGroup`, card inline in Impostazioni) COMPLETATE. **Ogni sessione deve leggere ROADMAP.md** per sapere cosa manca e cosa è già stato riportato.
 - **2026-08-11**: Fallback dinamico modelli `:free` — client: `fetchFreeModels()` da `/api/v1/models` + dropdown dinamico (`populateFreeModelSelect`, opzione `🎲 Casuale (Free)` value `random`); server: `FALLBACK_MODELS` + loop candidati dedup con timeout 30s, stop su 401/403, 502 solo a esaurimento
   - **Regola**: il modello `:free` può sparire/diventare a pagamento → mai hardcodare UN solo modello; lista attiva dal client + fallback array nel server
 - **2026-08-11**: Surfacing errori invoke — helper `extractFunctionError(err)` in script.js (legge `err.context` di `FunctionsHttpError` → `Status <code>: <body>`); Edge Function chat-openrouter: guardia secret mancante → 500 esplicito, JSON malformato → 400, errori OpenRouter → 502 con dettaglio
@@ -243,3 +244,40 @@ overscroll-behavior: none !important;
  # #   =��  D e p l o y   R u l e   ( G i t H u b   P a g e s ) 
  -   * * A u t o m a t i c   P u s h * * :   A l   t e r m i n e   d i   o g n i   t a s k   o   m o d i f i c a   d i   c o d i c e ,   l ' A I   d e v e   a u t o n o m a m e n t e   f a r e   c o m m i t   e   p u s h   s u   G i t H u b   p e r   s c a t e n a r e   l a   b u i l d   d i   G i t H u b   P a g e s .  
  
+## 2026-08-11 — Investimenti tab: CSS restyled & verifica integrazione
+- Ported invest CSS (mobile dashboard, hero card, asset cards, type buttons, movements, nav active state) from `legacy_version/style.css` into `style.css` (appended; override-ordre wins on mobile due to later rules + `!important` on `.invest-mobile-dashboard` over `.hide-desktop`).
+- Added `.popup-body` + `.btn-small` utilities missing from current CSS.
+- Verified all 19 invest DOM ids exist in `index.html`; all 10 JS functions present; `node --check script.js` passes.
+- `.hide-desktop` (L524) keeps mobile dashboard hidden on desktop; popups use existing `.popup-panel` base.
+
+## 2026-08-11 — Fase 4 ROADMAP: Spese Condivise COMPLETATA
+- Migration `supabase/migrations/20260811_shared_expenses.sql`: tabelle people, groups, group_members, shared_expense_splits + ALTER expenses (isShared, sharedPayer). NOTIFY pgrst.
+- Adapter (`js/supabase-adapter.js`): 4 nuove tabelle in DB_ACCESSOR/_allowedColumns/window.db; expenses +2 colonne. NOTA: `groups` e` una keyword SQL quotata - il client Supabase la quota automaticamente.
+- HTML: entry card Mese (desktop `#condiviseCard` + mobile `.condivise-entry-btn`), shared panel nel bottom sheet (dopo recurring), popup `popup-spese-condivise` (tabs Saldi/Gruppi + detail view dark).
+- JS: data layer (people/groups/groupMembers), split calc in `saveTransactionFromSheet` (wheel amount via `getWheelSheetAmount`), reset in `closeTransactionSheet`, popup/ledger/settle port da legacy con window.db al posto di Dexie (`where().equals()` -> toArray+filter).
+- Backup: 4 tabelle aggiunte a export/import.
+- CSS: classi .shared-*/.condivise-*/.saldo-*/.gruppo-*/.ledger-* + pills; ledger in tema dark (#0f172a).
+- Desktop: `addExpense` gia` supportava % condivisa (identico a legacy) - nessuna modifica.
+
+## 2026-08-11 — Fase 5 ROADMAP: Rendiconto esteso + Modifica spesa COMPLETATA
+- Migration `20260811_expenses_settled.sql`: colonna expenses.settled (badge "Saldata"). Adapter aggiornato.
+- HTML: btnNewIncome + incomeListContainer + expenseListContainer nel popup rendiconto; incomeBottomSheet con amount-input nativo + swipe-to-close.
+- **BUG FIX preesistente**: openTransactionSheet usava id inesistente `sheetCategoryTitle` -> bottom sheet mobile mai aperto. Corretto a `selected-category-title`.
+- JS: editExpense (prefill wheel via syncInputToWheel/syncWheelToInput, slider->input view), branch edit in saveTransactionFromSheet (CASO A in-place / CASO B clone + settled=true), editingExpenseId reset in closeTransactionSheet, renderIncomeList/renderExpenseList/getIncomesForMonth, eventi income sheet + swipe.
+- entriesList: righe cliccabili -> editExpense (skip button), settled-badge. settleBalance branch debito: exp.settled=true.
+- openRendicontoPopup: liste per tipo (entrate -> btn+lista entrate; altro -> lista spese) + body sheet-open.
+- CSS: .income-*, .settled-badge, .popup-income-btn, .amount-input, .income-sheet-body.
+
+## 2026-08-11 - Fase 6 ROADMAP: Popup mobile (Ricerca, IA Mese, Action Hub) COMPLETATA
+- HTML: #mese-action-hub (hide-desktop, 3 bottoni data-action search/ia/condivise) nel tab Mese al posto del vecchio .condivise-entry-btn; #searchPopup (searchPopupInput, searchPeriodSelect, searchCustomMonth, searchResultsList); #iaMonthPopup (btnIaMonthAnalysis, iaMonthResponse) dopo popup-rendiconto.
+- JS: openSearchPopup/closeSearchPopup/toggleSearchCustomMonth/filterSearchResults (periodo current = currentData + getIncomesForMonth, all = toArray, custom = where('month').equals); openIaMonthPopup/closeIaMonthPopup/runIaMonthAnalysis -> riusa callAIEndpoint(prompt, 'iaMonthResponse', 'btnIaMonthAnalysis') gia presente (L4050) e saveNotes() verso months.iaNotes; wiring hub via IIFE addEventListener su #mese-action-hub.
+- FIX: tab popup Spese Condivise ora hanno onclick switchCondiviseTab('saldi'|'gruppi') (prima bloccati su Saldi).
+- CSS: #mese-action-hub + #mese-action-hub button (flex pills var(--panel)); rimosso blocco orfano .condivise-entry-btn (bilanciamento braces verificato, 534/534).
+- Verifica: node --check OK; tutti gli id/function cross-referenziati presenti.
+
+## 2026-08-11 - Fase 7 ROADMAP: Emoji picker categorie COMPLETATA
+- HTML: `#emojiPickerBtn` (placeholder emoji ) + `#emojiInput` nascosto nel grid-inputs della sezione categorie impostazioni (prima di `#newCatName`).
+- JS: `setupEmojiPicker` IIFE (click -> posizione fixed/opacity 0/focus per tastiera emoji nativa; input -> `[...val].pop()` -> testo bottone; blur -> reset). `saveCategory`: `chosenEmoji = document.getElementById('emojiPickerBtn')?.textContent`; branch edit `chosenEmoji || categoryIconMap[name] || MACRO_ICON[macro] || placeholder`, branch nuovo `chosenEmoji && chosenEmoji !== placeholder ? chosenEmoji : MACRO_ICON[macro] || placeholder`. `editCategory`: `pickerBtn.textContent = getCatIcon(cat)`.
+- CSS: `.emoji-picker-btn` (40px cerchio, bordo #cbd5e1, bg #f8fafc, font 20px), `:active` #e2e8f0, `.emoji-input-hidden` (clip rect 0, opacity 0).
+- Verifica: node --check OK, cross-ref id/class OK, braces 0/-.
+- ROADMAP completo: tutte le 7 fasi [x].
