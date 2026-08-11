@@ -1,5 +1,21 @@
 # Session Logs & Progress
 
+## [2026-08-11] - FIX overflow micro-categorie + card macro ristrutturate: solo icone FA in celle quadrate, titolo centrato, badge assoluto, glass quasi invisibile
+
+### ✅ Completed Changes (SOLO mobile, blocco ≤767)
+- **BUG FIXED — overflow a lista verticale**: celle prima `micro-emoji`+`micro-name` (testo nowrap su minmax 60px) spingevano la griglia fuori dal glass. Ora **SOLO icone**: `<i class="fas fa-...">` vettoriali (FontAwesome 6.5.0 già caricato), **nessun testo** nel render.
+- **Map FA**: `FA_ICON_MAP` (20 categorie predefinite → icone FA: basket-shopping, droplet, building, fire, bolt, trash, phone, pump-soap, house-chimney, gas-pump, motorcycle, screwdriver-wrench, file-invoice-dollar, shirt, paw, book-open, champagne-glasses, briefcase-medical, box) + `MACRO_FA` fallback per macro (`fa-house`/`fa-car`/`fa-cart-shopping`) + helper `faIconFor(cat,macro)` (custom → `fa-tag`). Dati reali da `userMacroCategories` (categoriaIconMap emoji resta per lista voci/registri, NON usata qui).
+- **Cella quadrata**: `.micro-cell` = `width/height 42px; aspect-ratio:1/1; flex center;` bg `rgba(255,255,255,0.5)` + bordo 0.8, icona 16px `color:inherit`. `.micro-more` = stesso quadrato, `⋯` solo (testo "+N altre" RIMOSSO).
+- **Layout card**: titolo `card-title` CENTRATO (`text-align:center; width:100%; margin:0 0 12px`) + **badge assoluto** `top:12px; right:10px` (.dash-card `position:relative; overflow:hidden`); `card-body` flex row space-between (icona `flex:0 0 25%` + glass) `overflow:hidden; min-width:0`; `.dash-card > * {min-width:0; max-width:100%}`.
+- **Glass quasi invisibile**: `rgba(255,255,255,0.15)` + `border rgba(255,255,255,0.2)` + radius 12px + padding 6px (rimosso blur(12px) e 0.5/bordo 0.8 invasivi).
+- **Griglia rigida**: `.card-micro-grid` + classi runtime `cols-2{repeat(2,1fr)}` / `cols-3{repeat(3,1fr)}` (`gap:6px; justify-items:center; align-content:center`); scelta in `renderMacroCards`: conteggio ≤4 → 2 colonne, 5/6 → 3. `micro-empty` invariato (✏️ Aggiungi categorie).
+- **Padding compatti**: `.dash-card` `clamp(8px,2vh,10px) 10px`, gap interni ridotti, icona macro clamp 26-34px, progress footer full-width invariato (fill #10b981/warn #f59e0b/over #ef4444).
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; div 290/290; braces CSS 691/691; zero residui `micro-name`/`micro-emoji`/`card-title-row`/`more-text` (solo `card-title`).
+
+---
+
 ## [2026-08-11] - LIGHT PASTEL THEME mobile: palette pastello, hero card panna con KPI 3-colonne, insight con fade, macro-card 2 colonne (icona+glass), rimossi banner gialli
 
 ### ✅ Completed Changes (SOLO mobile, blocco ≤767)

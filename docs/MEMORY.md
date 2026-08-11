@@ -1,6 +1,15 @@
 # Project Core Memory
 
-## 🎨 LIGHT PASTEL THEME mobile — hero panna KPI 3-colonne + macro-card 2 colonne (2026-08-11, STATO ATTUALE)
+## 🎨 LIGHT PASTEL mobile — FIX v2: micro-categorie SOLO icone FA quadrate + card ristrutturate (2026-08-11, STATO ATTUALE)
+- **Celle micro = solo icone FontAwesome, MAI testo**: `renderMacroCards` genera `<i class="fas fa-...">`; la cella è QUADRATA rigida (`width/height:42px; aspect-ratio:1/1; flex center`, bg `rgba(255,255,255,0.5)`). Testo label + `+N altre` RIMOSSI (solo `⋯` nel more-cell). Se rivedi la griglia: MAI reintrodurre nomi testuali nelle celle (causa del bug overflow a lista).
+- **Icone**: `FA_ICON_MAP` (20 default by name) + `MACRO_FA` fallback + `faIconFor(cat,macro)` → `fa-tag` per custom. `categoryIconMap` emoji RESTA per lista voci/registri/`getCatIcon` — non toccare.
+- **Griglia rigida**: `.card-micro-grid.cols-2{repeat(2,1fr)}` / `.cols-3{repeat(3,1fr)}`, `gap:6px; justify-items:center; align-content:center`; classe scelta in `renderMacroCards` (≤4 → 2 col, 5/6 → 3 col). `.card-glass` QUASI INVISIBILE: `rgba(255,255,255,0.15)` + bordo 0.2 + radius 12 + padding 6 (niente blur).
+- **Layout card macro**: `.dash-card{position:relative; overflow:hidden}`; titolo `h3.card-title` CENTRATO (`margin:0 0 12px`); badge ASSOLUTO `top:12px; right:10px`; `card-body` flex row `space-between; overflow:hidden` = icona `flex:0 0 25%` + glass; `.dash-card > *{min-width:0;max-width:100%}`. Padding card: `clamp(8px,2vh,10px) 10px`.
+- **Colori card invariati**: Casa `#B2DFDB`/`#004D40`/badge `#80CBC4`; Veicoli `#C8E6C9`/`#1B5E20`/badge `#A5D6A7`; Svago `#E1BEE7`/`#4A148C`/badge `#4A148C`+bianco. Fill progress `#10b981`/warn `#f59e0b`/over `#ef4444`, track `rgba(0,0,0,0.12)`.
+- **Body ≤767**: gradiente `135deg #E0F2F1→#FFF3E0→#E8F5E9` + `background-attachment:fixed`; hero card panna `rgba(255,255,255,0.6)`, KPI griglia `repeat(3,1fr)` (`heroEntrateTotal`/`heroSpesePreviste`/`heroSpeseSostenute`), insight fade 250ms (`heroInsightFadeT`), pill `rgba(255,255,255,0.8)`.
+- **Banner gialli RIMOSSI** (pill oro + deadlineAlert): `annualMonthAlert` (scadenze annuali, blu) INVARIATO. `.month-head` resta nascosto ≤767.
+
+## 🎨 LIGHT PASTEL THEME mobile — hero panna KPI 3-colonne + macro-card 2 colonne (2026-08-11, SOSTITUITO dal FIX v2 qui sopra)
 - **Palette ≤767**: `body` mobile = gradiente `linear-gradient(135deg,#E0F2F1,#FFF3E0,#E8F5E9)` + `background-attachment:fixed`; testo scuro ovunque su pastello; niente testo bianco tranne il badge LIFESTYLES (`#4A148C` su `#E1BEE7`). Desktop col `--bg` invariato.
 - **`#mobile-hero-card`**: panna `rgba(255,255,255,0.6)` + bordo `rgba(255,255,255,0.7)`, testo `#111827/#1F2937`. KPI = **griglia `repeat(3,1fr); gap:8px`**: `heroEntrateTotal` / `heroSpesePreviste` (+`openRendicontoPopup('previsto')`) / `heroSpeseSostenute` — `updateUI` scrive tutti e 3. Pillole interne (`hero-month-pill`/`hero-insight-pill`/`hero-mini-pill`): `rgba(255,255,255,0.8)` + bordo leggero + testo scuro.
 - **Insight rotante**: invariato (`renderHeroInsight` regole locali, interval 4s, tap next + pausa 6s) + **fade-in-out** via `showHeroInsight` (opacity 0 → 250ms → testo + opacity 1, `heroInsightFadeT` con clearTimeout anti-race); CSS `transition:opacity 0.25s ease`.

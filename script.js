@@ -253,6 +253,19 @@ const DEFAULT_ICONS = {
     "Tasse Auto": "💰", "Tasse Moto": "💰", Abbigliamento: "👕", Cane: "🐾",
     Formazione: "📚", "Imprevisti e Svago": "🎉", Sanitarie: "🏥", Varie: "📦"
 };
+const FA_ICON_MAP = {
+    Alimentari: 'fa-basket-shopping', "Bolletta Acqua": 'fa-droplet', "Bolletta Condominio": 'fa-building',
+    "Bolletta Gas": 'fa-fire', "Bolletta Luce": 'fa-bolt', "Bolletta Rifiuti": 'fa-trash',
+    "Bolletta Telefonia": 'fa-phone', "Igiene e Pulizia": 'fa-pump-soap', Mutuo: 'fa-house-chimney',
+    "Carburante Auto": 'fa-gas-pump', "Carburante Moto": 'fa-motorcycle', Manutenzioni: 'fa-screwdriver-wrench',
+    "Tasse Auto": 'fa-file-invoice-dollar', "Tasse Moto": 'fa-file-invoice-dollar', Abbigliamento: 'fa-shirt',
+    Cane: 'fa-paw', Formazione: 'fa-book-open', "Imprevisti e Svago": 'fa-champagne-glasses',
+    Sanitarie: 'fa-briefcase-medical', Varie: 'fa-box'
+};
+const MACRO_FA = { casa_utenze: 'fa-house', veicoli: 'fa-car', spese_svago: 'fa-cart-shopping' };
+function faIconFor(cat, macro) {
+    return FA_ICON_MAP[cat] || MACRO_FA[macro] || 'fa-tag';
+}
 let userMacroCategories = {};
 let userCategories = [];
 let categoryIconMap = {}; // { 'Alimentari': '🛒', ... }
@@ -3570,19 +3583,22 @@ function renderMacroCards() {
         if (grid) {
             grid.innerHTML = '';
             if (cats.length === 0) {
+                grid.className = 'card-micro-grid cols-2';
                 grid.innerHTML = '<div class="micro-empty">✏️ Aggiungi categorie</div>';
             } else {
-                cats.slice(0, 5).forEach(cat => {
+                const shown = cats.slice(0, 5);
+                const hasMore = cats.length > 5;
+                grid.className = 'card-micro-grid ' + ((shown.length + (hasMore ? 1 : 0)) <= 4 ? 'cols-2' : 'cols-3');
+                shown.forEach(cat => {
                     const cell = document.createElement('div');
                     cell.className = 'micro-cell';
-                    const icon = categoryIconMap[cat] || '📌';
-                    cell.innerHTML = `<span class="micro-emoji">${icon}</span><span class="micro-name">${cat}</span>`;
+                    cell.innerHTML = `<i class="fas ${faIconFor(cat, macro)}"></i>`;
                     grid.appendChild(cell);
                 });
-                if (cats.length > 5) {
+                if (hasMore) {
                     const more = document.createElement('div');
                     more.className = 'micro-more';
-                    more.innerHTML = `<span class="more-icon">⋯</span><span class="more-text">+${cats.length - 5} altre</span>`;
+                    more.innerHTML = '⋯';
                     grid.appendChild(more);
                 }
             }
