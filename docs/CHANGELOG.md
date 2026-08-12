@@ -1078,3 +1078,15 @@
 
 ### Status: COMPLETATO
 - node --check OK; braces CSS 710/710
+
+## [2026-08-12] - Refactoring modal inserimento spesa: input importo compatto (niente spin) + azioni nota
+
+### Completed Changes
+- **Spin rotante ELIMINATO**: rimosse 2 ruote (#integerWheel/#decimalWheel), input hidden, initNativeWheels, syncWheelToInput, syncInputToWheel, vars ruota (selectedInteger/selectedDecimal/WHEEL_ITEM_HEIGHT/isScrollingProgrammatically/handlers) e tutti i CSS .wheel-*
+- **Nuovo campo importo**: input type=text inputmode=decimal (tastierino numerico decimale su mobile) + simbolo € fisso a destra; getSheetAmount() con parsing virgola->punto
+- **Note actions**: 2 pulsanti icona sotto la nota (fa-camera #btnNoteCamera, fa-paperclip #btnNoteAttach) con handler placeholder vuoti (.note-action-btn)
+- **Compatto**: .sheet-amount-display height 150px -> auto (anche modal Entrata alleggerito); gap sheet-body 20->12, sheet-inputs 12->8, footer 20->10, header 15->8, recurring 12->8, shared-panel 10->8
+- **Live preview Dividi Spesa**: refresh updateSplitFields su input importo quando il panel e' attivo
+
+### Status: COMPLETATO
+- node --check OK; braces CSS 704/704; zero residui wheel nel codice

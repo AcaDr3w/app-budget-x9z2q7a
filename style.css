@@ -1573,81 +1573,14 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     padding: 10px 0;
 }
 
-/* Wheel styles */
+/* Amount display */
 .sheet-amount-display {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    height: 150px;
+    padding: 6px 0 2px;
     position: relative;
-}
-.wheel-container {
-    height: 150px;
-    width: 100px;
-    position: relative;
-    overflow: hidden;
-    border-radius: 12px;
-    background: #f8fafc;
-}
-.wheel-scroll {
-    height: 100%;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    -webkit-overflow-scrolling: touch;
-}
-.wheel-scroll::-webkit-scrollbar {
-    display: none;
-}
-
-/* Firefox scrollbar */
-.wheel-scroll {
-    scrollbar-width: none;
-}
-
-/* Hybrid input - invisible but clickable */
-.hidden-wheel-input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    z-index: 10;
-    border: none;
-    background: transparent;
-    pointer-events: none;
-}
-
-/* Focus feedback for active wheel */
-.wheel-container.focused {
-    background-color: rgba(0, 122, 255, 0.08);
-    border: 1.5px solid #007aff;
-    border-radius: 12px;
-    transition: background-color 0.2s, border 0.2s;
-}
-
-.wheel-item {
-    height: 50px;
-    line-height: 50px;
-    text-align: center;
-    font-size: 28px;
-    font-weight: 600;
-    color: #94a3b8;
-    scroll-snap-align: center;
-    scroll-snap-stop: normal;
-    transition: color 0.2s, transform 0.2s;
-}
-.wheel-item.selected {
-    color: var(--primary);
-    transform: scale(1.15);
-    font-weight: 700;
-}
-
-/* Visual separator and currency */
-.wheel-separator {
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--primary);
 }
 .currency-symbol {
     font-size: 28px;
@@ -1690,7 +1623,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .sheet-inputs {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 .sheet-input {
     width: 100%;
@@ -1701,11 +1634,37 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     background: #fff;
 }
 
+/* Quick note actions (camera / attach) */
+.sheet-note-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.note-action-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.note-action-btn:active {
+    background: #e2e8f0;
+    transform: scale(0.94);
+}
+
 /* Sheet footer with two buttons */
 .sheet-footer {
     display: flex;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 10px;
     flex-shrink: 0;
 }
 .sheet-footer button {
@@ -1735,7 +1694,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 #viewInput > .sheet-body {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
     flex: 1 1 auto;
     min-height: 100px;
     overflow-y: auto !important;
@@ -1763,8 +1722,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 10px 16px;
-    margin-bottom: 15px;
+    padding: 8px 16px;
+    margin-bottom: 8px;
 }
 .btn-back-sheet {
     background: #f0f2f5;
@@ -1987,7 +1946,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .recurring-toggle-wrapper {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     padding: 4px 0;
 }
 .toggle-switch {
@@ -2439,7 +2398,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     margin-top: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 .shared-panel.active {
     max-height: 340px;

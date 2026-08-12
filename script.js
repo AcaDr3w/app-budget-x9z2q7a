@@ -695,8 +695,7 @@ function openTransactionSheet(categoryName) {
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
     const title = document.getElementById('selected-category-title');
-    const intInput = document.getElementById('hiddenIntegerInput');
-    const decInput = document.getElementById('hiddenDecimalInput');
+    const amountInput = document.getElementById('amountInput');
     const sheetDate = document.getElementById('sheetDate');
     const toggleOptions = document.querySelectorAll('.toggle-option');
     
@@ -708,8 +707,7 @@ if (overlay && sheet && title) {
         sheet.classList.add('open');
         
         // Reset inputs
-        if (intInput) intInput.value = '';
-        if (decInput) decInput.value = '';
+        if (amountInput) amountInput.value = '';
         
         // Reset date to today
         if (sheetDate) {
@@ -719,8 +717,6 @@ if (overlay && sheet && title) {
         
         // Reset toggle to 'actual' (Sostenuta)
         toggleOptions.forEach(opt => opt.classList.toggle('active', opt.dataset.type === 'actual'));
-        
-        initNativeWheels();
     }
 }
 
@@ -805,15 +801,10 @@ function editExpense(id) {
 
     if (sheetTitle) sheetTitle.textContent = exp.category;
 
-    // Pre-fill amount via wheels
+    // Pre-fill amount
     const amount = exp.planned || exp.actual || 0;
-    const intPart = Math.floor(amount);
-    const decPart = Math.round((amount - intPart) * 100);
-    initNativeWheels();
-    syncInputToWheel('integer', intPart);
-    syncInputToWheel('decimal', decPart);
-    syncWheelToInput('integer', intPart);
-    syncWheelToInput('decimal', decPart);
+    const amountInput = document.getElementById('amountInput');
+    if (amountInput) amountInput.value = amount.toFixed(2).replace('.', ',');
 
     // Pre-fill date
     if (sheetDate && exp.date) {
@@ -1294,19 +1285,17 @@ function setExpenseTypePill(el) {
     if (pagato) pagato.style.borderColor = type === 'actual' ? '#ef4444' : '';
 }
 
-function getWheelSheetAmount() {
-    const intInput = document.getElementById('hiddenIntegerInput');
-    const decInput = document.getElementById('hiddenDecimalInput');
-    const intVal = parseInt(intInput?.value) || (typeof selectedInteger !== 'undefined' ? selectedInteger : 0);
-    const decVal = parseInt(decInput?.value) || (typeof selectedDecimal !== 'undefined' ? selectedDecimal : 0);
-    return intVal + (decVal / 100);
+function getSheetAmount() {
+    const raw = (document.getElementById('amountInput')?.value || '').trim().replace(',', '.');
+    const val = parseFloat(raw);
+    return isFinite(val) && val > 0 ? val : 0;
 }
 
 function updateSplitFields() {
     const container = document.getElementById('sharedDetailFields');
     const activeMethod = document.querySelector('.split-pill.active');
     const method = activeMethod ? activeMethod.dataset.method : 'equal';
-    const totalAmount = getWheelSheetAmount();
+    const totalAmount = getSheetAmount();
     if (!container) return;
 
     if (method === 'equal') {
@@ -1822,211 +1811,6 @@ async function deleteRecurringGroup(groupId) {
     }
 }
 
-// Wheel state
-let wheelDebounceTimer = null;
-let isScrollingProgrammatically = false;
-let selectedInteger = 0;
-let selectedDecimal = 0;
-
-// Store scroll handlers for removal during programmatic scroll
-let intWheelScrollHandler = null;
-let decWheelScrollHandler = null;
-
-// Constants for wheel calculations
-const WHEEL_ITEM_HEIGHT = 50; // Must match CSS .wheel-item height
-
-function initNativeWheels() {
-    const intWheel = document.getElementById('integerWheel');
-    const decWheel = document.getElementById('decimalWheel');
-    const intInput = document.getElementById('hiddenIntegerInput');
-    const decInput = document.getElementById('hiddenDecimalInput');
-    
-    if (!intWheel || !decWheel) return;
-    
-    // Generate integer wheel (0-999) with padding
-    intWheel.innerHTML = '';
-    decWheel.innerHTML = '';
-    
-    // Padding items for proper snap (empty items before/after)
-    const intPaddingBefore = document.createElement('div');
-    intPaddingBefore.className = 'wheel-item';
-    intPaddingBefore.style.height = '50px';
-    intWheel.appendChild(intPaddingBefore);
-    
-    for (let i = 0; i <= 999; i++) {
-        const span = document.createElement('div');
-        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
-        span.textContent = i.toString().padStart(3, '0');
-        span.dataset.value = i.toString().padStart(3, '0');
-        intWheel.appendChild(span);
-    }
-    
-    const intPaddingAfter = document.createElement('div');
-    intPaddingAfter.className = 'wheel-item';
-    intPaddingAfter.style.height = '50px';
-    intWheel.appendChild(intPaddingAfter);
-    
-    // Decimal wheel (00-99) with padding
-    const decPaddingBefore = document.createElement('div');
-    decPaddingBefore.className = 'wheel-item';
-    decPaddingBefore.style.height = '50px';
-    decWheel.appendChild(decPaddingBefore);
-    
-    for (let i = 0; i <= 99; i++) {
-        const span = document.createElement('div');
-        span.className = 'wheel-item' + (i === 0 ? ' selected' : '');
-        span.textContent = i.toString().padStart(2, '0');
-        span.dataset.value = i.toString().padStart(2, '0');
-        decWheel.appendChild(span);
-    }
-    
-    const decPaddingAfter = document.createElement('div');
-    decPaddingAfter.className = 'wheel-item';
-    decPaddingAfter.style.height = '50px';
-    decWheel.appendChild(decPaddingAfter);
-    
-    // Reset selections
-    selectedInteger = 0;
-    selectedDecimal = 0;
-    
-    // Define scroll handlers and store them for later removal
-    intWheelScrollHandler = function() {
-        // Skip if we're scrolling programmatically
-        if (isScrollingProgrammatically) return;
-        
-        clearTimeout(wheelDebounceTimer);
-        wheelDebounceTimer = setTimeout(() => {
-            const items = intWheel.querySelectorAll('.wheel-item');
-            const centerY = intWheel.scrollTop + 75; // 150px/2
-            let closestIdx = 0;
-            let closestDiff = Infinity;
-            
-            items.forEach((item, idx) => {
-                const itemTop = idx * WHEEL_ITEM_HEIGHT;
-                const itemCenter = itemTop + (WHEEL_ITEM_HEIGHT / 2);
-                const diff = Math.abs(centerY - itemCenter);
-                if (diff < closestDiff) {
-                    closestDiff = diff;
-                    closestIdx = idx;
-                }
-            });
-            
-            // Skip padding items (first and last)
-            if (closestIdx > 0 && closestIdx < items.length - 1) {
-                selectedInteger = closestIdx - 1;
-                items.forEach((item, idx) => {
-                    item.classList.toggle('selected', idx === closestIdx);
-                });
-                syncWheelToInput('integer', selectedInteger);
-            }
-        }, 100);
-    };
-    
-    decWheelScrollHandler = function() {
-        // Skip if we're scrolling programmatically
-        if (isScrollingProgrammatically) return;
-        
-        clearTimeout(wheelDebounceTimer);
-        wheelDebounceTimer = setTimeout(() => {
-            const items = decWheel.querySelectorAll('.wheel-item');
-            const centerY = decWheel.scrollTop + 75;
-            let closestIdx = 0;
-            let closestDiff = Infinity;
-            
-            items.forEach((item, idx) => {
-                const itemTop = idx * WHEEL_ITEM_HEIGHT;
-                const itemCenter = itemTop + (WHEEL_ITEM_HEIGHT / 2);
-                const diff = Math.abs(centerY - itemCenter);
-                if (diff < closestDiff) {
-                    closestDiff = diff;
-                    closestIdx = idx;
-                }
-            });
-            
-            if (closestIdx > 0 && closestIdx < items.length - 1) {
-                selectedDecimal = closestIdx - 1;
-                items.forEach((item, idx) => {
-                    item.classList.toggle('selected', idx === closestIdx);
-                });
-                syncWheelToInput('decimal', selectedDecimal);
-            }
-        }, 100);
-    };
-    
-    intWheel.addEventListener('scroll', intWheelScrollHandler);
-    decWheel.addEventListener('scroll', decWheelScrollHandler);
-    
-    // Sync input changes to wheels - INPUT event for real-time sync
-    const intContainer = document.getElementById('integerWheelContainer');
-    const decContainer = document.getElementById('decimalWheelContainer');
-    
-    // Debounce timers for input events
-    let intInputDebounceTimer = null;
-    let decInputDebounceTimer = null;
-    
-    if (intInput) {
-        intInput.addEventListener('input', () => {
-            // Debounce the scroll to avoid interrupting fast typing
-            clearTimeout(intInputDebounceTimer);
-            intInputDebounceTimer = setTimeout(() => {
-                const val = parseInt(intInput.value) || 0;
-                if (val >= 0 && val <= 999) {
-                    syncInputToWheel('integer', val);
-                }
-            }, 150);
-        });
-        // Enter key moves focus to decimal with small delay to avoid blur conflict
-        intInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && decInput) {
-                e.preventDefault();
-                setTimeout(() => decInput.focus(), 50);
-            }
-        });
-        // Focus/blur visual feedback + select all on focus
-        intInput.addEventListener('focus', (e) => {
-            if (intContainer) intContainer.classList.add('focused');
-            e.target.select();
-        });
-        intInput.addEventListener('blur', () => {
-            if (intContainer) intContainer.classList.remove('focused');
-            isScrollingProgrammatically = false; // Reset flag on blur
-        });
-    }
-    
-    if (decInput) {
-        decInput.addEventListener('input', () => {
-            clearTimeout(decInputDebounceTimer);
-            decInputDebounceTimer = setTimeout(() => {
-                let val = parseInt(decInput.value) || 0;
-                if (val < 0) val = 0;
-                if (val > 99) val = 99;
-                syncInputToWheel('decimal', val);
-            }, 150);
-        });
-        // Focus/blur visual feedback + select all on focus
-        decInput.addEventListener('focus', (e) => {
-            if (decContainer) decContainer.classList.add('focused');
-            e.target.select();
-        });
-        decInput.addEventListener('blur', () => {
-            if (decContainer) decContainer.classList.remove('focused');
-            isScrollingProgrammatically = false; // Reset flag on blur
-        });
-    }
-    
-// Click on wheel container opens keyboard
-    if (intContainer) {
-        intContainer.addEventListener('click', () => {
-            if (intInput) intInput.focus();
-        });
-    }
-    if (decContainer) {
-        decContainer.addEventListener('click', () => {
-            if (decInput) decInput.focus();
-        });
-    }
-}
-
 // =====================================================================
 // BOTTOM SHEET WITH MACRO/MICRO CATEGORIES (ORIGINAL GRID INJECTION)
 // =====================================================================
@@ -2228,21 +2012,17 @@ function slideToInputView(categoryName) {
     if (sheetTitle) sheetTitle.textContent = categoryName;
     if (sheetTitle) sheetTitle.style.color = '';
     
-    // Reset inputs and init wheels
-    const intInput = document.getElementById('hiddenIntegerInput');
-    const decInput = document.getElementById('hiddenDecimalInput');
+    // Reset inputs
+    const amountInput = document.getElementById('amountInput');
     const sheetDate = document.getElementById('sheetDate');
     const toggleOptions = document.querySelectorAll('.toggle-option');
     
-    if (intInput) intInput.value = '';
-    if (decInput) decInput.value = '';
+    if (amountInput) amountInput.value = '';
     if (sheetDate) sheetDate.value = new Date().toISOString().slice(0, 10);
     
     toggleOptions.forEach(opt => {
         opt.classList.toggle('active', opt.dataset.type === 'actual');
     });
-    
-    initNativeWheels();
 }
 
 function slideBackToCategories() {
@@ -2289,69 +2069,6 @@ function setupBottomSheetBackBtn() {
     const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) {
         backBtn.addEventListener('click', slideBackToCategories);
-    }
-}
-
-function syncWheelToInput(type, value) {
-    const intInput = document.getElementById('hiddenIntegerInput');
-    const decInput = document.getElementById('hiddenDecimalInput');
-    
-    if (type === 'integer' && intInput) {
-        intInput.value = value;
-    } else if (type === 'decimal' && decInput) {
-        decInput.value = value;
-    }
-}
-
-// Sync input value to wheel scroll position using DOM-based approach
-function syncInputToWheel(type, value) {
-    const intWheel = document.getElementById('integerWheel');
-    const decWheel = document.getElementById('decimalWheel');
-    
-    if (type === 'integer' && intWheel) {
-        selectedInteger = value;
-        // Format value with padding
-        const formattedValue = value.toString().padStart(3, '0');
-        // Find element by data-value
-        const targetElement = intWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
-        if (targetElement) {
-            isScrollingProgrammatically = true;
-            // Remove scroll listener temporarily
-            if (intWheelScrollHandler) {
-                intWheel.removeEventListener('scroll', intWheelScrollHandler);
-            }
-            // Use scrollIntoView to center the element
-            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Re-add listener and reset flag after smooth scroll completes
-            setTimeout(() => {
-                if (intWheelScrollHandler) {
-                    intWheel.addEventListener('scroll', intWheelScrollHandler);
-                }
-                isScrollingProgrammatically = false;
-            }, 400);
-        }
-    } else if (type === 'decimal' && decWheel) {
-        selectedDecimal = value;
-        // Format value with padding
-        const formattedValue = value.toString().padStart(2, '0');
-        // Find element by data-value
-        const targetElement = decWheel.querySelector(`.wheel-item[data-value="${formattedValue}"]`);
-        if (targetElement) {
-            isScrollingProgrammatically = true;
-            // Remove scroll listener temporarily
-            if (decWheelScrollHandler) {
-                decWheel.removeEventListener('scroll', decWheelScrollHandler);
-            }
-            // Use scrollIntoView to center the element
-            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Re-add listener and reset flag after smooth scroll completes
-            setTimeout(() => {
-                if (decWheelScrollHandler) {
-                    decWheel.addEventListener('scroll', decWheelScrollHandler);
-                }
-                isScrollingProgrammatically = false;
-            }, 400);
-        }
     }
 }
 
@@ -2428,15 +2145,11 @@ function setupToggleType() {
 // Save transaction from bottom sheet
 async function saveTransactionFromSheet() {
     const month = document.getElementById('currentMonth').value;
-    const intInput = document.getElementById('hiddenIntegerInput');
-    const decInput = document.getElementById('hiddenDecimalInput');
     const sheetDate = document.getElementById('sheetDate');
     const sheetNote = document.getElementById('sheetNote');
     const saveBtn = document.getElementById('saveTransactionBtn');
     
-    const intVal = parseInt(intInput?.value) || selectedInteger;
-    const decVal = parseInt(decInput?.value) || selectedDecimal;
-    const amount = intVal + (decVal / 100);
+    const amount = getSheetAmount();
     
     if (amount <= 0) {
         alert('Inserisci un importo maggiore di zero');
@@ -2608,6 +2321,22 @@ async function saveTransactionFromSheet() {
     if (sheet) {
         sheet.addEventListener('click', (e) => e.stopPropagation());
     }
+
+    // Amount input: select all on focus + live refresh of split preview
+    const amountInput = document.getElementById('amountInput');
+    if (amountInput) {
+        amountInput.addEventListener('focus', (e) => e.target.select());
+        amountInput.addEventListener('input', () => {
+            const panel = document.getElementById('sharedPanel');
+            if (panel && panel.classList.contains('active')) updateSplitFields();
+        });
+    }
+
+    // Note actions (placeholder: logica foto/allegato in sviluppo)
+    const camBtn = document.getElementById('btnNoteCamera');
+    const attachBtn = document.getElementById('btnNoteAttach');
+    if (camBtn) camBtn.addEventListener('click', () => {});
+    if (attachBtn) attachBtn.addEventListener('click', () => {});
 })();
 
 // Initialize toggle when DOM ready

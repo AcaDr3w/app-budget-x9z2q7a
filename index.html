@@ -936,15 +936,7 @@
             <div id="viewInput" class="sheet-view">
                 <div class="sheet-body">
                     <div class="sheet-amount-display">
-                        <div class="wheel-container" id="integerWheelContainer">
-                            <div class="wheel-scroll" id="integerWheel"></div>
-                            <input type="number" id="hiddenIntegerInput" class="hidden-wheel-input" min="0" max="9999" inputmode="numeric">
-                        </div>
-                        <span class="wheel-separator">,</span>
-                        <div class="wheel-container" id="decimalWheelContainer">
-                            <div class="wheel-scroll" id="decimalWheel"></div>
-                            <input type="number" id="hiddenDecimalInput" class="hidden-wheel-input" min="0" max="99" inputmode="numeric">
-                        </div>
+                        <input type="text" id="amountInput" class="amount-input" inputmode="decimal" placeholder="0,00" autocomplete="off">
                         <span class="currency-symbol">€</span>
                     </div>
                     
@@ -956,6 +948,14 @@
                     <div class="sheet-inputs">
                         <input type="date" id="sheetDate" class="sheet-input">
                         <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Spesa Esselunga)">
+                        <div class="sheet-note-actions">
+                            <button type="button" class="note-action-btn" id="btnNoteCamera" title="Scatta una foto" aria-label="Scatta una foto">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button type="button" class="note-action-btn" id="btnNoteAttach" title="Allega un file" aria-label="Allega un file">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="recurring-toggle-wrapper">

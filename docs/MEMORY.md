@@ -374,3 +374,9 @@ overscroll-behavior: none !important;
 - Hero 'Spese Previste': stessa regola su tutte le categorie (getCategoryMacroGroup ha fallback = tutte le categorie coperte)
 - openBottomSheetFromMacro e enderMacroBudgetBadge sono async (await su db)
 - Bottomsheet grid: max-height none + card compatte (10px 6px, icona 1.3rem) -> 9 container sempre fissi
+
+## REGOLA: IMPORT O SPESA = INPUT TESTO, MAI RUOTE (2026-08-12)
+- Il bottomsheet spesa usa #amountInput (type=text, inputmode=decimal -> tastierino decimale nativo, virgola ok) + span .currency-symbol € a destra. MAI piu' .wheel-* / hiddenIntegerInput / initNativeWheels / selectedInteger (rimossi da DOM, CSS e JS).
+- Leggere l'importo SEMPRE con getSheetAmount() (virgola->punto, parseFloat, >0).
+- #btnNoteCamera / #btnNoteAttach = placeholder (logica foto/allegato futura).
+- Spazi compact sheet: gap 12/8, footer mt 10, header mb 8. Live preview Dividi su input importo.
