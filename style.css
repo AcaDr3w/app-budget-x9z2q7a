@@ -1524,7 +1524,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 .bottom-sheet .drag-handle-wrapper {
     flex-shrink: 0;
@@ -1579,7 +1579,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 6px 0 2px;
+    padding: 4px 0 0;
     position: relative;
 }
 .currency-symbol {
@@ -1627,9 +1627,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .sheet-input {
     width: 100%;
-    padding: 12px 14px;
+    padding: 12px 16px;
     font-size: 15px;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #cbd5e1;
     background: #fff;
 }
@@ -1639,6 +1639,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-top: 4px;
 }
 .note-action-btn {
     width: 40px;
@@ -1663,9 +1664,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 /* Sheet footer with two buttons */
 .sheet-footer {
     display: flex;
-    gap: 10px;
-    margin-top: 10px;
+    gap: 12px;
+    width: 100%;
+    margin-top: 12px;
     flex-shrink: 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 .sheet-footer button {
     flex: 1;
@@ -1700,8 +1703,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
-    padding: 15px;
-    padding-bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+    padding: 16px;
+    padding-bottom: 16px !important;
 }
 .bottom-sheet .sheet-slider {
     flex: 1;
@@ -1715,6 +1718,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     flex: 0 0 100%;
     min-width: 100%;
     min-height: 0;
+}
+#viewCategories {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* ===== BOTTOM SHEET HEADER (Back Button + Title) ===== */
@@ -1808,10 +1815,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .macro-budget-badge {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
     box-sizing: border-box;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: 14px;
     background: var(--macro-tint, #f4f6f8);
     border: 1px solid var(--macro-border, transparent);
@@ -1946,8 +1953,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .recurring-toggle-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     padding: 4px 0;
+    margin-top: 8px;
 }
 .toggle-switch {
     position: relative;
@@ -2387,6 +2395,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     align-items: center;
     gap: 12px;
     padding: 4px 0;
+    margin-top: 8px;
 }
 .shared-panel {
     overflow: clip;

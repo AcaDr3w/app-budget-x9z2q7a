@@ -380,3 +380,8 @@ overscroll-behavior: none !important;
 - Leggere l'importo SEMPRE con getSheetAmount() (virgola->punto, parseFloat, >0).
 - #btnNoteCamera / #btnNoteAttach = placeholder (logica foto/allegato futura).
 - Spazi compact sheet: gap 12/8, footer mt 10, header mb 8. Live preview Dividi su input importo.
+
+## REGOLA: BOTTOM SHEET SPAESE - HEADER/FOOTER FISSI (2026-08-12)
+- .bottom-sheet = flex column + overflow hidden (max-heigh 85vh); .sheet-slider flex:1 min-height:0; SOLO .sheet-body (view input) e #viewCategories scorrono (overflow-y auto).
+- .sheet-footer e' sibling del .sheet-body dentro #viewInput -> fisso in basso, padding-bottom env(safe-area-inset-bottom).
+- Toggle recurring/shared: flex align-center gap 12px margin-top 8px. Input sheet: padding 12px 16px radius 12px.

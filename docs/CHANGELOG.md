@@ -1090,3 +1090,18 @@
 
 ### Status: COMPLETATO
 - node --check OK; braces CSS 704/704; zero residui wheel nel codice
+
+## [2026-08-12] - Bottom sheet spese: header/footer fissi, solo area centrale scrollabile + spacing rifinito
+
+### Completed Changes
+- .bottom-sheet overflow-y auto -> hidden (header e footer mai sotto scroll); #viewCategories overflow-y auto (sicurezza)
+- .sheet-body: padding 16px, rimosso padding-bottom 85px (footer ora fisso fuori dallo scroll)
+- .sheet-footer: gap 12px, margin-top 12px, width 100%, padding-bottom calc(16px + env(safe-area-inset-bottom))
+- .macro-budget-badge (pill verde): padding 8px 12px, gap 8px (piu compatta)
+- .sheet-input: padding 12px 16px, border-radius 12px
+- .sheet-note-actions: margin-top 4px
+- .recurring-toggle-wrapper e .shared-toggle-wrapper: gap 12px, margin-top 8px
+- .sheet-amount-display: padding 4px 0 0 (centratura importo)
+
+### Status: COMPLETATO
+- braces CSS 705/705 OK
