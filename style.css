@@ -1516,11 +1516,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     visibility: hidden;
     pointer-events: none;
     overscroll-behavior-y: contain !important;
-    height: 85dvh;
-    max-height: 85dvh;
+    height: auto;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
+    overflow-y: auto;
 }
 .bottom-sheet .drag-handle-wrapper {
     flex-shrink: 0;
@@ -1790,8 +1791,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-    padding: 16px 8px;
-    max-height: 60vh;
+    padding: 16px 8px 4px;
+    max-height: 46vh;
     overflow-y: auto;
 }
 .bottom-sheet-cat-card {
@@ -1801,7 +1802,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     justify-content: center;
     padding: 14px 8px;
     border-radius: 18px;
-    background: #f4f6f8;
+    background: var(--macro-tint, #f4f6f8);
+    border: 1px solid var(--macro-border, transparent);
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     text-align: center;
     cursor: pointer;
@@ -1813,7 +1815,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .bottom-sheet-cat-card .cat-icon-wrap {
     font-size: 1.5rem;
     margin-bottom: 6px;
-    color: #333;
+    color: var(--macro-accent, #333);
 }
 .bottom-sheet-cat-card .cat-name {
     font-size: 0.75rem;
@@ -1821,6 +1823,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     line-height: 1.1;
     color: #2c3e50;
     word-break: break-word;
+}
+.bottom-sheet-cat-card .cat-speso {
+    margin-top: 3px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--macro-accent, #64748b);
+    white-space: nowrap;
 }
 .bottom-sheet-empty {
     padding: 32px 16px;
@@ -1830,13 +1839,125 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     font-weight: 500;
 }
 
+/* ===== MACRO SHEET: BUDGET SUMMARY BADGE ===== */
+.macro-sheet-subheader {
+    padding: 0 8px 4px;
+}
+.macro-budget-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--macro-tint, #f4f6f8);
+    border: 1px solid var(--macro-border, transparent);
+    font-size: 0.78rem;
+    color: #2c3e50;
+}
+.macro-budget-badge .badge-label {
+    white-space: nowrap;
+}
+.macro-budget-badge b {
+    color: var(--macro-accent, #333);
+    font-weight: 700;
+}
+.macro-budget-badge .badge-progress {
+    flex: 1;
+    min-width: 60px;
+    height: 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+.macro-budget-badge .badge-progress-bar {
+    height: 100%;
+    border-radius: 6px;
+    background: var(--macro-accent, #2a9d8f);
+}
+
+/* ===== MACRO SHEET: ULTIME SPESE ===== */
+.macro-sheet-recent {
+    padding: 14px 8px 8px;
+}
+.macro-recent-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--macro-accent, #2c3e50);
+    margin-bottom: 8px;
+}
+.macro-recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 34vh;
+    overflow-y: auto;
+}
+.macro-recent-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.macro-recent-icon {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: var(--macro-accent, #333);
+    background: var(--macro-tint, #f4f6f8);
+}
+.macro-recent-main {
+    flex: 1;
+    min-width: 0;
+}
+.macro-recent-cat {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #2c3e50;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.macro-recent-desc {
+    font-size: 0.68rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.macro-recent-date {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    color: #94a3b8;
+}
+.macro-recent-amount {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--macro-accent, #333);
+}
+
 /* ===== PROGRESS BAR INSIDE CATEGORY TILES ===== */
 .cat-progress-track {
     width: 80%;
     height: 4px;
     background-color: #e9ecef;
     border-radius: 4px;
-    margin-top: 8px;
+    margin-top: 6px;
     overflow: hidden;
 }
 .cat-progress-bar {

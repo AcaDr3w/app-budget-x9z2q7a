@@ -1,5 +1,21 @@
 # Session Logs & Progress
 
+## [2026-08-12] - Bottom Sheet Macro-Categorie ridisegnato: altezza dinamica, tema cromatico per macro, badge budget + ultime spese
+
+### ✅ Completed Changes
+- **Altezza dinamica**: `.bottom-sheet` da `height:85dvh` fissa → `height:auto; max-height:85vh; overflow-y:auto` (fine del vuoto in basso; il form spesa ora scrolla l'intero sheet). `.bottom-sheet-grid` `max-height: 60vh` → `46vh`.
+- **Tema cromatico per macro** (nuovo const `MACRO_THEME` in script.js): CSS vars `--macro-accent/--macro-tint/--macro-border` settate su `#bottomSheet` in `openBottomSheetFromMacro`. Casa/Utenze ottanio `#2a9d8f`, Veicoli verde `#7bc043`, Spese e Svago viola `#6f42c1`.
+- **Micro-card unificate**: rimosso `card.style.background = getCategoryCardBg(cat)` (colori casuali hash) → sfondo `--macro-tint` + bordo `--macro-border` neutri; colore tematico solo su icona, importo e barra progresso (stati warn `#f59e0b`/over `#ef4444` invariati, normal = accent macro).
+- **Importo speso nelle micro-card**: nuovo `.cat-speso` sotto il nome (`fmtEPlain(aVal,0)` es. "14 €").
+- **Badge budget header**: nuovo `#macroSheetSubheader` + `.macro-budget-badge` ("Speso: X su Y disponibili" + mini progress bar accent, over/warn semantiche).
+- **Ultime spese**: nuovo `#macroSheetRecent` + `renderMacroRecentSpese(macroGroup)` — top 5 movimenti della macro (actual>0 altrimenti planned), sort data desc, righe con icona FA, categoria, desc, data gg/mm, importo accent; blocco nascosto se vuoto.
+- **Titolo sheet**: colorato con accent macro in apertura, reset in `slideToInputView`/`closeTransactionSheet`, ripristino in `slideBackToCategories`.
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; braces CSS 710/710; `getCategoryCardBg` resta (usata da `.reg-dot`).
+
+---
+
 ## [2026-08-11] - Refactoring Responsive UI fluida: badge stacked sopra titolo (zero sovrapposizioni), griglia auto-fit con celle fluide clamp, hub flessibile flex:1 1 0
 
 ### ✅ Completed Changes (SOLO mobile, blocco ≤767)

@@ -329,6 +329,13 @@ function getCategoryMacroGroup(catName) {
     return 'spese_svago'; // fallback per categorie non mappate
 }
 
+// Tema cromatico per il bottom sheet delle macro-categorie
+const MACRO_THEME = {
+    casa_utenze: { accent: '#2a9d8f', tint: 'rgba(42,157,143,0.12)', border: 'rgba(42,157,143,0.30)' },
+    veicoli: { accent: '#7bc043', tint: 'rgba(123,192,67,0.12)', border: 'rgba(123,192,67,0.30)' },
+    spese_svago: { accent: '#6f42c1', tint: 'rgba(111,66,193,0.12)', border: 'rgba(111,66,193,0.30)' }
+};
+
 // Inizializzazione valori UI
 const dateNow = new Date();
 let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
@@ -732,6 +739,10 @@ function closeTransactionSheet() {
     sheetTransactionType = 'actual';
     sheetCurrentMacroGroup = null;
     editingExpenseId = null;
+
+    // Reset title color from macro theme
+    const sheetTitleEl = document.getElementById('selected-category-title');
+    if (sheetTitleEl) sheetTitleEl.style.color = '';
 
     // Reset recurring toggle
     const recToggle = document.getElementById('recurringToggle');
@@ -2026,6 +2037,14 @@ function openBottomSheetFromMacro(macroGroup) {
     
     if (!overlay || !sheet) return;
     
+    // Applica il tema cromatico della macro al bottom sheet
+    const theme = MACRO_THEME[macroGroup];
+    if (theme) {
+        sheet.style.setProperty('--macro-accent', theme.accent);
+        sheet.style.setProperty('--macro-tint', theme.tint);
+        sheet.style.setProperty('--macro-border', theme.border);
+    }
+    
     document.body.classList.add('sheet-open');
     document.body.style.overflow = 'hidden';
     overlay.classList.add('open');
@@ -2033,6 +2052,8 @@ function openBottomSheetFromMacro(macroGroup) {
     
     // Render micro categories in the grid
     renderMicroCategoriesGrid(macroGroup);
+    renderMacroBudgetBadge(macroGroup);
+    renderMacroRecentSpese(macroGroup);
     
     // Reset slider position
     const slider = document.querySelector('.sheet-slider');
@@ -2052,6 +2073,68 @@ function openBottomSheetFromMacro(macroGroup) {
         };
         sheetTitle.textContent = titles[macroGroup] || 'Categoria';
     }
+    if (sheetTitle && theme) sheetTitle.style.color = theme.accent;
+}
+
+function renderMacroBudgetBadge(macroGroup) {
+    const container = document.getElementById('macroSheetSubheader');
+    if (!container) return;
+    
+    const cats = userMacroCategories[macroGroup] || [];
+    const catSet = new Set(cats);
+    let planned = 0, actual = 0;
+    currentData.expenses.forEach(e => {
+        if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
+    });
+    
+    const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+    const barColor = planned > 0 && actual > planned ? '#ef4444' : (pct >= 80 ? '#f59e0b' : '');
+    
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="macro-budget-badge">
+            <span class="badge-label">Speso: <b>${fmtEPlain(actual, 0)}</b> su ${fmtEPlain(planned, 0)} disponibili</span>
+            <div class="badge-progress"><div class="badge-progress-bar" style="width: ${pct}%;${barColor ? ' background-color:' + barColor + ';' : ''}"></div></div>
+        </div>
+    `;
+}
+
+function renderMacroRecentSpese(macroGroup) {
+    const container = document.getElementById('macroSheetRecent');
+    if (!container) return;
+    
+    const cats = userMacroCategories[macroGroup] || [];
+    const catSet = new Set(cats);
+    const recent = currentData.expenses
+        .filter(e => catSet.has(e.category))
+        .map(e => ({ exp: e, amount: (e.actual || 0) > 0 ? e.actual : e.planned }))
+        .filter(r => r.amount > 0)
+        .sort((a, b) => {
+            const da = a.exp.date || a.exp.month + '-01';
+            const db = b.exp.date || b.exp.month + '-01';
+            return db.localeCompare(da) || b.exp.id - a.exp.id;
+        })
+        .slice(0, 5);
+    
+    if (recent.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+    
+    container.style.display = 'block';
+    container.innerHTML = '<div class="macro-recent-title">Ultime spese</div><div class="macro-recent-list">' +
+        recent.map(r => {
+            const exp = r.exp;
+            const dateStr = exp.date ? exp.date.split('-').reverse().slice(0, 2).join('/') : exp.month.split('-').reverse().slice(0, 2).join('/');
+            return `
+                <div class="macro-recent-row">
+                    <div class="macro-recent-icon"><i class="fas ${getFaIcon(exp.category)}"></i></div>
+                    <div class="macro-recent-main">
+                        <div class="macro-recent-cat">${exp.category}</div>
+                        ${exp.desc ? `<div class="macro-recent-desc">${exp.desc}</div>` : ''}
+                    </div>
+                    <span class="macro-recent-date">${dateStr}</span>
+                    <span class="macro-recent-amount">${fmtEPlain(r.amount, 0)}</span>
+                </div>
+            `;
+        }).join('') + '</div>';
 }
 
 function renderMicroCategoriesGrid(macroGroup) {
@@ -2066,6 +2149,7 @@ function renderMicroCategoriesGrid(macroGroup) {
         return;
     }
     
+    const theme = MACRO_THEME[macroGroup];
     const wrapper = document.createElement('div');
     wrapper.className = 'bottom-sheet-grid';
     
@@ -2080,22 +2164,22 @@ function renderMicroCategoriesGrid(macroGroup) {
             .reduce((s, e) => s + e.actual, 0);
         
         let perc = 0;
-        let barColor = '#2a9d8f';
+        let barColor = theme ? theme.accent : '#2a9d8f';
         if (pVal > 0) {
             perc = Math.min((aVal / pVal) * 100, 100);
-            if (perc >= 100) barColor = '#e76f51';
-            else if (perc > 70) barColor = '#e9c46a';
+            if (perc >= 100) barColor = '#ef4444';
+            else if (perc > 70) barColor = '#f59e0b';
         }
         
         const card = document.createElement('div');
         card.className = 'bottom-sheet-cat-card';
         card.dataset.id = cat;
-        card.style.background = getCategoryCardBg(cat);
         card.innerHTML = `
             <div class="cat-icon-wrap">
                 <i class="fas ${faIcon}"></i>
             </div>
             <span class="cat-name">${cat}</span>
+            <span class="cat-speso">${fmtEPlain(aVal, 0)}</span>
             <div class="cat-progress-track">
                 <div class="cat-progress-bar" style="width: ${perc}%; background-color: ${barColor};"></div>
             </div>
@@ -2121,6 +2205,7 @@ function slideToInputView(categoryName) {
     // Update title
     const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle) sheetTitle.textContent = categoryName;
+    if (sheetTitle) sheetTitle.style.color = '';
     
     // Reset inputs and init wheels
     const intInput = document.getElementById('hiddenIntegerInput');
@@ -2157,6 +2242,9 @@ function slideBackToCategories() {
         };
         sheetTitle.textContent = titles[sheetCurrentMacroGroup] || 'Categoria';
     }
+    
+    const backTheme = sheetCurrentMacroGroup ? MACRO_THEME[sheetCurrentMacroGroup] : null;
+    if (sheetTitle && backTheme) sheetTitle.style.color = backTheme.accent;
     
     sheetSelectedCategory = null;
 }

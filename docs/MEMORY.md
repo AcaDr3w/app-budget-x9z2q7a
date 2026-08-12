@@ -1,5 +1,14 @@
 # Project Core Memory
 
+## 🎨 BOTTOM SHEET MACRO-CATEGORIE v2 — altezza dinamica + tema macro + badge budget + ultime spese (2026-08-12)
+- **`.bottom-sheet` (STYLE.CSS 1504)**: `height:auto; max-height:85vh; overflow-y:auto` (niente più 85dvh fissa → niente vuoto in basso). GLOBALE per scelta utente: anche la view input spesa scrolla l'intero sheet. `.bottom-sheet-grid` `max-height:46vh` (era 60vh).
+- **Tema per macro**: const `MACRO_THEME` (script.js, dopo CATEGORIES_MAP) → `casa_utenze` ottanio `#2a9d8f`, `veicoli` verde `#7bc043`, `spese_svago` viola `#6f42c1`; ognuno con accent/tint/border. `openBottomSheetFromMacro` setta `--macro-accent/--macro-tint/--macro-border` su `#bottomSheet` + colore titolo accent.
+- **Micro-card UNIFORMI**: MAI più `getCategoryCardBg(cat)` (colori hash casuali) nel sheet — bg `var(--macro-tint)` + bordo `var(--macro-border)`; accent solo su `.cat-icon-wrap`, `.cat-speso` (importo speso `fmtEPlain(aVal,0)` sotto il nome) e barra progresso (normal=accent, warn `#f59e0b` >70%, over `#ef4444` ≥100%).
+- **Badge budget**: `#macroSheetSubheader` + `.macro-budget-badge` ("Speso: X su Y disponibili" + mini progress bar), render in `renderMacroBudgetBadge(macroGroup)`.
+- **Ultime spese**: `#macroSheetRecent` + `renderMacroRecentSpese(macroGroup)` (top 5 per data desc, actual>0 altrimenti planned, righe `.macro-recent-*`, blocco nascosto se vuoto).
+- **Reset titolo**: colore accent in apertura; `''` in `slideToInputView`/`closeTransactionSheet`; ripristinato in `slideBackToCategories`.
+- **Regola**: `fmtEPlain(n, 0)` già include " €" — NON aggiungere suffisso € nei template.
+
 ## 🎨 LIGHT PASTEL mobile — STATO ATTUALE: badge stacked, griglia auto-fit fluida (2026-08-11)
 - **Card macro**: `.card-header` = `flex column; align-items:center; gap:4px` → **badge sopra, titolo centrato sotto** (MAI più position:absolute sul badge — sovrapposizioni risolte). `.card-title` `margin:0`, ellipsis nowrap. Corpo: `card-body` flex row space-between (icona `flex:0 0 25%` + glass). Padding card `clamp(8px,2vh,10px) 10px`.
 - **Griglia micro-celle**: `.card-micro-grid` = `repeat(auto-fit, minmax(min(56px, 100%), 1fr))` + 2 righe max → wrap automatico (Svago full-width), 2 col sulle mezze card, **niente classi cols-2/cols-3** (rimosse). `min(56px,100%)` = difesa anti-esplosione a 320px (un 60px fisso rompeva).
