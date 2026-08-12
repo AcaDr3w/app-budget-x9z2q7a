@@ -1084,7 +1084,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         min-width: 0;
         min-height: 0;
         width: 100%;
-        overflow: hidden;
+        overflow: visible;
     }
     .dash-card .card-hero-icon {
         flex: 0 0 25%;
@@ -1118,9 +1118,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: rgba(255, 255, 255, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 24px;
-        padding: 6px;
+        padding: 8px 6px;
         margin: 8px 0;
-        overflow: hidden;
+        overflow: visible;
     }
     .card-micro-grid {
         display: grid;
@@ -1130,13 +1130,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-items: center;
         align-content: stretch;
         width: 100%;
-        height: 100%;
+        height: auto;
         min-width: 0;
         max-width: 100%;
     }
     .micro-cell {
         width: 100%;
-        height: 100%;
+        height: auto;
         min-width: 0;
         min-height: 0;
         display: flex;
@@ -1144,18 +1144,20 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center;
     }
     .micro-cell i {
+        flex-shrink: 0;
         font-size: clamp(12px, 3.8vw, 15px);
         line-height: 1;
         color: inherit;
     }
     .micro-more {
         width: 100%;
-        height: 100%;
+        height: auto;
         min-width: 0;
         min-height: 0;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
         color: #374151;
         font-size: clamp(14px, 4.2vw, 17px);
         line-height: 1;
@@ -1170,7 +1172,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         text-align: center;
         padding: 2px;
         width: 100%;
-        height: 100%;
+        height: auto;
+        flex-shrink: 0;
         gap: 3px;
     }
 

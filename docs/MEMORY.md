@@ -362,3 +362,8 @@ overscroll-behavior: none !important;
 - CSS: `.emoji-picker-btn` (40px cerchio, bordo #cbd5e1, bg #f8fafc, font 20px), `:active` #e2e8f0, `.emoji-input-hidden` (clip rect 0, opacity 0).
 - Verifica: node --check OK, cross-ref id/class OK, braces 0/-.
 - ROADMAP completo: tutte le 7 fasi [x].
+
+## REGOLA RESPONSIVE: container glass micro-categorie (2026-08-12)
+- **MAI** height fisse nella catena .card-body > .card-glass > .card-micro-grid > .micro-cell/.micro-more/.micro-empty (causa taglio icone top/bottom su schermi corti). Tutto height:auto (contenuto definisce).
+- .card-glass (STYLE.CSS 1110, blocco 767): padding: 8px 6px (respiro verticale), overflow: visible (mai clip). .card-body overflow visible.
+- Icone micro: lex-shrink:0 su .micro-cell i, .micro-more, .micro-empty + clamp() espliciti.

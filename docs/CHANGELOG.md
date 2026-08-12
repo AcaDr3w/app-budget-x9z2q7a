@@ -1055,3 +1055,15 @@
 - HTML: emojiPickerBtn + emojiInput (input nascosto) nel grid-inputs categorie impostazioni, prima di newCatName.
 - JS: IIFE setupEmojiPicker (tap -> focus input nascosto con tastiera emoji nativa; input -> ultimo codepoint -> testo bottone; blur -> reset style); saveCategory usa chosenEmoji in entrambi i branch (edit: chosenEmoji || icona esistente || MACRO_ICON; nuovo: emoji scelta se != placeholder); editCategory prefill bottone con getCatIcon(cat).
 - CSS: .emoji-picker-btn (cerchio 40px) + :active + .emoji-input-hidden (clip tecnica). Braces bilanciate.
+
+## [2026-08-12] - Fix: contenitori glass micro-categorie (Casa/Veicoli/Spese) tagliati
+
+### Completed Changes
+- .card-glass: padding 6px -> 8px 6px (respiro verticale), overflow hidden -> visible (stop taglio icone)
+- .card-micro-grid: height 100% -> auto (contenuto definisce l'altezza)
+- .micro-cell / .micro-more / .micro-empty: height 100% -> auto
+- .micro-cell i / .micro-more / .micro-empty: added flex-shrink: 0 (icone mai compresse)
+- .card-body: overflow hidden -> visible (rimosso clip genitore)
+
+### Status: COMPLETATO
+- braces CSS 710/710 OK
