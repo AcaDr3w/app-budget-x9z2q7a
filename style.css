@@ -2532,99 +2532,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     font-size: 14px;
     color: #94a3b8;
 }
-.condivise-add-person,
-.condivise-add-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 8px;
-}
-.condivise-add-person .btn-small,
-.condivise-add-group .btn-small {
-    flex-shrink: 0;
-    width: auto;
-    padding: 0 14px;
-    font-size: 13px;
-}
-.saldo-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.saldo-row:hover { background: #f1f5f9; }
-.saldo-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.saldo-name {
-    font-size: 14px;
-    font-weight: 700;
-    color: #0f172a;
-}
-.saldo-detail {
-    font-size: 11px;
-    color: #64748b;
-}
-.saldo-amount {
-    font-size: 16px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.saldo-positive { color: #10b981; }
-.saldo-negative { color: #ef4444; }
-.saldo-dovuto { border-left: 4px solid #10b981; }
-.saldo-debito { border-left: 4px solid #ef4444; }
-.btn-salda {
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: none;
-    background: #3b82f6;
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    width: auto;
-    margin: 0;
-    flex-shrink: 0;
-}
-.gruppo-card {
-    padding: 14px;
-    border-radius: 14px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.gruppo-card:hover { border-color: #8b5cf6; }
-.gruppo-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
-.gruppo-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #0f172a;
-}
-.gruppo-total {
-    font-size: 14px;
-    font-weight: 700;
-    color: #3b82f6;
-}
-.gruppo-members {
-    font-size: 11px;
-    color: #64748b;
-}
 
 /* ===== LEDGER - Detail View (dark) ===== */
 .condivise-detail-view {
@@ -3135,4 +3042,295 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 /* Griglia larga: cap a 5 colonne su schermi molto ampi */
 @media (min-width: 1600px) {
     .category-grid-desktop { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* =====================================================================
+   SHARED EXPENSES V2 - Dashboard styles
+   ===================================================================== */
+.condivise-title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+}
+#condiviseBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.condivise-search-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.condivise-search-add .sheet-input {
+    flex: 1;
+}
+.condivise-search-add .btn-small {
+    flex-shrink: 0;
+    padding: 0 16px;
+    font-size: 13px;
+    min-height: 44px;
+}
+
+/* Friend / Group list */
+.condivise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.friend-row,
+.group-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.friend-row:active,
+.group-card:active {
+    transform: scale(0.98);
+}
+.friend-avatar,
+.group-avatar,
+.detail-avatar-large {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+.group-avatar {
+    background: #8b5cf6;
+}
+.friend-info,
+.group-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.friend-name,
+.group-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.friend-status,
+.group-members {
+    font-size: 12px;
+    color: #64748b;
+}
+.friend-balance,
+.group-balance {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.saldo-positive { color: #10b981; }
+.saldo-negative { color: #ef4444; }
+.saldo-neutral { color: #94a3b8; }
+
+.btn-settle,
+.btn-settle-large,
+.btn-copy-link {
+    border: none;
+    border-radius: 12px;
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-settle {
+    padding: 8px 14px;
+    font-size: 12px;
+}
+.btn-settle-large {
+    padding: 12px 20px;
+    font-size: 14px;
+    margin-top: 10px;
+}
+.btn-copy-link {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.btn-settle:active,
+.btn-settle-large:active,
+.btn-copy-link:active {
+    transform: scale(0.96);
+}
+
+.group-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+.group-card-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.group-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* Detail view (light theme) */
+.condivise-detail-view {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 4px;
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+    color: #0f172a;
+    border-radius: 16px;
+}
+.condivise-detail-header {
+    text-align: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.detail-avatar-large {
+    width: 64px;
+    height: 64px;
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+.condivise-detail-header .detail-header-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.condivise-detail-header .detail-header-balance {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+.condivise-detail-header .detail-header-members {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+.group-invite-box,
+.group-add-member {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+    width: 100%;
+}
+.group-invite-box .sheet-input,
+.group-add-member .sheet-input {
+    flex: 1;
+    font-size: 13px;
+}
+
+/* Ledger */
+.condivise-detail-ledger {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ledger-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ledger-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+}
+.ledger-row.ledger-settled {
+    opacity: 0.55;
+}
+.ledger-row-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.ledger-row-right {
+    text-align: right;
+    flex-shrink: 0;
+}
+.ledger-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.ledger-desc {
+    font-size: 14px;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+.ledger-type {
+    font-size: 11px;
+    color: #64748b;
+}
+.ledger-amount {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.debts-summary {
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 2px;
+}
+.debt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #eef2ff;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #3730a3;
+}
+.debt-amount {
+    font-weight: 700;
+}
+
+@media (max-width: 767px) {
+    .condivise-detail-view {
+        max-height: 65vh;
+    }
+    .ledger-desc {
+        max-width: 160px;
+    }
 }

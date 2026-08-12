@@ -388,3 +388,13 @@ overscroll-behavior: none !important;
 
 ## REGOLA: CONTAINER MICRO-CATEGORIE CARD MACRO = TRASPARENTE (2026-08-12)
 - .card-glass e' totalmente trasparente: background transparent, border none. Mantiene solo padding e margin per allineamento griglia icone.
+
+## SPESE CONDIVISE V2 - MODELLO E DASHBOARD (FASE 1, 2026-08-12)
+- Nuove tabelle: shared_expenses (id, expense_id, group_id, total_amount, split_method, created_by, created_at) e shared_expense_participants (id, shared_expense_id, person_id, participant_name, share_amount, paid_amount, split_value, created_at).
+- Tabella group_invites per token di invito; funzione Supabase join_group_with_token(token, member_name).
+- Colonne people.user_id/email, groups.invite_token/created_by, group_members.user_id/member_name.
+- calculateBalances() = net = paid - share; getSimplifiedDebts() = greedy settlement.
+- Dashboard: tab Amici/Gruppi, avatar iniziali + colore deterministico, saldi verde/rosso/grigio.
+- Link invito gruppo: window.location.origin + '?join_group=' + token.
+- Migration automatica da vecchia shared_expense_splits al nuovo schema (flag in settings).
+- Payer multiplo e split avanzati: FASE 2.

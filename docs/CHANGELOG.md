@@ -1113,3 +1113,20 @@
 
 ### Status: COMPLETATO
 - braces CSS 705/705 OK
+
+## [2026-08-12] - FASE 1: Refactoring Spese Condivise - nuovo modello dati, dashboard Amici/Gruppi e inviti
+
+### Completed Changes
+- Migration SQL (migrations/001_shared_expenses_v2.sql): nuove tabelle shared_expenses, shared_expense_participants, group_invites; colonne user_id/email su people, invite_token/created_by su groups, user_id/member_name su group_members; funzione RPC join_group_with_token(token, member_name); RLS policies.
+- supabase-adapter.js: aggiunti sharedExpenses, sharedExpenseParticipants, groupInvites a DB_ACCESSOR/window.db; aggiornate _allowedColumns.
+- script.js: helper genId, avatar (iniziali + colore deterministico), ensureCurrentUserPerson, createPerson, createGroup, generateInviteToken, getGroupInviteLink, copyInviteLink, joinGroupByToken (RPC), calculateBalances, calculateGroupBalances, getSimplifiedDebts, saveSharedExpenseV2, migrateSharedExpensesV2, handleJoinGroupFromUrl.
+- Dashboard popup: tab Amici/Gruppi con avatar, saldi colorati (verde/rosso/grigio), bottone Salda, detail persona/gruppo con ledger e saldi semplificati.
+- saveSharedSplits scrive anche sul nuovo schema V2 per popolare la dashboard.
+- Stili CSS nuovi per friend-row, group-card, avatar, ledger chiaro, saldi.
+
+### Note
+- Payer multiplo e metodi avanzati di split rimandati alla Fase 2.
+- Lo script SQL va eseguito manualmente nell'SQL Editor di Supabase.
+
+### Status: COMPLETATO
+- node --check OK; braces CSS 735/735 OK

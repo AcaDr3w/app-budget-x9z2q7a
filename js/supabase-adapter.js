@@ -32,8 +32,9 @@ const DB_ACCESSOR = {
     months: 'months', income: 'income', expenses: 'expenses',
     annual_deadlines: 'annualDeadlines', savings_goals: 'savingsGoals',
     investments: 'investments', investment_movements: 'investmentMovements',
-    people: 'people', groups: 'groups',
-    group_members: 'groupMembers', shared_expense_splits: 'sharedExpenseSplits'
+    people: 'people', groups: 'groups', group_invites: 'groupInvites',
+    group_members: 'groupMembers', shared_expense_splits: 'sharedExpenseSplits',
+    shared_expenses: 'sharedExpenses', shared_expense_participants: 'sharedExpenseParticipants'
 };
 async function flushOutbox() {
     if (!window.supabaseUser) return;
@@ -86,10 +87,13 @@ class SupabaseTable {
             settings: ['key', 'value'],
             investments: ['id', 'type', 'name', 'targetAmount', 'initialCapital', 'createdAt'],
             investment_movements: ['id', 'investmentId', 'date', 'type', 'amount', 'desc'],
-            people: ['id', 'name', 'createdAt'],
-            groups: ['id', 'name', 'description', 'createdAt'],
-            group_members: ['id', 'groupId', 'personId'],
-            shared_expense_splits: ['id', 'expenseId', 'personId', 'groupId', 'amount', 'splitType', 'paidBy', 'isPaid', 'settled', 'createdAt']
+            people: ['id', 'name', 'user_id', 'email', 'createdAt'],
+            groups: ['id', 'name', 'description', 'invite_token', 'created_by', 'createdAt'],
+            group_members: ['id', 'groupId', 'personId', 'user_id', 'member_name'],
+            group_invites: ['id', 'group_id', 'token', 'email', 'used_by', 'used_at', 'created_at'],
+            shared_expense_splits: ['id', 'expenseId', 'personId', 'groupId', 'amount', 'splitType', 'paidBy', 'isPaid', 'settled', 'createdAt'],
+            shared_expenses: ['id', 'expense_id', 'group_id', 'total_amount', 'split_method', 'created_by', 'created_at'],
+            shared_expense_participants: ['id', 'shared_expense_id', 'person_id', 'participant_name', 'share_amount', 'paid_amount', 'split_value', 'created_at']
         };
         return map[this.tableName] || null;
     }
@@ -286,8 +290,11 @@ window.db = {
     investmentMovements: new SupabaseTable('investment_movements', 'id'),
     people: new SupabaseTable('people', 'id'),
     groups: new SupabaseTable('groups', 'id'),
+    groupInvites: new SupabaseTable('group_invites', 'id'),
     groupMembers: new SupabaseTable('group_members', 'id'),
-    sharedExpenseSplits: new SupabaseTable('shared_expense_splits', 'id')
+    sharedExpenseSplits: new SupabaseTable('shared_expense_splits', 'id'),
+    sharedExpenses: new SupabaseTable('shared_expenses', 'id'),
+    sharedExpenseParticipants: new SupabaseTable('shared_expense_participants', 'id')
 };
 
 // Autenticazione Auth Modal Logic
