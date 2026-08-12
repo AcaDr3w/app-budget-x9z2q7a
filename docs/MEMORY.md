@@ -367,3 +367,10 @@ overscroll-behavior: none !important;
 - **MAI** height fisse nella catena .card-body > .card-glass > .card-micro-grid > .micro-cell/.micro-more/.micro-empty (causa taglio icone top/bottom su schermi corti). Tutto height:auto (contenuto definisce).
 - .card-glass (STYLE.CSS 1110, blocco 767): padding: 8px 6px (respiro verticale), overflow: visible (mai clip). .card-body overflow visible.
 - Icone micro: lex-shrink:0 su .micro-cell i, .micro-more, .micro-empty + clamp() espliciti.
+
+## PREVISIONE SPESE (badge macro + hero) - regola 2026-08-12
+- getCategoryForecasts() (script.js): per OGNI categoria -> planned mese corrente se >0, altrimenti actual del mese precedente (query db.expenses.where('month').equals(prev))
+- Badge bottomsheet 'Speso X su Y previsti': Y = somma previsioni delle categorie della macro. Rosso SOLO se previsti>0 e actual>previsti; previsti=0 -> barra neutra (MAI rossa)
+- Hero 'Spese Previste': stessa regola su tutte le categorie (getCategoryMacroGroup ha fallback = tutte le categorie coperte)
+- openBottomSheetFromMacro e enderMacroBudgetBadge sono async (await su db)
+- Bottomsheet grid: max-height none + card compatte (10px 6px, icona 1.3rem) -> 9 container sempre fissi

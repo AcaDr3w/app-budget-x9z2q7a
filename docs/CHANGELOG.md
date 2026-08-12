@@ -1067,3 +1067,14 @@
 
 ### Status: COMPLETATO
 - braces CSS 710/710 OK
+
+## [2026-08-12] - Bottomsheet Mese: container micro-categorie compatti + badge previsione proattiva
+
+### Completed Changes
+- style.css: .bottom-sheet-grid max-height none (niente scroll interno, gap 10px); .bottom-sheet-cat-card padding 10px 6px; .cat-icon-wrap 1.3rem -> 9 container fissi senza scroll
+- script.js: nuova getCategoryForecasts() -> per categoria: planned mese corrente se >0, altrimenti actual mese precedente (db query month prev)
+- renderMacroBudgetBadge async: label 'Speso X su Y previsti'; barra rossa solo se previsti>0 e actual>previsti; previsti=0 -> barra neutra
+- heroSpesePreviste (updateUI): previsione globale (stessa regola su tutte le categorie)
+
+### Status: COMPLETATO
+- node --check OK; braces CSS 710/710

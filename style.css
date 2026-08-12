@@ -1793,17 +1793,16 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .bottom-sheet-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
     padding: 16px 8px 4px;
-    max-height: 46vh;
-    overflow-y: auto;
+    max-height: none;
 }
 .bottom-sheet-cat-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 14px 8px;
+    padding: 10px 6px;
     border-radius: 18px;
     background: var(--macro-tint, #f4f6f8);
     border: 1px solid var(--macro-border, transparent);
@@ -1816,7 +1815,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     transform: scale(0.94);
 }
 .bottom-sheet-cat-card .cat-icon-wrap {
-    font-size: 1.5rem;
+    flex-shrink: 0;
+    font-size: 1.3rem;
     margin-bottom: 6px;
     color: var(--macro-accent, #333);
 }

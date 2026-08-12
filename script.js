@@ -2030,7 +2030,7 @@ function initNativeWheels() {
 // =====================================================================
 // BOTTOM SHEET WITH MACRO/MICRO CATEGORIES (ORIGINAL GRID INJECTION)
 // =====================================================================
-function openBottomSheetFromMacro(macroGroup) {
+async function openBottomSheetFromMacro(macroGroup) {
     sheetCurrentMacroGroup = macroGroup;
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
@@ -2052,7 +2052,7 @@ function openBottomSheetFromMacro(macroGroup) {
     
     // Render micro categories in the grid
     renderMicroCategoriesGrid(macroGroup);
-    renderMacroBudgetBadge(macroGroup);
+    await renderMacroBudgetBadge(macroGroup);
     renderMacroRecentSpese(macroGroup);
     
     // Reset slider position
@@ -2076,24 +2076,45 @@ function openBottomSheetFromMacro(macroGroup) {
     if (sheetTitle && theme) sheetTitle.style.color = theme.accent;
 }
 
-function renderMacroBudgetBadge(macroGroup) {
+async function getCategoryForecasts() {
+    const f = {};
+    currentData.expenses.forEach(e => {
+        if (e.planned > 0) f[e.category] = (f[e.category] || 0) + e.planned;
+    });
+    const prevMonth = getPreviousMonthStrings(document.getElementById('currentMonth').value, 1)[0];
+    if (prevMonth) {
+        const prev = await db.expenses.where('month').equals(prevMonth).toArray();
+        prev.forEach(e => {
+            if (!f[e.category] && e.actual > 0) f[e.category] = (f[e.category] || 0) + e.actual;
+        });
+    }
+    return f;
+}
+
+async function renderMacroBudgetBadge(macroGroup) {
     const container = document.getElementById('macroSheetSubheader');
     if (!container) return;
     
     const cats = userMacroCategories[macroGroup] || [];
     const catSet = new Set(cats);
-    let planned = 0, actual = 0;
+    let actual = 0;
     currentData.expenses.forEach(e => {
-        if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
+        if (catSet.has(e.category)) actual += e.actual;
     });
     
-    const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
-    const barColor = planned > 0 && actual > planned ? '#ef4444' : (pct >= 80 ? '#f59e0b' : '');
+    const forecasts = await getCategoryForecasts();
+    let previsti = 0;
+    cats.forEach(c => { previsti += forecasts[c] || 0; });
+    
+    const pct = previsti > 0 ? Math.min(100, (actual / previsti) * 100) : 0;
+    const barColor = previsti > 0
+        ? (actual > previsti ? '#ef4444' : (pct >= 80 ? '#f59e0b' : ''))
+        : '';
     
     container.style.display = 'block';
     container.innerHTML = `
         <div class="macro-budget-badge">
-            <span class="badge-label">Speso: <b>${fmtEPlain(actual, 0)}</b> su ${fmtEPlain(planned, 0)} disponibili</span>
+            <span class="badge-label">Speso: <b>${fmtEPlain(actual, 0)}</b> su ${fmtEPlain(previsti, 0)} previsti</span>
             <div class="badge-progress"><div class="badge-progress-bar" style="width: ${pct}%;${barColor ? ' background-color:' + barColor + ';' : ''}"></div></div>
         </div>
     `;
@@ -3137,8 +3158,13 @@ async function updateUI() {
     const heroPrevisteEl = document.getElementById('heroSpesePreviste');
     const heroSpeseEl = document.getElementById('heroSpeseSostenute');
     if (heroEntrateEl) heroEntrateEl.innerText = fmtE(totalIncome, 0);
-    if (heroPrevisteEl) heroPrevisteEl.innerText = fmtE(totalPlanned, 0);
     if (heroSpeseEl) heroSpeseEl.innerText = fmtE(totalActual, 0);
+    if (heroPrevisteEl) {
+        const forecasts = await getCategoryForecasts();
+        let forecastTotal = 0;
+        Object.values(forecasts).forEach(v => { forecastTotal += v; });
+        heroPrevisteEl.innerText = fmtE(forecastTotal, 0);
+    }
     renderMacroCards();
     renderHeroInsight();
 
