@@ -1020,9 +1020,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
-        gap: clamp(8px, 2vh, 12px) !important;
+        gap: clamp(10px, 2.4vh, 14px) !important;
         width: 100% !important;
-        margin: 6px 0 0 !important;
+        margin: 8px 0 4px !important;
         overflow-y: auto !important;
     }
     .dash-card {
@@ -1033,7 +1033,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         flex-direction: column !important;
         justify-content: space-evenly !important;
         align-items: stretch !important;
-        padding: clamp(8px, 2vh, 10px) 10px !important;
+        padding: 14px !important;
         border-radius: 20px;
         color: #1F2937;
         text-align: center;
@@ -1048,10 +1048,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .dash-card:focus-visible { outline: 2px solid rgba(0, 0, 0, 0.35); outline-offset: 2px; }
     .card-header {
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 6px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
         width: 100%;
         min-width: 0;
         flex-shrink: 0;
@@ -1061,11 +1060,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         font-size: clamp(12px, 3.6vw, 16px);
         font-weight: 700;
         text-align: left;
-        flex: 1 1 auto;
+        width: 100%;
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: break-word;
     }
     .card-badge { flex-shrink: 0; }
     .card-badge {
@@ -1121,14 +1118,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: rgba(255, 255, 255, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 24px;
-        padding: 8px;
+        padding: 6px;
+        margin: 8px 0;
         overflow: hidden;
     }
     .card-micro-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: repeat(auto-fill, minmax(26px, 1fr));
-        gap: clamp(6px, 1.6vw, 10px);
+        grid-template-rows: repeat(auto-fill, minmax(22px, 1fr));
+        gap: clamp(4px, 1.2vw, 8px);
         justify-items: center;
         align-content: stretch;
         width: 100%;
@@ -1146,7 +1144,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         justify-content: center;
     }
     .micro-cell i {
-        font-size: clamp(14px, 4.5vw, 18px);
+        font-size: clamp(12px, 3.8vw, 15px);
         line-height: 1;
         color: inherit;
     }
@@ -1159,7 +1157,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         align-items: center;
         justify-content: center;
         color: #374151;
-        font-size: clamp(16px, 5vw, 20px);
+        font-size: clamp(14px, 4.2vw, 17px);
         line-height: 1;
     }
     .micro-empty {
@@ -1183,6 +1181,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         flex-direction: column;
         gap: clamp(2px, 0.7vh, 5px);
         flex-shrink: 0;
+        margin-top: clamp(2px, 0.6vh, 6px);
     }
     .card-progress-track {
         width: 100%;
@@ -1213,11 +1212,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .month-head { display: none !important; }
 
     /* ===== ACTION HUBS (Mese + Future) ===== */
-    #mese-action-hub { padding: 2px 0 0; gap: clamp(10px, 3vw, 16px); }
+    #mese-action-hub { padding: 2px 0 0; gap: 8px; }
     #mese-action-hub button,
     #futureActionHub button {
         flex: 1 1 clamp(140px, 30vw, 200px);
-        padding: clamp(10px, 3vh, 14px) 8px;
+        padding: clamp(6px, 1.6vh, 9px) 4px;
         font-size: clamp(12px, 3.4vw, 13px);
     }
     #futureActionHub { padding: 8px 0 0; gap: clamp(10px, 3vw, 16px); }
@@ -2662,21 +2661,20 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 /* ===== ACTION HUB MESE (mobile) ===== */
 #mese-action-hub {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: clamp(10px, 3vw, 16px);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
     flex-shrink: 0;
     padding: 2px 16px 4px;
 }
 #mese-action-hub button {
-    flex: 1 1 clamp(140px, 30vw, 200px);
     min-width: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 12px 10px;
+    gap: 2px;
+    padding: 8px 4px;
     border-radius: 16px;
     font-size: 13px;
     font-weight: 700;
@@ -2686,6 +2684,18 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     color: var(--primary);
     margin: 0;
     transition: transform 0.15s;
+}
+#mese-action-hub button .hub-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+#mese-action-hub button .hub-text {
+    font-size: 10px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 #mese-action-hub button:active {
     transform: scale(0.96);
