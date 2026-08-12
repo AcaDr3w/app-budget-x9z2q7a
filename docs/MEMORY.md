@@ -385,3 +385,6 @@ overscroll-behavior: none !important;
 - .bottom-sheet = flex column + overflow hidden (max-heigh 85vh); .sheet-slider flex:1 min-height:0; SOLO .sheet-body (view input) e #viewCategories scorrono (overflow-y auto).
 - .sheet-footer e' sibling del .sheet-body dentro #viewInput -> fisso in basso, padding-bottom env(safe-area-inset-bottom).
 - Toggle recurring/shared: flex align-center gap 12px margin-top 8px. Input sheet: padding 12px 16px radius 12px.
+
+## REGOLA: CONTAINER MICRO-CATEGORIE CARD MACRO = TRASPARENTE (2026-08-12)
+- .card-glass e' totalmente trasparente: background transparent, border none. Mantiene solo padding e margin per allineamento griglia icone.

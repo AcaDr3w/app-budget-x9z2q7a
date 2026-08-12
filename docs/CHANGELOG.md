@@ -1105,3 +1105,11 @@
 
 ### Status: COMPLETATO
 - braces CSS 705/705 OK
+
+## [2026-08-12] - Card macro: container micro-categorie totalmente trasparente
+
+### Completed Changes
+- .card-glass (blocco mobile): background rgba(255,255,255,0.15) -> transparent; border -> none. Le icone micro riposano direttamente sul colore della dash-card (Casa/Veicoli/Spese)
+
+### Status: COMPLETATO
+- braces CSS 705/705 OK
