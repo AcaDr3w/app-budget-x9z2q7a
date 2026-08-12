@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## 🗄️ SHARED EXPENSES V2 — tipi FK dinamici + quoting/cast (2026-08-12)
+- **DB reale**: `expenses.id` = **TEXT**, `people.id` = BIGINT, `group_members.user_id` = TEXT. `ADD COLUMN IF NOT EXISTS` NON converte colonne pre-esistenti → mai hardcodare BIGINT su FK verso tabelle legacy.
+- **`migrations/001_shared_expenses_v2.sql`**: `shared_expenses`/`shared_expense_participants` create via `DO $$ ... EXECUTE format()` con tipo letto da `information_schema.columns` (fallback text/bigint). Fix errore 42804 (expense_id bigint vs expenses.id text).
+- **Quoting obbligatorio**: `"personId"`, `"groupId"` (camelCase) — in SQL non quotato Postgres li lowercasa → colonna non trovata.
+- **Cast**: `auth.uid()` è UUID; le colonne `user_id` legacy sono TEXT → confronti SEMPRE con `::text` su entrambi i lati (es. `user_id = auth.uid()::text`, `created_by::text = auth.uid()::text`).
+- **Patch**: `migrations/001b_fix_fk_types.sql` = self-contained (DROP IF EXISTS + ricrea) per stati parziali.
+- Ogni migration termina con `NOTIFY pgrst, 'reload schema';`.
+
 ## 🎨 BOTTOM SHEET MACRO-CATEGORIE v2 — altezza dinamica + tema macro + badge budget + ultime spese (2026-08-12)
 - **`.bottom-sheet` (STYLE.CSS 1504)**: `height:auto; max-height:85vh; overflow-y:auto` (niente più 85dvh fissa → niente vuoto in basso). GLOBALE per scelta utente: anche la view input spesa scrolla l'intero sheet. `.bottom-sheet-grid` `max-height:46vh` (era 60vh).
 - **Tema per macro**: const `MACRO_THEME` (script.js, dopo CATEGORIES_MAP) → `casa_utenze` ottanio `#2a9d8f`, `veicoli` verde `#7bc043`, `spese_svago` viola `#6f42c1`; ognuno con accent/tint/border. `openBottomSheetFromMacro` setta `--macro-accent/--macro-tint/--macro-border` su `#bottomSheet` + colore titolo accent.
@@ -376,7 +384,7 @@ overscroll-behavior: none !important;
 - Bottomsheet grid: max-height none + card compatte (10px 6px, icona 1.3rem) -> 9 container sempre fissi
 
 ## REGOLA: IMPORT O SPESA = INPUT TESTO, MAI RUOTE (2026-08-12)
-- Il bottomsheet spesa usa #amountInput (type=text, inputmode=decimal -> tastierino decimale nativo, virgola ok) + span .currency-symbol � a destra. MAI piu' .wheel-* / hiddenIntegerInput / initNativeWheels / selectedInteger (rimossi da DOM, CSS e JS).
+- Il bottomsheet spesa usa #amountInput (type=text, inputmode=decimal -> tastierino decimale nativo, virgola ok) + span .currency-symbol � a destra. MAI piu' .wheel-* / hiddenIntegerInput / initNativeWheels / selectedInteger (rimossi da DOM, CSS e JS).
 - Leggere l'importo SEMPRE con getSheetAmount() (virgola->punto, parseFloat, >0).
 - #btnNoteCamera / #btnNoteAttach = placeholder (logica foto/allegato futura).
 - Spazi compact sheet: gap 12/8, footer mt 10, header mb 8. Live preview Dividi su input importo.

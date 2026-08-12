@@ -1,13 +1,21 @@
 -- =====================================================================
--- Migration 001: Shared Expenses v2 + Group Invites
--- Esegui questo script nell'SQL Editor di Supabase prima di usare
--- la nuova logica di spese condivise.
--- Tipi FK allineati dinamicamente al DB reale (expenses.id=TEXT,
--- people.id=BIGINT) letti da information_schema.columns.
+-- Patch 001b: fix tipi FK + quoting camelCase + cast auth.uid()
+-- Per chi ha eseguito parzialmente la 001_shared_expenses_v2.sql.
+-- Self-contained: ripulisce gli oggetti parziali e li ricrea corretti.
+-- Eseguire UNA sola volta nell'SQL Editor di Supabase.
 -- =====================================================================
 
 -- -----------------------------------------------------------------
--- 1. Colonne aggiunte alle tabelle esistenti
+-- 0. Cleanup oggetti parziali (sicuro: DROP IF EXISTS)
+--    Le tabelle v2 sono NUOVE, nessun dato utente viene perso.
+-- -----------------------------------------------------------------
+DROP TABLE IF EXISTS shared_expense_participants;
+DROP TABLE IF EXISTS shared_expenses;
+DROP TABLE IF EXISTS group_invites;
+DROP FUNCTION IF EXISTS join_group_with_token(TEXT, TEXT);
+
+-- -----------------------------------------------------------------
+-- 1. Colonne tabelle esistenti
 -- -----------------------------------------------------------------
 ALTER TABLE people ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE people ADD COLUMN IF NOT EXISTS email TEXT;
@@ -19,10 +27,7 @@ ALTER TABLE group_members ADD COLUMN IF NOT EXISTS member_name TEXT;
 ALTER TABLE group_members ALTER COLUMN "personId" DROP NOT NULL;
 
 -- -----------------------------------------------------------------
--- 2. Nuove tabelle
---    I tipi delle colonne FK (expense_id, person_id) vengono letti
---    dal DB reale: CREATE TABLE IF NOT EXISTS non converte colonne
---    pre-esistenti, quindi expenses.id puo' essere TEXT.
+-- 2. Nuove tabelle (tipi FK letti dal DB reale)
 -- -----------------------------------------------------------------
 DO $$
 DECLARE
@@ -74,7 +79,7 @@ CREATE TABLE IF NOT EXISTS group_invites (
 );
 
 -- -----------------------------------------------------------------
--- 3. Indici utili
+-- 3. Indici
 -- -----------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_shared_expenses_expense_id ON shared_expenses(expense_id);
 CREATE INDEX IF NOT EXISTS idx_shared_expenses_group_id ON shared_expenses(group_id);
@@ -84,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_group_invites_token ON group_invites(token);
 CREATE INDEX IF NOT EXISTS idx_group_invites_group_id ON group_invites(group_id);
 
 -- -----------------------------------------------------------------
--- 4. Funzione per unirsi a un gruppo tramite token
+-- 4. Funzione join tramite token
 -- -----------------------------------------------------------------
 CREATE OR REPLACE FUNCTION join_group_with_token(p_token TEXT, p_member_name TEXT DEFAULT NULL)
 RETURNS TABLE(group_id BIGINT)
@@ -99,7 +104,6 @@ DECLARE
 BEGIN
     v_user_email := auth.email();
 
-    -- Trova invito valido (aperto o con email corrispondente, non ancora usato)
     SELECT gi.id, gi.group_id
     INTO v_invite_id, v_group_id
     FROM group_invites gi
@@ -114,13 +118,10 @@ BEGIN
 
     v_member_id := extract(epoch from now())::bigint * 1000 + (random() * 1000)::int;
 
-    -- Aggiunge l'utente come membro se non lo e' gia'
-    -- (group_members.user_id e' TEXT nel DB reale -> cast auth.uid()::text)
     INSERT INTO group_members (id, "groupId", user_id, member_name)
     VALUES (v_member_id, v_group_id, auth.uid()::text, COALESCE(p_member_name, split_part(v_user_email, '@', 1)))
     ON CONFLICT DO NOTHING;
 
-    -- Marca l'invito come usato
     UPDATE group_invites
     SET used_by = auth.uid(), used_at = extract(epoch from now())::bigint
     WHERE id = v_invite_id;
@@ -132,7 +133,7 @@ $$;
 GRANT EXECUTE ON FUNCTION join_group_with_token(TEXT, TEXT) TO authenticated;
 
 -- -----------------------------------------------------------------
--- 5. Abilita RLS
+-- 5. RLS
 -- -----------------------------------------------------------------
 ALTER TABLE shared_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared_expense_participants ENABLE ROW LEVEL SECURITY;
@@ -140,7 +141,6 @@ ALTER TABLE group_invites ENABLE ROW LEVEL SECURITY;
 
 -- -----------------------------------------------------------------
 -- 6. Policies: people
---    (user_id e' TEXT nel DB reale -> confronto via ::text)
 -- -----------------------------------------------------------------
 DROP POLICY IF EXISTS "people_own" ON people;
 CREATE POLICY "people_own" ON people
@@ -172,7 +172,6 @@ FOR DELETE USING (created_by::text = auth.uid()::text);
 
 -- -----------------------------------------------------------------
 -- 8. Policies: group_members
---    ("groupId" e' camelCase -> va quotato)
 -- -----------------------------------------------------------------
 DROP POLICY IF EXISTS "group_members_select" ON group_members;
 CREATE POLICY "group_members_select" ON group_members

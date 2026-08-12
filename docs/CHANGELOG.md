@@ -1,5 +1,25 @@
 # Session Logs & Progress
 
+## [2026-08-12] - Fix migration 001 Shared Expenses V2: tipi FK dinamici + quoting camelCase + cast auth.uid()
+
+### 🔧 Situazione
+- Errore Supabase SQL Editor: `42804: foreign key constraint "shared_expenses_expense_id_fkey" cannot be implemented — Key columns "expense_id" and "id" are of incompatible types: bigint and text`.
+- Causa: DB reale ha `expenses.id` = TEXT (la migration `20260811_schema_completo.sql` usa `ADD COLUMN IF NOT EXISTS` → non converte colonne pre-esistenti), mentre `001_shared_expenses_v2.sql` hardcodava `expense_id BIGINT`.
+- Tipi confermati dal DB: `expenses.id` TEXT, `people.id` BIGINT, `group_members.user_id` TEXT.
+
+### ✅ Completed Changes
+- **migrations/001_shared_expenses_v2.sql**:
+  - `CREATE TABLE` di `shared_expenses`/`shared_expense_participants` spostate in blocco `DO $$ ... EXECUTE format()` che legge i tipi reali di `expenses.id`/`people.id` da `information_schema.columns` (fallback text/bigint).
+  - Quoting camelCase: `"personId"` (ALTER DROP NOT NULL), `"groupId"` ovunque (function + policies).
+  - Cast `auth.uid()::text` e `colonna::text` nelle policies/function (confronti con colonne TEXT).
+  - Aggiunto `NOTIFY pgrst, 'reload schema';` finale (mancava, regola progetto).
+- **migrations/001b_fix_fk_types.sql (NUOVO)**: patch self-contained per stati parziali — DROP IF EXISTS tabelle/funzione v2 + ricreazione completa corretta.
+
+### ⚙ Status: COMPLETATO (in attesa di esecuzione SQL)
+- **Ordine di esecuzione**: se la 001 originale è fallita → eseguire `001b_fix_fk_types.sql` (ripulisce e ricrea tutto). Altrimenti la 001 corretta è idempotente.
+
+---
+
 ## [2026-08-12] - Bottom Sheet Macro-Categorie ridisegnato: altezza dinamica, tema cromatico per macro, badge budget + ultime spese
 
 ### ✅ Completed Changes
@@ -1083,7 +1103,7 @@
 
 ### Completed Changes
 - **Spin rotante ELIMINATO**: rimosse 2 ruote (#integerWheel/#decimalWheel), input hidden, initNativeWheels, syncWheelToInput, syncInputToWheel, vars ruota (selectedInteger/selectedDecimal/WHEEL_ITEM_HEIGHT/isScrollingProgrammatically/handlers) e tutti i CSS .wheel-*
-- **Nuovo campo importo**: input type=text inputmode=decimal (tastierino numerico decimale su mobile) + simbolo � fisso a destra; getSheetAmount() con parsing virgola->punto
+- **Nuovo campo importo**: input type=text inputmode=decimal (tastierino numerico decimale su mobile) + simbolo � fisso a destra; getSheetAmount() con parsing virgola->punto
 - **Note actions**: 2 pulsanti icona sotto la nota (fa-camera #btnNoteCamera, fa-paperclip #btnNoteAttach) con handler placeholder vuoti (.note-action-btn)
 - **Compatto**: .sheet-amount-display height 150px -> auto (anche modal Entrata alleggerito); gap sheet-body 20->12, sheet-inputs 12->8, footer 20->10, header 15->8, recurring 12->8, shared-panel 10->8
 - **Live preview Dividi Spesa**: refresh updateSplitFields su input importo quando il panel e' attivo
