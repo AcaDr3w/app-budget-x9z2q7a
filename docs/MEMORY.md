@@ -1,5 +1,11 @@
 # Project Core Memory
 
+## ⚡ SALDO PARZIALE AMICI (2026-08-13)
+- `settleFriendBalance` → prompt importo (`showPromptDialog`, default = |net|, virgola accettata) → `settleParticipantPortion`.
+- **Partial settle**: record pendente ridotto (`share`/`paid`) + NUOVO record `settled=true` (`share=taken` o `paid=taken`) → storico nel ledger; record chiusi interamente → `settled=true` senza duplicato. I calcoli dei net escludono sempre `settled` — i record saldati non sporcano i badge.
+- **Sync shared_debts**: match via `expense_id` + uid amico (creditor O debtor) → `amount` ridotto, `settled` a 0.
+- Direzione: `net = paid − share`; net<0 amico ti deve (entrata), net>0 devi tu (uscita) — il prompt si adatta.
+
 ## ⚡ RLS RECURSION group_members + merge outbox (2026-08-13)
 - **groups_select ↔ group_members_select si interrogavano a vicenda** → loop → qualsiasi INSERT/UPDATE condiviso falliva con "infinite recursion detected in policy for relation group_members" → dati in outbox, mai visibili (letture solo-cloud).
 - Fix: `is_group_member(gid)` **SECURITY DEFINER** (migration 005) usata da entrambe le policy; REVOKE PUBLIC/GRANT authenticated. MAI creare policy che si referenziano a vicenda — usare funzione SECURITY DEFINER.

@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Elenco amici: saldo parziale bidirezionale con storico + layout compatto
+
+### ✅ Completed Changes
+- **`settleFriendBalance` riscritto**: non marca più tutto come saldato — ora chiede l'**importo** (`showPromptDialog`, direzione-aware: "Ti deve X € — quanto ti salda?" vs "Devi X € — quanto paghi?", default = saldo completo, validazione 0 < importo ≤ |net|, decimali con virgola).
+- **`settleParticipantPortion(personId, records, amount)`** (nuova): consuma l'importo sui record pendenti dal più vecchio; se l'importo chiude un record → `settled=true`; se è parziale → riduce `share` (debito) o `paid` (credito) del record originale e crea un **nuovo record saldato** (`share=taken` / `paid=taken`) → il ledger mostra lo **storico** (✅ Saldata |importo| + ⏳ Da saldare |resto|) e i totali restano corretti (i saldati sono esclusi dai net).
+- **Sync `shared_debts` nel saldo**: riduce `amount` delle righe legate all'amico (`user_id`, creditor o debtor) per gli expense_id coinvolti; `status='settled'` a 0 → l'app dell'amico vede il debito ridotto.
+- **Layout compatto** (style.css): `.friend-row/.group-card` padding `6px 10px` gap 8 radius 12; avatar 36 (32 nei member-row); chevron 36; badge padding `2px 8px`; `.btn-settle` `5px 12px` (min-height 44); liste gap 6; `.ledger-row` `8px 10px` radius 10; `.detail-section` gap 4; `.debt-row`/`.member-row` `6px 10px`; `.detail-avatar-large` 40 separato.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Fix "Per conto diGiovanni" (flex) + debiti invisibili (RLS recursion + merge outbox nelle letture)
 
 ### ✅ Completed Changes

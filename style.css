@@ -3338,15 +3338,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .condivise-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 .friend-row,
 .group-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 14px;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 12px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     cursor: pointer;
@@ -3357,7 +3357,18 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     transform: scale(0.98);
 }
 .friend-avatar,
-.group-avatar,
+.group-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
 .detail-avatar-large {
     width: 40px;
     height: 40px;
@@ -3379,7 +3390,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
 }
 .friend-name,
 .group-name {
@@ -3394,7 +3405,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     align-self: flex-start;
     font-size: 11px;
     font-weight: 700;
-    padding: 3px 10px;
+    padding: 2px 8px;
     border-radius: 999px;
     white-space: nowrap;
 }
@@ -3419,13 +3430,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .row-chevron {
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #94a3b8;
-    font-size: 14px;
+    font-size: 13px;
 }
 .saldo-positive { color: #10b981; }
 .saldo-negative { color: #ef4444; }
@@ -3444,7 +3455,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     transition: background 0.15s, transform 0.1s;
 }
 .btn-settle {
-    padding: 8px 14px;
+    padding: 5px 12px;
     font-size: 12px;
     min-height: 44px;
 }
@@ -3473,8 +3484,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .group-card {
     flex-direction: row;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
+    gap: 8px;
+    padding: 6px 10px;
     overflow: visible;
 }
 
@@ -3483,12 +3494,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     font-size: 13px;
     font-weight: 800;
     color: #0f172a;
-    margin-top: 2px;
+    margin: 0 0 2px;
 }
 .detail-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 .debts-section .debt-row {
     background: #eef2ff;
@@ -3496,16 +3507,16 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .member-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
+    gap: 8px;
+    padding: 6px 10px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 10px;
 }
 .member-row .friend-avatar {
-    width: 36px;
-    height: 36px;
-    font-size: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
 }
 .member-role {
     font-size: 10px;
@@ -3559,7 +3570,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .debt-row {
     display: flex;
     align-items: center;
-    padding: 7px 10px;
+    padding: 6px 10px;
     background: #eef2ff;
     border-radius: 10px;
     font-size: 12px;
@@ -3643,15 +3654,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .ledger-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 .ledger-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #f8fafc;
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 10px;
+    padding: 8px 10px;
     border: 1px solid #e2e8f0;
 }
 .ledger-row.ledger-settled {

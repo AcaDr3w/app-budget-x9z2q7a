@@ -2411,17 +2411,97 @@ async function settleFriendBalance(personId) {
     const participants = await db.sharedExpenseParticipants.where('person_id').equals(personId).toArray();
     const pending = participants.filter(p => !p.settled);
     if (!pending.length) { showToast('Nessun debito da saldare', true); return; }
-    const ok = await showConfirmDialog(
-        `Saldare il conto con ${person.name}?`,
-        'Verranno marcate come saldate tutte le voci pendenti.'
-    );
-    if (!ok) return;
-    for (const p of pending) {
-        p.settled = true;
-        await db.sharedExpenseParticipants.put(p);
-    }
-    showToast('Saldo con ' + person.name + ' completato', false);
+    let paid = 0, share = 0;
+    for (const p of pending) { paid += Number(p.paid_amount) || 0; share += Number(p.share_amount) || 0; }
+    const net = Math.round((paid - share) * 100) / 100;
+    const abs = Math.abs(net);
+    if (abs < 0.001) { showToast('Nessun debito da saldare', true); return; }
+    const owesMe = net < 0;
+    const val = await showPromptDialog({
+        title: owesMe ? 'Saldi con ' + person.name : 'Paghi ' + person.name,
+        message: owesMe
+            ? 'Ti deve ' + fmtE(abs) + ' €. Quanto ti salda?'
+            : 'Devi ' + fmtE(abs) + ' € a ' + person.name + '. Quanto vuoi pagare?',
+        defaultValue: fmtEPlain(abs),
+        placeholder: 'Importo in €',
+        okLabel: 'Salda'
+    });
+    if (val == null) return;
+    const amount = Math.round((parseFloat(String(val).replace(',', '.')) || 0) * 100) / 100;
+    if (amount <= 0) { showToast('Importo non valido', true); return; }
+    if (amount > abs + 0.001) { showToast('Importo maggiore del debito (' + fmtE(abs) + ' €)', true); return; }
+    await settleParticipantPortion(personId, pending, amount);
+    const full = abs - amount < 0.001;
+    showToast(full ? '✅ Conto saldato con ' + person.name : '✅ Saldati ' + fmtE(amount) + ' €', false);
     renderFriendsTab();
+}
+
+async function settleParticipantPortion(personId, pendingRecords, amount) {
+    const round2 = v => Math.round(v * 100) / 100;
+    let remaining = amount;
+    const affectedExpenseIds = new Set();
+    for (const rec of pendingRecords.sort((a, b) => (a.created_at || 0) - (b.created_at || 0))) {
+        if (remaining <= 0.001) break;
+        const recShare = Number(rec.share_amount) || 0;
+        const recPaid = Number(rec.paid_amount) || 0;
+        const debt = recShare - recPaid;
+        if (Math.abs(debt) < 0.001) continue;
+        affectedExpenseIds.add(String(rec.shared_expense_id));
+        const taken = Math.min(remaining, Math.abs(debt));
+        remaining = Math.round((remaining - taken) * 100) / 100;
+        if (taken >= Math.abs(debt) - 0.001) {
+            rec.settled = true;
+            await db.sharedExpenseParticipants.put(rec);
+        } else if (debt > 0) {
+            rec.share_amount = round2(recShare - taken);
+            await db.sharedExpenseParticipants.put(rec);
+            await db.sharedExpenseParticipants.put({
+                id: genId(),
+                shared_expense_id: rec.shared_expense_id,
+                person_id: personId,
+                participant_name: rec.participant_name,
+                share_amount: taken,
+                paid_amount: 0,
+                split_value: rec.split_value != null ? rec.split_value : null,
+                settled: true,
+                created_at: Date.now()
+            });
+        } else {
+            rec.paid_amount = round2(recPaid - taken);
+            await db.sharedExpenseParticipants.put(rec);
+            await db.sharedExpenseParticipants.put({
+                id: genId(),
+                shared_expense_id: rec.shared_expense_id,
+                person_id: personId,
+                participant_name: rec.participant_name,
+                share_amount: 0,
+                paid_amount: taken,
+                split_value: rec.split_value != null ? rec.split_value : null,
+                settled: true,
+                created_at: Date.now()
+            });
+        }
+    }
+    const friend = people.find(pp => pp.id === personId);
+    const friendUid = friend ? friend.user_id : null;
+    if (friendUid && affectedExpenseIds.size) {
+        try {
+            const debts = await db.sharedDebts.toArray();
+            const mine = debts.filter(d =>
+                affectedExpenseIds.has(String(d.expense_id)) &&
+                (d.debtor_user_id === friendUid || d.creditor_user_id === friendUid) &&
+                d.status !== 'settled'
+            );
+            let rem = amount;
+            for (const d of mine) {
+                const amt = Number(d.amount) || 0;
+                const take = Math.min(rem, amt);
+                rem = Math.round((rem - take) * 100) / 100;
+                const next = round2(amt - take);
+                await db.sharedDebts.update(d.id, { amount: next, status: next <= 0 ? 'settled' : d.status });
+            }
+        } catch (e) { console.error('[DB] sync shared_debts nel saldo:', e); }
+    }
 }
 // =====================================================================
 // RIPETIZIONI (Recurring Expenses Management)
