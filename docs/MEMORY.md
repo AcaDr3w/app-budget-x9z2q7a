@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## 🤝 DIVIDI SPESA UX v3 — payer unico + segmented control + righe compatte (2026-08-13)
+- **Stato**: `sharedSplitState = { participants: [], method: 'equal', groupId: null, payerId: null }`; partecipante = `{ personId, name, value }` (NON più `paid` per-riga). `payerId` null = "Tu".
+- **`computeSharedSplits`**: `paidAmount = totale` SOLO al pagatore (`getSharedPayer` = payerId → me → primo). Branch `shares` RESTA nel compute (legacy) ma è FUORI dalla UI.
+- **UI**: selettore `Pagato da` (`#sharedPayerSelect`/`Desktop`, bind one-shot via `dataset.bound`); segmented `.split-segment` 3 pill (equal/exact/percentage); righe `[.participant-avatar iniziali] [nome] [input|read-only] [.participant-remove 44px]`; badge `.shared-remainder.ok/.warn`. `renderSharedParticipants`/chips/`participant-paid`/`shared-preview` RIMOSSI.
+- **Regole**: se il pagatore viene rimosso → reset `payerId` a me. `refreshSharedPanelUI(chipsId)` fa solo da dispatch mobile/desktop.
+- **Banner budget** `#macroSheetSubheader`: NASCOSTO in `slideToInputView`, ripristinato in `slideBackToCategories` (è fuori dallo slider). Solo schermata microcategorie.
+- **`.split-pill` base** = pill bordate (usata dalle pill "Tipo voce" desktop `data-exp-type` in `.split-method-pills`); `.split-segment .split-pill` la sovrascrive (segment iOS-like). Non rimuovere la base.
+
 ## 🤝 SPESE CONDIVISE FASE 2 — payer multiplo + split avanzati (2026-08-13)
 - **Stato globale unico**: `let sharedSplitState = { participants: [], method: 'equal', groupId: null }` (script.js ~1345). Partecipante = `{ personId, name, paid, value }`; `value` = %/€/quota a seconda del metodo, `paid` = "ha pagato €".
 - **`computeSharedSplits(state, total)`** → `{ records, splitMethod }` o `{ error }`: metodi `equal|percentage|exact|shares`; errori: % sommano 100, € sommano il totale, quote positive, paid copre il totale; **se nessun paid → paga tutto "Io"** (fallback primo partecipante); ultimo record aggiusta il round.

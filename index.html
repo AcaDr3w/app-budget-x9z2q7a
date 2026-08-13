@@ -376,16 +376,18 @@
                                     <span class="toggle-label">Spesa condivisa</span>
                                 </div>
                                 <div class="shared-panel" id="sharedPanelDesktop">
+                                    <div class="shared-payer-row">
+                                        <span class="shared-field-label">Pagato da</span>
+                                        <select id="sharedPayerSelectDesktop" class="sheet-input"></select>
+                                    </div>
                                     <div class="shared-person-row">
                                         <select id="sharedPersonDesktop" style="flex:1;"></select>
                                         <button type="button" class="btn-small" id="btnNewPersonDesktop" title="Nuova persona">➕</button>
                                     </div>
-                                    <div class="shared-participants" id="sharedParticipantsDesktop"></div>
-                                    <div class="split-method-pills">
-                                        <button type="button" class="split-pill active" data-method="equal">🤝 Uguali</button>
-                                        <button type="button" class="split-pill" data-method="percentage">%</button>
-                                        <button type="button" class="split-pill" data-method="exact">€</button>
-                                        <button type="button" class="split-pill" data-method="shares">Quote</button>
+                                    <div class="split-segment">
+                                        <button type="button" class="split-pill active" data-method="equal">🤝 Equamente</button>
+                                        <button type="button" class="split-pill" data-method="exact">€ Importi</button>
+                                        <button type="button" class="split-pill" data-method="percentage">% Perc.</button>
                                     </div>
                                     <div class="shared-detail-fields" id="sharedDetailFieldsDesktop"></div>
                                 </div>
@@ -976,18 +978,20 @@
                         <span class="toggle-label">👥 Dividi Spesa</span>
                     </div>
                     <div class="shared-panel" id="sharedPanel">
+                        <div class="shared-payer-row">
+                            <span class="shared-field-label">Pagato da</span>
+                            <select id="sharedPayerSelect" class="sheet-input"></select>
+                        </div>
                         <div class="shared-person-row">
                             <select id="sharedPersonSelect" class="sheet-input">
-                                <option value="">Aggiungi persona o gruppo...</option>
+                                <option value="">+ Aggiungi persone...</option>
                             </select>
                             <button class="btn-small" id="btnNewPerson" title="Nuova persona">＋</button>
                         </div>
-                        <div class="shared-participants" id="sharedParticipants"></div>
-                        <div class="split-method-pills">
-                            <label class="split-pill active" data-method="equal">Parti Uguali</label>
-                            <label class="split-pill" data-method="percentage">%</label>
-                            <label class="split-pill" data-method="exact">€</label>
-                            <label class="split-pill" data-method="shares">Quote</label>
+                        <div class="split-segment">
+                            <label class="split-pill active" data-method="equal">🤝 Equamente</label>
+                            <label class="split-pill" data-method="exact">€ Importi</label>
+                            <label class="split-pill" data-method="percentage">% Perc.</label>
                         </div>
                         <div id="sharedDetailFields"></div>
                     </div>

@@ -1,5 +1,22 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Refactoring UX "Dividi Spesa" + banner budget solo su schermata categorie
+
+### ✅ Completed Changes
+- **Banner budget**: `#macroSheetSubheader` ora nascosto in `slideToInputView` e ripristinato in `slideBackToCategories` (era fuori dallo slider → restava visibile anche nell'inserimento spesa).
+- **Payer unico**: rimosso campo "ha pagato €" per ogni riga → selettore sottile in alto `Pagato da: [Tu ▾]` (`#sharedPayerSelect`/`#sharedPayerSelectDesktop`); `sharedSplitState.payerId` (null = me); `computeSharedSplits` assegna `paid_amount = totale` solo al pagatore; reset a "Tu" se il pagatore viene rimosso.
+- **Segmented Control 3 opzioni**: `.split-segment` (bg neutro + pill attive) con `🤝 Equamente | € Importi | % Perc.`; metodo "Quote" (shares) rimosso dalla UI (branch resta in compute per dati legacy).
+- **Lista partecipanti compatta**: chips rimosse → righe sottili `[avatar iniziali] [nome] [quota] [✕ 44x44]` (`participant-avatar` colore deterministico, `participant-remove` touch target ≥44px); modalità Equamente → importo calcolato grigio read-only; €/% → input editabili.
+- **Micro-badge** `.shared-remainder`: verde `.ok` ("Divido in N parti uguali" / "Rimanente: 0,00 € · Saldo pagato da X") o rosso `.warn` con errore di validazione; sostituisce `.shared-preview` ("a tuo carico").
+- **Layout**: `.shared-panel` max-height 480→430px, gap 8→6px, touch target 44px (skill mobile-first); `.split-pill` base ripristinata (le pill "Tipo voce" desktop `data-exp-type` usano ancora `.split-method-pills`).
+- Salvataggi (`saveTransactionFromSheet`/`addExpense`) invariati: già leggono `meRec.paidAmount` dal nuovo compute.
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; braces CSS 0; grep pulito (`shared-chip`, `participant-paid`, `shared-preview`, `data-method="shares"`, `renderSharedParticipants` = 0 residui nel codice).
+- Nessuna migration necessaria (semantica paid solo nel compute).
+
+---
+
 ## [2026-08-13] - FASE 2 Spese Condivise V2: payer multiplo + split avanzati (% / € / Quote)
 
 ### ✅ Completed Changes

@@ -2410,9 +2410,24 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     gap: 8px;
 }
 .shared-panel.active {
-    max-height: 480px;
+    max-height: 430px;
     opacity: 1;
     margin-top: 8px;
+}
+.shared-payer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.shared-payer-row .shared-field-label {
+    margin: 0;
+    white-space: nowrap;
+}
+.shared-payer-row .sheet-input,
+.shared-payer-row select {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
 }
 .shared-person-row {
     display: flex;
@@ -2421,75 +2436,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .shared-person-row .btn-small {
     flex-shrink: 0;
-}
-.shared-participants {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-.shared-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 5px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #334155;
-}
-.shared-chip-x {
-    border: none;
-    background: transparent;
-    color: #94a3b8;
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0 2px;
-}
-.shared-chip-x:hover {
-    color: #ef4444;
-}
-.participant-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.participant-name {
-    flex: 1;
-    min-width: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: #334155;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.participant-share {
-    font-size: 13px;
-    font-weight: 700;
-    color: #3b82f6;
-    white-space: nowrap;
-}
-.participant-value,
-.participant-paid {
-    width: 86px;
-    flex-shrink: 0;
-    padding: 8px 10px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #334155;
-    background: #fff;
-    outline: none;
-    box-sizing: border-box;
-    text-align: right;
-}
-.participant-value:focus,
-.participant-paid:focus {
-    border-color: #8b5cf6;
+    min-width: 44px;
+    min-height: 44px;
 }
 .split-method-pills {
     display: flex;
@@ -2497,6 +2445,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .split-pill {
     flex: 1;
+    min-height: 40px;
     padding: 8px 4px;
     border-radius: 20px;
     border: 1.5px solid #e2e8f0;
@@ -2508,11 +2457,44 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     transition: all 0.2s;
     color: #64748b;
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .split-pill.active {
     background: #8b5cf6;
     color: #fff;
     border-color: #8b5cf6;
+}
+.split-segment {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 4px;
+}
+.split-segment .split-pill {
+    flex: 1;
+    min-height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #64748b;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.split-segment .split-pill.active {
+    background: #8b5cf6;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 .shared-field-label {
     font-size: 12px;
@@ -2526,16 +2508,95 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     padding: 8px 0;
     text-align: center;
 }
-.shared-preview {
+.participant-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 4px 6px;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+}
+.participant-avatar {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.participant-name {
+    flex: 1;
+    min-width: 0;
     font-size: 13px;
     font-weight: 600;
-    color: #3b82f6;
-    background: #eff6ff;
-    padding: 10px 14px;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.participant-share {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    white-space: nowrap;
+    min-width: 86px;
+    text-align: right;
+}
+.participant-value {
+    width: 86px;
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    background: #fff;
+    outline: none;
+    box-sizing: border-box;
+    text-align: right;
+}
+.participant-value:focus {
+    border-color: #8b5cf6;
+}
+.participant-remove {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.participant-remove:hover,
+.participant-remove:active {
+    color: #ef4444;
+    background: #fef2f2;
+}
+.shared-remainder {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 12px;
     border-radius: 10px;
     text-align: center;
 }
-.shared-preview-error {
+.shared-remainder.ok {
+    color: #059669;
+    background: #ecfdf5;
+}
+.shared-remainder.warn {
     color: #dc2626;
     background: #fef2f2;
 }
