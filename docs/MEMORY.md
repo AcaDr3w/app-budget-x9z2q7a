@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## ⚡ RLS RECURSION group_members + merge outbox (2026-08-13)
+- **groups_select ↔ group_members_select si interrogavano a vicenda** → loop → qualsiasi INSERT/UPDATE condiviso falliva con "infinite recursion detected in policy for relation group_members" → dati in outbox, mai visibili (letture solo-cloud).
+- Fix: `is_group_member(gid)` **SECURITY DEFINER** (migration 005) usata da entrambe le policy; REVOKE PUBLIC/GRANT authenticated. MAI creare policy che si referenziano a vicenda — usare funzione SECURITY DEFINER.
+- **Adapter**: le letture fanno SEMPRE merge con outbox (`_mergeOutbox` in toArray/get/where/orderBy, `_pk()` per months/categories) — pattern identico a `loadPeopleGroups`. Senza merge, i dati pending restano invisibili.
+
+## ⚡ PRESET CARDS — niente display:flex (2026-08-13)
+- `.preset-card` è `display: block` (flex elimina gli spazi tra testo e `<b>` → "Per conto diGiovanni"). Se in futuro servisse centratura verticale: padding, NON flex.
+
 ## ⚡ CONVENZIONE SEGNO DEBITI (2026-08-13)
 - `net = paid − share` ovunque: **>0 = creditore** (ha pagato più della quota) → badge "Devi/Le devi" (rosso, negative/saldo-negative); **<0 = debitore** → "Ti deve" (verde, positive/saldo-positive). `showGroupDetail` era corretto; `renderFriendsTab`/`showFriendDetail` erano INVERTITI (fix applicato). Ledger amico: `diff<0` → "+" verde, `diff>0` → "−" rosso.
 - `.popup-overlay` **z-index: 10500** (sopra navbar 9999!important e bottomsheet 10000!important) — NON riabbassare.

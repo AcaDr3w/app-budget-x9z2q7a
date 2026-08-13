@@ -65,6 +65,28 @@ class SupabaseTable {
         this.noUserId = noUserId;
     }
 
+    _pk() {
+        if (this.tableName === 'months') return 'month_id';
+        if (this.tableName === 'categories') return 'name';
+        return this.primaryKey;
+    }
+
+    _mergeOutbox(rows) {
+        const queue = readOutbox(this.tableName);
+        if (!queue.length) return rows;
+        const pk = this._pk();
+        const byId = new Map(rows.map(r => [String(r[pk]), r]));
+        for (const item of queue) {
+            if (item && item.__update) {
+                const existing = byId.get(String(item.__id));
+                if (existing) Object.assign(existing, item.__changes);
+            } else if (item && item[pk] != null) {
+                byId.set(String(item[pk]), item);
+            }
+        }
+        return Array.from(byId.values());
+    }
+
     _uidEq(query) {
         if (this.noUserId) return query;
         return query.eq('user_id', window.supabaseUser.id);
@@ -119,13 +141,15 @@ class SupabaseTable {
     }
 
     async toArray() {
-        if (!window.supabaseUser) return [];
+        if (!window.supabaseUser) return this._mergeOutbox([]);
         const { data, error } = await this._uidEq(supabaseClient.from(this.tableName).select('*'));
         if (error) console.error(error);
-        return (data || []).map(this._mapOut.bind(this));
+        return this._mergeOutbox((data || []).map(this._mapOut.bind(this)));
     }
 
     async get(id) {
+        const outboxHit = readOutbox(this.tableName).find(i => i && !i.__update && String(i[this._pk()]) === String(id));
+        if (outboxHit) return this._mapOut(outboxHit);
         if (!window.supabaseUser) return null;
         let query = this._uidEq(supabaseClient.from(this.tableName).select('*'));
         
@@ -229,13 +253,13 @@ class SupabaseTable {
         return {
             equals: (val) => ({
                 toArray: async () => {
-                    if (!window.supabaseUser) return [];
+                    if (!window.supabaseUser) return self._mergeOutbox([]);
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
                     const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').eq(f, val));
                     if (error) console.error(error);
-                    return (data || []).map(self._mapOut.bind(self));
+                    return self._mergeOutbox((data || []).map(self._mapOut.bind(self)));
                 },
                 primaryKeys: async () => {
                     if (!window.supabaseUser) return [];
@@ -249,13 +273,13 @@ class SupabaseTable {
             }),
             anyOf: (arr) => ({
                 toArray: async () => {
-                    if (!window.supabaseUser || !arr.length) return [];
+                    if (!window.supabaseUser || !arr.length) return self._mergeOutbox([]);
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
                     const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').in(f, arr));
                     if (error) console.error(error);
-                    return (data || []).map(self._mapOut.bind(self));
+                    return self._mergeOutbox((data || []).map(self._mapOut.bind(self)));
                 }
             })
         };
@@ -265,13 +289,13 @@ class SupabaseTable {
         const self = this;
         return {
             toArray: async () => {
-                if (!window.supabaseUser) return [];
+                if (!window.supabaseUser) return self._mergeOutbox([]);
                 let f = field;
                 if (self.tableName === 'months' && field === 'month') f = 'month_id';
                 
                 const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').order(f));
                 if (error) console.error(error);
-                return (data || []).map(self._mapOut.bind(self));
+                return self._mergeOutbox((data || []).map(self._mapOut.bind(self)));
             }
         };
     }

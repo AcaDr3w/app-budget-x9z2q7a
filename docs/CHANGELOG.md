@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Fix "Per conto diGiovanni" (flex) + debiti invisibili (RLS recursion + merge outbox nelle letture)
+
+### ✅ Completed Changes
+- **CAUSA RADICE debiti invisibili (console)**: `infinite recursion detected in policy for relation "group_members"` → `groups_select` e `group_members_select` si interrogavano a vicenda; ogni INSERT su `shared_expenses`/`shared_expense_participants` (che valuta `shared_expenses_select`, che interroga group_members) entrava in loop → put fallito → outbox + toast rosso, dati mai visibili (l'adapter legge solo cloud).
+- **Migration `005_fix_rls_recursion_group_members.sql`** (DA ESEGUIRE su Supabase): funzione `SECURITY DEFINER is_group_member(gid)` (bypassa RLS → spezza il ciclo) + `groups_select`/`group_members_select` riscritte per usarla; REVOKE PUBLIC + GRANT authenticated.
+- **Adapter (`js/supabase-adapter.js`)**: letture ora fanno **merge con l'outbox** — `_mergeOutbox()` applicato a `toArray()`, `get()`, `where().equals()/anyOf()`, `orderBy()` (con `_pk()` per months/categories). I dati pending (put falliti/offline) compaiono SUBITO nell'elenco Amici/Gruppi, nel ledger e nel mese, e sopravvivono al reload (outbox = localStorage). Stesso pattern già usato in `loadPeopleGroups`.
+- **Spazio label preset**: `.preset-card` `display: flex` → `block` (il flex elimina gli spazi tra testo e `<b>`) → "Per conto di Giovanni", "Giovanni ha pagato…" corretti.
+
+### ⚙ Status: COMPLETATO — `005` va eseguita su Supabase (SQL Editor)
+
 ## [2026-08-13] - Fix popup sotto navbar (z-index) + debiti amici invertiti
 
 ### ✅ Completed Changes

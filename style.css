@@ -2612,8 +2612,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     margin-top: 8px;
 }
 .preset-card {
-    display: flex;
-    align-items: center;
+    display: block;
     min-height: 52px;
     padding: 8px 10px;
     border-radius: 12px;
