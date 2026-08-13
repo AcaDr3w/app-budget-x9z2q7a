@@ -2410,12 +2410,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     gap: 8px;
 }
 .shared-panel.active {
-    max-height: 430px;
+    max-height: 2000px;
     opacity: 1;
     margin-top: 8px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
 }
 .shared-person-row {
     display: flex;
@@ -3185,7 +3182,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .form-advanced [data-exp-type].active { background: #0284c7; border-color: #0284c7; color: #fff; }
 .form-advanced [data-exp-type="actual"].active { background: #dc2626; border-color: #dc2626; color: #fff; }
 .form-advanced-body { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
-.form-advanced .shared-panel.active { max-height: 380px; }
+.form-advanced .shared-panel.active { max-height: 2000px; }
 
 /* ===== IA QUICK CARD (fondo colonna destra) ===== */
 .ia-quick-card { padding: 10px; flex-shrink: 0; }

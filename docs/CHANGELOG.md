@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Fix: sheet non scrollabile dopo toggle "Dividi Spesa" (scroll container annidato)
+
+### ✅ Completed Changes
+- **REGREssIONE (029828c)**: `.shared-panel.active` era diventato uno scroll container (`overflow-y: auto` + `overscroll-behavior: contain`) → ogni swipe sul pannello espanso veniva inghiottito dallo scroll interno (poco contenuto) e bloccato dal `contain` → il bottomsheet NON scrollava più ("non mi fa scendere").
+- **FIX**: `.shared-panel.active` `max-height: 430px → 2000px` (mai clip) e RIMOSSI `overflow-y: auto`/`overscroll-behavior: contain`/`scrollbar-width` → il pannello non è più scroll container; lo scroll lo fa `.sheet-body` (unico contenitore). Stesso per `.form-advanced .shared-panel.active` (desktop, `380px → 2000px`).
+- Regola per il futuro: MAI `overscroll-behavior: contain` su contenitori annidati dentro `.sheet-body` (blocca la catena di scroll).
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Fix debiti amici/gruppi (p4 perso) + refactor "Dividi Spesa": via il selettore pagatore ridondante
 
 ### ✅ Completed Changes

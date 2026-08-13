@@ -1,5 +1,9 @@
 # Project Core Memory
 
+## ⚡ SHEET DIVIDI SPESA — mai scroll container annidato (2026-08-13)
+- `.shared-panel.active`: `max-height: 2000px` + NIENTE `overflow-y: auto`/`overscroll-behavior: contain` (bloccavano lo swipe → sheet non scrollabile). Scroll SOLO in `.sheet-body`. Regola fissa per ogni contenitore dentro il bottomsheet.
+- Desktop: `.form-advanced .shared-panel.active { max-height: 2000px }` (stessa regola).
+
 ## ⚡ DIVIDI SPESA — save gate + pushSharedDebts + no payer select (2026-08-13)
 - **Save gate**: MAI usare `otherPart > 0` (perdeva p4: me=100% → otherPart=0 → nessun record → elenco amici/gruppi vuoto). Regola: `isShared && splitRes && splitRes.records.some(r => r.personId !== meId)` in `saveTransactionFromSheet` e `addExpense`.
 - **pushSharedDebts**: `payerRec = records.find(r => r.paidAmount > 0)` → `creditor_user_id = payer's uid` (non più `window.supabaseUser.id`!), `debtor_user_id = p.user_id` (gruppo → user_id membro); skip `uid === payerUid` (self-debt) e uid mancanti.
