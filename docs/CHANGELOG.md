@@ -1,5 +1,21 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Fix rendering liste (Amici/Gruppi) + refactoring Vista Dettaglio Gruppo
+
+### ✅ Completed Changes
+- **Fix bug lista Amici**: `renderFriendsTab` NON deriva più la lista da `calculateBalances()` (che mostrava solo chi aveva spese condivise → lista vuota dopo la creazione di un amico senza spese). Ora elenca **tutte le persone** (escluso me) con saldo calcolato da `sharedExpenseParticipants` (paid−share, skip settled, arrotondato al centesimo); chi non ha voci → badge `In pari (0,00 €)`; email sotto il nome (`friend-sub`); empty state solo se non ci sono amici.
+- **Fix card Gruppi**: rimossa **accordion** → la card apre la **Vista Dettaglio Gruppo** (`showGroupDetail`); card = `[icona] [nome] ["N partecipanti"] [badge saldo personale colorato 🟩 In credito di X / 🟥 In debito di X / ⬜ In pari] [copia-link] [chevron >]`. Dopo `createGroup` → apre subito il dettaglio del nuovo gruppo.
+- **Rimozione codice morto**: `settleMyGroupShare` (→ sostituita da `settleGroupExpenseShare`), accordion JS/CSS (`.group-acc-body`, `.group-acc-actions`, `.btn-acc-action`, `.group-card-header`, chevron rotation), `.group-total`, `.group-pos`, `.debts-summary`.
+- **`showGroupDetail` refactoring completo**:
+  1. Header: titolo + **Creatore** ("Creato da te"/"Creato da X", via `created_by` → `people.user_id`) + N partecipanti; box invito con copia.
+  2. **Aggiungi partecipante**: input con `datalist` (persone NON membri, autocompletamento) + bottone solido `.btn-add-solid` SOTTO l'input, full-width (pattern mobile-first, addio bottone trasparente `btn-small` affiancato); Enter = aggiungi.
+  3. Sezione **👥 Partecipanti**: per ogni membro `[avatar] [nome] [ruolo Admin/Membro] [saldo individuale nel gruppo]` (Admin = `user_id === created_by`).
+  4. Sezione **📌 Riepilogo Debiti**: box `getSimplifiedDebts` ("X deve Y € a Z", me→"Tu") + empty "✨ Nessun debito in sospeso".
+  5. Sezione **🧾 Spese del Gruppo**: ledger (data/desc/metodo/totale) + bottone **`Salda quota`** per ogni spesa con MIA quota pendente (NUOVO `settleGroupExpenseShare`: confirm → `settled=true` sulle mie righe → re-render dettaglio); spese saldate → dimmed `✅ Saldata`.
+- **CSS**: `.detail-section-title`/`.detail-section`, `.member-row`, `.member-role`, `.member-balance` (+`.bal-positive/negative/neutral`), `.ledger-settle-btn` (solido blu, min-height 44px), `.ledger-settled`, `.friend-sub`, `.group-add-member` → colonna (input + bottone full-width).
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Spese Condivise: sync debiti multi-account + redesign modal (Amici/Gruppi)
 
 ### ✅ Completed Changes

@@ -1,5 +1,12 @@
 # Project Core Memory
 
+## 🔧 LISTE + VISTA DETTAGLIO GRUPPO (2026-08-13)
+- **Lista Amici = TUTTE le persone** (escluso me via `getSharedMeId()`), NON i risultati di `calculateBalances()`: il saldo è calcolato da `sharedExpenseParticipants` (`netByPerson[person_id] += paid_amount - share_amount`, skip `settled`, arrotondato `*100/100`). Chi non ha voci → `In pari (0,00 €)`. `people.push` in `createPerson` → `renderFriendsTab()` mostra subito l'amico nuovo (niente più empty state fantasma).
+- **Gruppi: card = click → `showGroupDetail(gid)`** (niente accordion). Card: `[group-avatar] [nome] ["N partecipanti"] [friend-badge positive/negative/neutral: "In credito di X"/"In debito di X"/"In pari"] [btn-copy-link] [row-chevron >]`. `createGroup` → `renderGroupsTab()` poi `showGroupDetail(g.id)`.
+- **`showGroupDetail`**: header = avatar, nome, "Creato da te/X" (`created_by` → `people.user_id`, me → "te") + N partecipanti, box invito+copia, form add = `<input list="groupAddPersonList">` (datalist persone NON membri) + `.btn-add-solid` SOTTO full-width (Enter = aggiungi, match case-insensitive sul nome; `addPersonToGroup` invariata). Sezioni: 👥 Partecipanti (`.member-row`: avatar 36, nome, `.member-role` Admin/Membro = `user_id === created_by`, `.member-balance` bal-positive/negative/neutral), 📌 Riepilogo Debiti (`.debts-section` con `.debt-row`), 🧾 Spese del Gruppo (`.ledger-row` + **`.ledger-settle-btn` "Salda quota"** per spese con MIA quota pendente → `settleGroupExpenseShare(seId)` → re-render `showGroupDetail(gid)`; saldate → riga `.ledger-settled` dimmed + `✅ Saldata`).
+- **Bottone add = SEMPRE `.btn-add-solid`** (mai `btn-small`/trasparente) nei form condivise; `.group-add-member` è colonna (input + bottone width 100%).
+- Rimossi: `settleMyGroupShare`, `.group-acc-body/.group-card-header/.btn-acc-action/.group-total/.group-pos/.debts-summary`.
+
 ## 🔄 SPESE CONDIVISE — sync debiti multi-account + modal redesign (2026-08-13)
 - **`shared_debts`** (migration 003, RLS creditor/debtor, NO colonna `user_id`): ponte cross-account A↔B. `db.sharedDebts` = `SupabaseTable('shared_debts','id', noUserId=true)` — il flag **`noUserId`** fa saltare i filtri `.eq('user_id', uid)` nel adapter (l'isolamento è via RLS).
 - **A-side**: `pushSharedDebts(sharedExpenseId, groupId, records)` chiamato in coda a `saveSharedExpenseV2`; scrive solo debiti verso persone con `user_id` noto (person.user_id oppure membro gruppo via `groupMembers.user_id`). `debt.expense_id` = **sharedExpenseId** (NON expenses.id).
