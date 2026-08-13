@@ -20,6 +20,8 @@ function readOutbox(tableName) {
 function writeOutbox(tableName, items) {
     try { localStorage.setItem(outboxKey(tableName), JSON.stringify(items)); } catch (e) {}
 }
+window.readOutbox = readOutbox;
+window.flushOutbox = flushOutbox;
 function enqueueOutbox(tableName, item) {
     const queue = readOutbox(tableName);
     queue.push(item);
@@ -302,8 +304,8 @@ window.db = {
     groupInvites: new SupabaseTable('group_invites', 'id'),
     groupMembers: new SupabaseTable('group_members', 'id'),
     sharedExpenseSplits: new SupabaseTable('shared_expense_splits', 'id'),
-    sharedExpenses: new SupabaseTable('shared_expenses', 'id'),
-    sharedExpenseParticipants: new SupabaseTable('shared_expense_participants', 'id'),
+    sharedExpenses: new SupabaseTable('shared_expenses', 'id', true),
+    sharedExpenseParticipants: new SupabaseTable('shared_expense_participants', 'id', true),
     sharedDebts: new SupabaseTable('shared_debts', 'id', true)
 };
 

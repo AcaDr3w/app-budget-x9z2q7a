@@ -2434,11 +2434,29 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     gap: 8px;
     align-items: center;
 }
-.shared-person-row .btn-small {
+.shared-person-row .btn-small,
+.shared-person-row .btn-plus-solid {
     flex-shrink: 0;
     min-width: 44px;
     min-height: 44px;
 }
+.btn-plus-solid {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 12px;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-plus-solid:active { transform: scale(0.96); }
 .split-method-pills {
     display: flex;
     gap: 6px;

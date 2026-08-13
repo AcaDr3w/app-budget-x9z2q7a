@@ -1060,9 +1060,18 @@ function parseAmountInput(raw) {
 // =====================================================================
 async function loadPeopleGroups() {
     try {
-        people = await db.people.toArray();
-        groups = await db.groups.toArray();
-        groupMembers = await db.groupMembers.toArray();
+        const mergeById = (cloud, outbox, pk) => {
+            const byId = new Map();
+            for (const c of cloud) byId.set(c[pk], c);
+            for (const o of outbox) if (o && o[pk] != null && !byId.has(o[pk])) byId.set(o[pk], o);
+            return [...byId.values()];
+        };
+        const outboxPeople = (typeof window.readOutbox === 'function') ? window.readOutbox('people') : [];
+        const outboxGroups = (typeof window.readOutbox === 'function') ? window.readOutbox('groups') : [];
+        const outboxMembers = (typeof window.readOutbox === 'function') ? window.readOutbox('group_members') : [];
+        people = mergeById(await db.people.toArray(), outboxPeople, 'id');
+        groups = mergeById(await db.groups.toArray(), outboxGroups, 'id');
+        groupMembers = mergeById(await db.groupMembers.toArray(), outboxMembers, 'id');
         if (window.supabaseUser) {
             for (const p of people) {
                 if (!p.user_id) {
@@ -1653,6 +1662,10 @@ function renderSplitEditor(containerId, total) {
         badge.textContent = 'Rimanente: ' + fmtE(0) + ' · Saldo pagato da ' + (getSharedPayer(sharedSplitState) || {}).name;
     };
     c.querySelectorAll('.participant-value').forEach(inp => {
+        inp.addEventListener('focus', (e) => {
+            const el = e.target;
+            requestAnimationFrame(() => el.select());
+        });
         inp.addEventListener('input', () => {
             const p = sharedSplitState.participants.find(x => x.personId === parseInt(inp.dataset.pid));
             if (p) p.value = parseFloat(inp.value) || 0;
@@ -1760,6 +1773,10 @@ function setupSharedPanelDesktop() {
         }
     });
     ['expActual', 'expPlanned'].forEach(id => {
+        document.getElementById(id)?.addEventListener('focus', (e) => {
+            const el = e.target;
+            requestAnimationFrame(() => el.select());
+        });
         document.getElementById(id)?.addEventListener('input', () => {
             const panel = document.getElementById('sharedPanelDesktop');
             if (panel && panel.classList.contains('active')) refreshSharedPanelUI('sharedParticipantsDesktop');
@@ -1805,6 +1822,7 @@ async function openCondivisePopup() {
     popup.classList.add('active');
     document.body.classList.add('popup-open');
     switchCondiviseTab('amici');
+    await Promise.all([renderFriendsTab(), renderGroupsTab()]);
 }
 
 function closeCondivisePopup(event) {
@@ -1915,28 +1933,37 @@ async function renderGroupsTab() {
         html += '<div class="condivise-list">';
         const meId = getSharedMeId();
         for (const g of groups) {
-            const members = getGroupMembersWithPeople(g.id);
-            const balances = await calculateGroupBalances(g.id);
-            const meB = balances.find(b => b.id === meId);
-            const myNet = meB ? meB.net : 0;
-            const badgeClass = myNet > 0.001 ? 'positive' : (myNet < -0.001 ? 'negative' : 'neutral');
-            const badgeText = myNet > 0.001 ? 'In credito di ' + fmtE(myNet) : (myNet < -0.001 ? 'In debito di ' + fmtE(Math.abs(myNet)) : 'In pari');
-            html += `
-                <div class="group-card" data-gid="${g.id}">
-                    <div class="group-avatar"><i class="fas fa-users"></i></div>
-                    <div class="group-info">
-                        <span class="group-name">${g.name}</span>
-                        <span class="group-members">${members.length} partecipanti</span>
-                        <span class="friend-badge ${badgeClass}">${badgeText}</span>
+            try {
+                const members = getGroupMembersWithPeople(g.id);
+                const balances = await calculateGroupBalances(g.id);
+                const meB = balances.find(b => b.id === meId);
+                const myNet = meB ? meB.net : 0;
+                const badgeClass = myNet > 0.001 ? 'positive' : (myNet < -0.001 ? 'negative' : 'neutral');
+                const badgeText = myNet > 0.001 ? 'In credito di ' + fmtE(myNet) : (myNet < -0.001 ? 'In debito di ' + fmtE(Math.abs(myNet)) : 'In pari');
+                html += `
+                    <div class="group-card" data-gid="${g.id}">
+                        <div class="group-avatar"><i class="fas fa-users"></i></div>
+                        <div class="group-info">
+                            <span class="group-name">${g.name}</span>
+                            <span class="group-members">${members.length} partecipanti</span>
+                            <span class="friend-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <button class="btn-copy-link" data-gid="${g.id}" title="Copia link invito"><i class="fas fa-link"></i></button>
+                        <span class="row-chevron"><i class="fas fa-chevron-right"></i></span>
                     </div>
-                    <button class="btn-copy-link" data-gid="${g.id}" title="Copia link invito"><i class="fas fa-link"></i></button>
-                    <span class="row-chevron"><i class="fas fa-chevron-right"></i></span>
-                </div>
-            `;
+                `;
+            } catch (err) {
+                console.warn('[Gruppi] errore rendering gruppo ' + g.id + ':', err);
+            }
         }
         html += '</div>';
     }
-    container.innerHTML = html;
+    try {
+        container.innerHTML = html;
+    } catch (err) {
+        console.warn('[Gruppi] errore rendering lista:', err);
+        container.innerHTML = '<div class="condivise-empty">⚠️ Errore caricamento gruppi</div>';
+    }
 
     container.querySelectorAll('.group-card').forEach(card => {
         card.addEventListener('click', async (e) => {

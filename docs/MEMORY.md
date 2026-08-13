@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## 🐛 DEBUG: noUserId sulle junction + gruppi offline + focus-select + btn + blu (2026-08-13)
+- **`shared_expenses` e `shared_expense_participants` NON hanno colonna `user_id`** (`shared_expenses` usa `created_by`, participants è junction) → **devono avere `noUserId: true`** nel costruttore `SupabaseTable` (isolamento via RLS delle migrazioni). SENZA il flag: ogni read → 400 "column user_id does not exist" → `[]`; ogni write → outbox → liste/debiti/spese MAI aggiornati. Stessa regola per `shared_debts` (già noUserId).
+- **`loadPeopleGroups` = merge cloud + outbox** (dedupe per id, cloud preferita) per `people`/`groups`/`groupMembers` — via `window.readOutbox` (esposto dall'adapter insieme a `window.flushOutbox`). Mai più gruppi/persone "spariti" dopo creazione offline.
+- **`openCondivisePopup`** prerender entrambe le tab: `await Promise.all([renderFriendsTab(), renderGroupsTab()])` dopo `loadPeopleGroups`.
+- **`renderGroupsTab`**: try/catch per-gruppo + complessivo (empty state su errore; un gruppo rotto non blocca la lista).
+- **Focus = select()** (rAF) su `.participant-value` (split %, €, quota) e su `#expActual`/`#expPlanned` desktop — pattern da replicare su ogni input numerico (come `#amountInput`).
+- **Tasto + persona = `.btn-plus-solid`** (blu #3b82f6, 44x44) — `#btnNewPerson` (mobile) + `#btnNewPersonDesktop`; mai `.btn-small`/trasparente nei form condivise.
+
 ## 🔧 LISTE + VISTA DETTAGLIO GRUPPO (2026-08-13)
 - **Lista Amici = TUTTE le persone** (escluso me via `getSharedMeId()`), NON i risultati di `calculateBalances()`: il saldo è calcolato da `sharedExpenseParticipants` (`netByPerson[person_id] += paid_amount - share_amount`, skip `settled`, arrotondato `*100/100`). Chi non ha voci → `In pari (0,00 €)`. `people.push` in `createPerson` → `renderFriendsTab()` mostra subito l'amico nuovo (niente più empty state fantasma).
 - **Gruppi: card = click → `showGroupDetail(gid)`** (niente accordion). Card: `[group-avatar] [nome] ["N partecipanti"] [friend-badge positive/negative/neutral: "In credito di X"/"In debito di X"/"In pari"] [btn-copy-link] [row-chevron >]`. `createGroup` → `renderGroupsTab()` poi `showGroupDetail(g.id)`.

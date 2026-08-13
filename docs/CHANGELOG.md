@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Debug: fix liste/debiti condivisi (noUserId junction), gruppi fantasma, focus-select split, tasto + blu
+
+### ✅ Completed Changes
+- **ROOT CAUSE bug liste/debiti non aggiornati**: l'adapter filtrava `.eq('user_id', uid)` e scriveva `user_id` su TUTTE le tabelle, ma `shared_expenses` (usa `created_by`) e `shared_expense_participants` (junction, nessuna colonna `user_id`) → ogni read PostgREST 400 → `[]`; ogni write → outbox. **Fix**: `noUserId: true` su `sharedExpenses` e `sharedExpenseParticipants` (isolamento via RLS già presente nelle migrazioni). Ora spese condivise, partecipanti, debiti e "Salda" funzionano.
+- **Gruppi "a volte no"**: `loadPeopleGroups` ora fa **merge cloud + outbox** (dedupe per id, copia cloud preferita) per `people`/`groups`/`groupMembers` → gruppi/persone creati offline (put fallito) non spariscono più alla riapertura del popup. Esposti `window.readOutbox`/`window.flushOutbox`.
+- **`openCondivisePopup`**: dopo `loadPeopleGroups` prerender **entrambe** le tab con `await Promise.all([renderFriendsTab(), renderGroupsTab()])` → niente race al primo switch.
+- **`renderGroupsTab`**: try/catch per-gruppo + complessivo → un errore non blocca più l'innerHTML (empty state "⚠️ Errore caricamento gruppi").
+- **Focus-select split** (bug #3): `.participant-value` (%, €, quota) in `renderSplitEditor` + `#expActual`/`#expPlanned` desktop → `focus` = `select()` con `requestAnimationFrame` (sovrascrittura immediata del numero).
+- **Tasto + blu** (bug #4): nuova classe `.btn-plus-solid` (blu `#3b82f6`, bianco, 44x44, radius 12) applicata a `#btnNewPerson` (mobile) e `#btnNewPersonDesktop`.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Fix rendering liste (Amici/Gruppi) + refactoring Vista Dettaglio Gruppo
 
 ### ✅ Completed Changes
