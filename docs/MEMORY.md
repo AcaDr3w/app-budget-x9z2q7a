@@ -1,5 +1,9 @@
 # Project Core Memory
 
+## ⚡ CONVENZIONE SEGNO DEBITI (2026-08-13)
+- `net = paid − share` ovunque: **>0 = creditore** (ha pagato più della quota) → badge "Devi/Le devi" (rosso, negative/saldo-negative); **<0 = debitore** → "Ti deve" (verde, positive/saldo-positive). `showGroupDetail` era corretto; `renderFriendsTab`/`showFriendDetail` erano INVERTITI (fix applicato). Ledger amico: `diff<0` → "+" verde, `diff>0` → "−" rosso.
+- `.popup-overlay` **z-index: 10500** (sopra navbar 9999!important e bottomsheet 10000!important) — NON riabbassare.
+
 ## ⚡ SHEET DIVIDI SPESA — mai scroll container annidato (2026-08-13)
 - `.shared-panel.active`: `max-height: 2000px` + NIENTE `overflow-y: auto`/`overscroll-behavior: contain` (bloccavano lo swipe → sheet non scrollabile). Scroll SOLO in `.sheet-body`. Regola fissa per ogni contenitore dentro il bottomsheet.
 - Desktop: `.form-advanced .shared-panel.active { max-height: 2000px }` (stessa regola).

@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Fix popup sotto navbar (z-index) + debiti amici invertiti
+
+### ✅ Completed Changes
+- **Popup coperto dalla navbar**: `.popup-overlay` `z-index: 2000 → 10500` (sopra `.bottom-nav` 9999!important e `.bottom-sheet` 10000!important). Vale per tutti i popup (Spese Condivise, Settings, Ricerca, Rendiconto, Invest, IA, Archive).
+- **Badge debiti tab Amici INVERTITI**: `renderFriendsTab` mostrava `net > 0 → "Ti deve"` ma `net = paid − share` (>0 = l'amico ha pagato più della quota = LUI creditore → "Devi"). Ora: `net>0 → classe negative + "Devi X"`, `net<0 → positive + "Ti deve X"` (allineato a `showGroupDetail` che era già corretto: "In credito di" per net>0).
+- **Dettaglio amico (`showFriendDetail`)**: stessa inversione su header (`"Le devi X"` per net>0, `"Ti deve X"` per net<0, classi saldo-negative/positive scambiate) e sul **ledger** (`diff = paid − share`: `diff<0` l'amico ti deve → verde "+", `diff>0` devi tu → rosso "−").
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Fix: sheet non scrollabile dopo toggle "Dividi Spesa" (scroll container annidato)
 
 ### ✅ Completed Changes

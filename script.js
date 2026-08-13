@@ -2039,8 +2039,8 @@ async function renderFriendsTab() {
             const color = getAvatarColor(p.name);
             const initials = getInitials(p.name);
             const net = netByPerson[p.id] || 0;
-            const badgeClass = net > 0.001 ? 'positive' : (net < -0.001 ? 'negative' : 'neutral');
-            const badgeText = net > 0.001 ? 'Ti deve ' + fmtE(net) : (net < -0.001 ? 'Devi ' + fmtE(Math.abs(net)) : 'In pari (0,00 €)');
+            const badgeClass = net > 0.001 ? 'negative' : (net < -0.001 ? 'positive' : 'neutral');
+            const badgeText = net > 0.001 ? 'Devi ' + fmtE(net) : (net < -0.001 ? 'Ti deve ' + fmtE(Math.abs(net)) : 'In pari (0,00 €)');
             html += `
                 <div class="friend-row" data-pid="${p.id}">
                     <div class="friend-avatar" style="background:${color}">${initials}</div>
@@ -2231,12 +2231,12 @@ async function showFriendDetail(personId) {
     detailView.style.display = 'flex';
 
     const color = getAvatarColor(p.name);
-    const statusClass = net > 0.001 ? 'saldo-positive' : (net < -0.001 ? 'saldo-negative' : 'saldo-neutral');
+    const statusClass = net > 0.001 ? 'saldo-negative' : (net < -0.001 ? 'saldo-positive' : 'saldo-neutral');
     document.getElementById('condiviseDetailHeader').innerHTML = `
         <div class="detail-avatar-large" style="background:${color}">${getInitials(p.name)}</div>
         <div class="detail-header-name">${p.name}</div>
         <div class="detail-header-balance ${statusClass}">
-            ${net > 0.001 ? 'Ti deve ' + fmtE(net) : (net < -0.001 ? 'Le devi ' + fmtE(Math.abs(net)) : 'In pari')}
+            ${net > 0.001 ? 'Le devi ' + fmtE(net) : (net < -0.001 ? 'Ti deve ' + fmtE(Math.abs(net)) : 'In pari')}
         </div>
         ${Math.abs(net) > 0.001 ? `<button class="btn-settle-large" data-pid="${p.id}">Salda debito</button>` : ''}
     `;
@@ -2256,7 +2256,7 @@ async function showFriendDetail(personId) {
                     <span class="ledger-type">${part.settled ? '✅ Saldata' : '⏳ Da saldare'}</span>
                 </div>
                 <div class="ledger-row-right">
-                    <span class="ledger-amount ${diff > 0 ? 'saldo-positive' : (diff < 0 ? 'saldo-negative' : '')}">${diff > 0 ? '+' : (diff < 0 ? '-' : '')}${fmtE(Math.abs(diff))}</span>
+                    <span class="ledger-amount ${diff < 0 ? 'saldo-positive' : (diff > 0 ? 'saldo-negative' : '')}">${diff < 0 ? '+' : (diff > 0 ? '-' : '')}${fmtE(Math.abs(diff))}</span>
                 </div>
             </div>
         `;
