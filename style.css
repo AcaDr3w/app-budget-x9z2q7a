@@ -2413,21 +2413,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     max-height: 430px;
     opacity: 1;
     margin-top: 8px;
-}
-.shared-payer-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.shared-payer-row .shared-field-label {
-    margin: 0;
-    white-space: nowrap;
-}
-.shared-payer-row .sheet-input,
-.shared-payer-row select {
-    flex: 1;
-    min-width: 0;
-    min-height: 44px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
 }
 .shared-person-row {
     display: flex;
@@ -2682,6 +2670,36 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     display: flex;
     gap: 6px;
     margin-bottom: 6px;
+}
+.payer-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.payer-chip-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.payer-chip {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.payer-chip.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
 }
 .adv-method-btn {
     flex: 1;

@@ -1,5 +1,19 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Fix debiti amici/gruppi (p4 perso) + refactor "Dividi Spesa": via il selettore pagatore ridondante
+
+### ✅ Completed Changes
+- **BUG FIX — debiti mai mostrati in p4**: il gate di salvataggio era `otherPart > 0`; col preset p4 ("amico ha pagato per te", me=100%) `myPart = totale` → `otherPart = 0` → `saveSharedSplitsV2` mai chiamata → nessun record partecipante → elenco Amici/Gruppi vuoto. Ora: `splitRes.records.some(r => r.personId !== meId)` in `saveTransactionFromSheet` e `addExpense` (record non-me presente → salva sempre).
+- **BUG FIX — self-debt in pushSharedDebts (p3/p4)**: scrittura `creditor = me, debtor = me` (debito verso sé stessi materializzato nelle mie Spese Previste). Riscritto: `payerRec` (chi ha `paidAmount>0`) → `creditor = payer's uid`, `debtor = p.user_id` (gruppo: user_id membro); skip se `uid === payerUid` (self) o se manca uid.
+- **Migration `004_shared_debts_any_side.sql`** (DA ESEGUIRE su Supabase): policy INSERT rilassata `creditor_user_id = uid OR debtor_user_id = uid` → il creatore (debtor in p3/p4) può materializzare la riga con creditore = amico → sync cross-account "Da saldare a X" funziona anche per i preset col pagatore amico.
+- **Refactor ridondanza "chi ha pagato"**: RIMOSSI `#sharedPayerSelect`/`#sharedPayerSelectDesktop` (righe HTML), funzioni `renderSharedPayer`/`bindSharedPayer`, CSS `.shared-payer-row`. Il pagatore è espresso dai preset (p1/p2 = Tu, p3/p4 = primo non-me); in **modalità avanzata** nuova `.payer-chip-row` (chips "👤 Tu" + partecipanti attivi, attiva evidenziata) renderizzata da `renderSplitEditor` → click setta `payerId` + `preset='custom'`.
+- **Layout pannello riordinato**: 1) Aggiungi persona/gruppo (select + ➕), 2) preset grid, 3) ⚙️ Personalizza, 4) [avanzato] toggle %/€ + payer chips + righe + badge.
+- **Badge riepilogo**: modalità preset → "Paga [X] · N partecipanti" (era "Rimanente 0,00 € · Paga X" ridondante); avanzato → invariato (remainder + errore somma).
+- **Scroll panel**: `.shared-panel.active` da `overflow: clip` → `overflow-y: auto` (contenuto >430px veniva tagliato senza poter scrollare).
+- CSS: `.payer-chip-row`, `.payer-chip-label`, `.payer-chip(.active)`.
+
+### ⚙ Status: COMPLETATO — `004` va eseguita su Supabase (SQL Editor)
+
 ## [2026-08-13] - Dividi Spesa: preset rapidi Splitwise + partecipanti con checkbox + modalità avanzata con auto-fix
 
 ### ✅ Completed Changes

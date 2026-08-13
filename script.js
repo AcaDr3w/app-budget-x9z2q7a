@@ -1327,22 +1327,24 @@ async function saveSharedExpenseV2(expenseId, totalAmount, groupId, participantR
 async function pushSharedDebts(sharedExpenseId, groupId, participantRecords) {
     if (!window.supabaseUser) return;
     const meId = getSharedMeId();
-    const meP = people.find(pp => pp.id === meId);
-    const payerId = (participantRecords.find(r => r.paidAmount > 0) || {}).personId || meId;
+    const payerRec = participantRecords.find(r => r.paidAmount > 0);
+    const payerP = payerRec ? people.find(pp => pp.id === payerRec.personId) : null;
+    const payerUid = payerP ? (payerP.user_id || (groupId ? ((groupMembers.find(m => m.groupId === groupId && m.personId === payerRec.personId) || {}).user_id || '') : '')) : '';
+    if (!payerUid) return;
     const now = Date.now();
     for (const r of participantRecords) {
-        if (r.personId === payerId) continue;
+        if (r.personId === (payerRec ? payerRec.personId : null)) continue;
         const owed = Math.round((r.shareAmount - (r.paidAmount || 0)) * 100) / 100;
         if (owed <= 0) continue;
         const p = people.find(pp => pp.id === r.personId);
         if (!p) continue;
         const uid = p.user_id || (groupId ? ((groupMembers.find(m => m.groupId === groupId && m.personId === r.personId) || {}).user_id || '') : '');
-        if (!uid) continue;
+        if (!uid || uid === payerUid) continue;
         await db.sharedDebts.put({
             id: genId(),
-            creditor_user_id: window.supabaseUser.id,
+            creditor_user_id: payerUid,
             debtor_user_id: uid,
-            creditor_name: meP ? meP.name : 'Io',
+            creditor_name: payerP ? payerP.name : 'Io',
             debtor_name: p.name,
             amount: owed,
             description: '',
@@ -1687,29 +1689,6 @@ function autoFixSplitValues(state, total) {
     }
 }
 
-function renderSharedPayer(selectId) {
-    const sel = document.getElementById(selectId);
-    if (!sel) return;
-    const meId = getSharedMeId();
-    let opts = '<option value="me">👤 Tu</option>';
-    sharedSplitState.participants.forEach(p => {
-        opts += `<option value="${p.personId}">${p.name}</option>`;
-    });
-    sel.innerHTML = opts;
-    sel.value = sharedSplitState.payerId && sharedSplitState.payerId !== meId ? String(sharedSplitState.payerId) : 'me';
-}
-
-function bindSharedPayer(selectId) {
-    const sel = document.getElementById(selectId);
-    if (!sel || sel.dataset.bound) return;
-    sel.dataset.bound = '1';
-    sel.addEventListener('change', () => {
-        sharedSplitState.payerId = sel.value === 'me' ? null : parseInt(sel.value);
-        const isDesktop = selectId === 'sharedPayerSelectDesktop';
-        refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
-    });
-}
-
 function renderSplitEditor(containerId, total) {
     const c = document.getElementById(containerId);
     if (!c) return;
@@ -1719,13 +1698,22 @@ function renderSplitEditor(containerId, total) {
         return;
     }
     const advanced = sharedSplitState.advanced;
+    const meId = getSharedMeId();
     const payer = getSharedPayer(sharedSplitState);
+    const payerId = payer ? payer.personId : null;
     let html = '';
     if (advanced) {
         html += `
             <div class="adv-method-toggle">
                 <button type="button" class="adv-method-btn ${sharedSplitState.method === 'percentage' ? 'active' : ''}" data-adv="percentage">%</button>
                 <button type="button" class="adv-method-btn ${sharedSplitState.method === 'exact' ? 'active' : ''}" data-adv="exact">€</button>
+            </div>
+            <div class="payer-chip-row">
+                <span class="payer-chip-label">Paga</span>
+                <button type="button" class="payer-chip ${!payerId || payerId === meId ? 'active' : ''}" data-payer="me">👤 Tu</button>
+                ${sharedSplitState.participants.filter(p => p.personId !== meId && p.active).map(p =>
+                    `<button type="button" class="payer-chip ${payerId === p.personId ? 'active' : ''}" data-payer="${p.personId}">${p.name}</button>`
+                ).join('')}
             </div>
         `;
     }
@@ -1765,8 +1753,13 @@ function renderSplitEditor(containerId, total) {
         }
         badge.classList.remove('warn');
         badge.classList.add('ok');
-        const payerName = (getSharedPayer(sharedSplitState) || {}).name;
-        badge.textContent = 'Rimanente: ' + fmtE(0) + ' · Paga ' + (payerName || '…');
+        if (advanced) {
+            const payerName = payer ? payer.name : '…';
+            badge.textContent = 'Rimanente: ' + fmtE(0) + ' · Paga ' + (payerName);
+        } else {
+            const activeCount = sharedSplitState.participants.filter(p => p.active).length;
+            badge.textContent = 'Paga ' + (payer ? payer.name : '…') + ' · ' + activeCount + ' partecipanti';
+        }
     };
     c.querySelectorAll('.participant-check').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -1822,14 +1815,19 @@ function renderSplitEditor(containerId, total) {
             refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
         });
     });
+    c.querySelectorAll('.payer-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            sharedSplitState.payerId = btn.dataset.payer === 'me' ? null : parseInt(btn.dataset.payer);
+            sharedSplitState.preset = 'custom';
+            refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
+        });
+    });
     updateRemainder();
 }
 
 function refreshSharedPanelUI(chipsId) {
     const isDesktop = chipsId === 'sharedParticipantsDesktop';
     const total = isDesktop ? getDesktopSharedTotal() : getSheetAmount();
-    renderSharedPayer(isDesktop ? 'sharedPayerSelectDesktop' : 'sharedPayerSelect');
-    bindSharedPayer(isDesktop ? 'sharedPayerSelectDesktop' : 'sharedPayerSelect');
     renderSplitEditor(isDesktop ? 'sharedDetailFieldsDesktop' : 'sharedDetailFields', total);
     renderPresets(isDesktop);
     ['btnAdvancedSplit', 'btnAdvancedSplitDesktop'].forEach(id => {
@@ -2971,7 +2969,7 @@ async function saveTransactionFromSheet() {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
-        if (isShared && splitRes && otherPart > 0) {
+        if (isShared && splitRes && splitRes.records.some(r => r.personId !== getSharedMeId())) {
             const r = await saveSharedSplitsV2(exp.id, amount, sharedSplitState);
             if (r.error) {
                 currentData.expenses.pop();
@@ -3311,7 +3309,7 @@ async function addExpense() {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
-        if (isShared && splitRes && otherPart > 0) {
+        if (isShared && splitRes && splitRes.records.some(r => r.personId !== getSharedMeId())) {
             const r = await saveSharedSplitsV2(exp.id, total, sharedSplitState);
             if (r.error) {
                 currentData.expenses = currentData.expenses.filter(e => e.id !== exp.id);

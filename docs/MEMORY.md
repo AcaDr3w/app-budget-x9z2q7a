@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## ⚡ DIVIDI SPESA — save gate + pushSharedDebts + no payer select (2026-08-13)
+- **Save gate**: MAI usare `otherPart > 0` (perdeva p4: me=100% → otherPart=0 → nessun record → elenco amici/gruppi vuoto). Regola: `isShared && splitRes && splitRes.records.some(r => r.personId !== meId)` in `saveTransactionFromSheet` e `addExpense`.
+- **pushSharedDebts**: `payerRec = records.find(r => r.paidAmount > 0)` → `creditor_user_id = payer's uid` (non più `window.supabaseUser.id`!), `debtor_user_id = p.user_id` (gruppo → user_id membro); skip `uid === payerUid` (self-debt) e uid mancanti.
+- **RLS shared_debts**: INSERT richiede `creditor OR debtor = uid` (migration 004) — senza, p3/p4 non sincronizzano cross-account. UPDATE/SELECT entrambi i lati.
+- **Niente selettore "Pagato da"**: rimosso (era ridondante coi preset). Payer = preset (p1/p2 Tu, p3/p4 primo non-me) OPPURE `.payer-chip-row` in modalità avanzata (`data-payer`, click → payerId + preset='custom'). `renderSharedPayer`/`bindSharedPayer` ELIMINATE — non riaggiungere.
+- **Badge riepilogo** `.shared-remainder`: preset → "Paga X · N partecipanti"; advanced → remainder/errore.
+- `.shared-panel.active` ha `overflow-y: auto` (mai `clip` — tagliava il contenuto >430px).
+
 ## ⚡ DIVIDI SPESA — preset Splitwise + checkbox + avanzato (2026-08-13)
 - **Preset** = `sharedSplitState.preset: 'p1'|'p2'|'p3'|'p4'|'custom'` + `advanced` (bool) + `groupMeta: {label, memberIds}`. `applyPreset(preset, forceActive)` (forceActive=false preserva gli `active` per la ri-distribuzione %), `derivePreset()` ri-sincronizza la card attiva (chiamata in `renderPresets` dentro `refreshSharedPanelUI`).
 - **p1** payer=me equal · **p2** payer=me, 100% su tutti i non-me attivi (100/k) · **p3** payer=primo non-me attivo, equal · **p4** payer=primo non-me, me=100% · avanzato = metodo `%|€` con input per riga.
