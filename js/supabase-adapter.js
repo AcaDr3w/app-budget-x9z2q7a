@@ -34,7 +34,8 @@ const DB_ACCESSOR = {
     investments: 'investments', investment_movements: 'investmentMovements',
     people: 'people', groups: 'groups', group_invites: 'groupInvites',
     group_members: 'groupMembers', shared_expense_splits: 'sharedExpenseSplits',
-    shared_expenses: 'sharedExpenses', shared_expense_participants: 'sharedExpenseParticipants'
+    shared_expenses: 'sharedExpenses', shared_expense_participants: 'sharedExpenseParticipants',
+    shared_debts: 'sharedDebts'
 };
 async function flushOutbox() {
     if (!window.supabaseUser) return;
@@ -56,9 +57,15 @@ async function flushOutbox() {
 window.addEventListener('online', flushOutbox);
 
 class SupabaseTable {
-    constructor(tableName, primaryKey = 'id') {
+    constructor(tableName, primaryKey = 'id', noUserId = false) {
         this.tableName = tableName;
         this.primaryKey = primaryKey;
+        this.noUserId = noUserId;
+    }
+
+    _uidEq(query) {
+        if (this.noUserId) return query;
+        return query.eq('user_id', window.supabaseUser.id);
     }
     
     _mapIn(item) {
@@ -93,7 +100,8 @@ class SupabaseTable {
             group_invites: ['id', 'group_id', 'token', 'email', 'used_by', 'used_at', 'created_at'],
             shared_expense_splits: ['id', 'expenseId', 'personId', 'groupId', 'amount', 'splitType', 'paidBy', 'isPaid', 'settled', 'createdAt'],
             shared_expenses: ['id', 'expense_id', 'group_id', 'total_amount', 'split_method', 'created_by', 'created_at'],
-            shared_expense_participants: ['id', 'shared_expense_id', 'person_id', 'participant_name', 'share_amount', 'paid_amount', 'split_value', 'settled', 'created_at']
+            shared_expense_participants: ['id', 'shared_expense_id', 'person_id', 'participant_name', 'share_amount', 'paid_amount', 'split_value', 'settled', 'created_at'],
+            shared_debts: ['id', 'creditor_user_id', 'debtor_user_id', 'creditor_name', 'debtor_name', 'amount', 'description', 'category', 'expense_id', 'status', 'created_at']
         };
         return map[this.tableName] || null;
     }
@@ -110,14 +118,14 @@ class SupabaseTable {
 
     async toArray() {
         if (!window.supabaseUser) return [];
-        const { data, error } = await supabaseClient.from(this.tableName).select('*').eq('user_id', window.supabaseUser.id);
+        const { data, error } = await this._uidEq(supabaseClient.from(this.tableName).select('*'));
         if (error) console.error(error);
         return (data || []).map(this._mapOut.bind(this));
     }
 
     async get(id) {
         if (!window.supabaseUser) return null;
-        let query = supabaseClient.from(this.tableName).select('*').eq('user_id', window.supabaseUser.id);
+        let query = this._uidEq(supabaseClient.from(this.tableName).select('*'));
         
         if (this.tableName === 'months') {
             query = query.eq('month_id', id);
@@ -133,7 +141,8 @@ class SupabaseTable {
 
     async _upsert(item) {
         if (!window.supabaseUser) return { message: 'utente non autenticato' };
-        const payload = { ...this._mapIn(item), user_id: window.supabaseUser.id };
+        const payload = { ...this._mapIn(item) };
+        if (!this.noUserId) payload.user_id = window.supabaseUser.id;
         const { error } = await supabaseClient.from(this.tableName).upsert(payload);
         return error;
     }
@@ -149,7 +158,7 @@ class SupabaseTable {
     async _update(id, changes) {
         if (!window.supabaseUser) return { message: 'utente non autenticato' };
         const payload = this._mapIn(changes);
-        let query = supabaseClient.from(this.tableName).update(payload).eq('user_id', window.supabaseUser.id);
+        let query = this._uidEq(supabaseClient.from(this.tableName).update(payload));
         
         if (this.tableName === 'months') {
             query = query.eq('month_id', id);
@@ -172,7 +181,7 @@ class SupabaseTable {
 
     async delete(id) {
         if (!window.supabaseUser) return;
-        let query = supabaseClient.from(this.tableName).delete().eq('user_id', window.supabaseUser.id);
+        let query = this._uidEq(supabaseClient.from(this.tableName).delete());
         
         if (this.tableName === 'months') {
             query = query.eq('month_id', id);
@@ -187,13 +196,13 @@ class SupabaseTable {
 
     async clear() {
         if (!window.supabaseUser) return;
-        const { error } = await supabaseClient.from(this.tableName).delete().eq('user_id', window.supabaseUser.id);
+        const { error } = await this._uidEq(supabaseClient.from(this.tableName).delete());
         if (error) console.error(error);
     }
 
     async count() {
         if (!window.supabaseUser) return 0;
-        const { count, error } = await supabaseClient.from(this.tableName).select('*', { count: 'exact', head: true }).eq('user_id', window.supabaseUser.id);
+        const { count, error } = await this._uidEq(supabaseClient.from(this.tableName).select('*', { count: 'exact', head: true }));
         return count || 0;
     }
 
@@ -209,7 +218,7 @@ class SupabaseTable {
 
     async bulkDelete(ids) {
         if (!window.supabaseUser || !ids.length) return;
-        const { error } = await supabaseClient.from(this.tableName).delete().in(this.primaryKey, ids).eq('user_id', window.supabaseUser.id);
+        const { error } = await this._uidEq(supabaseClient.from(this.tableName).delete().in(this.primaryKey, ids));
         if (error) console.error(error);
     }
 
@@ -222,7 +231,7 @@ class SupabaseTable {
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
-                    const { data, error } = await supabaseClient.from(self.tableName).select('*').eq(f, val).eq('user_id', window.supabaseUser.id);
+                    const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').eq(f, val));
                     if (error) console.error(error);
                     return (data || []).map(self._mapOut.bind(self));
                 },
@@ -231,7 +240,7 @@ class SupabaseTable {
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
-                    const { data, error } = await supabaseClient.from(self.tableName).select(self.primaryKey).eq(f, val).eq('user_id', window.supabaseUser.id);
+                    const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select(self.primaryKey).eq(f, val));
                     if (error) console.error(error);
                     return data ? data.map(d => d[self.primaryKey]) : [];
                 }
@@ -242,7 +251,7 @@ class SupabaseTable {
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
-                    const { data, error } = await supabaseClient.from(self.tableName).select('*').in(f, arr).eq('user_id', window.supabaseUser.id);
+                    const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').in(f, arr));
                     if (error) console.error(error);
                     return (data || []).map(self._mapOut.bind(self));
                 }
@@ -258,7 +267,7 @@ class SupabaseTable {
                 let f = field;
                 if (self.tableName === 'months' && field === 'month') f = 'month_id';
                 
-                const { data, error } = await supabaseClient.from(self.tableName).select('*').eq('user_id', window.supabaseUser.id).order(f);
+                const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').order(f));
                 if (error) console.error(error);
                 return (data || []).map(self._mapOut.bind(self));
             }
@@ -294,7 +303,8 @@ window.db = {
     groupMembers: new SupabaseTable('group_members', 'id'),
     sharedExpenseSplits: new SupabaseTable('shared_expense_splits', 'id'),
     sharedExpenses: new SupabaseTable('shared_expenses', 'id'),
-    sharedExpenseParticipants: new SupabaseTable('shared_expense_participants', 'id')
+    sharedExpenseParticipants: new SupabaseTable('shared_expense_participants', 'id'),
+    sharedDebts: new SupabaseTable('shared_debts', 'id', true)
 };
 
 // Autenticazione Auth Modal Logic

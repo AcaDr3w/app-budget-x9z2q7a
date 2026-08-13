@@ -301,7 +301,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 /* ===== POPUP ===== */
 .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(2px); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
 .popup-overlay.active { display: flex; }
-.popup-panel { position: relative; width: min(500px, 100%); max-height: calc(90vh - 32px); background: white; border-radius: 20px; padding: 18px 18px 16px; box-shadow: 0 20px 60px rgba(15,23,42,0.25); overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+.popup-panel { position: relative; width: min(500px, 100%); max-height: calc(85vh - 32px); background: white; border-radius: 20px; padding: 14px 16px 14px; box-shadow: 0 20px 60px rgba(15,23,42,0.25); overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
 .popup-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border: none; border-radius: 999px; background: rgba(15,23,42,0.08); color: #334155; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .popup-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .popup-legend { font-size: 11px; color: #64748b; text-align: center; padding-top: 8px; }
@@ -2602,29 +2602,32 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 
 /* ===== SPESE CONDIVISE - Popup Saldi & Gruppi ===== */
-.condivise-tabs {
+.condivise-segmented {
     display: flex;
-    gap: 0;
-    border-bottom: 2px solid #e2e8f0;
-    margin: 0 0 8px;
+    gap: 4px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 4px;
+    margin: 0 0 10px;
 }
 .condivise-tab {
     flex: 1;
-    padding: 10px 8px;
+    min-height: 40px;
     font-size: 13px;
     font-weight: 700;
     text-align: center;
     cursor: pointer;
     border: none;
     background: transparent;
-    color: #94a3b8;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
+    color: #64748b;
+    border-radius: 9px;
     transition: all 0.2s;
 }
 .condivise-tab.active {
-    color: #3b82f6;
-    border-bottom-color: #3b82f6;
+    background: #3b82f6;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 .condivise-tab-content {
     display: none;
@@ -2638,9 +2641,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     gap: 8px;
 }
 .condivise-empty {
-    padding: 30px 16px;
+    padding: 16px 12px;
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     color: #94a3b8;
 }
 
@@ -3167,7 +3170,11 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 #condiviseBody {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 .condivise-search-add {
     display: flex;
@@ -3176,27 +3183,38 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .condivise-search-add .sheet-input {
     flex: 1;
+    min-width: 0;
 }
-.condivise-search-add .btn-small {
+.btn-add-solid {
     flex-shrink: 0;
-    padding: 0 16px;
-    font-size: 13px;
     min-height: 44px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    background: #3b82f6;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-add-solid:active {
+    transform: scale(0.96);
 }
 
 /* Friend / Group list */
 .condivise-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 .friend-row,
 .group-card {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 16px;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 14px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     cursor: pointer;
@@ -3209,13 +3227,13 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .friend-avatar,
 .group-avatar,
 .detail-avatar-large {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #fff;
     flex-shrink: 0;
@@ -3233,24 +3251,63 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 }
 .friend-name,
 .group-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: #0f172a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.friend-status,
-.group-members {
-    font-size: 12px;
-    color: #64748b;
-}
-.friend-balance,
-.group-balance {
-    font-size: 15px;
+.friend-badge {
+    align-self: flex-start;
+    font-size: 11px;
     font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
     white-space: nowrap;
+}
+.friend-badge.positive {
+    color: #059669;
+    background: #ecfdf5;
+}
+.friend-badge.negative {
+    color: #dc2626;
+    background: #fef2f2;
+}
+.friend-badge.neutral {
+    color: #64748b;
+    background: #f1f5f9;
+}
+.group-members {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.group-pos {
+    font-size: 11px;
+    font-weight: 700;
+}
+.group-total {
     flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    background: #eef2ff;
+    border-radius: 999px;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+.row-chevron {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 14px;
 }
 .saldo-positive { color: #10b981; }
 .saldo-negative { color: #ef4444; }
@@ -3271,6 +3328,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .btn-settle {
     padding: 8px 14px;
     font-size: 12px;
+    min-height: 44px;
 }
 .btn-settle-large {
     padding: 12px 20px;
@@ -3284,6 +3342,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     align-items: center;
     justify-content: center;
     font-size: 16px;
+    background: #eef2ff;
+    color: #6366f1;
 }
 .btn-settle:active,
 .btn-settle-large:active,
@@ -3291,21 +3351,84 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     transform: scale(0.96);
 }
 
+/* Group accordion */
 .group-card {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
 }
-.group-card-main {
+.group-card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    padding: 8px 10px;
 }
-.group-card-actions {
+.group-acc-body {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 10px 10px;
+    border-top: 1px solid #eef2f7;
+    padding-top: 8px;
+}
+.group-card.open .group-acc-body {
+    display: flex;
+}
+.group-card.open .row-chevron i {
+    transform: rotate(180deg);
+}
+.row-chevron i {
+    transition: transform 0.2s;
+}
+.group-acc-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+.btn-acc-action {
+    flex: 1;
+    min-height: 44px;
+    border: none;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-acc-action[data-action="add"] {
+    background: #3b82f6;
+    color: #fff;
+}
+.btn-acc-action[data-action="settle"] {
+    background: #ecfdf5;
+    color: #059669;
+}
+.btn-acc-action:active {
+    transform: scale(0.96);
+}
+.debts-summary {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 2px;
+}
+.debts-summary.neutral {
+    color: #94a3b8;
+    font-weight: 600;
+}
+.debt-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    padding: 7px 10px;
+    background: #eef2ff;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #3730a3;
+}
+.debt-amount {
+    font-weight: 700;
 }
 
 /* Detail view (light theme) */
@@ -3443,5 +3566,17 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     }
     .ledger-desc {
         max-width: 160px;
+    }
+}
+
+@media (max-width: 360px) {
+    .condivise-search-add {
+        flex-wrap: wrap;
+    }
+    .condivise-search-add .sheet-input {
+        flex: 1 1 100%;
+    }
+    .btn-add-solid {
+        flex: 1 1 100%;
     }
 }

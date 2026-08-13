@@ -1,5 +1,23 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Spese Condivise: sync debiti multi-account + redesign modal (Amici/Gruppi)
+
+### ✅ Completed Changes
+- **migrations/003_shared_debts.sql (NUOVO)**: tabella `shared_debts` (creditor/debtor user_id, importo, expense_id, status open/settled) + RLS (SELECT/UPDATE creditor O debtor, INSERT solo creditor) + `NOTIFY pgrst`. **Da eseguire su Supabase.**
+- **js/supabase-adapter.js**: flag `noUserId` per tabelle senza colonna `user_id` (isolamento via RLS) + nuova tabella `shared_debts` in `DB_ACCESSOR`/allowlist/`window.db.sharedDebts`.
+- **Sync A→B** (`pushSharedDebts` in `saveSharedExpenseV2`): per ogni partecipante non-pagatore con quota >0 e `user_id` noto (persona collegata o membro di gruppo con invito accettato) → riga `shared_debts`.
+- **Sync B→A** (`syncSharedDebts` in `startupCloudCompare` + `initApp` + listener `online`): B materializza i debiti `open` come **Spese Previste del mese corrente** `"Da saldare a [Nome A]"` (dedupe su `debtId`, categoria fallback 'Spese Condivise'); A marca `settled` i partecipanti quando B salda.
+- **Salda (B)**: `payExpense` aggiornato → transizione planned→actual + `markDebtSettled` (RLS debtor permette update).
+- **Modal redesign**: tabs → segmented control `[👤 Amici | 👥 Gruppi]` (`.condivise-segmented`, pattern `.split-segment`); popup `max-height 85vh` + `#condiviseBody` scrollabile; form add con bottone solido `.btn-add-solid` (+ stack ≤360px); friend rows compatte con **badge stato** (🟩 Ti deve X / 🟥 Devi X / ⬜ In pari) + chevron 44px; gruppi → **accordion** (header: icona, nome, membri, posizione "Sei in credito di X"/"Devi X"/"In pari", badge Totale Speso, copia-link; corpo espanso: matrice "📌 X deve Y € a Z" con me→"Tu" + azioni `+ Aggiungi Spesa` e `Salda mia quota` (NUOVO `settleMyGroupShare`)); empty state compatto; label `getSimplifiedDebts` → "deve ... a ..." anche in `showGroupDetail`.
+- CSS morti rimossi (`.friend-status`, `.friend-balance`, `.group-balance`, `.group-card-main/.actions`).
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; braces 0; grep residui pulito.
+- **Da eseguire su Supabase**: `migrations/003_shared_debts.sql` (dopo 001/001b/002).
+- Limitazione: amici senza `user_id` collegato → niente sync cross-account (resta gestione locale/Salda manuale). Categoria derivata 'Spese Condivise' non compare nelle macro-card (liste e totali OK).
+
+---
+
 ## [2026-08-13] - Refactoring UX "Dividi Spesa" + banner budget solo su schermata categorie
 
 ### ✅ Completed Changes

@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## 🔄 SPESE CONDIVISE — sync debiti multi-account + modal redesign (2026-08-13)
+- **`shared_debts`** (migration 003, RLS creditor/debtor, NO colonna `user_id`): ponte cross-account A↔B. `db.sharedDebts` = `SupabaseTable('shared_debts','id', noUserId=true)` — il flag **`noUserId`** fa saltare i filtri `.eq('user_id', uid)` nel adapter (l'isolamento è via RLS).
+- **A-side**: `pushSharedDebts(sharedExpenseId, groupId, records)` chiamato in coda a `saveSharedExpenseV2`; scrive solo debiti verso persone con `user_id` noto (person.user_id oppure membro gruppo via `groupMembers.user_id`). `debt.expense_id` = **sharedExpenseId** (NON expenses.id).
+- **B-side**: `syncSharedDebts()` in `startupCloudCompare`+`initApp`+`online` → materializza in `expenses` locali (month corrente, `desc: "Da saldare a X"`, `debtId` per dedupe, category fallback 'Spese Condivise') e, lato creditor, segna `settled` i partecipanti quando il debitore salda.
+- **Salda B**: `payExpense` → `exp.actual=amount; settled=true` + `markDebtSettled(debtId)` (usa `db.sharedDebts.update` — RLS debtor permette; MAI `put` lato debtor: l'upsert fallirebbe sul WITH CHECK insert creditor).
+- **Modal**: tabs = `.condivise-segmented`; popup `max-height:85vh` + `#condiviseBody` `flex:1; overflow-y:auto`; bottone add `.btn-add-solid` (stack ≤360px); amici = righe con `.friend-badge` (positive/negative/neutral) + `.row-chevron` 44px; gruppi = accordion `.group-card.open` (header + `.group-acc-body` con `.debt-row` "X deve Y € a Z", me→"Tu", azioni `btn-acc-action[data-action=add|settle]`); `settleMyGroupShare(groupId)` salda le MIE righe del gruppo.
+- `getSimplifiedDebts(balances)` → txs `{from,to,amount}`; label resa con "deve ... a ..." sia nel tab sia in `showGroupDetail`.
+
 ## 🤝 DIVIDI SPESA UX v3 — payer unico + segmented control + righe compatte (2026-08-13)
 - **Stato**: `sharedSplitState = { participants: [], method: 'equal', groupId: null, payerId: null }`; partecipante = `{ personId, name, value }` (NON più `paid` per-riga). `payerId` null = "Tu".
 - **`computeSharedSplits`**: `paidAmount = totale` SOLO al pagatore (`getSharedPayer` = payerId → me → primo). Branch `shares` RESTA nel compute (legacy) ma è FUORI dalla UI.

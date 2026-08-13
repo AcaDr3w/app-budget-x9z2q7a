@@ -204,6 +204,7 @@ async function startupCloudCompare() {
     } catch (e) {
         console.warn('[SYNC] Errore durante il confronto startup cloud:', e);
     }
+    await syncSharedDebts();
 }
 
 async function processSilentRestore(data, cloudCounter) {
@@ -443,6 +444,8 @@ async function initApp() {
     setupSharedToggle();
     setupSharedPanelDesktop();
     handleJoinGroupFromUrl();
+    await syncSharedDebts();
+    window.addEventListener('online', syncSharedDebts);
     if (localStorage.getItem('push_notifications_enabled') === 'true') {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
@@ -1312,6 +1315,93 @@ async function saveSharedExpenseV2(expenseId, totalAmount, groupId, participantR
             created_at: Date.now()
         });
     }
+    await pushSharedDebts(sharedExpenseId, groupId, participantRecords);
+}
+
+async function pushSharedDebts(sharedExpenseId, groupId, participantRecords) {
+    if (!window.supabaseUser) return;
+    const meId = getSharedMeId();
+    const meP = people.find(pp => pp.id === meId);
+    const payerId = (participantRecords.find(r => r.paidAmount > 0) || {}).personId || meId;
+    const now = Date.now();
+    for (const r of participantRecords) {
+        if (r.personId === payerId) continue;
+        const owed = Math.round((r.shareAmount - (r.paidAmount || 0)) * 100) / 100;
+        if (owed <= 0) continue;
+        const p = people.find(pp => pp.id === r.personId);
+        if (!p) continue;
+        const uid = p.user_id || (groupId ? ((groupMembers.find(m => m.groupId === groupId && m.personId === r.personId) || {}).user_id || '') : '');
+        if (!uid) continue;
+        await db.sharedDebts.put({
+            id: genId(),
+            creditor_user_id: window.supabaseUser.id,
+            debtor_user_id: uid,
+            creditor_name: meP ? meP.name : 'Io',
+            debtor_name: p.name,
+            amount: owed,
+            description: '',
+            category: '',
+            expense_id: String(sharedExpenseId),
+            status: 'open',
+            created_at: now
+        });
+    }
+}
+
+async function syncSharedDebts() {
+    if (!window.supabaseUser) return;
+    const uid = window.supabaseUser.id;
+    try {
+        const debts = await db.sharedDebts.toArray();
+        const openForMe = debts.filter(d => d.status === 'open' && d.debtor_user_id === uid);
+        if (openForMe.length) {
+            const month = document.getElementById('currentMonth')?.value;
+            const existing = new Set((await db.expenses.toArray()).map(e => e.debtId ? String(e.debtId) : null).filter(Boolean));
+            for (const d of openForMe) {
+                if (existing.has(String(d.id))) continue;
+                if (!month) continue;
+                const exp = {
+                    id: genId(),
+                    month,
+                    date: new Date().toISOString().slice(0, 10),
+                    category: d.category || 'Spese Condivise',
+                    desc: 'Da saldare a ' + (d.creditor_name || '…'),
+                    planned: Number(d.amount) || 0,
+                    actual: 0,
+                    sharedPercentage: 0,
+                    debtId: String(d.id)
+                };
+                await db.expenses.put(exp);
+                currentData.expenses.push(exp);
+                existing.add(String(d.id));
+            }
+            await updateUI();
+            showToast('💸 ' + openForMe.length + ' debito/i da saldare aggiunti', false);
+        }
+        const settledForMe = debts.filter(d => d.creditor_user_id === uid && d.status === 'settled' && d.expense_id);
+        for (const d of settledForMe) {
+            const debtorP = people.find(pp => pp.user_id === d.debtor_user_id);
+            if (!debtorP) continue;
+            const parts = await db.sharedExpenseParticipants.toArray();
+            for (const part of parts) {
+                if (String(part.shared_expense_id) === String(d.expense_id) && part.person_id === debtorP.id && !part.settled) {
+                    part.settled = true;
+                    await db.sharedExpenseParticipants.put(part);
+                    showToast('✅ ' + (d.debtor_name || 'Un amico') + ' ha saldato il debito', false);
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('[SyncDebts] errore:', err);
+    }
+}
+
+async function markDebtSettled(debtId) {
+    if (!debtId) return;
+    const debts = await db.sharedDebts.toArray();
+    const d = debts.find(x => String(x.id) === String(debtId));
+    if (!d || d.status === 'settled') return;
+    await db.sharedDebts.update(d.id, { status: 'settled' });
 }
 
 async function copyInviteLink(groupId) {
@@ -1738,7 +1828,7 @@ async function renderFriendsTab() {
     let html = `
         <div class="condivise-search-add">
             <input type="text" id="newPersonQuickInput" class="sheet-input" placeholder="Nome o email...">
-            <button class="btn-small" id="btnQuickAddPerson">Aggiungi</button>
+            <button class="btn-add-solid" id="btnQuickAddPerson">+ Aggiungi</button>
         </div>
     `;
 
@@ -1749,17 +1839,18 @@ async function renderFriendsTab() {
         for (const p of list) {
             const color = getAvatarColor(p.name);
             const initials = getInitials(p.name);
-            const statusClass = p.net > 0.001 ? 'saldo-positive' : (p.net < -0.001 ? 'saldo-negative' : 'saldo-neutral');
-            const statusText = p.net > 0.001 ? 'Ti deve' : (p.net < -0.001 ? 'Devi' : 'In pari');
+            const net = p.net;
+            const badgeClass = net > 0.001 ? 'positive' : (net < -0.001 ? 'negative' : 'neutral');
+            const badgeText = net > 0.001 ? 'Ti deve ' + fmtE(net) : (net < -0.001 ? 'Devi ' + fmtE(Math.abs(net)) : 'In pari');
             html += `
                 <div class="friend-row" data-pid="${p.id}">
                     <div class="friend-avatar" style="background:${color}">${initials}</div>
                     <div class="friend-info">
                         <span class="friend-name">${p.name}</span>
-                        <span class="friend-status ${statusClass}">${statusText}</span>
+                        <span class="friend-badge ${badgeClass}">${badgeText}</span>
                     </div>
-                    <span class="friend-balance ${statusClass}">${p.net > 0 ? '+' : (p.net < 0 ? '-' : '')}${fmtE(Math.abs(p.net))}</span>
-                    ${Math.abs(p.net) > 0.001 ? `<button class="btn-settle" data-pid="${p.id}">Salda</button>` : ''}
+                    ${Math.abs(net) > 0.001 ? `<button class="btn-settle" data-pid="${p.id}">Salda</button>` : ''}
+                    <span class="row-chevron"><i class="fas fa-chevron-right"></i></span>
                 </div>
             `;
         }
@@ -1769,7 +1860,7 @@ async function renderFriendsTab() {
 
     container.querySelectorAll('.friend-row').forEach(row => {
         row.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('btn-settle')) return;
+            if (e.target.closest('.btn-settle')) return;
             const pid = parseInt(row.dataset.pid);
             await showFriendDetail(pid);
         });
@@ -1803,7 +1894,7 @@ async function renderGroupsTab() {
     let html = `
         <div class="condivise-search-add">
             <input type="text" id="newGroupQuickInput" class="sheet-input" placeholder="Nome gruppo...">
-            <button class="btn-small" id="btnQuickAddGroup">Crea</button>
+            <button class="btn-add-solid" id="btnQuickAddGroup">+ Crea</button>
         </div>
     `;
 
@@ -1815,20 +1906,49 @@ async function renderGroupsTab() {
             const members = getGroupMembersWithPeople(g.id);
             const memberNames = members.map(m => m.person ? m.person.name : '?').join(', ') || 'Nessun membro';
             const balances = await calculateGroupBalances(g.id);
-            const net = balances.reduce((sum, b) => sum + b.net, 0);
+            const shared = (await db.sharedExpenses.toArray()).filter(se => se.group_id === g.id);
+            const total = shared.reduce((s, se) => s + (Number(se.total_amount) || 0), 0);
+            const meId = getSharedMeId();
+            const meB = balances.find(b => b.id === meId);
+            const myNet = meB ? meB.net : 0;
+            const posText = myNet > 0.001 ? 'Sei in credito di ' + fmtE(myNet)
+                : (myNet < -0.001 ? 'Devi ' + fmtE(Math.abs(myNet)) : 'In pari');
+            const debts = getSimplifiedDebts(balances);
+            let accBody = '';
+            if (debts.length) {
+                accBody += '<div class="debts-summary">📌 Chi deve cosa</div>';
+                for (const tx of debts) {
+                    const fromName = tx.from.id === meId ? 'Tu' : tx.from.name;
+                    const toName = tx.to.id === meId ? 'Tu' : tx.to.name;
+                    accBody += `
+                        <div class="debt-row">
+                            <span>${fromName} deve ${fmtE(tx.amount)} a ${toName}</span>
+                        </div>
+                    `;
+                }
+            } else {
+                accBody += '<div class="debts-summary neutral">✨ Nessun debito in sospeso</div>';
+            }
+            accBody += `
+                <div class="group-acc-actions">
+                    <button class="btn-acc-action" data-gid="${g.id}" data-action="add">+ Aggiungi Spesa</button>
+                    <button class="btn-acc-action" data-gid="${g.id}" data-action="settle">Salda mia quota</button>
+                </div>
+            `;
             html += `
                 <div class="group-card" data-gid="${g.id}">
-                    <div class="group-card-main">
+                    <div class="group-card-header">
                         <div class="group-avatar"><i class="fas fa-users"></i></div>
                         <div class="group-info">
                             <span class="group-name">${g.name}</span>
                             <span class="group-members">${memberNames}</span>
+                            <span class="group-pos ${myNet > 0.001 ? 'saldo-positive' : (myNet < -0.001 ? 'saldo-negative' : 'saldo-neutral')}">${posText}</span>
                         </div>
-                    </div>
-                    <div class="group-card-actions">
-                        <span class="group-balance ${net > 0.001 ? 'saldo-positive' : (net < -0.001 ? 'saldo-negative' : 'saldo-neutral')}">${fmtE(Math.abs(net))}</span>
+                        <span class="group-total">${fmtE(total)}</span>
                         <button class="btn-copy-link" data-gid="${g.id}" title="Copia link invito"><i class="fas fa-link"></i></button>
+                        <span class="row-chevron"><i class="fas fa-chevron-down"></i></span>
                     </div>
+                    <div class="group-acc-body">${accBody}</div>
                 </div>
             `;
         }
@@ -1836,11 +1956,11 @@ async function renderGroupsTab() {
     }
     container.innerHTML = html;
 
-    container.querySelectorAll('.group-card').forEach(card => {
-        card.addEventListener('click', async (e) => {
+    container.querySelectorAll('.group-card-header').forEach(header => {
+        header.addEventListener('click', async (e) => {
             if (e.target.closest('.btn-copy-link')) return;
-            const gid = parseInt(card.dataset.gid);
-            await showGroupDetail(gid);
+            const card = header.closest('.group-card');
+            card.classList.toggle('open');
         });
     });
     container.querySelectorAll('.btn-copy-link').forEach(btn => {
@@ -1848,6 +1968,14 @@ async function renderGroupsTab() {
             e.stopPropagation();
             const gid = parseInt(btn.dataset.gid);
             await copyInviteLink(gid);
+        });
+    });
+    container.querySelectorAll('.btn-acc-action').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const gid = parseInt(btn.dataset.gid);
+            if (btn.dataset.action === 'settle') await settleMyGroupShare(gid);
+            else await showGroupDetail(gid);
         });
     });
 
@@ -1860,6 +1988,29 @@ async function renderGroupsTab() {
         });
         quickAddInput.addEventListener('keydown', async (e) => { if (e.key === 'Enter') quickAddBtn.click(); });
     }
+}
+
+async function settleMyGroupShare(groupId) {
+    const meId = getSharedMeId();
+    if (!meId) return;
+    const shared = (await db.sharedExpenses.toArray()).filter(se => se.group_id === groupId);
+    const parts = [];
+    for (const se of shared) {
+        const p = await loadSharedExpenseParticipants(se.id);
+        parts.push(...p.filter(x => x.person_id === meId && !x.settled));
+    }
+    if (!parts.length) { showToast('Nessuna quota da saldare in questo gruppo', true); return; }
+    const ok = await showConfirmDialog(
+        'Salda la tua quota nel gruppo?',
+        parts.length + ' voce/i pendenti verranno marcate come saldate.'
+    );
+    if (!ok) return;
+    for (const part of parts) {
+        part.settled = true;
+        await db.sharedExpenseParticipants.put(part);
+    }
+    showToast('✅ Quota saldata', false);
+    renderGroupsTab();
 }
 
 // ===== LEDGER - VISTA DETTAGLIO PERSONA / GRUPPO =====
@@ -1991,11 +2142,13 @@ async function showGroupDetail(groupId) {
     let html = '<div class="ledger-list">';
     if (debts.length) {
         html += '<div class="debts-summary"><strong>Saldi consigliati</strong></div>';
+        const meId = getSharedMeId();
         for (const tx of debts) {
+            const fromName = tx.from.id === meId ? 'Tu' : tx.from.name;
+            const toName = tx.to.id === meId ? 'Tu' : tx.to.name;
             html += `
                 <div class="debt-row">
-                    <span>${tx.from.name} paga ${tx.to.name}</span>
-                    <span class="debt-amount">${fmtE(tx.amount)}</span>
+                    <span>${fromName} deve ${fmtE(tx.amount)} a ${toName}</span>
                 </div>
             `;
         }
@@ -2969,7 +3122,7 @@ async function payExpense(id) {
     const exp = currentData.expenses.find(i => i.id === id); if (!exp) return;
     const val = prompt("Importo effettivo pagato (€):", exp.planned.toFixed(2));
     if (val !== null) {
-        const p = parseFloat(val.replace(',','.')); if (!isNaN(p)) { exp.actual = p; await db.expenses.update(id, {actual: p}); updateUI(); }
+        const p = parseFloat(val.replace(',','.')); if (!isNaN(p)) { exp.actual = p; exp.settled = true; await db.expenses.update(id, {actual: p, settled: true}); if (exp.debtId) await markDebtSettled(exp.debtId); updateUI(); }
     }
 }
 async function deleteEntry(type, id) {
