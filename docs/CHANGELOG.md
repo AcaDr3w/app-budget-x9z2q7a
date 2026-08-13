@@ -1,5 +1,19 @@
 # Session Logs & Progress
 
+## [2026-08-13] - Dividi Spesa: preset rapidi Splitwise + partecipanti con checkbox + modalità avanzata con auto-fix
+
+### ✅ Completed Changes
+- **Preset rapidi (4 card)** sostituiscono le pills metodo (`split-pill` rimosse dal pannello): `.preset-grid` 2×2 con `🟢 Hai pagato tu, dividi equamente` (default), `🔵 Per conto di [X]` (payer=me, 100% ripartito equamente tra i non-me attivi), `🟡 [X] ha pagato, dividi equamente` (payer=primo non-me), `🔴 [X] ha pagato per te` (me=100%). `applyPreset(preset, forceActive)` mappa su `payerId`+`method`+`value`; `derivePreset()` ri-sincronizza la card attiva su qualsiasi cambio (payer select, avanzato).
+- **Controparte = tutti i non-me attivi** (multiselezione): checkbox per riga `.participant-check` (spuntate di default); deselezionare = escluso dallo split; **il pagatore non può essere escluso** (toast); in p2/p4 la deselection non può svuotare la controparte (toast) e i valori % vengono **ri-distribuiti** (`applyPreset(preset, false)` preserva gli `active`).
+- **Gruppo intero**: select `g_` imposta `sharedSplitState.groupMeta = { label, memberIds }` → label preset "per conto del gruppo"; multiselezione membri via checkbox. `groupMeta` azzerato su add persona singola/rimozione totale.
+- **Modalità avanzata**: bottone `⚙️ Personalizza quote (% / €)` (label ⇄ "← Torna ai preset") → toggle segmentato `% | €` (`.adv-method-btn`), input per riga; **auto-fix** `autoFixSplitValues(state, total)` su blur e pre-salvataggio (mobile `saveTransactionFromSheet` + desktop `addExpense`): l'ULTIMA riga viene adattata a `target − somma(altri)` (clamp ≥0) → mai più blocco somma-zero; errore solo se il fix darebbe negativo.
+- **`computeSharedSplits`** ora filtra i soli partecipanti `active`; micro-quota live per riga (`.participant-share` = quota calcolata, es. "25,00 €"); tag "paga" sul pagatore (`.participant-payer-tag`).
+- **`renderSplitEditor` v2**: righe con checkbox+avatar+nome+tag+quota/input+✕; focus=select() e blur=auto-fix sugli input avanzati; badge `.shared-remainder` sempre presente ("Rimanente: 0,00 € · Paga X").
+- **CSS**: `.preset-grid`, `.preset-card(.active/.disabled)`, `.btn-advanced`, `.adv-method-toggle/.adv-method-btn`, `.participant-check` (24px accent blu), `.participant-row.excluded` (opacity .5), `.participant-payer-tag`.
+- `resetSharedSplitState` esteso (`preset:'p1', advanced:false, groupMeta:null`); rimosso codice morto pills dal reset sheet.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Debug: fix liste/debiti condivisi (noUserId junction), gruppi fantasma, focus-select split, tasto + blu
 
 ### ✅ Completed Changes

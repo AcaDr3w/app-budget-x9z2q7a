@@ -384,11 +384,13 @@
                                         <select id="sharedPersonDesktop" style="flex:1;"></select>
                                         <button type="button" class="btn-plus-solid" id="btnNewPersonDesktop" title="Nuova persona">➕</button>
                                     </div>
-                                    <div class="split-segment">
-                                        <button type="button" class="split-pill active" data-method="equal">🤝 Equamente</button>
-                                        <button type="button" class="split-pill" data-method="exact">€ Importi</button>
-                                        <button type="button" class="split-pill" data-method="percentage">% Perc.</button>
+                                    <div class="preset-grid" id="sharedPresetsDesktop">
+                                        <button type="button" class="preset-card active" data-preset="p1">🟢 Hai pagato tu, dividi equamente</button>
+                                        <button type="button" class="preset-card" data-preset="p2">🔵 Per conto di <b class="preset-friend">…</b></button>
+                                        <button type="button" class="preset-card" data-preset="p3">🟡 <b class="preset-friend">…</b> ha pagato, dividi equamente</button>
+                                        <button type="button" class="preset-card" data-preset="p4">🔴 <b class="preset-friend">…</b> ha pagato per te</button>
                                     </div>
+                                    <button type="button" class="btn-advanced" id="btnAdvancedSplitDesktop">⚙️ Personalizza quote (% / €)</button>
                                     <div class="shared-detail-fields" id="sharedDetailFieldsDesktop"></div>
                                 </div>
                             </div>
@@ -988,11 +990,13 @@
                             </select>
                             <button class="btn-plus-solid" id="btnNewPerson" title="Nuova persona">＋</button>
                         </div>
-                        <div class="split-segment">
-                            <label class="split-pill active" data-method="equal">🤝 Equamente</label>
-                            <label class="split-pill" data-method="exact">€ Importi</label>
-                            <label class="split-pill" data-method="percentage">% Perc.</label>
+                        <div class="preset-grid" id="sharedPresets">
+                            <label class="preset-card active" data-preset="p1">🟢 Hai pagato tu, dividi equamente</label>
+                            <label class="preset-card" data-preset="p2">🔵 Per conto di <b class="preset-friend">…</b></label>
+                            <label class="preset-card" data-preset="p3">🟡 <b class="preset-friend">…</b> ha pagato, dividi equamente</label>
+                            <label class="preset-card" data-preset="p4">🔴 <b class="preset-friend">…</b> ha pagato per te</label>
                         </div>
+                        <button type="button" class="btn-advanced" id="btnAdvancedSplit">⚙️ Personalizza quote (% / €)</button>
                         <div id="sharedDetailFields"></div>
                     </div>
                 </div>

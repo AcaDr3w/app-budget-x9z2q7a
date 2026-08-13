@@ -1,5 +1,14 @@
 # Project Core Memory
 
+## ⚡ DIVIDI SPESA — preset Splitwise + checkbox + avanzato (2026-08-13)
+- **Preset** = `sharedSplitState.preset: 'p1'|'p2'|'p3'|'p4'|'custom'` + `advanced` (bool) + `groupMeta: {label, memberIds}`. `applyPreset(preset, forceActive)` (forceActive=false preserva gli `active` per la ri-distribuzione %), `derivePreset()` ri-sincronizza la card attiva (chiamata in `renderPresets` dentro `refreshSharedPanelUI`).
+- **p1** payer=me equal · **p2** payer=me, 100% su tutti i non-me attivi (100/k) · **p3** payer=primo non-me attivo, equal · **p4** payer=primo non-me, me=100% · avanzato = metodo `%|€` con input per riga.
+- **Checkbox** `.participant-check`: esclusi → `active=false` → filtrati in `computeSharedSplits` (che ora usa `p.active`); pagatore NON deselezionabile; p2/p4 non svuotabili (toast) e valori ri-distribuiti via `applyPreset(preset,false)`.
+- **Gruppo**: select `g_` → `groupMeta.memberIds` → label preset "per conto del gruppo" se gli attivi ⊆ membri; multiselezione = checkbox.
+- **Auto-fix** `autoFixSplitValues(state, total)`: su blur degli input avanzati E prima di `computeSharedSplits` in `saveTransactionFromSheet` e `addExpense` → ultima riga = target − somma(altri) (clamp ≥0; errore solo se negativo).
+- Micro-quota per riga = `sharesByPid` da `computeSharedSplits` (non-advanced); tag "paga" sul pagatore; `renderSplitEditor` = containerId → isDesktop via `sharedDetailFieldsDesktop`.
+- Regola: **mai numeri obbligatori nei casi semplici** — preset card ≥44px, `.btn-advanced` full-width; pills `split-pill` restano solo per "Tipo voce" desktop (`data-exp-type`).
+
 ## 🐛 DEBUG: noUserId sulle junction + gruppi offline + focus-select + btn + blu (2026-08-13)
 - **`shared_expenses` e `shared_expense_participants` NON hanno colonna `user_id`** (`shared_expenses` usa `created_by`, participants è junction) → **devono avere `noUserId: true`** nel costruttore `SupabaseTable` (isolamento via RLS delle migrazioni). SENZA il flag: ogni read → 400 "column user_id does not exist" → `[]`; ogni write → outbox → liste/debiti/spese MAI aggiornati. Stessa regola per `shared_debts` (già noUserId).
 - **`loadPeopleGroups` = merge cloud + outbox** (dedupe per id, cloud preferita) per `people`/`groups`/`groupMembers` — via `window.readOutbox` (esposto dall'adapter insieme a `window.flushOutbox`). Mai più gruppi/persone "spariti" dopo creazione offline.

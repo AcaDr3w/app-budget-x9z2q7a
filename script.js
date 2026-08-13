@@ -768,9 +768,6 @@ function closeTransactionSheet() {
     const shDetailFields = document.getElementById('sharedDetailFields');
     if (shDetailFields) shDetailFields.innerHTML = '';
     resetSharedSplitState();
-    document.querySelectorAll('#sharedPanel .split-pill').forEach(p => p.classList.remove('active'));
-    const equalPill = document.querySelector('#sharedPanel .split-pill[data-method="equal"]');
-    if (equalPill) equalPill.classList.add('active');
 }
 
 function editExpense(id) {
@@ -1441,7 +1438,7 @@ async function handleJoinGroupFromUrl() {
 }
 
 // ===== SPESE CONDIVISE - Pannello split condiviso (mobile + desktop) =====
-let sharedSplitState = { participants: [], method: 'equal', groupId: null, payerId: null };
+let sharedSplitState = { participants: [], method: 'equal', groupId: null, payerId: null, preset: 'p1', advanced: false, groupMeta: null };
 
 function populateSharedPersonSelect(selEl) {
     if (!selEl) return;
@@ -1474,7 +1471,7 @@ function populateSharedPersonSelect(selEl) {
 }
 
 function resetSharedSplitState() {
-    sharedSplitState = { participants: [], method: 'equal', groupId: null, payerId: null };
+    sharedSplitState = { participants: [], method: 'equal', groupId: null, payerId: null, preset: 'p1', advanced: false, groupMeta: null };
 }
 
 async function addSharedParticipant(selEl) {
@@ -1484,24 +1481,28 @@ async function addSharedParticipant(selEl) {
     if (val === 'me') {
         const me = await ensureCurrentUserPerson();
         if (me && !sharedSplitState.participants.some(p => p.personId === me.id)) {
-            sharedSplitState.participants.push({ personId: me.id, name: me.name, value: null });
+            sharedSplitState.participants.push({ personId: me.id, name: me.name, value: null, active: true });
         }
+        sharedSplitState.groupMeta = null;
     } else if (val.startsWith('g_')) {
         const gid = parseInt(val.replace('g_', ''));
         sharedSplitState.groupId = gid;
         const members = getGroupMembersWithPeople(gid);
+        const g = groups.find(gg => gg.id === gid);
+        sharedSplitState.groupMeta = { label: g ? g.name : 'Gruppo', memberIds: members.map(m => (m.person ? m.person.id : m.personId)).filter(Boolean) };
         for (const m of members) {
             const pid = m.person ? m.person.id : m.personId;
             if (pid && !sharedSplitState.participants.some(p => p.personId === pid)) {
-                sharedSplitState.participants.push({ personId: pid, name: m.person ? m.person.name : (m.member_name || 'Sconosciuto'), value: null });
+                sharedSplitState.participants.push({ personId: pid, name: m.person ? m.person.name : (m.member_name || 'Sconosciuto'), value: null, active: true });
             }
         }
     } else {
         const pid = parseInt(val);
         const p = people.find(pp => pp.id === pid);
         if (p && !sharedSplitState.participants.some(x => x.personId === pid)) {
-            sharedSplitState.participants.push({ personId: pid, name: p.name, value: null });
+            sharedSplitState.participants.push({ personId: pid, name: p.name, value: null, active: true });
         }
+        sharedSplitState.groupMeta = null;
     }
     const meId = getSharedMeId();
     if (sharedSplitState.payerId && !sharedSplitState.participants.some(p => p.personId === sharedSplitState.payerId)) {
@@ -1514,6 +1515,7 @@ async function addSharedParticipant(selEl) {
 
 function removeSharedParticipant(pid) {
     sharedSplitState.participants = sharedSplitState.participants.filter(p => p.personId !== pid);
+    if (!sharedSplitState.participants.length) sharedSplitState.groupMeta = null;
     const meId = getSharedMeId();
     if (sharedSplitState.payerId === pid) sharedSplitState.payerId = null;
     if (!sharedSplitState.payerId && meId && sharedSplitState.participants.some(p => p.personId === meId)) {
@@ -1540,7 +1542,7 @@ function avatarColorFor(name) {
 }
 
 function computeSharedSplits(state, total) {
-    const parts = state.participants;
+    const parts = state.participants.filter(p => p.active);
     if (!parts.length) return { error: 'Aggiungi almeno un partecipante' };
     const n = parts.length;
     const round2 = v => Math.round(v * 100) / 100;
@@ -1585,6 +1587,106 @@ function computeSharedSplits(state, total) {
     return { records, splitMethod: method };
 }
 
+function derivePreset() {
+    const meId = getSharedMeId();
+    if (sharedSplitState.advanced) { sharedSplitState.preset = 'custom'; return; }
+    const hasOther = sharedSplitState.participants.some(p => p.active && p.personId !== meId);
+    if (sharedSplitState.payerId === meId) {
+        sharedSplitState.preset = sharedSplitState.method === 'equal' ? 'p1' : (hasOther ? 'p2' : 'custom');
+    } else {
+        sharedSplitState.preset = sharedSplitState.method === 'equal' ? 'p3' : (hasOther ? 'p4' : 'custom');
+    }
+}
+
+function applyPreset(preset, forceActive) {
+    const meId = getSharedMeId();
+    const others = sharedSplitState.participants.filter(p => p.active && p.personId !== meId);
+    const setActive = forceActive !== false;
+    sharedSplitState.advanced = false;
+    sharedSplitState.preset = preset;
+    if (preset === 'p1') {
+        sharedSplitState.payerId = meId;
+        sharedSplitState.method = 'equal';
+        sharedSplitState.participants.forEach(p => { if (setActive) p.active = true; p.value = null; });
+    } else if (preset === 'p2') {
+        sharedSplitState.payerId = meId;
+        sharedSplitState.method = 'percentage';
+        const k = Math.max(1, others.length);
+        sharedSplitState.participants.forEach(p => {
+            if (setActive) p.active = true;
+            p.value = p.personId === meId ? 0 : Math.round(100 / k * 100) / 100;
+        });
+    } else if (preset === 'p3') {
+        const friend = others[0];
+        if (!friend) return;
+        sharedSplitState.payerId = friend.personId;
+        sharedSplitState.method = 'equal';
+        sharedSplitState.participants.forEach(p => { if (setActive) p.active = true; p.value = null; });
+    } else if (preset === 'p4') {
+        const friend = others[0];
+        if (!friend) return;
+        sharedSplitState.payerId = friend.personId;
+        sharedSplitState.method = 'percentage';
+        sharedSplitState.participants.forEach(p => {
+            if (setActive) p.active = true;
+            p.value = p.personId === meId ? 100 : 0;
+        });
+    }
+}
+
+function renderPresets(desktop) {
+    const grid = document.getElementById(desktop ? 'sharedPresetsDesktop' : 'sharedPresets');
+    if (!grid) return;
+    const meId = getSharedMeId();
+    const others = sharedSplitState.participants.filter(p => p.active && p.personId !== meId);
+    let label = '…';
+    if (sharedSplitState.groupMeta && sharedSplitState.groupMeta.memberIds.length) {
+        const othersInGroup = others.every(o => sharedSplitState.groupMeta.memberIds.includes(o.personId));
+        if (othersInGroup && others.length) label = sharedSplitState.groupMeta.label;
+        else if (others.length === 1) label = others[0].name;
+        else if (others.length > 1) label = others[0].name + ' e altri ' + (others.length - 1);
+    } else if (others.length === 1) {
+        label = others[0].name;
+    } else if (others.length > 1) {
+        label = others[0].name + ' e altri ' + (others.length - 1);
+    }
+    derivePreset();
+    grid.querySelectorAll('.preset-card').forEach(card => {
+        const p = card.dataset.preset;
+        const hasOther = others.length > 0;
+        const disabled = (p === 'p2' || p === 'p3' || p === 'p4') ? !hasOther : sharedSplitState.participants.length === 0;
+        card.classList.toggle('disabled', disabled);
+        card.classList.toggle('active', !disabled && p === sharedSplitState.preset);
+        const b = card.querySelector('.preset-friend');
+        if (b) b.textContent = label;
+    });
+}
+
+function autoFixSplitValues(state, total) {
+    const parts = state.participants.filter(p => p.active);
+    if (parts.length < 2) return;
+    const round2 = v => Math.round(v * 100) / 100;
+    if (state.method === 'percentage') {
+        const vals = parts.map(p => parseFloat(p.value) || 0);
+        const sum = vals.reduce((a, b) => a + b, 0);
+        if (Math.abs(sum - 100) > 0.01) {
+            const others = vals.slice(0, -1).reduce((a, b) => a + b, 0);
+            const last = round2(100 - others);
+            if (last < 0) return;
+            parts[parts.length - 1].value = last;
+        }
+    } else if (state.method === 'exact') {
+        const vals = parts.map(p => parseFloat(p.value) || 0);
+        const sum = vals.reduce((a, b) => a + b, 0);
+        if (Math.abs(sum - total) > 0.01) {
+            const others = vals.slice(0, -1).reduce((a, b) => a + b, 0);
+            const last = round2(total - others);
+            if (last < 0) return;
+            parts[parts.length - 1].value = last;
+        }
+    }
+}
+
 function renderSharedPayer(selectId) {
     const sel = document.getElementById(selectId);
     if (!sel) return;
@@ -1611,56 +1713,87 @@ function bindSharedPayer(selectId) {
 function renderSplitEditor(containerId, total) {
     const c = document.getElementById(containerId);
     if (!c) return;
+    const isDesktop = containerId === 'sharedDetailFieldsDesktop';
     if (!sharedSplitState.participants.length) {
         c.innerHTML = '<div class="shared-hint">🤝 Aggiungi chi partecipa alla spesa</div>';
         return;
     }
-    const n = sharedSplitState.participants.length;
-    const round2 = v => Math.round(v * 100) / 100;
-    const method = sharedSplitState.method;
-    let rows = '';
-    sharedSplitState.participants.forEach((p, i) => {
-        let shareField = '';
-        if (method === 'equal') {
-            const base = round2(total / n);
-            const share = i === n - 1 ? round2(total - base * (n - 1)) : base;
-            shareField = `<span class="participant-share">${fmtE(share)}</span>`;
-        } else if (method === 'percentage') {
-            const def = p.value != null ? p.value : round2(100 / n);
-            shareField = `<input type="number" class="participant-value" data-pid="${p.personId}" step="1" min="0" max="100" value="${def}" placeholder="%">`;
-        } else if (method === 'exact') {
-            const def = p.value != null ? p.value : '';
-            shareField = `<input type="number" class="participant-value" data-pid="${p.personId}" step="0.01" min="0" value="${def}" placeholder="€">`;
-        } else if (method === 'shares') {
-            const def = p.value != null ? p.value : 1;
-            shareField = `<input type="number" class="participant-value" data-pid="${p.personId}" step="1" min="1" value="${def}" placeholder="quota">`;
+    const advanced = sharedSplitState.advanced;
+    const payer = getSharedPayer(sharedSplitState);
+    let html = '';
+    if (advanced) {
+        html += `
+            <div class="adv-method-toggle">
+                <button type="button" class="adv-method-btn ${sharedSplitState.method === 'percentage' ? 'active' : ''}" data-adv="percentage">%</button>
+                <button type="button" class="adv-method-btn ${sharedSplitState.method === 'exact' ? 'active' : ''}" data-adv="exact">€</button>
+            </div>
+        `;
+    }
+    const res = computeSharedSplits(sharedSplitState, total);
+    const sharesByPid = {};
+    if (res && !res.error) for (const r of res.records) sharesByPid[r.personId] = r.shareAmount;
+    sharedSplitState.participants.forEach(p => {
+        const isPayer = payer && payer.personId === p.personId;
+        let quotaField;
+        if (advanced) {
+            quotaField = `<input type="number" inputmode="decimal" class="participant-value" data-pid="${p.personId}" step="0.01" min="0" value="${p.value != null ? p.value : ''}" placeholder="${sharedSplitState.method === 'percentage' ? '%' : '€'}">`;
+        } else {
+            const share = sharesByPid[p.personId];
+            quotaField = `<span class="participant-share">${share != null ? fmtE(share) : '—'}</span>`;
         }
-        rows += `
-            <div class="participant-row">
+        html += `
+            <div class="participant-row ${p.active ? '' : 'excluded'}">
+                <input type="checkbox" class="participant-check" data-pid="${p.personId}" ${p.active ? 'checked' : ''} aria-label="Includi ${p.name}">
                 <span class="participant-avatar" style="background:${avatarColorFor(p.name)}">${getInitials(p.name)}</span>
                 <span class="participant-name">${p.name}</span>
-                ${shareField}
+                ${isPayer ? '<span class="participant-payer-tag">paga</span>' : ''}
+                ${quotaField}
                 <button type="button" class="participant-remove" data-pid="${p.personId}" title="Rimuovi" aria-label="Rimuovi ${p.name}">✕</button>
             </div>`;
     });
-    const badgeHtml = method === 'equal'
-        ? `<div class="shared-remainder ok">Divido in ${n} parti uguali</div>`
-        : `<div class="shared-remainder" id="${containerId}-remainder"></div>`;
-    c.innerHTML = rows + badgeHtml;
+    html += `<div class="shared-remainder" id="${containerId}-remainder"></div>`;
+    c.innerHTML = html;
     const updateRemainder = () => {
         const badge = document.getElementById(containerId + '-remainder');
         if (!badge) return;
-        const res = computeSharedSplits(sharedSplitState, total);
-        if (res.error) {
-            badge.textContent = '⚠️ ' + res.error;
+        const r = computeSharedSplits(sharedSplitState, total);
+        if (r.error) {
+            badge.textContent = '⚠️ ' + r.error;
             badge.classList.remove('ok');
             badge.classList.add('warn');
             return;
         }
         badge.classList.remove('warn');
         badge.classList.add('ok');
-        badge.textContent = 'Rimanente: ' + fmtE(0) + ' · Saldo pagato da ' + (getSharedPayer(sharedSplitState) || {}).name;
+        const payerName = (getSharedPayer(sharedSplitState) || {}).name;
+        badge.textContent = 'Rimanente: ' + fmtE(0) + ' · Paga ' + (payerName || '…');
     };
+    c.querySelectorAll('.participant-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const p = sharedSplitState.participants.find(x => x.personId === parseInt(cb.dataset.pid));
+            if (!p) return;
+            const payerNow = getSharedPayer(sharedSplitState);
+            if (payerNow && payerNow.personId === p.personId && !cb.checked) {
+                showToast('Il pagatore non può essere escluso', true);
+                cb.checked = true;
+                return;
+            }
+            const meIdNow = getSharedMeId();
+            const othersAfter = sharedSplitState.participants.filter(x =>
+                (x === p ? cb.checked : x.active) && x.personId !== meIdNow
+            );
+            if (!cb.checked && !othersAfter.length && (sharedSplitState.preset === 'p2' || sharedSplitState.preset === 'p4')) {
+                showToast('Serve almeno un altro partecipante', true);
+                cb.checked = true;
+                return;
+            }
+            p.active = cb.checked;
+            if (!sharedSplitState.advanced && (sharedSplitState.preset === 'p2' || sharedSplitState.preset === 'p4')) {
+                applyPreset(sharedSplitState.preset, false);
+            }
+            refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
+        });
+    });
     c.querySelectorAll('.participant-value').forEach(inp => {
         inp.addEventListener('focus', (e) => {
             const el = e.target;
@@ -1671,11 +1804,21 @@ function renderSplitEditor(containerId, total) {
             if (p) p.value = parseFloat(inp.value) || 0;
             updateRemainder();
         });
+        inp.addEventListener('blur', () => {
+            autoFixSplitValues(sharedSplitState, total);
+            refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
+        });
     });
     c.querySelectorAll('.participant-remove').forEach(btn => {
         btn.addEventListener('click', () => {
             removeSharedParticipant(parseInt(btn.dataset.pid));
-            const isDesktop = containerId === 'sharedDetailFieldsDesktop';
+            refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
+        });
+    });
+    c.querySelectorAll('.adv-method-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            sharedSplitState.method = btn.dataset.adv;
+            sharedSplitState.preset = 'custom';
             refreshSharedPanelUI(isDesktop ? 'sharedParticipantsDesktop' : 'sharedParticipants');
         });
     });
@@ -1688,6 +1831,11 @@ function refreshSharedPanelUI(chipsId) {
     renderSharedPayer(isDesktop ? 'sharedPayerSelectDesktop' : 'sharedPayerSelect');
     bindSharedPayer(isDesktop ? 'sharedPayerSelectDesktop' : 'sharedPayerSelect');
     renderSplitEditor(isDesktop ? 'sharedDetailFieldsDesktop' : 'sharedDetailFields', total);
+    renderPresets(isDesktop);
+    ['btnAdvancedSplit', 'btnAdvancedSplitDesktop'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.textContent = sharedSplitState.advanced ? '← Torna ai preset' : '⚙️ Personalizza quote (% / €)';
+    });
 }
 
 function setupSharedToggle() {
@@ -1700,20 +1848,33 @@ function setupSharedToggle() {
                 resetSharedSplitState();
                 populateSharedPersonSelect(document.getElementById('sharedPersonSelect'));
                 const me = await ensureCurrentUserPerson();
-                if (me) sharedSplitState.participants.push({ personId: me.id, name: me.name, value: null });
+                if (me) sharedSplitState.participants.push({ personId: me.id, name: me.name, value: null, active: true });
                 refreshSharedPanelUI('sharedParticipants');
             }
         });
     }
-    const methodPills = document.querySelectorAll('#sharedPanel .split-pill');
-    methodPills.forEach(pill => {
-        pill.addEventListener('click', () => {
-            methodPills.forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
-            sharedSplitState.method = pill.dataset.method;
+    const grid = document.getElementById('sharedPresets');
+    if (grid) {
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.preset-card');
+            if (!card || card.classList.contains('disabled')) return;
+            applyPreset(card.dataset.preset);
             refreshSharedPanelUI('sharedParticipants');
         });
-    });
+    }
+    const advBtn = document.getElementById('btnAdvancedSplit');
+    if (advBtn) {
+        advBtn.addEventListener('click', () => {
+            sharedSplitState.advanced = !sharedSplitState.advanced;
+            if (sharedSplitState.advanced) {
+                if (sharedSplitState.method === 'equal') sharedSplitState.method = 'percentage';
+                sharedSplitState.preset = 'custom';
+            } else {
+                sharedSplitState.method = 'equal';
+            }
+            refreshSharedPanelUI('sharedParticipants');
+        });
+    }
     const sel = document.getElementById('sharedPersonSelect');
     if (sel) sel.addEventListener('change', async () => { await addSharedParticipant(sel); refreshSharedPanelUI('sharedParticipants'); });
     const newPersonBtn = document.getElementById('btnNewPerson');
@@ -1742,19 +1903,31 @@ function setupSharedPanelDesktop() {
                 resetSharedSplitState();
                 populateSharedPersonSelect(document.getElementById('sharedPersonDesktop'));
                 const me = await ensureCurrentUserPerson();
-                if (me) sharedSplitState.participants.push({ personId: me.id, name: me.name, value: null });
+                if (me) sharedSplitState.participants.push({ personId: me.id, name: me.name, value: null, active: true });
                 refreshSharedPanelUI('sharedParticipantsDesktop');
             }
         });
     }
-    if (panel) {
-        panel.querySelectorAll('.split-pill').forEach(pill => {
-            pill.addEventListener('click', () => {
-                panel.querySelectorAll('.split-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                sharedSplitState.method = pill.dataset.method;
-                refreshSharedPanelUI('sharedParticipantsDesktop');
-            });
+    const grid = document.getElementById('sharedPresetsDesktop');
+    if (grid) {
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.preset-card');
+            if (!card || card.classList.contains('disabled')) return;
+            applyPreset(card.dataset.preset);
+            refreshSharedPanelUI('sharedParticipantsDesktop');
+        });
+    }
+    const advBtn = document.getElementById('btnAdvancedSplitDesktop');
+    if (advBtn) {
+        advBtn.addEventListener('click', () => {
+            sharedSplitState.advanced = !sharedSplitState.advanced;
+            if (sharedSplitState.advanced) {
+                if (sharedSplitState.method === 'equal') sharedSplitState.method = 'percentage';
+                sharedSplitState.preset = 'custom';
+            } else {
+                sharedSplitState.method = 'equal';
+            }
+            refreshSharedPanelUI('sharedParticipantsDesktop');
         });
     }
     const selDesktop = document.getElementById('sharedPersonDesktop');
@@ -2742,6 +2915,7 @@ async function saveTransactionFromSheet() {
     let splitRes = null;
 
     if (isShared) {
+        autoFixSplitValues(sharedSplitState, amount);
         splitRes = computeSharedSplits(sharedSplitState, amount);
         if (splitRes.error) {
             showToast(splitRes.error, true);
@@ -3092,6 +3266,7 @@ async function addExpense() {
     const total = actual > 0 ? actual : planned;
     let myPart = 0, otherPart = 0, sharedPct = 0, splitRes = null;
     if (isShared) {
+        autoFixSplitValues(sharedSplitState, total);
         splitRes = computeSharedSplits(sharedSplitState, total);
         if (splitRes.error) { showToast(splitRes.error, true); return; }
         const meId = getSharedMeId();
