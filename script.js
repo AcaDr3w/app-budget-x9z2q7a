@@ -764,13 +764,9 @@ function closeTransactionSheet() {
     if (shPersonSelect) shPersonSelect.value = '';
     const shDetailFields = document.getElementById('sharedDetailFields');
     if (shDetailFields) shDetailFields.innerHTML = '';
-    const mePill = document.querySelector('.payer-pill[data-payer="me"]');
-    const themPill = document.getElementById('payerThemLbl');
-    document.querySelectorAll('.payer-pill').forEach(p => p.classList.remove('active'));
-    if (mePill) mePill.classList.add('active');
-    if (themPill) { themPill.textContent = '👥 Ha pagato...'; themPill.style.opacity = '0.4'; themPill.style.pointerEvents = 'none'; }
-    document.querySelectorAll('.split-pill').forEach(p => p.classList.remove('active'));
-    const equalPill = document.querySelector('.split-pill[data-method="equal"]');
+    resetSharedSplitState();
+    document.querySelectorAll('#sharedPanel .split-pill').forEach(p => p.classList.remove('active'));
+    const equalPill = document.querySelector('#sharedPanel .split-pill[data-method="equal"]');
     if (equalPill) equalPill.classList.add('active');
 }
 
@@ -1139,8 +1135,8 @@ async function createPerson(name, email) {
     const person = { id: genId(), name: cleanName, email: cleanEmail, user_id: userId, createdAt: Date.now() };
     await db.people.put(person);
     people.push(person);
-    populateSharedPersonSelect();
-    populateSharedPersonSelectDesktop();
+    populateSharedPersonSelect(document.getElementById('sharedPersonSelect'));
+    populateSharedPersonSelect(document.getElementById('sharedPersonDesktop'));
     showToast('👤 ' + cleanName + ' aggiunto', false);
     return person;
 }
@@ -1230,6 +1226,7 @@ async function calculateBalances() {
     const me = await ensureCurrentUserPerson();
     const map = {};
     for (const part of participants) {
+        if (part.settled) continue;
         if (!map[part.person_id]) {
             const p = people.find(pp => pp.id === part.person_id);
             map[part.person_id] = {
@@ -1253,6 +1250,7 @@ async function calculateGroupBalances(groupId) {
     for (const se of shared) {
         const parts = await loadSharedExpenseParticipants(se.id);
         for (const part of parts) {
+            if (part.settled) continue;
             if (!map[part.person_id]) {
                 const p = people.find(pp => pp.id === part.person_id);
                 map[part.person_id] = {
@@ -1289,14 +1287,14 @@ function getSimplifiedDebts(balances) {
     return txs;
 }
 
-async function saveSharedExpenseV2(expenseId, totalAmount, groupId, participantRecords) {
+async function saveSharedExpenseV2(expenseId, totalAmount, groupId, participantRecords, splitMethod) {
     const sharedExpenseId = genId();
     await db.sharedExpenses.put({
         id: sharedExpenseId,
         expense_id: expenseId,
         group_id: groupId || null,
         total_amount: totalAmount,
-        split_method: 'equal',
+        split_method: splitMethod || 'equal',
         created_by: window.supabaseUser ? window.supabaseUser.id : null,
         created_at: Date.now()
     });
@@ -1306,10 +1304,11 @@ async function saveSharedExpenseV2(expenseId, totalAmount, groupId, participantR
             id: genId(),
             shared_expense_id: sharedExpenseId,
             person_id: r.personId,
-            participant_name: p ? p.name : (r.participantName || 'Sconosciuto'),
+            participant_name: p ? p.name : (r.name || 'Sconosciuto'),
             share_amount: r.shareAmount,
             paid_amount: r.paidAmount,
-            split_value: r.splitValue || null,
+            split_value: r.splitValue != null ? r.splitValue : null,
+            settled: false,
             created_at: Date.now()
         });
     }
@@ -1342,15 +1341,25 @@ async function handleJoinGroupFromUrl() {
     }
 }
 
-function populateSharedPersonSelect() {
-    const sel = document.getElementById('sharedPersonSelect');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">Seleziona persona...</option>';
+// ===== SPESE CONDIVISE - Pannello split condiviso (mobile + desktop) =====
+let sharedSplitState = { participants: [], method: 'equal', groupId: null };
+
+function populateSharedPersonSelect(selEl) {
+    if (!selEl) return;
+    selEl.innerHTML = '<option value="">Aggiungi persona o gruppo...</option>';
+    const me = people.find(pp => pp.user_id === (window.supabaseUser ? window.supabaseUser.id : null));
+    if (me) {
+        const opt = document.createElement('option');
+        opt.value = 'me';
+        opt.textContent = '👤 Io (' + me.name + ')';
+        selEl.appendChild(opt);
+    }
     people.forEach(p => {
+        if (me && p.id === me.id) return;
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
-        sel.appendChild(opt);
+        selEl.appendChild(opt);
     });
     if (groups.length > 0) {
         const og = document.createElement('optgroup');
@@ -1361,81 +1370,228 @@ function populateSharedPersonSelect() {
             opt.textContent = g.name;
             og.appendChild(opt);
         });
-        sel.appendChild(og);
+        selEl.appendChild(og);
     }
+}
+
+function resetSharedSplitState() {
+    sharedSplitState = { participants: [], method: 'equal', groupId: null };
+}
+
+async function addSharedParticipant(selEl) {
+    const val = selEl ? selEl.value : '';
+    if (!val) return;
+    selEl.value = '';
+    if (val === 'me') {
+        const me = await ensureCurrentUserPerson();
+        if (me && !sharedSplitState.participants.some(p => p.personId === me.id)) {
+            sharedSplitState.participants.push({ personId: me.id, name: me.name, paid: 0, value: null });
+        }
+    } else if (val.startsWith('g_')) {
+        const gid = parseInt(val.replace('g_', ''));
+        sharedSplitState.groupId = gid;
+        const members = getGroupMembersWithPeople(gid);
+        for (const m of members) {
+            const pid = m.person ? m.person.id : m.personId;
+            if (pid && !sharedSplitState.participants.some(p => p.personId === pid)) {
+                sharedSplitState.participants.push({ personId: pid, name: m.person ? m.person.name : (m.member_name || 'Sconosciuto'), paid: 0, value: null });
+            }
+        }
+    } else {
+        const pid = parseInt(val);
+        const p = people.find(pp => pp.id === pid);
+        if (p && !sharedSplitState.participants.some(x => x.personId === pid)) {
+            sharedSplitState.participants.push({ personId: pid, name: p.name, paid: 0, value: null });
+        }
+    }
+}
+
+function removeSharedParticipant(pid) {
+    sharedSplitState.participants = sharedSplitState.participants.filter(p => p.personId !== pid);
+}
+
+function getSharedMeId() {
+    const me = people.find(pp => pp.user_id === (window.supabaseUser ? window.supabaseUser.id : null));
+    return me ? me.id : null;
+}
+
+function computeSharedSplits(state, total) {
+    const parts = state.participants;
+    if (!parts.length) return { error: 'Aggiungi almeno un partecipante' };
+    const n = parts.length;
+    const round2 = v => Math.round(v * 100) / 100;
+    let shares = [], splitValues = null, method = state.method;
+    if (method === 'equal') {
+        const base = round2(total / n);
+        for (let i = 0; i < n; i++) shares.push(i === n - 1 ? round2(total - base * (n - 1)) : base);
+    } else if (method === 'percentage') {
+        const vals = parts.map(p => parseFloat(p.value) || 0);
+        const sum = vals.reduce((a, b) => a + b, 0);
+        if (Math.abs(sum - 100) > 0.01) return { error: 'Le percentuali devono sommare 100 (ora ' + round2(sum) + ')' };
+        for (let i = 0; i < n; i++) shares.push(round2(total * vals[i] / 100));
+        splitValues = vals;
+    } else if (method === 'exact') {
+        const vals = parts.map(p => parseFloat(p.value) || 0);
+        const sum = vals.reduce((a, b) => a + b, 0);
+        if (Math.abs(sum - total) > 0.01) return { error: 'Gli importi devono sommare il totale (' + fmtE(total) + ')' };
+        shares = vals.map(round2);
+        splitValues = vals;
+    } else if (method === 'shares') {
+        const qs = parts.map(p => parseFloat(p.value) || 0);
+        const sumQ = qs.reduce((a, b) => a + b, 0);
+        if (sumQ <= 0) return { error: 'Inserisci quote positive' };
+        for (let i = 0; i < n; i++) shares.push(round2(total * qs[i] / sumQ));
+        splitValues = qs;
+    } else {
+        return { error: 'Metodo di split non valido' };
+    }
+    const paid = parts.map(p => parseFloat(p.paid) || 0);
+    let sumPaid = paid.reduce((a, b) => a + b, 0);
+    if (sumPaid === 0 && n > 0) {
+        const meId = getSharedMeId();
+        const idx = parts.findIndex(p => p.personId === meId);
+        paid[idx >= 0 ? idx : 0] = total;
+        sumPaid = total;
+    }
+    if (Math.abs(sumPaid - total) > 0.01) return { error: 'Chi ha pagato deve coprire il totale: mancano ' + fmtE(total - sumPaid) };
+    const records = parts.map((p, i) => ({
+        personId: p.personId,
+        name: p.name,
+        shareAmount: round2(shares[i]),
+        paidAmount: round2(paid[i]),
+        splitValue: splitValues ? round2(splitValues[i]) : null
+    }));
+    const sumShare = records.reduce((a, r) => a + r.shareAmount, 0);
+    if (Math.abs(sumShare - total) > 0.005 && records.length) {
+        records[records.length - 1].shareAmount = round2(records[records.length - 1].shareAmount + (total - sumShare));
+    }
+    return { records, splitMethod: method };
+}
+
+function renderSharedParticipants(chipsId) {
+    const c = document.getElementById(chipsId);
+    if (!c) return;
+    if (!sharedSplitState.participants.length) {
+        c.innerHTML = '<div class="shared-hint">🤝 Aggiungi chi partecipa alla spesa</div>';
+        return;
+    }
+    c.innerHTML = sharedSplitState.participants.map(p =>
+        `<span class="shared-chip" data-pid="${p.personId}">${p.name}<button type="button" class="shared-chip-x" data-pid="${p.personId}" title="Rimuovi">×</button></span>`
+    ).join('');
+    c.querySelectorAll('.shared-chip-x').forEach(btn => {
+        btn.addEventListener('click', () => {
+            removeSharedParticipant(parseInt(btn.dataset.pid));
+            refreshSharedPanelUI(chipsId);
+        });
+    });
+}
+
+function renderSplitEditor(containerId, total) {
+    const c = document.getElementById(containerId);
+    if (!c) return;
+    if (!sharedSplitState.participants.length) {
+        c.innerHTML = '<div class="shared-hint">🤝 Aggiungi chi partecipa alla spesa</div>';
+        return;
+    }
+    const n = sharedSplitState.participants.length;
+    const round2 = v => Math.round(v * 100) / 100;
+    const method = sharedSplitState.method;
+    let rows = '';
+    sharedSplitState.participants.forEach((p, i) => {
+        let shareField = '';
+        if (method === 'equal') {
+            const base = round2(total / n);
+            const share = i === n - 1 ? round2(total - base * (n - 1)) : base;
+            shareField = `<span class="participant-share">${fmtE(share)}</span>`;
+        } else if (method === 'percentage') {
+            const def = p.value != null ? p.value : round2(100 / n);
+            shareField = `<input type="number" class="participant-value" data-pid="${p.personId}" step="1" min="0" max="100" value="${def}" placeholder="%">`;
+        } else if (method === 'exact') {
+            const def = p.value != null ? p.value : '';
+            shareField = `<input type="number" class="participant-value" data-pid="${p.personId}" step="0.01" min="0" value="${def}" placeholder="€">`;
+        } else if (method === 'shares') {
+            const def = p.value != null ? p.value : 1;
+            shareField = `<input type="number" class="participant-value" data-pid="${p.personId}" step="1" min="1" value="${def}" placeholder="quota">`;
+        }
+        rows += `
+            <div class="participant-row">
+                <span class="participant-name">${p.name}</span>
+                ${shareField}
+                <input type="number" class="participant-paid" data-pid="${p.personId}" step="0.01" min="0" value="${p.paid || ''}" placeholder="ha pagato €">
+            </div>`;
+    });
+    c.innerHTML = rows + `<div class="shared-preview" id="${containerId}-preview"></div>`;
+    const updatePreview = () => {
+        const preview = document.getElementById(containerId + '-preview');
+        if (!preview) return;
+        const res = computeSharedSplits(sharedSplitState, total);
+        if (res.error) {
+            preview.textContent = '⚠️ ' + res.error;
+            preview.classList.add('shared-preview-error');
+            return;
+        }
+        preview.classList.remove('shared-preview-error');
+        const meId = getSharedMeId();
+        const meRec = res.records.find(r => r.personId === meId) || res.records[0];
+        const myShare = meRec ? meRec.shareAmount : 0;
+        preview.textContent = `${fmtE(myShare)} a tuo carico · ${fmtE(total - myShare)} a carico altrui`;
+    };
+    c.querySelectorAll('.participant-value').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const p = sharedSplitState.participants.find(x => x.personId === parseInt(inp.dataset.pid));
+            if (p) p.value = parseFloat(inp.value) || 0;
+            updatePreview();
+        });
+    });
+    c.querySelectorAll('.participant-paid').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const p = sharedSplitState.participants.find(x => x.personId === parseInt(inp.dataset.pid));
+            if (p) p.paid = parseFloat(inp.value) || 0;
+            updatePreview();
+        });
+    });
+    updatePreview();
+}
+
+function refreshSharedPanelUI(chipsId) {
+    const isDesktop = chipsId === 'sharedParticipantsDesktop';
+    const total = isDesktop ? getDesktopSharedTotal() : getSheetAmount();
+    renderSharedParticipants(chipsId);
+    renderSplitEditor(isDesktop ? 'sharedDetailFieldsDesktop' : 'sharedDetailFields', total);
 }
 
 function setupSharedToggle() {
     const toggle = document.getElementById('sharedToggle');
     const panel = document.getElementById('sharedPanel');
     if (toggle && panel) {
-        toggle.addEventListener('change', () => {
+        toggle.addEventListener('change', async () => {
             panel.classList.toggle('active', toggle.checked);
             if (toggle.checked) {
-                populateSharedPersonSelect();
-                updateSplitFields();
-                updatePayerLabel();
+                resetSharedSplitState();
+                populateSharedPersonSelect(document.getElementById('sharedPersonSelect'));
+                const me = await ensureCurrentUserPerson();
+                if (me) sharedSplitState.participants.push({ personId: me.id, name: me.name, paid: 0, value: null });
+                refreshSharedPanelUI('sharedParticipants');
             }
         });
     }
-    const methodPills = document.querySelectorAll('.split-pill');
+    const methodPills = document.querySelectorAll('#sharedPanel .split-pill');
     methodPills.forEach(pill => {
         pill.addEventListener('click', () => {
             methodPills.forEach(p => p.classList.remove('active'));
             pill.classList.add('active');
-            updateSplitFields();
+            sharedSplitState.method = pill.dataset.method;
+            refreshSharedPanelUI('sharedParticipants');
         });
     });
-    const payerPills = document.querySelectorAll('.payer-pill');
-    payerPills.forEach(pill => {
-        pill.addEventListener('click', () => {
-            payerPills.forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
-        });
-    });
-    const personSelect = document.getElementById('sharedPersonSelect');
-    if (personSelect) {
-        personSelect.addEventListener('change', updatePayerLabel);
-    }
+    const sel = document.getElementById('sharedPersonSelect');
+    if (sel) sel.addEventListener('change', async () => { await addSharedParticipant(sel); refreshSharedPanelUI('sharedParticipants'); });
     const newPersonBtn = document.getElementById('btnNewPerson');
     if (newPersonBtn) {
         newPersonBtn.addEventListener('click', () => {
             const name = prompt('Nome della persona:');
-            if (name && name.trim()) {
-                saveNewPerson(name.trim());
-            }
+            if (name && name.trim()) saveNewPerson(name.trim());
         });
-    }
-}
-
-function updatePayerLabel() {
-    const sel = document.getElementById('sharedPersonSelect');
-    const themPill = document.getElementById('payerThemLbl');
-    const mePill = document.querySelector('.payer-pill[data-payer="me"]');
-    if (!sel || !themPill) return;
-    const val = sel.value;
-    if (!val || val === '') {
-        themPill.textContent = '👥 Ha pagato...';
-        themPill.style.opacity = '0.4';
-        themPill.style.pointerEvents = 'none';
-        if (themPill.classList.contains('active')) {
-            themPill.classList.remove('active');
-            if (mePill) mePill.classList.add('active');
-        }
-    } else if (val.startsWith('g_')) {
-        const g = groups.find(gg => gg.id === parseInt(val.replace('g_', '')));
-        themPill.textContent = '👥 Spesa di gruppo';
-        themPill.style.opacity = '0.4';
-        themPill.style.pointerEvents = 'none';
-        if (themPill.classList.contains('active')) {
-            themPill.classList.remove('active');
-            if (mePill) mePill.classList.add('active');
-        }
-    } else {
-        const p = people.find(pp => pp.id === parseInt(val));
-        themPill.textContent = '👤 Ha pagato ' + (p ? p.name : '...');
-        themPill.style.opacity = '1';
-        themPill.style.pointerEvents = 'auto';
     }
 }
 
@@ -1450,12 +1606,14 @@ function setupSharedPanelDesktop() {
     const toggle = document.getElementById('sharedToggleDesktop');
     const panel = document.getElementById('sharedPanelDesktop');
     if (toggle && panel) {
-        toggle.addEventListener('change', () => {
+        toggle.addEventListener('change', async () => {
             panel.classList.toggle('active', toggle.checked);
             if (toggle.checked) {
-                populateSharedPersonSelectDesktop();
-                updateSplitFieldsDesktop();
-                updatePayerLabelDesktop();
+                resetSharedSplitState();
+                populateSharedPersonSelect(document.getElementById('sharedPersonDesktop'));
+                const me = await ensureCurrentUserPerson();
+                if (me) sharedSplitState.participants.push({ personId: me.id, name: me.name, paid: 0, value: null });
+                refreshSharedPanelUI('sharedParticipantsDesktop');
             }
         });
     }
@@ -1464,128 +1622,38 @@ function setupSharedPanelDesktop() {
             pill.addEventListener('click', () => {
                 panel.querySelectorAll('.split-pill').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
-                updateSplitFieldsDesktop();
-            });
-        });
-        panel.querySelectorAll('.payer-pill').forEach(pill => {
-            pill.addEventListener('click', () => {
-                panel.querySelectorAll('.payer-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
+                sharedSplitState.method = pill.dataset.method;
+                refreshSharedPanelUI('sharedParticipantsDesktop');
             });
         });
     }
-    document.getElementById('sharedPersonDesktop')?.addEventListener('change', updatePayerLabelDesktop);
+    const selDesktop = document.getElementById('sharedPersonDesktop');
+    if (selDesktop) selDesktop.addEventListener('change', async () => {
+        await addSharedParticipant(selDesktop);
+        refreshSharedPanelUI('sharedParticipantsDesktop');
+    });
     document.getElementById('btnNewPersonDesktop')?.addEventListener('click', async () => {
         const name = prompt('Nome della persona:');
         if (name && name.trim()) {
             const person = { id: genId(), name, createdAt: Date.now() };
             await db.people.put(person);
             people.push(person);
-            populateSharedPersonSelectDesktop();
+            populateSharedPersonSelect(document.getElementById('sharedPersonDesktop'));
             showToast('👤 ' + name + ' aggiunto', false);
         }
     });
-}
-
-function populateSharedPersonSelectDesktop() {
-    const sel = document.getElementById('sharedPersonDesktop');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">Seleziona persona...</option>';
-    people.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.name;
-        sel.appendChild(opt);
-    });
-    if (groups.length > 0) {
-        const og = document.createElement('optgroup');
-        og.label = '👥 Gruppi';
-        groups.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = 'g_' + g.id;
-            opt.textContent = g.name;
-            og.appendChild(opt);
+    ['expActual', 'expPlanned'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            const panel = document.getElementById('sharedPanelDesktop');
+            if (panel && panel.classList.contains('active')) refreshSharedPanelUI('sharedParticipantsDesktop');
         });
-        sel.appendChild(og);
-    }
-}
-
-function updatePayerLabelDesktop() {
-    const sel = document.getElementById('sharedPersonDesktop');
-    const themPill = document.getElementById('payerThemLblDesktop');
-    const mePill = document.querySelector('#sharedPanelDesktop .payer-pill[data-payer="me"]');
-    if (!sel || !themPill) return;
-    const val = sel.value;
-    if (!val || val === '') {
-        themPill.textContent = '👥 Ha pagato...';
-        themPill.style.opacity = '0.4';
-        themPill.style.pointerEvents = 'none';
-        if (themPill.classList.contains('active')) {
-            themPill.classList.remove('active');
-            if (mePill) mePill.classList.add('active');
-        }
-    } else if (val.startsWith('g_')) {
-        themPill.textContent = '👥 Spesa di gruppo';
-        themPill.style.opacity = '0.4';
-        themPill.style.pointerEvents = 'none';
-        if (themPill.classList.contains('active')) {
-            themPill.classList.remove('active');
-            if (mePill) mePill.classList.add('active');
-        }
-    } else {
-        const p = people.find(pp => pp.id === parseInt(val));
-        themPill.textContent = '👤 Ha pagato ' + (p ? p.name : '...');
-        themPill.style.opacity = '1';
-        themPill.style.pointerEvents = 'auto';
-    }
+    });
 }
 
 function getDesktopSharedTotal() {
     const a = parseFloat(document.getElementById('expActual').value) || 0;
     const p = parseFloat(document.getElementById('expPlanned').value) || 0;
     return a || p;
-}
-
-function updateSplitFieldsDesktop() {
-    const container = document.getElementById('sharedDetailFieldsDesktop');
-    if (!container) return;
-    const activeMethod = document.querySelector('#sharedPanelDesktop .split-pill.active');
-    const method = activeMethod ? activeMethod.dataset.method : 'equal';
-    const totalAmount = getDesktopSharedTotal();
-
-    if (method === 'equal') {
-        container.innerHTML = '<div class="shared-hint">🤝 Diviso in parti uguali tra tutti i partecipanti</div>';
-    } else if (method === 'percentage') {
-        container.innerHTML = `
-            <label class="shared-field-label">La tua percentuale (%)</label>
-            <input type="number" id="sharedPctDesktop" step="1" min="1" max="100" placeholder="Es. 50" value="50">
-            <div class="shared-preview" id="sharedPreviewDesktop">${fmtE(totalAmount / 2)} a tuo carico</div>
-        `;
-        document.getElementById('sharedPctDesktop')?.addEventListener('input', () => updateSharedPreviewDesktop('percentage'));
-    } else if (method === 'fixed') {
-        container.innerHTML = `
-            <label class="shared-field-label">Importo a carico tuo (€)</label>
-            <input type="number" id="sharedFixedDesktop" step="0.01" min="0" placeholder="Es. 25.00">
-            <div class="shared-preview" id="sharedPreviewDesktop">Inserisci l'importo a tuo carico</div>
-        `;
-        document.getElementById('sharedFixedDesktop')?.addEventListener('input', () => updateSharedPreviewDesktop('fixed'));
-    }
-}
-
-function updateSharedPreviewDesktop(method) {
-    const preview = document.getElementById('sharedPreviewDesktop');
-    if (!preview) return;
-    const totalAmount = getDesktopSharedTotal();
-    let yourPart = 0;
-    if (method === 'percentage') {
-        const pct = parseFloat(document.getElementById('sharedPctDesktop')?.value) || 0;
-        yourPart = totalAmount * pct / 100;
-    } else if (method === 'fixed') {
-        yourPart = parseFloat(document.getElementById('sharedFixedDesktop')?.value) || 0;
-    }
-    yourPart = Math.max(0, Math.min(yourPart, totalAmount));
-    const otherPart = totalAmount - yourPart;
-    preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
 }
 
 function setExpenseTypePill(el) {
@@ -1603,109 +1671,11 @@ function getSheetAmount() {
     return isFinite(val) && val > 0 ? val : 0;
 }
 
-function updateSplitFields() {
-    const container = document.getElementById('sharedDetailFields');
-    const activeMethod = document.querySelector('.split-pill.active');
-    const method = activeMethod ? activeMethod.dataset.method : 'equal';
-    const totalAmount = getSheetAmount();
-    if (!container) return;
-
-    if (method === 'equal') {
-        container.innerHTML = '<div class="shared-hint">🤝 Diviso in parti uguali tra tutti i partecipanti</div>';
-    } else if (method === 'percentage') {
-        container.innerHTML = `
-            <label class="shared-field-label">La tua percentuale (%)</label>
-            <input type="number" id="sharedPctInput" class="sheet-input" step="1" min="1" max="100" placeholder="Es. 50" value="50">
-            <div class="shared-preview" id="sharedPreview">${fmtE(totalAmount / 2)} a tuo carico</div>
-        `;
-        const pctInput = document.getElementById('sharedPctInput');
-        if (pctInput) {
-            pctInput.addEventListener('input', () => {
-                const pct = parseFloat(pctInput.value) || 0;
-                const preview = document.getElementById('sharedPreview');
-                if (preview) {
-                    const yourPart = totalAmount * pct / 100;
-                    const otherPart = totalAmount - yourPart;
-                    preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
-                }
-            });
-        }
-    } else if (method === 'fixed') {
-        container.innerHTML = `
-            <label class="shared-field-label">Importo a carico tuo (€)</label>
-            <input type="number" id="sharedFixedInput" class="sheet-input" step="0.01" min="0" placeholder="Es. 25.00">
-            <div class="shared-preview" id="sharedPreview">Inserisci l'importo a tuo carico</div>
-        `;
-        const fixedInput = document.getElementById('sharedFixedInput');
-        if (fixedInput) {
-            fixedInput.addEventListener('input', () => {
-                const yourPart = parseFloat(fixedInput.value) || 0;
-                const preview = document.getElementById('sharedPreview');
-                if (preview) {
-                    const otherPart = totalAmount - yourPart;
-                    preview.textContent = `${fmtE(yourPart)} a tuo carico · ${fmtE(otherPart)} a carico altrui`;
-                }
-            });
-        }
-    }
-}
-
-async function saveSharedSplits(expenseId, splitAmount, payer, selectedValue) {
-    const totalAmount = splitAmount * 2; // legacy UI era sempre split a 2 persone
-    const me = await ensureCurrentUserPerson();
-    const meId = me ? me.id : null;
-    let records = [];
-    if (selectedValue.startsWith('g_')) {
-        const groupId = parseInt(selectedValue.replace('g_', ''));
-        const members = getGroupMembersWithPeople(groupId);
-        const count = members.length || 1;
-        const share = totalAmount / count;
-        for (const m of members) {
-            records.push({
-                personId: m.person ? m.person.id : m.personId,
-                participantName: m.person ? m.person.name : (m.member_name || 'Sconosciuto'),
-                shareAmount: share,
-                paidAmount: (payer === 'me' && m.person && m.person.id === meId) ? totalAmount : 0,
-                splitValue: null
-            });
-        }
-        await saveSharedExpenseV2(expenseId, totalAmount, groupId, records);
-    } else {
-        const person = people.find(pp => pp.id === parseInt(selectedValue));
-        records.push({ personId: parseInt(selectedValue), participantName: person ? person.name : 'Sconosciuto', shareAmount: splitAmount, paidAmount: payer === 'them' ? totalAmount : 0, splitValue: null });
-        if (meId && meId !== parseInt(selectedValue)) {
-            const me = people.find(pp => pp.id === meId);
-            records.push({ personId: meId, participantName: me ? me.name : 'Io', shareAmount: splitAmount, paidAmount: payer === 'me' ? totalAmount : 0, splitValue: null });
-        }
-        await saveSharedExpenseV2(expenseId, totalAmount, null, records);
-    }
-    // manteniamo anche la vecchia tabella per retro-compatibilita'
-    await saveSharedSplitsLegacy(expenseId, splitAmount, payer, selectedValue);
-    return true;
-}
-
-async function saveSharedSplitsLegacy(expenseId, splitAmount, payer, selectedValue) {
-    let personId = null, groupId = null;
-    if (selectedValue.startsWith('g_')) {
-        groupId = parseInt(selectedValue.replace('g_', ''));
-        const members = groupMembers.filter(m => m.groupId === groupId);
-        const perMember = splitAmount / (members.length || 1);
-        for (const member of members) {
-            await db.sharedExpenseSplits.put({
-                id: genId(), expenseId, personId: member.personId, groupId,
-                amount: perMember, splitType: 'equal', paidBy: payer,
-                isPaid: false, settled: false, createdAt: Date.now()
-            });
-        }
-    } else {
-        personId = parseInt(selectedValue);
-        await db.sharedExpenseSplits.put({
-            id: genId(), expenseId, personId, groupId: null,
-            amount: splitAmount, splitType: 'equal', paidBy: payer,
-            isPaid: false, settled: false, createdAt: Date.now()
-        });
-    }
-    return true;
+async function saveSharedSplitsV2(expenseId, totalAmount, state) {
+    const res = computeSharedSplits(state, totalAmount);
+    if (res.error) return { error: res.error };
+    await saveSharedExpenseV2(expenseId, totalAmount, state.groupId, res.records, res.splitMethod);
+    return { ok: true };
 }
 
 // =====================================================================
@@ -1898,7 +1868,10 @@ async function showFriendDetail(personId) {
     }
     if (!p) return;
     let paid = 0, share = 0;
-    for (const part of participants) { paid += part.paid_amount; share += part.share_amount; }
+    for (const part of participants) {
+        if (part.settled) continue;
+        paid += part.paid_amount; share += part.share_amount;
+    }
     const net = paid - share;
 
     document.querySelector('.condivise-tabs').style.display = 'none';
@@ -2514,53 +2487,42 @@ async function saveTransactionFromSheet() {
 
     const sharedToggle = document.getElementById('sharedToggle');
     const isShared = sharedToggle?.checked;
-    const sharedPersonSelect = document.getElementById('sharedPersonSelect');
-    const selVal = sharedPersonSelect?.value;
-    const hasPersonSelected = selVal && selVal !== '';
 
     let myPart = amount;
     let otherPart = 0;
     let sharedPct = 0;
-    let payer = 'me';
+    let splitRes = null;
 
-    if (isShared && hasPersonSelected) {
-        const activePill = document.querySelector('.payer-pill.active');
-        payer = activePill ? activePill.dataset.payer : 'me';
-
-        const activeMethod = document.querySelector('.split-pill.active');
-        const method = activeMethod ? activeMethod.dataset.method : 'equal';
-
-        if (method === 'equal') {
-            myPart = amount / 2;
-            otherPart = amount / 2;
-            sharedPct = 50;
-        } else if (method === 'percentage') {
-            const pct = parseFloat(document.getElementById('sharedPctInput')?.value) || 50;
-            myPart = amount * pct / 100;
-            otherPart = amount - myPart;
-            sharedPct = pct;
-        } else if (method === 'fixed') {
-            const yourPart = parseFloat(document.getElementById('sharedFixedInput')?.value) || 0;
-            myPart = Math.min(yourPart, amount);
-            otherPart = amount - myPart;
-            sharedPct = amount > 0 ? Math.round(myPart / amount * 100) : 0;
+    if (isShared) {
+        splitRes = computeSharedSplits(sharedSplitState, amount);
+        if (splitRes.error) {
+            showToast(splitRes.error, true);
+            return;
         }
-        myPart = Math.max(0, Math.min(myPart, amount));
+        const meId = getSharedMeId();
+        const meRec = splitRes.records.find(r => r.personId === meId) || splitRes.records[0];
+        myPart = meRec ? meRec.shareAmount : amount;
         otherPart = Math.max(0, amount - myPart);
+        sharedPct = amount > 0 ? Math.round(myPart / amount * 100) : 0;
     }
 
     let exp;
-    if (isShared && hasPersonSelected && payer === 'them') {
+    if (isShared && splitRes) {
+        const meId = getSharedMeId();
+        const meRec = splitRes.records.find(r => r.personId === meId) || splitRes.records[0];
+        const mePaid = meRec ? meRec.paidAmount : 0;
         exp = {
             id: Date.now(),
             month, date,
             category: sheetSelectedCategory,
             desc: note || 'Aggiunto da mobile',
             planned: myPart,
-            actual: 0,
+            actual: sheetTransactionType === 'actual' && mePaid > 0 ? Math.min(mePaid, myPart) : 0,
             sharedPercentage: sharedPct,
             isShared: true,
-            sharedPayer: 'them'
+            sharedPayer: mePaid > 0 ? 'me' : 'them',
+            sharedPersonId: splitRes.records.length === 2 ? (splitRes.records.find(r => r.personId !== meId) || {}).personId : undefined,
+            sharedGroupId: sharedSplitState.groupId || undefined
         };
     } else {
         exp = {
@@ -2568,11 +2530,9 @@ async function saveTransactionFromSheet() {
             month, date,
             category: sheetSelectedCategory,
             desc: note || 'Aggiunto da mobile',
-            planned: sheetTransactionType === 'planned' ? (isShared ? myPart : amount) : 0,
-            actual: sheetTransactionType === 'actual' ? (isShared ? amount : amount) : 0,
-            sharedPercentage: isShared ? sharedPct : 0,
-            isShared: isShared || undefined,
-            sharedPayer: isShared ? 'me' : undefined
+            planned: sheetTransactionType === 'planned' ? amount : 0,
+            actual: sheetTransactionType === 'actual' ? amount : 0,
+            sharedPercentage: 0
         };
     }
 
@@ -2589,8 +2549,13 @@ async function saveTransactionFromSheet() {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
-        if (isShared && hasPersonSelected && otherPart > 0) {
-            await saveSharedSplits(exp.id, otherPart, payer, selVal);
+        if (isShared && splitRes && otherPart > 0) {
+            const r = await saveSharedSplitsV2(exp.id, amount, sharedSplitState);
+            if (r.error) {
+                currentData.expenses.pop();
+                showToast(r.error, true);
+                return;
+            }
         }
 
         if (isRecurring) {
@@ -2634,7 +2599,7 @@ async function saveTransactionFromSheet() {
         amountInput.addEventListener('focus', (e) => e.target.select());
         amountInput.addEventListener('input', () => {
             const panel = document.getElementById('sharedPanel');
-            if (panel && panel.classList.contains('active')) updateSplitFields();
+            if (panel && panel.classList.contains('active')) refreshSharedPanelUI('sharedParticipants');
         });
     }
 
@@ -2876,34 +2841,24 @@ async function addExpense() {
     // Split con persona (parity col bottom sheet mobile)
     const sharedToggle = document.getElementById('sharedToggleDesktop');
     const isShared = sharedToggle?.checked;
-    const sel = document.getElementById('sharedPersonDesktop');
-    const selVal = sel?.value;
-    const hasPersonSelected = isShared && selVal && selVal !== '';
-    let myPart = 0, otherPart = 0, sharedPct = 0, payer = 'me';
-    let sharedGroupId = null;
-    if (hasPersonSelected) {
-        const total = actual > 0 ? actual : planned;
-        const activePayer = document.querySelector('#sharedPanelDesktop .payer-pill.active');
-        payer = activePayer ? activePayer.dataset.payer : 'me';
-        const activeMethod = document.querySelector('#sharedPanelDesktop .split-pill.active');
-        const method = activeMethod ? activeMethod.dataset.method : 'equal';
-        if (method === 'equal') { myPart = total / 2; otherPart = total - myPart; sharedPct = 50; }
-        else if (method === 'percentage') {
-            const pct = parseFloat(document.getElementById('sharedPctDesktop')?.value) || 50;
-            myPart = total * pct / 100; otherPart = total - myPart; sharedPct = pct;
-        } else {
-            const yourPart = parseFloat(document.getElementById('sharedFixedDesktop')?.value) || 0;
-            myPart = Math.min(yourPart, total); otherPart = total - myPart;
-            sharedPct = total > 0 ? Math.round(myPart / total * 100) : 0;
-        }
-        myPart = Math.max(0, Math.min(myPart, total));
+    const total = actual > 0 ? actual : planned;
+    let myPart = 0, otherPart = 0, sharedPct = 0, splitRes = null;
+    if (isShared) {
+        splitRes = computeSharedSplits(sharedSplitState, total);
+        if (splitRes.error) { showToast(splitRes.error, true); return; }
+        const meId = getSharedMeId();
+        const meRec = splitRes.records.find(r => r.personId === meId) || splitRes.records[0];
+        myPart = meRec ? meRec.shareAmount : total;
         otherPart = Math.max(0, total - myPart);
-        if (selVal.startsWith('g_')) sharedGroupId = parseInt(selVal.replace('g_', ''));
+        sharedPct = total > 0 ? Math.round(myPart / total * 100) : 0;
     }
 
-    if (hasPersonSelected) {
-        if (payer === 'them') { planned = myPart; actual = 0; }
-        else { planned = planned > 0 ? myPart : 0; actual = actual > 0 ? myPart : 0; }
+    if (isShared && splitRes) {
+        const meId = getSharedMeId();
+        const meRec = splitRes.records.find(r => r.personId === meId) || splitRes.records[0];
+        const mePaid = meRec ? meRec.paidAmount : 0;
+        planned = myPart;
+        actual = actual > 0 && mePaid > 0 ? Math.min(mePaid, myPart) : 0;
         shared = sharedPct;
     } else if (shared > 0 && shared <= 100) {
         planned = Math.round(planned * shared / 100 * 100) / 100;
@@ -2913,10 +2868,10 @@ async function addExpense() {
     let exp = {
         id: Date.now(), month, date, category: cat, desc, planned, actual,
         sharedPercentage: shared,
-        isShared: hasPersonSelected ? true : undefined,
-        sharedPayer: hasPersonSelected ? payer : undefined,
-        sharedPersonId: hasPersonSelected && !sharedGroupId ? parseInt(selVal) : undefined,
-        sharedGroupId: hasPersonSelected ? sharedGroupId : undefined
+        isShared: isShared ? true : undefined,
+        sharedPayer: isShared ? (splitRes && splitRes.records.some(r => r.paidAmount > 0 && r.personId === getSharedMeId()) ? 'me' : 'them') : undefined,
+        sharedPersonId: isShared && splitRes ? (splitRes.records.length === 2 ? (splitRes.records.find(r => r.personId !== getSharedMeId()) || {}).personId : undefined) : undefined,
+        sharedGroupId: isShared ? (sharedSplitState.groupId || undefined) : undefined
     };
 
     try {
@@ -2933,8 +2888,13 @@ async function addExpense() {
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
-        if (hasPersonSelected && otherPart > 0) {
-            await saveSharedSplits(exp.id, otherPart, payer, selVal);
+        if (isShared && splitRes && otherPart > 0) {
+            const r = await saveSharedSplitsV2(exp.id, total, sharedSplitState);
+            if (r.error) {
+                currentData.expenses = currentData.expenses.filter(e => e.id !== exp.id);
+                showToast(r.error, true);
+                return;
+            }
         }
 
         if (isRecurringDesktop) {
@@ -2968,6 +2928,7 @@ function resetExpenseAdvancedForm() {
     if (panel) panel.classList.remove('active');
     if (sel) sel.value = '';
     if (fields) fields.innerHTML = '';
+    resetSharedSplitState();
 }
 async function payExpense(id) {
     const exp = currentData.expenses.find(i => i.id === id); if (!exp) return;

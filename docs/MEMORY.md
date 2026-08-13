@@ -1,5 +1,14 @@
 # Project Core Memory
 
+## 🤝 SPESE CONDIVISE FASE 2 — payer multiplo + split avanzati (2026-08-13)
+- **Stato globale unico**: `let sharedSplitState = { participants: [], method: 'equal', groupId: null }` (script.js ~1345). Partecipante = `{ personId, name, paid, value }`; `value` = %/€/quota a seconda del metodo, `paid` = "ha pagato €".
+- **`computeSharedSplits(state, total)`** → `{ records, splitMethod }` o `{ error }`: metodi `equal|percentage|exact|shares`; errori: % sommano 100, € sommano il totale, quote positive, paid copre il totale; **se nessun paid → paga tutto "Io"** (fallback primo partecipante); ultimo record aggiusta il round.
+- **Salvataggio**: `saveSharedSplitsV2(expenseId, totalAmount, state)` → `saveSharedExpenseV2(...)` scrive `split_method` reale + `split_value` per record + `settled: false`. MAI più `saveSharedSplits`/`updateSplitFields` (rimossi).
+- **UI**: `populateSharedPersonSelect(selEl)` richiede l'elemento (no-arg = no-op); `addSharedParticipant` gestisce 'me', `g_<id>` (membri gruppo → groupId), persona singola; `refreshSharedPanelUI(chipsId)` usa 'sharedParticipants' (mobile) / 'sharedParticipantsDesktop' (desktop) e legge il totale da `getSheetAmount()` / `getDesktopSharedTotal()`.
+- **Regola**: prima di salvare spesa condivisa chiamare SEMPRE `computeSharedSplits`; su `res.error` → toast + abort salvataggio (mobile e desktop).
+- **`settled`**: colonna su `shared_expense_participants` (migration 002); `calculateBalances`/`calculateGroupBalances`/`showFriendDetail` SKIPPANO le righe `settled`.
+- **Pills desktop**: metodo in `#sharedPanelDesktop .split-pill` (scoped); le pill `data-exp-type` (Prevista/Sostenuta) sono FUORI dal panel — non toccarle.
+
 ## 🗄️ SHARED EXPENSES V2 — tipi FK dinamici + quoting/cast (2026-08-12)
 - **DB reale**: `expenses.id` = **TEXT**, `people.id` = BIGINT, `group_members.user_id` = TEXT. `ADD COLUMN IF NOT EXISTS` NON converte colonne pre-esistenti → mai hardcodare BIGINT su FK verso tabelle legacy.
 - **`migrations/001_shared_expenses_v2.sql`**: `shared_expenses`/`shared_expense_participants` create via `DO $$ ... EXECUTE format()` con tipo letto da `information_schema.columns` (fallback text/bigint). Fix errore 42804 (expense_id bigint vs expenses.id text).

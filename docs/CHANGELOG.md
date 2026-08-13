@@ -1,5 +1,28 @@
 # Session Logs & Progress
 
+## [2026-08-13] - FASE 2 Spese Condivise V2: payer multiplo + split avanzati (% / € / Quote)
+
+### ✅ Completed Changes
+- **migrations/002_shared_expenses_v2_phase2.sql (NUOVO)**: `ALTER TABLE shared_expense_participants ADD COLUMN IF NOT EXISTS settled BOOLEAN DEFAULT false` + indice `(person_id, settled)` + `NOTIFY pgrst, 'reload schema';`. Fix bug pre-esistente: `settled` era usato da `settleFriendBalance` ma mai creato (migration 001 né allowlist adapter).
+- **js/supabase-adapter.js**: allowlist `shared_expense_participants` aggiornata con `settled`.
+- **index.html**: `#sharedPanel` (mobile) e `#sharedPanelDesktop` riscritti — rimosso payer-row (`#payerThemLbl`, pills pagatore), metodo ora 4 pills: Parti Uguali / % / € / Quote (`data-method` equal/percentage/exact/shares); nuovi contenitori chips `#sharedParticipants` / `#sharedParticipantsDesktop`.
+- **script.js**:
+  - Nuovo stato globale `sharedSplitState = { participants: [], method: 'equal', groupId: null }` (partecipante = `{ personId, name, paid, value }`).
+  - `computeSharedSplits(state, total)`: split equal/%/€/quote; errori validazione (percentuali sommano 100, € sommano totale, quote positive, paid copre il totale); se nessuno indica chi ha pagato → paga tutto "Io" (fallback primo partecipante); rounding con aggiustamento sull'ultimo record.
+  - `saveSharedExpenseV2` ora scrive `split_method` reale + `split_value` per record + `settled: false`.
+  - `saveSharedSplitsV2` sostituisce `saveSharedSplits`/`saveSharedSplitsLegacy`/`updateSplitFields` (rimossi).
+  - UI: `populateSharedPersonSelect(selEl)` (nuova firma), `addSharedParticipant` (opzione "me", gruppi `g_` → membri, persona singola), chips rimovibili, editor righe per partecipante (share + ha pagato €) con preview live.
+  - `saveTransactionFromSheet` e `addExpense` riscritti: usano `sharedSplitState` + `computeSharedSplits` + `saveSharedSplitsV2`; errore → toast + abort salvataggio.
+  - Saldi: `calculateBalances` / `calculateGroupBalances` / `showFriendDetail` escludono righe `settled`.
+  - `resetExpenseAdvancedForm` / `closeTransactionSheet` resettano `sharedSplitState` (rimosso codice payer-pill morto).
+- **style.css**: nuove classi `.shared-participants`, `.shared-chip`, `.shared-chip-x`, `.participant-row`, `.participant-name`, `.participant-share`, `.participant-value`, `.participant-paid`, `.shared-preview-error`; max-height panel attivo 340→480px; rimosse `.shared-payer-row`/`.payer-pill` morte.
+
+### ⚙ Status: COMPLETATO
+- `node --check` OK; braces CSS 0; zero residui (grep `updateSplitFields|saveSharedSplits(|payer-pill|sharedPctInput|sharedFixedInput|sharedPctDesktop|sharedFixedDesktop|payerThemLbl|updatePayerLabel|populateSharedPersonSelectDesktop`).
+- **Da eseguire su Supabase**: `migrations/002_shared_expenses_v2_phase2.sql` DOPO 001/001b.
+
+---
+
 ## [2026-08-12] - Fix migration 001 Shared Expenses V2: tipi FK dinamici + quoting camelCase + cast auth.uid()
 
 ### 🔧 Situazione

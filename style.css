@@ -2410,7 +2410,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     gap: 8px;
 }
 .shared-panel.active {
-    max-height: 340px;
+    max-height: 480px;
     opacity: 1;
     margin-top: 8px;
 }
@@ -2422,28 +2422,74 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 .shared-person-row .btn-small {
     flex-shrink: 0;
 }
-.shared-payer-row {
+.shared-participants {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
 }
-.payer-pill {
-    flex: 1;
-    padding: 8px 4px;
-    border-radius: 20px;
-    border: 1.5px solid #e2e8f0;
-    font-size: 11px;
-    font-weight: 700;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    background: #f8fafc;
-    color: #64748b;
+.shared-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
 }
-.payer-pill.active {
-    background: #3b82f6;
-    color: #fff;
-    border-color: #3b82f6;
+.shared-chip-x {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+}
+.shared-chip-x:hover {
+    color: #ef4444;
+}
+.participant-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.participant-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.participant-share {
+    font-size: 13px;
+    font-weight: 700;
+    color: #3b82f6;
+    white-space: nowrap;
+}
+.participant-value,
+.participant-paid {
+    width: 86px;
+    flex-shrink: 0;
+    padding: 8px 10px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    background: #fff;
+    outline: none;
+    box-sizing: border-box;
+    text-align: right;
+}
+.participant-value:focus,
+.participant-paid:focus {
+    border-color: #8b5cf6;
 }
 .split-method-pills {
     display: flex;
@@ -2488,6 +2534,10 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     padding: 10px 14px;
     border-radius: 10px;
     text-align: center;
+}
+.shared-preview-error {
+    color: #dc2626;
+    background: #fef2f2;
 }
 
 /* ===== SPESE CONDIVISE - Popup Saldi & Gruppi ===== */
