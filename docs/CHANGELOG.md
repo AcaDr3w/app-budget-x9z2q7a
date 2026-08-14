@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Analisi: layout stretto no-overflow (carousel max 220px, sparkline 64px, gap 8, space-between)
+
+### ✅ Completed Changes
+- **`#history-tab.active`**: `justify-content: space-between !important`, `gap: 10px → 8px`, `padding: 8px 12px → 12px`, `min-height: 0` (height già `100%` del `.container` = `calc(100dvh - header 60px - nav 71px)`) → zero overflow verticale, nav sempre in viewport.
+- **Carousel anomalie**: `flex: 1 1 35%` → **`flex: 0 1 auto; max-height: 220px`** — altezza = contenuto (mai >220px), niente spazio bianco. Compattato: header `8px 12px 0`, slide `2px 16px 0`, dots `6px 0 8px`. **Sparkline SVG `34px → 64px`** (range richiesto 60-80).
+- **KPI**: `.kpi-card` `flex: 0 0 78% → 75%` (snap-align:start invariato) → scrollabilità evidente.
+- **Label scostamento**: `vs Budget` → **`vs Previsto`** (script.js:5310/5313, rosso/verde invariati).
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Analisi: marquee vero, KPI swipeable + Scostamento Budget, carousel 35% con dots, fisse per keyword
 
 ### ✅ Completed Changes

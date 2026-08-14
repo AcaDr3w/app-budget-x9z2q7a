@@ -563,10 +563,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
+        justify-content: space-between !important;
         overflow: hidden !important;
-        gap: 10px;
-        padding: 8px 12px;
+        gap: 8px;
+        padding: 12px;
         box-sizing: border-box;
+        min-height: 0;
     }
 
     /* ===== ANALISI TAB — MOBILE NATIVE SINGLE SCREEN ===== */
@@ -702,7 +704,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: none;
     }
     .kpi-card {
-        flex: 0 0 78%;
+        flex: 0 0 75%;
         scroll-snap-align: start;
         background: rgba(255,255,255,0.9);
         border-radius: 14px;
@@ -742,7 +744,8 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
 
     /* Row 4: carousel anomalie (~35% altezza) + barra fisse/variabili (bottom) */
     .anomaly-carousel {
-        flex: 1 1 35%;
+        flex: 0 1 auto;
+        max-height: 220px;
         min-height: 0;
         position: relative;
         overflow: hidden;
@@ -759,7 +762,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         text-transform: uppercase;
         letter-spacing: 0.3px;
         color: #94a3b8;
-        padding: 10px 12px 2px;
+        padding: 8px 12px 0;
     }
     .anomaly-window {
         flex: 1;
@@ -774,7 +777,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         align-items: center;
         justify-content: center;
         gap: 4px;
-        padding: 4px 16px 0;
+        padding: 2px 16px 0;
         opacity: 0;
         transform: translateY(6px);
         transition: opacity 0.6s ease, transform 0.6s ease;
@@ -802,7 +805,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .anomaly-delta.flat { color: #94a3b8; }
     .anomaly-slide .sparkline-svg {
         width: 100%;
-        height: 34px;
+        height: 64px;
         flex: none;
     }
     .sparkline-svg {
@@ -814,7 +817,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         display: flex;
         justify-content: center;
         gap: 6px;
-        padding: 6px 0 10px;
+        padding: 6px 0 8px;
     }
     .anomaly-dot {
         width: 6px;

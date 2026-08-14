@@ -5307,10 +5307,10 @@ async function renderAnalisiMobile() {
                 diffDelta.textContent = '= In linea col budget';
                 diffDelta.className = 'trend-delta trend-flat';
             } else if (budgetPct > 0) {
-                diffDelta.innerHTML = '<span class="trend-arrow">▲</span> +' + budgetPct.toFixed(0) + '% vs Budget';
+                diffDelta.innerHTML = '<span class="trend-arrow">▲</span> +' + budgetPct.toFixed(0) + '% vs Previsto';
                 diffDelta.className = 'trend-delta trend-up';
             } else {
-                diffDelta.innerHTML = '<span class="trend-arrow">▼</span> -' + Math.abs(budgetPct).toFixed(0) + '% vs Budget';
+                diffDelta.innerHTML = '<span class="trend-arrow">▼</span> -' + Math.abs(budgetPct).toFixed(0) + '% vs Previsto';
                 diffDelta.className = 'trend-delta trend-down';
             }
         }
