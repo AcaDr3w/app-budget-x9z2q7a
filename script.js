@@ -5324,67 +5324,109 @@ function renderAnomalyCarousel(slides) {
     if (!slides || !slides.length) {
         box.innerHTML = `<div class="anomaly-header">Anomalie di Spesa</div>
             <div class="anomaly-window">
-                <div class="anomaly-slide active">
-                    <span class="anomaly-cat">Nessuna anomalia rilevata</span>
-                    <span class="anomaly-delta flat">Tutto nella norma nel periodo</span>
+                <div class="anomaly-track">
+                    <div class="anomaly-slide">
+                        <span class="anomaly-cat">Nessuna anomalia rilevata</span>
+                        <span class="anomaly-delta flat">Tutto nella norma nel periodo</span>
+                    </div>
                 </div>
             </div>
             <div class="anomaly-dots"><span class="anomaly-dot active"></span></div>`;
+        setupAnomalySwipe(box);
         return;
     }
     box.innerHTML = `<div class="anomaly-header">Anomalie di Spesa</div>
-        <div class="anomaly-window">` + slides.map((s, i) => `
-            <div class="anomaly-slide ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}">
-                <span class="anomaly-cat">${s.cat}</span>
-                <span class="anomaly-delta ${s.delta > 0 ? 'up' : 'down'}">${s.delta > 0 ? '▲ +' : '▼ -'}${Math.abs(s.delta).toFixed(0)}% vs solito</span>
-                ${sparklineSVG(s.vals, s.total)}
-            </div>`).join('') + `</div>
+        <div class="anomaly-window">
+            <div class="anomaly-track">` + slides.map((s, i) => `
+                <div class="anomaly-slide" aria-hidden="${i !== 0}">
+                    <span class="anomaly-cat">${s.cat}</span>
+                    <span class="anomaly-delta ${s.delta > 0 ? 'up' : 'down'}">${s.delta > 0 ? '▲ +' : '▼ -'}${Math.abs(s.delta).toFixed(0)}% vs solito</span>
+                    ${sparklineSVG(s.vals, s.total)}
+                </div>`).join('') + `</div>
+        </div>
         <div class="anomaly-dots">` + slides.map((s, i) => `
             <button type="button" class="anomaly-dot ${i === 0 ? 'active' : ''}" onclick="goAnomalySlide(${i})" aria-label="Anomalia ${i + 1}"></button>`).join('') + `</div>`;
+    setupAnomalySwipe(box);
     if (slides.length > 1) {
         let idx = 0;
         anomalyTimer = setInterval(() => {
-            const els = box.querySelectorAll('.anomaly-slide');
-            const dots = box.querySelectorAll('.anomaly-dot');
-            if (!els.length) return;
-            els[idx].classList.remove('active');
-            els[idx].setAttribute('aria-hidden', 'true');
-            if (dots[idx]) dots[idx].classList.remove('active');
-            idx = (idx + 1) % els.length;
-            els[idx].classList.add('active');
-            els[idx].setAttribute('aria-hidden', 'false');
-            if (dots[idx]) dots[idx].classList.add('active');
+            idx = (idx + 1) % slides.length;
+            moveAnomalyTo(box, idx);
         }, 3500);
     }
+}
+
+function moveAnomalyTo(box, i) {
+    const track = box.querySelector('.anomaly-track');
+    const slides = box.querySelectorAll('.anomaly-slide');
+    const dots = box.querySelectorAll('.anomaly-dot');
+    if (!track || !slides.length) return;
+    track.style.transform = `translateX(-${i * 100}%)`;
+    slides.forEach((el, j) => el.setAttribute('aria-hidden', j !== i));
+    dots.forEach((d, j) => d.classList.toggle('active', j === i));
 }
 
 function goAnomalySlide(i) {
     stopAnomalyCarousel();
     const box = document.getElementById('anomalyCarousel');
     if (!box) return;
-    const els = box.querySelectorAll('.anomaly-slide');
-    const dots = box.querySelectorAll('.anomaly-dot');
-    if (!els.length) return;
-    els.forEach((el, j) => {
-        el.classList.toggle('active', j === i);
-        el.setAttribute('aria-hidden', j !== i);
-    });
-    dots.forEach((d, j) => d.classList.toggle('active', j === i));
-    if (els.length > 1) {
+    const slides = box.querySelectorAll('.anomaly-slide');
+    if (!slides.length) return;
+    moveAnomalyTo(box, i);
+    if (slides.length > 1) {
         let idx = i;
         anomalyTimer = setInterval(() => {
-            const e2 = box.querySelectorAll('.anomaly-slide');
-            const d2 = box.querySelectorAll('.anomaly-dot');
-            if (!e2.length) return;
-            e2[idx].classList.remove('active');
-            e2[idx].setAttribute('aria-hidden', 'true');
-            if (d2[idx]) d2[idx].classList.remove('active');
-            idx = (idx + 1) % e2.length;
-            e2[idx].classList.add('active');
-            e2[idx].setAttribute('aria-hidden', 'false');
-            if (d2[idx]) d2[idx].classList.add('active');
+            idx = (idx + 1) % slides.length;
+            moveAnomalyTo(box, idx);
         }, 3500);
     }
+}
+
+function setupAnomalySwipe(box) {
+    if (!box || box.dataset.swipeBound) return;
+    box.dataset.swipeBound = '1';
+    const win = box.querySelector('.anomaly-window');
+    const track = box.querySelector('.anomaly-track');
+    if (!win || !track) return;
+    let startX = null, curX = 0, dragging = false;
+    win.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        startX = e.clientX;
+        curX = 0;
+        dragging = true;
+        win.setPointerCapture(e.pointerId);
+    });
+    win.addEventListener('pointermove', (e) => {
+        if (!dragging || startX === null) return;
+        curX = e.clientX - startX;
+        const slides = box.querySelectorAll('.anomaly-slide');
+        const idx = Array.from(slides).findIndex(s => s.getAttribute('aria-hidden') === 'false');
+        if (idx < 0) return;
+        track.classList.add('dragging');
+        track.style.transform = `translateX(calc(${-idx * 100}% + ${curX}px))`;
+    });
+    const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        track.classList.remove('dragging');
+        const slides = box.querySelectorAll('.anomaly-slide');
+        let idx = Array.from(slides).findIndex(s => s.getAttribute('aria-hidden') === 'false');
+        if (idx < 0) return;
+        stopAnomalyCarousel();
+        if (Math.abs(curX) > 50) {
+            idx = curX < 0 ? Math.min(idx + 1, slides.length - 1) : Math.max(idx - 1, 0);
+        }
+        moveAnomalyTo(box, idx);
+        if (slides.length > 1) {
+            let i = idx;
+            anomalyTimer = setInterval(() => {
+                i = (i + 1) % slides.length;
+                moveAnomalyTo(box, i);
+            }, 3500);
+        }
+    };
+    win.addEventListener('pointerup', endDrag);
+    win.addEventListener('pointercancel', endDrag);
 }
 
 function stopAnomalyCarousel() {

@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Analisi v5: carousel anomalie a slide orizzontale + area flex-grow (spec finale)
+
+### ✅ Completed Changes
+- **`.anomaly-carousel`**: `flex: 0 1 auto; max-height: 220px` → **`flex: 1 1 auto; min-height: 0`** — occupa tutto lo spazio verticale rimanente (spec: flex-grow:1, cuore della pagina). Rimosso `justify-content: space-between` da `#history-tab.active`.
+- **Carousel → scorrimento orizzontale**: fade/translateY sostituito da `.anomaly-track` (flex row, `transition: transform 0.5s cubic-bezier`, `translateX(-idx*100%)` via `moveAnomalyTo(box, i)`, classe `.dragging` per drag senza transition). Slide = `flex: 0 0 100%; height: 100%` (niente più absolute/opacity). Dots + autoplay 3.5s invariati; `goAnomalySlide(i)` ora delega a `moveAnomalyTo`.
+- **Swipe touch** `setupAnomalySwipe(box)` (Pointer Events, bind post-render con guard `dataset.swipeBound`, `touch-action: pan-y` sul window): drag orizzontale traduce il track, |Δx|>50 → slide successiva/precedente, altrimenti snap back; timer restart dopo il gesto.
+- **Sparkline**: `height: 64px` → `clamp(64px, 18vh, 140px)` (scala con l'area flessibile).
+- Desktop ≥768 e logica KPI/IA/fisse invariate.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Analisi: layout stretto no-overflow (carousel max 220px, sparkline 64px, gap 8, space-between)
 
 ### ✅ Completed Changes

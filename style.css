@@ -563,7 +563,6 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
-        justify-content: space-between !important;
         overflow: hidden !important;
         gap: 8px;
         padding: 12px;
@@ -742,10 +741,9 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .trend-delta.trend-flat { color: #94a3b8; }
     .trend-delta .trend-arrow { margin-right: 2px; }
 
-    /* Row 4: carousel anomalie (~35% altezza) + barra fisse/variabili (bottom) */
+    /* Row 4: carousel anomalie (flex-grow, riempie lo spazio) + barra fisse/variabili (bottom) */
     .anomaly-carousel {
-        flex: 0 1 auto;
-        max-height: 220px;
+        flex: 1 1 auto;
         min-height: 0;
         position: relative;
         overflow: hidden;
@@ -768,24 +766,29 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         flex: 1;
         min-height: 0;
         position: relative;
+        overflow: hidden;
+        touch-action: pan-y;
+    }
+    .anomaly-track {
+        display: flex;
+        height: 100%;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+    }
+    .anomaly-track.dragging {
+        transition: none;
     }
     .anomaly-slide {
-        position: absolute;
-        inset: 0;
+        flex: 0 0 100%;
+        height: 100%;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 4px;
         padding: 2px 16px 0;
-        opacity: 0;
-        transform: translateY(6px);
-        transition: opacity 0.6s ease, transform 0.6s ease;
-        pointer-events: none;
-    }
-    .anomaly-slide.active {
-        opacity: 1;
-        transform: none;
+        box-sizing: border-box;
     }
     .anomaly-cat {
         font-size: 13px;
@@ -805,7 +808,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .anomaly-delta.flat { color: #94a3b8; }
     .anomaly-slide .sparkline-svg {
         width: 100%;
-        height: 64px;
+        height: clamp(64px, 18vh, 140px);
         flex: none;
     }
     .sparkline-svg {
