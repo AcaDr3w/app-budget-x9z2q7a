@@ -5108,40 +5108,17 @@ function filterMonthsByPeriod(months) {
     return sorted.filter(m => set.has(m.month));
 }
 
-function drawSparkline(canvas, values, total) {
-    const w = Math.max(canvas.getBoundingClientRect().width, 10);
-    const h = 40;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = h * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, h);
-    if (!values.length || values.every(v => v === 0)) {
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(0, h / 2);
-        ctx.lineTo(w, h / 2);
-        ctx.stroke();
-        return;
-    }
+function sparklineSVG(values, total) {
+    const w = 100, h = 40;
     const color = total > 0 ? '#ef4444' : '#10b981';
+    if (!values.length || values.every(v => v === 0)) {
+        return `<svg class="sparkline-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="${h / 2}" x2="${w}" y2="${h / 2}" stroke="#cbd5e1" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+    }
     const max = Math.max(...values);
-    const step = w / Math.max(values.length - 1, 1);
-    const pts = values.map((v, i) => [i * step, h - 4 - (v / max) * (h - 8)]);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
-    ctx.stroke();
-    ctx.lineTo(pts[pts.length - 1][0], h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    ctx.fillStyle = color + '22';
-    ctx.fill();
+    const pts = values.map((v, i) => [i * (w / Math.max(values.length - 1, 1)), h - 4 - (v / max) * (h - 8)]);
+    const points = pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+    const fillPoints = points + ` ${pts[pts.length - 1][0].toFixed(2)},${h} 0,${h}`;
+    return `<svg class="sparkline-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polygon points="${fillPoints}" fill="${color}" fill-opacity="0.12"/><polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
 async function renderAnalisiMobile() {
@@ -5185,10 +5162,10 @@ async function renderAnalisiMobile() {
         avgDelta.textContent = '→ stabile';
         avgDelta.className = 'trend-delta trend-flat';
     } else if (deltaPct > 0) {
-        avgDelta.innerHTML = '<span class="trend-arrow">▲</span>' + deltaPct.toFixed(0) + '%';
+        avgDelta.innerHTML = '<span class="trend-arrow">▲</span> +' + deltaPct.toFixed(0) + '%';
         avgDelta.className = 'trend-delta trend-up';
     } else {
-        avgDelta.innerHTML = '<span class="trend-arrow">▼</span>' + Math.abs(deltaPct).toFixed(0) + '%';
+        avgDelta.innerHTML = '<span class="trend-arrow">▼</span> -' + Math.abs(deltaPct).toFixed(0) + '%';
         avgDelta.className = 'trend-delta trend-down';
     }
 
@@ -5210,11 +5187,11 @@ async function renderAnalisiMobile() {
     });
     if (bestCat && bestDelta > 0) {
         topVal.textContent = bestCat;
-        topDelta.innerHTML = '<span class="trend-arrow">▲</span>' + bestPct.toFixed(0) + '%';
+        topDelta.innerHTML = '<span class="trend-arrow">▲</span> +' + bestPct.toFixed(0) + '%';
         topDelta.className = 'trend-delta trend-up';
     } else if (bestCat) {
         topVal.textContent = bestCat;
-        topDelta.textContent = 'in calo';
+        topDelta.innerHTML = '<span class="trend-arrow">▼</span> -' + Math.abs(bestPct).toFixed(0) + '%';
         topDelta.className = 'trend-delta trend-down';
     } else {
         topVal.textContent = '–';
@@ -5228,18 +5205,12 @@ async function renderAnalisiMobile() {
         sparkList.innerHTML = '<div class="sparkline-empty">Nessuna spesa nel periodo</div>';
     } else {
         topCats.forEach(([cat, total]) => {
-            const row = document.createElement('div');
-            row.className = 'sparkline-row';
-            const name = document.createElement('span');
-            name.className = 'sparkline-name';
-            name.textContent = cat;
-            const canvas = document.createElement('canvas');
-            canvas.className = 'sparkline-canvas';
-            canvas.height = 40;
-            row.appendChild(name);
-            row.appendChild(canvas);
-            sparkList.appendChild(row);
-            drawSparkline(canvas, monthKeys.map(k => catByMonth[cat][k] || 0), total);
+            const vals = monthKeys.map(k => catByMonth[cat][k] || 0);
+            sparkList.innerHTML += `
+            <div class="sparkline-row">
+                <span class="sparkline-name">${cat}</span>
+                ${sparklineSVG(vals, total)}
+            </div>`;
         });
     }
 }

@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Fix metà inferiore tab Analisi: sparkline SVG visibili + layout pieno + trend coerente
+
+### ✅ Completed Changes
+- **Sparklines canvas → SVG inline** (`sparklineSVG(values, total)`): il canvas misurava `getBoundingClientRect().width` a render-time (fragile, linea invisibile/sliver 10px). Ora `<svg viewBox="0 0 100 40" preserveAspectRatio="none">` con `<polyline vector-effect="non-scaling-stroke">` (stroke uniforme a ogni scala) + `<polygon>` fill `fill-opacity="0.12"`; dati reali del periodo, fallback linea grigia piatta se zeri. Colori: `#ef4444` totale>0, `#10b981` totale=0. Righe generate via template `innerHTML` (`sparkline-name` 34% + svg flex:1).
+- **Layout list**: `.sparkline-list` `flex-grow:1; flex-direction:column; justify-content:flex-start; gap:1rem`; `.sparkline-row` `justify-content:space-between; align-items:center; padding:1.5rem 1rem` → card più alte, spazio vuoto in fondo quasi annullato.
+- **Trend card "Top Categoria in Crescita"**: rimosso il branch `'in calo'` verde (controsenso) → percentuale SEMPRE con segno: `▲ +X%` rosso se cresce, `▼ -X%` verde se cala, `—` senza dati. Segno `+`/`-` aggiunto anche a "Media Uscite Mensili".
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Tab Analisi mobile: refactor single-screen nativo (periodi, trend, sparklines)
 
 ### ✅ Completed Changes
