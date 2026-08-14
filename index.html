@@ -455,11 +455,40 @@
             </div>
         </div>
 
-        <!-- MOBILE TOP ACTION BAR (hidden on desktop) -->
-        <div class="analisi-top-actions hide-desktop">
-            <button class="analisi-icon-btn" onclick="openIaModal()" aria-label="Analisi IA">🤖</button>
-            <button class="analisi-icon-btn" onclick="openArchiveModal()" aria-label="Archivio Mesi">📋</button>
+        <!-- MOBILE: HEADER + SELEZIONE PERIODO (hidden on desktop) -->
+        <div class="analisi-header-row hide-desktop">
+            <h2 class="analisi-title">Analisi</h2>
+            <select id="analysisPeriod" class="analisi-period-select" aria-label="Periodo analisi">
+                <option value="3m">Ultimi 3 mesi</option>
+                <option value="6m" selected>Ultimi 6 mesi</option>
+                <option value="year">Anno corrente</option>
+                <option value="custom">Personalizzato</option>
+            </select>
         </div>
+
+        <!-- MOBILE: AI INSIGHT CARD (hidden on desktop) -->
+        <button type="button" class="ai-insight-card hide-desktop" id="aiInsightCard" onclick="onAiInsightCardTap()">
+            <span class="ai-insight-icon" aria-hidden="true">✨</span>
+            <span class="ai-insight-text" id="aiInsightText">Tocca per l'analisi IA del periodo</span>
+            <span class="ai-insight-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <!-- MOBILE: METRICHE TREND (hidden on desktop) -->
+        <div class="trend-mini-grid hide-desktop">
+            <div class="trend-mini-card">
+                <div class="trend-label">Media Uscite Mensili</div>
+                <div class="trend-value" id="trendAvgValue">–</div>
+                <div class="trend-delta trend-flat" id="trendAvgDelta"></div>
+            </div>
+            <div class="trend-mini-card">
+                <div class="trend-label">Top Categoria in Crescita</div>
+                <div class="trend-value" id="trendTopCatValue">–</div>
+                <div class="trend-delta trend-flat" id="trendTopCatDelta"></div>
+            </div>
+        </div>
+
+        <!-- MOBILE: SPARKLINES (hidden on desktop) -->
+        <div class="sparkline-list hide-desktop" id="sparklineList"></div>
 
         <div class="card" id="recordsHubContainer">
             <h2 class="hide-mobile">🏆 Hub dei Record Personali</h2>
@@ -532,6 +561,19 @@
             <button class="popup-close" onclick="closeArchiveModal()">×</button>
             <h3 style="margin:0 0 12px;">📋 Registro Mesi Archiviati</h3>
             <div id="archiveModalBody" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+    </div>
+
+    <!-- CUSTOM RANGE POPUP (mobile) -->
+    <div id="customRangePopup" class="popup-overlay" onclick="closeCustomRangePopup(event)">
+        <div class="popup-panel" onclick="event.stopPropagation()">
+            <button class="popup-close" onclick="closeCustomRangePopup()">×</button>
+            <h3 style="margin:0 0 12px;">📅 Range Personalizzato</h3>
+            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Da</label>
+            <input type="month" id="customRangeFrom" class="responsive-input" style="margin-bottom:10px;">
+            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">A</label>
+            <input type="month" id="customRangeTo" class="responsive-input" style="margin-bottom:14px;">
+            <button class="btn-ia" onclick="applyCustomRange()">Applica Range</button>
         </div>
     </div>
 

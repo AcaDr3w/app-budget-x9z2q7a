@@ -1,5 +1,14 @@
 # Project Core Memory
 
+## 📱 TAB ANALISI mobile — SINGLE-SCREEN NATIVO v2 (2026-08-14)
+- **Layout mobile (≤767)**: `.analisi-header-row` (titolo + `#analysisPeriod` select pill) → `.ai-insight-card` (tap = `onAiInsightCardTap`: apre `#iaModal` + `generateInsightCard()` on-demand via `callAIEndpoint(prompt,'aiInsightText','')`, guard `aiInsightPending`) → `.trend-mini-grid` 2×1 (`#trendAvg*`: delta prima/ultima metà, `#trendTopCat*`: cat con delta% max) → `#sparklineList` `flex:1;min-height:0;overflow-y:auto` con righe `.sparkline-row` (nome 34% + canvas 40px).
+- **Sparklines = canvas 2D puro** (`drawSparkline`, DPR-aware, color #ef4444 se totale>0, #10b981 se 0, linea grigia se vuoto) — MAI Chart.js per mini-grafici (istanze pesanti).
+- **Periodi**: globals `analysisPeriod='6m'`/`customRange`/`aiInsightPending`; `filterMonthsByPeriod(months)` àncora = `#currentMonth.value` (fallback ultimo mese DB); `3m/6m` = ultimi N mesi calendario, `year` = anno del mese-àncora, `custom` = range popup. Spese conteggiate da `db.expenses` (actual>0), non `db.months`.
+- **`#customRangePopup`**: 2 `<input type="month">` Da/A; body-lock `popup-open`; chiusura senza apply → revert del periodo precedente (`sel.dataset.prevPeriod`). Chiusura forzata anche in `switchTab`.
+- **`switchTab` branch history**: `<768` → `renderAnalisiMobile()` SOLO (mai `renderGlobalHistory`/`renderTradingChart`/`initChartToggle` su mobile: Chart.js su canvas display:none = dimensione 0). Desktop invariato.
+- **Rimossi da mobile**: `.analisi-top-actions`, `#recordsHubContainer`, `#chartsCard` (display:none!important ≤767, restano ≥768). `openArchiveModal` ora senza trigger UI (funzione mantenuta).
+- **Colori trend**: `trend-up`=#ef4444 (peggioramento), `trend-down`=#10b981, `trend-flat`=#94a3b8; frecce ▲/▼.
+
 ## ⚡ SALDO PARZIALE AMICI (2026-08-13)
 - `settleFriendBalance` → prompt importo (`showPromptDialog`, default = |net|, virgola accettata) → `settleParticipantPortion`.
 - **Partial settle**: record pendente ridotto (`share`/`paid`) + NUOVO record `settled=true` (`share=taken` o `paid=taken`) → storico nel ledger; record chiusi interamente → `settled=true` senza duplicato. I calcoli dei net escludono sempre `settled` — i record saldati non sporcano i badge.

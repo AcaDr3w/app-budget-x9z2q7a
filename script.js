@@ -280,6 +280,9 @@ let chartB = null, chartC = null;
 let historyBarChart = null;
 let tradingChart = null;
 let activeChartType = 'bars';
+let analysisPeriod = '6m';
+let customRange = null;
+let aiInsightPending = false;
 
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
@@ -399,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         monthInputEl.addEventListener('change', updateMonthDisplay);
     }
     setupMonthNavigation();
+    setupAnalysisPeriodSelector();
 });
 
 // =====================================================================
@@ -525,9 +529,14 @@ function switchTab(tabId, buttonEl) {
     const navItem = document.getElementById(navMap[tabId]);
     if (navItem) navItem.classList.add('active');
     updateActivePageSubtitle(tabId);
-    if (tabId === 'history-tab') { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
+    if (tabId === 'history-tab') {
+        if (window.innerWidth < 768) { renderAnalisiMobile(); }
+        else { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
+    }
     if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
     if (tabId === 'investimenti-tab') { renderInvestments(); }
+    const customPopup = document.getElementById('customRangePopup');
+    if (customPopup) customPopup.classList.remove('active');
     window.scrollTo(0, 0);
 }
 
@@ -5061,6 +5070,260 @@ async function renderTradingChart() {
         ]},
         options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}}},plugins:{legend:{position:'top',labels:{font:{size:10,weight:'bold'},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}}}
     });
+}
+
+// =====================================================================
+// ANALISI MOBILE — SINGLE SCREEN: periodi, trend, sparklines
+// =====================================================================
+function getAnalysisAnchorMonth() {
+    const input = document.getElementById('currentMonth');
+    if (input && input.value) return input.value;
+    return null;
+}
+
+function lastNMonthsList(endMonth, n) {
+    const [y, m] = endMonth.split('-').map(Number);
+    const list = [];
+    for (let i = 0; i < n; i++) {
+        const d = new Date(y, m - 1 - i, 1);
+        list.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return list;
+}
+
+function filterMonthsByPeriod(months) {
+    if (!months || !months.length) return [];
+    const sorted = [...months].sort((a, b) => a.month.localeCompare(b.month));
+    const anchor = getAnalysisAnchorMonth() || sorted[sorted.length - 1].month;
+    if (analysisPeriod === 'year') {
+        const year = anchor.split('-')[0];
+        return sorted.filter(m => m.month.startsWith(year));
+    }
+    if (analysisPeriod === 'custom') {
+        if (!customRange) return [];
+        return sorted.filter(m => m.month >= customRange[0] && m.month <= customRange[1]);
+    }
+    const count = analysisPeriod === '3m' ? 3 : 6;
+    const set = new Set(lastNMonthsList(anchor, count));
+    return sorted.filter(m => set.has(m.month));
+}
+
+function drawSparkline(canvas, values, total) {
+    const w = Math.max(canvas.getBoundingClientRect().width, 10);
+    const h = 40;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = h * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    if (!values.length || values.every(v => v === 0)) {
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+        return;
+    }
+    const color = total > 0 ? '#ef4444' : '#10b981';
+    const max = Math.max(...values);
+    const step = w / Math.max(values.length - 1, 1);
+    const pts = values.map((v, i) => [i * step, h - 4 - (v / max) * (h - 8)]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+    ctx.stroke();
+    ctx.lineTo(pts[pts.length - 1][0], h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = color + '22';
+    ctx.fill();
+}
+
+async function renderAnalisiMobile() {
+    const sparkList = document.getElementById('sparklineList');
+    const avgVal = document.getElementById('trendAvgValue');
+    const avgDelta = document.getElementById('trendAvgDelta');
+    const topVal = document.getElementById('trendTopCatValue');
+    const topDelta = document.getElementById('trendTopCatDelta');
+    const aiText = document.getElementById('aiInsightText');
+    if (!sparkList || !avgVal || !avgDelta || !topVal || !topDelta) return;
+    if (aiText) aiText.textContent = 'Tocca per l\'analisi IA del periodo';
+
+    const months = filterMonthsByPeriod(await db.months.toArray());
+    if (!months.length) {
+        avgVal.textContent = '–';
+        avgDelta.textContent = '';
+        avgDelta.className = 'trend-delta trend-flat';
+        topVal.textContent = '–';
+        topDelta.textContent = 'Nessun dato nel periodo';
+        topDelta.className = 'trend-delta trend-flat';
+        sparkList.innerHTML = '<div class="sparkline-empty">Nessun dato nel periodo selezionato</div>';
+        return;
+    }
+
+    const monthSet = new Set(months.map(m => m.month));
+    const expenses = (await db.expenses.toArray()).filter(e => monthSet.has(e.month));
+    const byMonth = {};
+    months.forEach(m => { byMonth[m.month] = 0; });
+    expenses.forEach(e => { if (e.actual > 0) byMonth[e.month] = (byMonth[e.month] || 0) + e.actual; });
+    const monthKeys = Object.keys(byMonth).sort();
+    const spentList = monthKeys.map(k => byMonth[k]);
+    const half = Math.max(1, Math.floor(spentList.length / 2));
+    const sum = (arr) => arr.reduce((s, v) => s + v, 0);
+    const avg = sum(spentList) / spentList.length;
+    const firstAvg = sum(spentList.slice(0, half)) / half;
+    const lastAvg = sum(spentList.slice(spentList.length - half)) / half;
+    const deltaPct = firstAvg > 0 ? ((lastAvg - firstAvg) / firstAvg) * 100 : 0;
+
+    avgVal.textContent = fmtEPlain(avg, 0);
+    if (Math.abs(deltaPct) < 1) {
+        avgDelta.textContent = '→ stabile';
+        avgDelta.className = 'trend-delta trend-flat';
+    } else if (deltaPct > 0) {
+        avgDelta.innerHTML = '<span class="trend-arrow">▲</span>' + deltaPct.toFixed(0) + '%';
+        avgDelta.className = 'trend-delta trend-up';
+    } else {
+        avgDelta.innerHTML = '<span class="trend-arrow">▼</span>' + Math.abs(deltaPct).toFixed(0) + '%';
+        avgDelta.className = 'trend-delta trend-down';
+    }
+
+    const catByMonth = {};
+    const catTotals = {};
+    expenses.forEach(e => {
+        if (e.actual <= 0) return;
+        catByMonth[e.category] = catByMonth[e.category] || {};
+        catByMonth[e.category][e.month] = (catByMonth[e.category][e.month] || 0) + e.actual;
+        catTotals[e.category] = (catTotals[e.category] || 0) + e.actual;
+    });
+    let bestCat = null, bestPct = -Infinity, bestDelta = 0;
+    Object.keys(catTotals).forEach(cat => {
+        const vals = monthKeys.map(k => catByMonth[cat][k] || 0);
+        const f = sum(vals.slice(0, half)) / half;
+        const l = sum(vals.slice(vals.length - half)) / half;
+        const pct = f > 0 ? ((l - f) / f) * 100 : (l > 0 ? 100 : 0);
+        if (pct > bestPct) { bestCat = cat; bestPct = pct; bestDelta = l - f; }
+    });
+    if (bestCat && bestDelta > 0) {
+        topVal.textContent = bestCat;
+        topDelta.innerHTML = '<span class="trend-arrow">▲</span>' + bestPct.toFixed(0) + '%';
+        topDelta.className = 'trend-delta trend-up';
+    } else if (bestCat) {
+        topVal.textContent = bestCat;
+        topDelta.textContent = 'in calo';
+        topDelta.className = 'trend-delta trend-down';
+    } else {
+        topVal.textContent = '–';
+        topDelta.textContent = '';
+        topDelta.className = 'trend-delta trend-flat';
+    }
+
+    const topCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    sparkList.innerHTML = '';
+    if (!topCats.length) {
+        sparkList.innerHTML = '<div class="sparkline-empty">Nessuna spesa nel periodo</div>';
+    } else {
+        topCats.forEach(([cat, total]) => {
+            const row = document.createElement('div');
+            row.className = 'sparkline-row';
+            const name = document.createElement('span');
+            name.className = 'sparkline-name';
+            name.textContent = cat;
+            const canvas = document.createElement('canvas');
+            canvas.className = 'sparkline-canvas';
+            canvas.height = 40;
+            row.appendChild(name);
+            row.appendChild(canvas);
+            sparkList.appendChild(row);
+            drawSparkline(canvas, monthKeys.map(k => catByMonth[cat][k] || 0), total);
+        });
+    }
+}
+
+function onAiInsightCardTap() {
+    openIaModal();
+    generateInsightCard();
+}
+
+async function generateInsightCard() {
+    const aiText = document.getElementById('aiInsightText');
+    if (!aiText || aiInsightPending) return;
+    const months = filterMonthsByPeriod(await db.months.toArray());
+    if (!months.length) { aiText.textContent = 'Nessun dato nel periodo selezionato.'; return; }
+    const dataText = months.map(m => {
+        const savings = (m.totalIncome || 0) - (m.totalActual || 0);
+        return `- ${m.month}: Entrate ${fmtE(m.totalIncome || 0)}, Uscite ${fmtE(m.totalActual || 0)}, Risparmio ${fmtE(savings)}`;
+    }).join('\n');
+    const prompt = `Agisci come un analista finanziario. Lingua: Italiano. Analizza questo periodo di ${months.length} mesi:\n${dataText}\nScrivi un commento breve e diretto (massimo 2-3 righe, max 200 caratteri) su trend di spesa e salute finanziaria del periodo.`;
+    aiInsightPending = true;
+    try {
+        await callAIEndpoint(prompt, 'aiInsightText', '');
+    } finally {
+        aiInsightPending = false;
+    }
+}
+
+function setupAnalysisPeriodSelector() {
+    const sel = document.getElementById('analysisPeriod');
+    if (!sel || sel.dataset.bound) return;
+    sel.dataset.bound = '1';
+    sel.addEventListener('change', () => {
+        const prev = analysisPeriod;
+        analysisPeriod = sel.value;
+        if (analysisPeriod === 'custom') {
+            sel.dataset.prevPeriod = prev;
+            openCustomRangePopup();
+        } else {
+            renderAnalisiMobile();
+        }
+    });
+}
+
+function openCustomRangePopup() {
+    const popup = document.getElementById('customRangePopup');
+    if (!popup) return;
+    const from = document.getElementById('customRangeFrom');
+    const to = document.getElementById('customRangeTo');
+    const end = getAnalysisAnchorMonth() || new Date().toISOString().slice(0, 7);
+    if (from && to) {
+        from.value = customRange ? customRange[0] : end.slice(0, 4) + '-01';
+        to.value = customRange ? customRange[1] : end;
+    }
+    popup.classList.add('active');
+    document.body.classList.add('popup-open');
+}
+
+function closeCustomRangePopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const popup = document.getElementById('customRangePopup');
+    if (!popup) return;
+    popup.classList.remove('active');
+    document.body.classList.remove('popup-open');
+    if (!customRange) {
+        const sel = document.getElementById('analysisPeriod');
+        if (sel) {
+            analysisPeriod = sel.dataset.prevPeriod || '6m';
+            sel.value = analysisPeriod;
+            renderAnalisiMobile();
+        }
+    }
+}
+
+function applyCustomRange() {
+    const from = document.getElementById('customRangeFrom');
+    const to = document.getElementById('customRangeTo');
+    if (!from || !to) return;
+    if (!from.value || !to.value) { showToast('Seleziona entrambi i mesi', true); return; }
+    if (from.value > to.value) { showToast('Il mese di inizio precede quello di fine', true); return; }
+    customRange = [from.value, to.value];
+    const sel = document.getElementById('analysisPeriod');
+    if (sel) sel.value = 'custom';
+    closeCustomRangePopup();
+    renderAnalisiMobile();
 }
 
 // =====================================================================

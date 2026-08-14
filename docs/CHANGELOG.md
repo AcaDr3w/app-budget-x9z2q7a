@@ -1,5 +1,19 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Tab Analisi mobile: refactor single-screen nativo (periodi, trend, sparklines)
+
+### ✅ Completed Changes
+- **Rimossi** su mobile: `.analisi-top-actions` (icone 🤖/📋), `#recordsHubContainer` (3 record-card), `#chartsCard` (Chart.js bar/line) → `display:none !important` nel blocco ≤767 (desktop ≥768 INTATTO: tabella, chart, records hub, IA card storica).
+- **Row 1**: `.analisi-header-row` = titolo + `<select id="analysisPeriod">` pill (3m/6m/year/custom, min-height 44px, default 6m).
+- **Row 2**: `.ai-insight-card` (button full-width, min-height 44, clamp 3 righe) → tap = `onAiInsightCardTap()` = apre `#iaModal` (esistente) + `generateInsightCard()` on-demand (prompt compatto sul range, `callAIEndpoint(prompt,'aiInsightText','')`, guard `aiInsightPending`). Nessuna chiamata IA automatica all'apertura tab.
+- **Row 3**: `.trend-mini-grid` 2×1 → "Media Uscite Mensili" (delta prima/ultima metà finestra: ▲rosso/▼verde/→stabile) + "Top Categoria in Crescita" (delta % per categoria).
+- **Row 4**: `#sparklineList` `flex:1; min-height:0; overflow-y:auto` → top 4 categorie per totale, righe `.sparkline-row` nome 34% + `<canvas>` 40px, **canvas 2D puro** `drawSparkline` (DPR-aware, NO Chart.js).
+- **Periodi**: `filterMonthsByPeriod(months)` àncora = `#currentMonth` (fallback ultimo mese DB); `year` = anno del mese-àncora; `custom` = `#customRangePopup` (2 `<input type="month">` Da/A, body-lock `popup-open`, revert periodo se chiuso senza applicare).
+- **switchTab**: branch `<768` → `renderAnalisiMobile()`; `>=768` → path originale (`renderGlobalHistory`+`renderTradingChart`+`initChartToggle`). Chiusura `#customRangePopup` in `switchTab`.
+- **Filtri**: spese conteggiate da `db.expenses` (actual>0) nel range, solo mesi con dati.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-13] - Elenco amici: saldo parziale bidirezionale con storico + layout compatto
 
 ### ✅ Completed Changes
