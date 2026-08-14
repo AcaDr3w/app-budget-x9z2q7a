@@ -5191,6 +5191,10 @@ async function renderAnalisiMobile() {
         if (segF) segF.style.width = '0%';
         if (segV) segV.style.width = '0%';
         if (pctEl) pctEl.textContent = 'Fisse 0% · Variabili 0%';
+        const diffVal = document.getElementById('budgetDiffValue');
+        const diffDelta = document.getElementById('budgetDiffDelta');
+        if (diffVal) diffVal.textContent = '–';
+        if (diffDelta) { diffDelta.textContent = ''; diffDelta.className = 'trend-delta trend-flat'; }
         return;
     }
 
@@ -5200,8 +5204,9 @@ async function renderAnalisiMobile() {
     const baseMonths = getBaselineCalendarMonths(periodMonths);
     const baseSet = new Set(baseMonths);
     const baseExpenses = allExp.filter(e => baseSet.has(e.month));
-    const isFixed = (e) => !!(e.isRecurring || e.recurringGroupId);
+    const isFixed = (e) => !!(e.isRecurring || e.recurringGroupId || /(mutuo|affitto|bollett|tass|luce|gas|acqua|telefon|internet|canone|assicuraz)/i.test(e.category || ''));
     const sum = (arr) => arr.reduce((s, v) => s + v, 0);
+    const monthRows = (await db.months.toArray()).filter(m => periodSet.has(m.month));
 
     // — Trend card: media uscite (metà vs prima metà finestra) —
     const byMonth = {};
@@ -5239,25 +5244,21 @@ async function renderAnalisiMobile() {
         catBase[e.category] = catBase[e.category] || {};
         catBase[e.category][e.month] = (catBase[e.category][e.month] || 0) + e.actual;
     });
-    let bestCat = null, bestPct = -Infinity, bestDelta = 0;
+    let bestCat = null, bestPct = -Infinity;
     Object.keys(catMonth).forEach(cat => {
         const vals = periodMonths.map(m => catMonth[cat][m] || 0);
         const f = sum(vals.slice(0, half)) / half;
         const l = sum(vals.slice(vals.length - half)) / half;
         const pct = f > 0 ? ((l - f) / f) * 100 : (l > 0 ? 100 : 0);
-        if (pct > bestPct) { bestCat = cat; bestPct = pct; bestDelta = l - f; }
+        if (pct > bestPct) { bestCat = cat; bestPct = pct; }
     });
-    if (bestCat && bestDelta > 0) {
+    if (bestCat && bestPct > 1) {
         topVal.textContent = bestCat;
         topDelta.innerHTML = '<span class="trend-arrow">▲</span> +' + bestPct.toFixed(0) + '%';
         topDelta.className = 'trend-delta trend-up';
-    } else if (bestCat) {
-        topVal.textContent = bestCat;
-        topDelta.innerHTML = '<span class="trend-arrow">▼</span> -' + Math.abs(bestPct).toFixed(0) + '%';
-        topDelta.className = 'trend-delta trend-down';
     } else {
         topVal.textContent = '–';
-        topDelta.textContent = '';
+        topDelta.textContent = 'Nessuna crescita';
         topDelta.className = 'trend-delta trend-flat';
     }
 
@@ -5287,6 +5288,33 @@ async function renderAnalisiMobile() {
     if (segF) segF.style.width = pctF + '%';
     if (segV) segV.style.width = (100 - pctF) + '%';
     if (pctEl) pctEl.textContent = `Fisse ${pctF}% · Variabili ${100 - pctF}%`;
+
+    // — Scostamento dal Budget (piano vs effettivo nel periodo) —
+    const plannedSum = monthRows.reduce((s, m) => s + (m.totalPlanned || 0), 0);
+    const actualSum = monthRows.reduce((s, m) => s + (m.totalActual || 0), 0);
+    const diffEl = document.getElementById('budgetDiffValue');
+    const diffDelta = document.getElementById('budgetDiffDelta');
+    if (diffEl && diffDelta) {
+        if (!monthRows.length) {
+            diffEl.textContent = '–';
+            diffDelta.textContent = '';
+            diffDelta.className = 'trend-delta trend-flat';
+        } else {
+            const budgetDiff = actualSum - plannedSum;
+            const budgetPct = plannedSum > 0 ? (budgetDiff / plannedSum) * 100 : 0;
+            diffEl.textContent = (budgetDiff > 0 ? '+' : '') + fmtEPlain(budgetDiff, 0);
+            if (Math.abs(budgetPct) < 1) {
+                diffDelta.textContent = '= In linea col budget';
+                diffDelta.className = 'trend-delta trend-flat';
+            } else if (budgetPct > 0) {
+                diffDelta.innerHTML = '<span class="trend-arrow">▲</span> +' + budgetPct.toFixed(0) + '% vs Budget';
+                diffDelta.className = 'trend-delta trend-up';
+            } else {
+                diffDelta.innerHTML = '<span class="trend-arrow">▼</span> -' + Math.abs(budgetPct).toFixed(0) + '% vs Budget';
+                diffDelta.className = 'trend-delta trend-down';
+            }
+        }
+    }
 }
 
 function renderAnomalyCarousel(slides) {
@@ -5294,25 +5322,67 @@ function renderAnomalyCarousel(slides) {
     const box = document.getElementById('anomalyCarousel');
     if (!box) return;
     if (!slides || !slides.length) {
-        box.innerHTML = `<div class="anomaly-slide active"><span class="anomaly-cat">Nessuna anomalia rilevata</span><span class="anomaly-delta flat">Tutto nella norma nel periodo</span></div>`;
+        box.innerHTML = `<div class="anomaly-header">Anomalie di Spesa</div>
+            <div class="anomaly-window">
+                <div class="anomaly-slide active">
+                    <span class="anomaly-cat">Nessuna anomalia rilevata</span>
+                    <span class="anomaly-delta flat">Tutto nella norma nel periodo</span>
+                </div>
+            </div>
+            <div class="anomaly-dots"><span class="anomaly-dot active"></span></div>`;
         return;
     }
-    box.innerHTML = '<span class="anomaly-label">Anomalie di spesa</span>' + slides.map((s, i) => `
-        <div class="anomaly-slide ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}">
-            <span class="anomaly-cat">${s.cat}</span>
-            <span class="anomaly-delta ${s.delta > 0 ? 'up' : 'down'}">${s.delta > 0 ? '▲ +' : '▼ -'}${Math.abs(s.delta).toFixed(0)}% vs solito</span>
-            ${sparklineSVG(s.vals, s.total)}
-        </div>`).join('');
+    box.innerHTML = `<div class="anomaly-header">Anomalie di Spesa</div>
+        <div class="anomaly-window">` + slides.map((s, i) => `
+            <div class="anomaly-slide ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}">
+                <span class="anomaly-cat">${s.cat}</span>
+                <span class="anomaly-delta ${s.delta > 0 ? 'up' : 'down'}">${s.delta > 0 ? '▲ +' : '▼ -'}${Math.abs(s.delta).toFixed(0)}% vs solito</span>
+                ${sparklineSVG(s.vals, s.total)}
+            </div>`).join('') + `</div>
+        <div class="anomaly-dots">` + slides.map((s, i) => `
+            <button type="button" class="anomaly-dot ${i === 0 ? 'active' : ''}" onclick="goAnomalySlide(${i})" aria-label="Anomalia ${i + 1}"></button>`).join('') + `</div>`;
     if (slides.length > 1) {
         let idx = 0;
         anomalyTimer = setInterval(() => {
             const els = box.querySelectorAll('.anomaly-slide');
+            const dots = box.querySelectorAll('.anomaly-dot');
             if (!els.length) return;
             els[idx].classList.remove('active');
             els[idx].setAttribute('aria-hidden', 'true');
+            if (dots[idx]) dots[idx].classList.remove('active');
             idx = (idx + 1) % els.length;
             els[idx].classList.add('active');
             els[idx].setAttribute('aria-hidden', 'false');
+            if (dots[idx]) dots[idx].classList.add('active');
+        }, 3500);
+    }
+}
+
+function goAnomalySlide(i) {
+    stopAnomalyCarousel();
+    const box = document.getElementById('anomalyCarousel');
+    if (!box) return;
+    const els = box.querySelectorAll('.anomaly-slide');
+    const dots = box.querySelectorAll('.anomaly-dot');
+    if (!els.length) return;
+    els.forEach((el, j) => {
+        el.classList.toggle('active', j === i);
+        el.setAttribute('aria-hidden', j !== i);
+    });
+    dots.forEach((d, j) => d.classList.toggle('active', j === i));
+    if (els.length > 1) {
+        let idx = i;
+        anomalyTimer = setInterval(() => {
+            const e2 = box.querySelectorAll('.anomaly-slide');
+            const d2 = box.querySelectorAll('.anomaly-dot');
+            if (!e2.length) return;
+            e2[idx].classList.remove('active');
+            e2[idx].setAttribute('aria-hidden', 'true');
+            if (d2[idx]) d2[idx].classList.remove('active');
+            idx = (idx + 1) % e2.length;
+            e2[idx].classList.add('active');
+            e2[idx].setAttribute('aria-hidden', 'false');
+            if (d2[idx]) d2[idx].classList.add('active');
         }, 3500);
     }
 }

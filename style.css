@@ -632,11 +632,15 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         flex: 1;
         min-width: 0;
         overflow: hidden;
-        white-space: nowrap;
-        display: flex;
-        animation: aiMarquee 14s linear infinite;
     }
-    .ai-insight-card:active .ai-insight-marquee {
+    .ai-insight-track {
+        display: inline-flex;
+        width: max-content;
+        white-space: nowrap;
+        animation: aiMarquee 14s linear infinite;
+        will-change: transform;
+    }
+    .ai-insight-card:active .ai-insight-track {
         animation-play-state: paused;
     }
     .ai-insight-text {
@@ -665,12 +669,12 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         margin-top: 2px;
     }
     .ai-insight-refresh {
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
         border: none;
         background: transparent;
         color: #7c3aed;
-        font-size: 15px;
+        font-size: 13px;
         cursor: pointer;
         border-radius: 999px;
         display: flex;
@@ -683,17 +687,26 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: rgba(124,58,237,0.1);
     }
 
-    /* Row 3: metriche trend — griglia 2x1 minimal */
-    .trend-mini-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+    /* Row 3: KPI — swipeable row con snap (Media, Top Crescita, Scostamento) */
+    .kpi-swipe {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
         flex-shrink: 0;
+        scrollbar-width: none;
+        padding-bottom: 2px;
     }
-    .trend-mini-card {
+    .kpi-swipe::-webkit-scrollbar {
+        display: none;
+    }
+    .kpi-card {
+        flex: 0 0 78%;
+        scroll-snap-align: start;
         background: rgba(255,255,255,0.9);
         border-radius: 14px;
-        padding: 8px 10px;
+        padding: 8px 12px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         min-width: 0;
     }
@@ -727,27 +740,31 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .trend-delta.trend-flat { color: #94a3b8; }
     .trend-delta .trend-arrow { margin-right: 2px; }
 
-    /* Row 4: carousel anomalie (flex-grow) + barra fisse/variabili (bottom) */
+    /* Row 4: carousel anomalie (~35% altezza) + barra fisse/variabili (bottom) */
     .anomaly-carousel {
-        flex-grow: 1;
-        flex-shrink: 0;
+        flex: 1 1 35%;
         min-height: 0;
         position: relative;
         overflow: hidden;
         border-radius: 14px;
         background: rgba(255,255,255,0.9);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
     }
-    .anomaly-label {
-        position: absolute;
-        top: 8px;
-        left: 12px;
+    .anomaly-header {
+        flex-shrink: 0;
         font-size: 9.5px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.3px;
         color: #94a3b8;
-        z-index: 1;
+        padding: 10px 12px 2px;
+    }
+    .anomaly-window {
+        flex: 1;
+        min-height: 0;
+        position: relative;
     }
     .anomaly-slide {
         position: absolute;
@@ -757,7 +774,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         align-items: center;
         justify-content: center;
         gap: 4px;
-        padding: 14px 16px 10px;
+        padding: 4px 16px 0;
         opacity: 0;
         transform: translateY(6px);
         transition: opacity 0.6s ease, transform 0.6s ease;
@@ -785,12 +802,33 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .anomaly-delta.flat { color: #94a3b8; }
     .anomaly-slide .sparkline-svg {
         width: 100%;
-        height: 36px;
+        height: 34px;
         flex: none;
     }
     .sparkline-svg {
         display: block;
         min-width: 0;
+    }
+    .anomaly-dots {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 0 10px;
+    }
+    .anomaly-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #d1d5db;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        transition: width 0.3s ease, background 0.3s ease;
+    }
+    .anomaly-dot.active {
+        width: 16px;
+        background: #7c3aed;
     }
 
     /* Barra Fisse vs Variabili — fondo pagina */

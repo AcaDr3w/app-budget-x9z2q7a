@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Analisi: marquee vero, KPI swipeable + Scostamento Budget, carousel 35% con dots, fisse per keyword
+
+### ✅ Completed Changes
+- **Banner IA**: fix marquee "tagliato" — struttura 3 livelli: `.ai-insight-marquee` (overflow:hidden, flex:1) > `.ai-insight-track` (inline-flex, `width:max-content`, `aiMarquee` 14s linear infinite, `will-change:transform`) > 2 span identici. `translateX(-50%)` ora sul track (= metà del contenuto) → loop seamless. Icona ↻: 44→36px, font 13px.
+- **KPI → swipeable row**: `.trend-mini-grid` (2×1) → `.kpi-swipe` (flex, `overflow-x:auto`, `scroll-snap-type:x mandatory`, scrollbar nascosta) con 3 `.kpi-card` (`flex:0 0 78%`, snap-start): Media Uscite, Top Crescita, **Scostamento Budget** (`#budgetDiffValue` + `#budgetDiffDelta`: ΣtotalActual−ΣtotalPlanned dai record `db.months` del periodo; valore `+85 €`, delta `▲ +8% vs Budget` rosso / `▼ -5% vs Budget` verde / `= In linea` grigio).
+- **Top Crescita**: MAI "in calo" — solo categoria con delta positivo >1%; altrimenti `—` + "Nessuna crescita" (flat).
+- **Carousel anomalie riprogettato**: `flex:1 1 35%` (~35% altezza) + flex column; `.anomaly-header` (titolo, flex-shrink:0) + `.anomaly-window` (flex:1, 1 slide visibile, fade 0.6s) + `.anomaly-dots` (3 button 6px, attivo `#7c3aed` 16px). Rimosso `.anomaly-label` assoluto (risolve sovrapposizione etichette). Nuova `goAnomalySlide(i)`: tap dot → stop timer, salto, restart 3.5s.
+- **Barra Fisse/Variabili realistica**: `isFixed(e)` = `isRecurring || recurringGroupId || /(mutuo|affitto|bollett|tass|luce|gas|acqua|telefon|internet|canone|assicuraz)/i.test(category)` — regex case-insensitive (resiste a rinomine). Usata anche per esclusione anomalie.
+- No-scroll: `#history-tab.active` già flex column overflow:hidden; KPI/header/barra flex-shrink:0, carousel basis 35% con shrink → tutto in una schermata. Desktop ≥768 intatto.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Tab Analisi: IA JSON+persistenza, banner marquee, sparkline smussate, carousel anomalie + barra Fisse/Variabili
 
 ### ✅ Completed Changes
