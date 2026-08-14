@@ -467,11 +467,17 @@
         </div>
 
         <!-- MOBILE: AI INSIGHT CARD (hidden on desktop) -->
-        <button type="button" class="ai-insight-card hide-desktop" id="aiInsightCard" onclick="onAiInsightCardTap()">
+        <div class="ai-insight-card hide-desktop" id="aiInsightCard" role="button" tabindex="0" onclick="onAiInsightCardTap()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onAiInsightCardTap();}">
             <span class="ai-insight-icon" aria-hidden="true">✨</span>
-            <span class="ai-insight-text" id="aiInsightText">Tocca per l'analisi IA del periodo</span>
-            <span class="ai-insight-chevron" aria-hidden="true">›</span>
-        </button>
+            <span class="ai-insight-marquee">
+                <span class="ai-insight-text" id="aiInsightText">Tocca per l'analisi IA del periodo</span>
+                <span class="ai-insight-text ai-insight-clone" id="aiInsightTextClone" aria-hidden="true"></span>
+            </span>
+            <span class="ai-insight-meta">
+                <span class="ai-insight-date" id="aiInsightDate"></span>
+                <button type="button" class="ai-insight-refresh" id="aiInsightRefresh" onclick="event.stopPropagation();generateInsightCard(true)" aria-label="Aggiorna analisi IA">↻</button>
+            </span>
+        </div>
 
         <!-- MOBILE: METRICHE TREND (hidden on desktop) -->
         <div class="trend-mini-grid hide-desktop">
@@ -487,8 +493,19 @@
             </div>
         </div>
 
-        <!-- MOBILE: SPARKLINES (hidden on desktop) -->
-        <div class="sparkline-list hide-desktop" id="sparklineList"></div>
+        <!-- MOBILE: CAROUSEL ANOMALIE + BARRA FISSE/VARIABILI (hidden on desktop) -->
+        <div class="anomaly-carousel hide-desktop" id="anomalyCarousel" aria-label="Anomalie di spesa"></div>
+
+        <div class="fixedvar-bar hide-desktop" id="fixedVarBar">
+            <div class="fixedvar-label">
+                <span>Fisse vs Variabili</span>
+                <span id="fixedVarPct">Fisse 0% · Variabili 0%</span>
+            </div>
+            <div class="fixedvar-track">
+                <div class="fixedvar-seg fixed" id="fixedVarFixed"></div>
+                <div class="fixedvar-seg var" id="fixedVarVar"></div>
+            </div>
+        </div>
 
         <div class="card" id="recordsHubContainer">
             <h2 class="hide-mobile">🏆 Hub dei Record Personali</h2>

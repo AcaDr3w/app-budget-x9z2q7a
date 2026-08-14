@@ -602,7 +602,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         outline: none;
     }
 
-    /* Row 2: AI Insight Card — tutta cliccabile, max 3 righe */
+    /* Row 2: AI Insight Card — marquee riassunto + data + refresh */
     .ai-insight-card {
         display: flex;
         align-items: center;
@@ -619,6 +619,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         box-shadow: 0 2px 10px rgba(0,0,0,0.06);
         transition: transform 0.15s;
         margin: 0;
+        font-family: inherit;
     }
     .ai-insight-card:active {
         transform: scale(0.98);
@@ -627,22 +628,59 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         font-size: 15px;
         flex-shrink: 0;
     }
-    .ai-insight-text {
+    .ai-insight-marquee {
         flex: 1;
         min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        display: flex;
+        animation: aiMarquee 14s linear infinite;
+    }
+    .ai-insight-card:active .ai-insight-marquee {
+        animation-play-state: paused;
+    }
+    .ai-insight-text {
+        flex: none;
         font-size: 11.5px;
         line-height: 1.35;
         color: #475569;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        padding-right: 28px;
     }
-    .ai-insight-chevron {
+    @keyframes aiMarquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+    }
+    .ai-insight-meta {
         flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        margin-left: 4px;
+    }
+    .ai-insight-date {
+        font-size: 9px;
         color: #a78bfa;
-        font-size: 17px;
-        font-weight: 700;
+        font-weight: 600;
+        white-space: nowrap;
+        margin-top: 2px;
+    }
+    .ai-insight-refresh {
+        width: 44px;
+        height: 44px;
+        border: none;
+        background: transparent;
+        color: #7c3aed;
+        font-size: 15px;
+        cursor: pointer;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+    }
+    .ai-insight-refresh:active {
+        background: rgba(124,58,237,0.1);
     }
 
     /* Row 3: metriche trend — griglia 2x1 minimal */
@@ -689,54 +727,105 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .trend-delta.trend-flat { color: #94a3b8; }
     .trend-delta .trend-arrow { margin-right: 2px; }
 
-    /* Row 4: sparklines — flex-grow, thin */
-    .sparkline-list {
+    /* Row 4: carousel anomalie (flex-grow) + barra fisse/variabili (bottom) */
+    .anomaly-carousel {
         flex-grow: 1;
         flex-shrink: 0;
         min-height: 0;
+        position: relative;
+        overflow: hidden;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.9);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .anomaly-label {
+        position: absolute;
+        top: 8px;
+        left: 12px;
+        font-size: 9.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: #94a3b8;
+        z-index: 1;
+    }
+    .anomaly-slide {
+        position: absolute;
+        inset: 0;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
-        gap: 1rem;
-        overflow-y: auto;
-        overscroll-behavior-y: contain;
-        padding-bottom: 2px;
-    }
-    .sparkline-row {
-        display: flex;
-        justify-content: space-between;
         align-items: center;
-        gap: 10px;
-        background: rgba(255,255,255,0.9);
-        border-radius: 12px;
-        padding: 1.5rem 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        flex-shrink: 0;
-        min-width: 0;
+        justify-content: center;
+        gap: 4px;
+        padding: 14px 16px 10px;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+        pointer-events: none;
     }
-    .sparkline-name {
-        flex: 0 0 34%;
-        min-width: 0;
-        font-size: 11.5px;
-        font-weight: 600;
-        color: #334155;
+    .anomaly-slide.active {
+        opacity: 1;
+        transform: none;
+    }
+    .anomaly-cat {
+        font-size: 13px;
+        font-weight: 800;
+        color: #1e293b;
+        max-width: 100%;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .sparkline-svg {
-        flex: 1;
-        min-width: 0;
+    .anomaly-delta {
+        font-size: 12px;
+        font-weight: 800;
+    }
+    .anomaly-delta.up { color: #ef4444; }
+    .anomaly-delta.down { color: #10b981; }
+    .anomaly-delta.flat { color: #94a3b8; }
+    .anomaly-slide .sparkline-svg {
         width: 100%;
-        height: 44px;
+        height: 36px;
+        flex: none;
+    }
+    .sparkline-svg {
         display: block;
+        min-width: 0;
     }
-    .sparkline-empty {
-        font-size: 11px;
-        color: #94a3b8;
-        text-align: center;
-        padding: 14px 0;
+
+    /* Barra Fisse vs Variabili — fondo pagina */
+    .fixedvar-bar {
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.9);
+        border-radius: 12px;
+        padding: 8px 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
+    .fixedvar-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+    .fixedvar-track {
+        display: flex;
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #e2e8f0;
+    }
+    .fixedvar-seg {
+        height: 100%;
+        transition: width 0.4s ease;
+    }
+    .fixedvar-seg.fixed { background: #ef4444; }
+    .fixedvar-seg.var { background: #10b981; }
 
     /* Vecchi componenti mobili RIMOSSI dalla view (restano su desktop >=768) */
     #recordsHubContainer,

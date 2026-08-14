@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## 🤖 IA ANALISI — JSON + persistenza localStorage (2026-08-14)
+- **`invokeAI(prompt, systemPrompt)`** (script.js ~5824): chiama `chat-openrouter` con messages `[system?, user]`, ritorna `data.content`. `callAIEndpoint` è ora un wrapper (4° param opzionale `systemPrompt`).
+- **`generateInsightCard(force)`**: system = "rispondi SEMPRE in italiano, SOLO JSON con `analisi_completa` + `riassunto_telegrafico`". `parseAIJson` (fence strip → primo `{}` → fallback prima frase ≤120 char). **Cache**: `localStorage['eb_analisi_ai_' + periodKey]` = `{analisi_completa, riassunto_telegrafico, ts}`; `periodKey` = `analysisPeriod_àncora` o `custom_<da>_<a>`. Tap banner → cache (nessuna chiamata); `↻` (`#aiInsightRefresh`, stopPropagation) → force=true. Banner reset a placeholder se la key cambia.
+- **Banner**: `.ai-insight-card` = **div role=button** (MAI button annidati) con `.ai-insight-marquee` (2 span duplicati, `aiMarquee` 14s translateX(-50%), pausa su `:active`) + `.ai-insight-meta` (`#aiInsightDate` "Aggiornato il GG/MM" + ↻ 44px).
+- **Sparkline = SVG `<path>` smussato**: catmull-rom → Bézier con divisore 5 (~tension 0.4), `vector-effect="non-scaling-stroke"`, fill chiuso alla base. MAI polyline dritte né canvas.
+- **Anomalie (Componente A)**: `#anomalyCarousel` flex-grow, fade 0.6s, auto 3.5s (`anomalyTimer` globale, `stopAnomalyCarousel()` su switchTab fuori dal tab). Top 3 per |delta%| **vs periodo precedente di pari lunghezza** (`getPeriodCalendarMonths`/`getBaselineCalendarMonths`). **Fisse = SOLO `isRecurring || recurringGroupId`** (niente whitelist) — usata anche per `#fixedVarBar` (Componente B, bicolore #ef4444/#10b981, bottom flex-shrink:0).
+- Regola: MAI chiamate IA automatiche su render/switchTab — solo su tap o ↻.
+
 ## 📱 TAB ANALISI mobile — SINGLE-SCREEN NATIVO v2 (2026-08-14)
 - **Layout mobile (≤767)**: `.analisi-header-row` (titolo + `#analysisPeriod` select pill) → `.ai-insight-card` (tap = `onAiInsightCardTap`: apre `#iaModal` + `generateInsightCard()` on-demand via `callAIEndpoint(prompt,'aiInsightText','')`, guard `aiInsightPending`) → `.trend-mini-grid` 2×1 (`#trendAvg*`: delta prima/ultima metà, `#trendTopCat*`: cat con delta% max) → `#sparklineList` `flex:1;min-height:0;overflow-y:auto` con righe `.sparkline-row` (nome 34% + canvas 40px).
 - **Sparklines = SVG inline** (`sparklineSVG(values,total)`): `viewBox="0 0 100 40"` + `preserveAspectRatio="none"` + `<polyline vector-effect="non-scaling-stroke">` (stroke 2 uniforme a ogni scala) + `<polygon>` fill-opacity 0.12; righe via template innerHTML. MAI canvas 2D per mini-grafici (misura rect a render-time → invisibile) né Chart.js (istanze pesanti). Colori #ef4444 totale>0 / #10b981 =0 / grigio #cbd5e1 senza dati.

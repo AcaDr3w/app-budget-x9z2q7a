@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Tab Analisi: IA JSON+persistenza, banner marquee, sparkline smussate, carousel anomalie + barra Fisse/Variabili
+
+### ✅ Completed Changes
+- **IA**: `callAIEndpoint` accetta 4° param `systemPrompt` (messages `[system, user]`); nuovo `invokeAI(prompt, systemPrompt)` restituisce `data.content`. `generateInsightCard(force=false)` → system prompt: rispondere SEMPRE in italiano + SOLO JSON con chiavi `analisi_completa` / `riassunto_telegrafico`; `parseAIJson` (strip fence, primo `{}`, fallback prima frase ≤120 char). **Persistenza** localStorage `eb_analisi_ai_<periodKey>` (`{analisi_completa, riassunto_telegrafico, ts}`); periodKey = `analysisPeriod_àncora` o `custom_<da>_<a>`. Cambio range → key diversa → nessuna chiamata; tap banner → popup con `analisi_completa` dalla cache (nessuna nuova chiamata); `↻` → `generateInsightCard(true)`.
+- **Banner**: `.ai-insight-card` ora `div role=button` con `.ai-insight-marquee` (2 span duplicati, `@keyframes aiMarquee` translateX(-50%) 14s infinito, pausa su `:active`) + `.ai-insight-meta` con `#aiInsightDate` ("Aggiornato il GG/MM") e bottone ↻ 44px (`stopPropagation`).
+- **Sparkline smussate**: polyline → `<path>` con curve Bézier (catmull-rom, divisore 5 ≈ tension 0.4), `vector-effect="non-scaling-stroke"`, fill chiuso a base.
+- **Sezione inferiore riscritta**: RIMOSSA `#sparklineList` (lista verticale). **Componente A** `#anomalyCarousel` (`flex-grow:1`, fade 600ms, auto 3.5s, timer `anomalyTimer` stoppato fuori dal tab in `switchTab`): top 3 categorie (escluse fisse) per |delta%| vs **periodo precedente di pari lunghezza** (`getBaselineCalendarMonths`); slide = nome + `▲ +X%`/`▼ -X%` + sparkline smussata; placeholder "Nessuna anomalia rilevata". **Componente B** `#fixedVarBar` (bottom, flex-shrink:0): barra bicolore Fisse `#ef4444` vs Variabili `#10b981` + label "Fisse X% · Variabili Y%". **Fisse = spese con `isRecurring || recurringGroupId`** (scelta utente, niente whitelist categorie).
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Fix metà inferiore tab Analisi: sparkline SVG visibili + layout pieno + trend coerente
 
 ### ✅ Completed Changes

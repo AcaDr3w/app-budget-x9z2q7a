@@ -283,6 +283,7 @@ let activeChartType = 'bars';
 let analysisPeriod = '6m';
 let customRange = null;
 let aiInsightPending = false;
+let anomalyTimer = null;
 
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
@@ -535,6 +536,7 @@ function switchTab(tabId, buttonEl) {
     }
     if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
     if (tabId === 'investimenti-tab') { renderInvestments(); }
+    if (tabId !== 'history-tab') stopAnomalyCarousel();
     const customPopup = document.getElementById('customRangePopup');
     if (customPopup) customPopup.classList.remove('active');
     window.scrollTo(0, 0);
@@ -5108,6 +5110,36 @@ function filterMonthsByPeriod(months) {
     return sorted.filter(m => set.has(m.month));
 }
 
+function shiftMonth(month, delta) {
+    const [y, m] = month.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getPeriodCalendarMonths() {
+    const anchor = getAnalysisAnchorMonth() || new Date().toISOString().slice(0, 7);
+    if (analysisPeriod === 'year') {
+        const y = anchor.split('-')[0];
+        const list = [];
+        for (let i = 1; i <= 12; i++) list.push(`${y}-${String(i).padStart(2, '0')}`);
+        return list;
+    }
+    if (analysisPeriod === 'custom') {
+        if (!customRange) return [];
+        const list = [];
+        let m = customRange[0];
+        while (m <= customRange[1]) { list.push(m); m = shiftMonth(m, 1); }
+        return list;
+    }
+    const count = analysisPeriod === '3m' ? 3 : 6;
+    return lastNMonthsList(anchor, count);
+}
+
+function getBaselineCalendarMonths(periodMonths) {
+    if (!periodMonths.length) return [];
+    return lastNMonthsList(shiftMonth(periodMonths[0], -1), periodMonths.length);
+}
+
 function sparklineSVG(values, total) {
     const w = 100, h = 40;
     const color = total > 0 ? '#ef4444' : '#10b981';
@@ -5116,42 +5148,67 @@ function sparklineSVG(values, total) {
     }
     const max = Math.max(...values);
     const pts = values.map((v, i) => [i * (w / Math.max(values.length - 1, 1)), h - 4 - (v / max) * (h - 8)]);
-    const points = pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
-    const fillPoints = points + ` ${pts[pts.length - 1][0].toFixed(2)},${h} 0,${h}`;
-    return `<svg class="sparkline-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polygon points="${fillPoints}" fill="${color}" fill-opacity="0.12"/><polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+    const at = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))];
+    let d = `M ${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = at(i - 1), p1 = pts[i], p2 = pts[i + 1], p3 = at(i + 2);
+        const cp1x = p1[0] + (p2[0] - p0[0]) / 5;
+        const cp1y = p1[1] + (p2[1] - p0[1]) / 5;
+        const cp2x = p2[0] - (p3[0] - p1[0]) / 5;
+        const cp2y = p2[1] - (p3[1] - p1[1]) / 5;
+        d += ` C ${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
+    }
+    const last = pts[pts.length - 1];
+    const fill = `${d} L ${last[0].toFixed(2)},${h} L 0,${h} Z`;
+    return `<svg class="sparkline-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${fill}" fill="${color}" fill-opacity="0.12"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
 async function renderAnalisiMobile() {
-    const sparkList = document.getElementById('sparklineList');
+    const carousel = document.getElementById('anomalyCarousel');
     const avgVal = document.getElementById('trendAvgValue');
     const avgDelta = document.getElementById('trendAvgDelta');
     const topVal = document.getElementById('trendTopCatValue');
     const topDelta = document.getElementById('trendTopCatDelta');
-    const aiText = document.getElementById('aiInsightText');
-    if (!sparkList || !avgVal || !avgDelta || !topVal || !topDelta) return;
-    if (aiText) aiText.textContent = 'Tocca per l\'analisi IA del periodo';
+    if (!carousel || !avgVal || !avgDelta || !topVal || !topDelta) return;
 
-    const months = filterMonthsByPeriod(await db.months.toArray());
-    if (!months.length) {
+    const insightKey = getInsightPeriodKey();
+    const cachedInsight = loadInsightCache(insightKey);
+    if (cachedInsight) renderInsightBanner(cachedInsight);
+    else resetInsightBanner();
+
+    const periodMonths = getPeriodCalendarMonths();
+    if (!periodMonths.length) {
         avgVal.textContent = '–';
         avgDelta.textContent = '';
         avgDelta.className = 'trend-delta trend-flat';
         topVal.textContent = '–';
         topDelta.textContent = 'Nessun dato nel periodo';
         topDelta.className = 'trend-delta trend-flat';
-        sparkList.innerHTML = '<div class="sparkline-empty">Nessun dato nel periodo selezionato</div>';
+        renderAnomalyCarousel([]);
+        const segF = document.getElementById('fixedVarFixed');
+        const segV = document.getElementById('fixedVarVar');
+        const pctEl = document.getElementById('fixedVarPct');
+        if (segF) segF.style.width = '0%';
+        if (segV) segV.style.width = '0%';
+        if (pctEl) pctEl.textContent = 'Fisse 0% · Variabili 0%';
         return;
     }
 
-    const monthSet = new Set(months.map(m => m.month));
-    const expenses = (await db.expenses.toArray()).filter(e => monthSet.has(e.month));
-    const byMonth = {};
-    months.forEach(m => { byMonth[m.month] = 0; });
-    expenses.forEach(e => { if (e.actual > 0) byMonth[e.month] = (byMonth[e.month] || 0) + e.actual; });
-    const monthKeys = Object.keys(byMonth).sort();
-    const spentList = monthKeys.map(k => byMonth[k]);
-    const half = Math.max(1, Math.floor(spentList.length / 2));
+    const allExp = await db.expenses.toArray();
+    const periodSet = new Set(periodMonths);
+    const expenses = allExp.filter(e => periodSet.has(e.month));
+    const baseMonths = getBaselineCalendarMonths(periodMonths);
+    const baseSet = new Set(baseMonths);
+    const baseExpenses = allExp.filter(e => baseSet.has(e.month));
+    const isFixed = (e) => !!(e.isRecurring || e.recurringGroupId);
     const sum = (arr) => arr.reduce((s, v) => s + v, 0);
+
+    // — Trend card: media uscite (metà vs prima metà finestra) —
+    const byMonth = {};
+    periodMonths.forEach(m => { byMonth[m] = 0; });
+    expenses.forEach(e => { if (e.actual > 0) byMonth[e.month] = (byMonth[e.month] || 0) + e.actual; });
+    const spentList = periodMonths.map(k => byMonth[k]);
+    const half = Math.max(1, Math.floor(spentList.length / 2));
     const avg = sum(spentList) / spentList.length;
     const firstAvg = sum(spentList.slice(0, half)) / half;
     const lastAvg = sum(spentList.slice(spentList.length - half)) / half;
@@ -5169,17 +5226,22 @@ async function renderAnalisiMobile() {
         avgDelta.className = 'trend-delta trend-down';
     }
 
-    const catByMonth = {};
-    const catTotals = {};
+    // — Top categoria in crescita (escluso fisse) —
+    const catMonth = {};
+    const catBase = {};
     expenses.forEach(e => {
-        if (e.actual <= 0) return;
-        catByMonth[e.category] = catByMonth[e.category] || {};
-        catByMonth[e.category][e.month] = (catByMonth[e.category][e.month] || 0) + e.actual;
-        catTotals[e.category] = (catTotals[e.category] || 0) + e.actual;
+        if (e.actual <= 0 || isFixed(e)) return;
+        catMonth[e.category] = catMonth[e.category] || {};
+        catMonth[e.category][e.month] = (catMonth[e.category][e.month] || 0) + e.actual;
+    });
+    baseExpenses.forEach(e => {
+        if (e.actual <= 0 || isFixed(e)) return;
+        catBase[e.category] = catBase[e.category] || {};
+        catBase[e.category][e.month] = (catBase[e.category][e.month] || 0) + e.actual;
     });
     let bestCat = null, bestPct = -Infinity, bestDelta = 0;
-    Object.keys(catTotals).forEach(cat => {
-        const vals = monthKeys.map(k => catByMonth[cat][k] || 0);
+    Object.keys(catMonth).forEach(cat => {
+        const vals = periodMonths.map(m => catMonth[cat][m] || 0);
         const f = sum(vals.slice(0, half)) / half;
         const l = sum(vals.slice(vals.length - half)) / half;
         const pct = f > 0 ? ((l - f) / f) * 100 : (l > 0 ? 100 : 0);
@@ -5199,42 +5261,166 @@ async function renderAnalisiMobile() {
         topDelta.className = 'trend-delta trend-flat';
     }
 
-    const topCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    sparkList.innerHTML = '';
-    if (!topCats.length) {
-        sparkList.innerHTML = '<div class="sparkline-empty">Nessuna spesa nel periodo</div>';
-    } else {
-        topCats.forEach(([cat, total]) => {
-            const vals = monthKeys.map(k => catByMonth[cat][k] || 0);
-            sparkList.innerHTML += `
-            <div class="sparkline-row">
-                <span class="sparkline-name">${cat}</span>
-                ${sparklineSVG(vals, total)}
-            </div>`;
-        });
+    // — Carousel anomalie: |delta%| più alto vs periodo precedente (escluse fisse) —
+    const anomalies = [];
+    Object.keys(catMonth).forEach(cat => {
+        const vals = periodMonths.map(m => catMonth[cat][m] || 0);
+        const totP = sum(vals);
+        const baseVals = baseMonths.map(m => (catBase[cat] || {})[m] || 0);
+        const totB = sum(baseVals);
+        const avgP = totP / periodMonths.length;
+        const avgB = totB / baseMonths.length;
+        const delta = avgB > 0 ? ((avgP - avgB) / avgB) * 100 : (avgP > 0 ? 100 : 0);
+        if (Math.abs(delta) >= 1) anomalies.push({ cat, delta, vals, total: totP });
+    });
+    anomalies.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    renderAnomalyCarousel(anomalies.slice(0, 3));
+
+    // — Barra Fisse vs Variabili —
+    let fTot = 0, vTot = 0;
+    expenses.forEach(e => { if (e.actual <= 0) return; if (isFixed(e)) fTot += e.actual; else vTot += e.actual; });
+    const grand = fTot + vTot;
+    const pctF = grand > 0 ? Math.round((fTot / grand) * 100) : 0;
+    const segF = document.getElementById('fixedVarFixed');
+    const segV = document.getElementById('fixedVarVar');
+    const pctEl = document.getElementById('fixedVarPct');
+    if (segF) segF.style.width = pctF + '%';
+    if (segV) segV.style.width = (100 - pctF) + '%';
+    if (pctEl) pctEl.textContent = `Fisse ${pctF}% · Variabili ${100 - pctF}%`;
+}
+
+function renderAnomalyCarousel(slides) {
+    stopAnomalyCarousel();
+    const box = document.getElementById('anomalyCarousel');
+    if (!box) return;
+    if (!slides || !slides.length) {
+        box.innerHTML = `<div class="anomaly-slide active"><span class="anomaly-cat">Nessuna anomalia rilevata</span><span class="anomaly-delta flat">Tutto nella norma nel periodo</span></div>`;
+        return;
     }
+    box.innerHTML = '<span class="anomaly-label">Anomalie di spesa</span>' + slides.map((s, i) => `
+        <div class="anomaly-slide ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}">
+            <span class="anomaly-cat">${s.cat}</span>
+            <span class="anomaly-delta ${s.delta > 0 ? 'up' : 'down'}">${s.delta > 0 ? '▲ +' : '▼ -'}${Math.abs(s.delta).toFixed(0)}% vs solito</span>
+            ${sparklineSVG(s.vals, s.total)}
+        </div>`).join('');
+    if (slides.length > 1) {
+        let idx = 0;
+        anomalyTimer = setInterval(() => {
+            const els = box.querySelectorAll('.anomaly-slide');
+            if (!els.length) return;
+            els[idx].classList.remove('active');
+            els[idx].setAttribute('aria-hidden', 'true');
+            idx = (idx + 1) % els.length;
+            els[idx].classList.add('active');
+            els[idx].setAttribute('aria-hidden', 'false');
+        }, 3500);
+    }
+}
+
+function stopAnomalyCarousel() {
+    if (anomalyTimer) { clearInterval(anomalyTimer); anomalyTimer = null; }
+}
+
+function getInsightPeriodKey() {
+    const anchor = getAnalysisAnchorMonth() || new Date().toISOString().slice(0, 7);
+    if (analysisPeriod === 'custom' && customRange) return `custom_${customRange[0]}_${customRange[1]}`;
+    return `${analysisPeriod}_${anchor}`;
+}
+
+function loadInsightCache(key) {
+    try {
+        const raw = localStorage.getItem('eb_analisi_ai_' + key);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+function saveInsightCache(key, data) {
+    try { localStorage.setItem('eb_analisi_ai_' + key, JSON.stringify(data)); } catch (e) {}
+}
+
+function parseAIJson(text) {
+    let t = (text || '').trim();
+    const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence) t = fence[1].trim();
+    const start = t.indexOf('{');
+    const end = t.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+        try { return JSON.parse(t.slice(start, end + 1)); } catch (e) {}
+    }
+    const firstSentence = (t.split(/[.!?]\s/)[0] || t).trim();
+    return { analisi_completa: t, riassunto_telegrafico: firstSentence.slice(0, 120) };
+}
+
+function formatShortDate(ts) {
+    const d = new Date(ts);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function renderInsightBanner(payload) {
+    const text = document.getElementById('aiInsightText');
+    const clone = document.getElementById('aiInsightTextClone');
+    const dateEl = document.getElementById('aiInsightDate');
+    if (text) text.textContent = payload.riassunto_telegrafico || '';
+    if (clone) clone.textContent = payload.riassunto_telegrafico || '';
+    if (dateEl) dateEl.textContent = payload.ts ? 'Aggiornato il ' + formatShortDate(payload.ts) : '';
+}
+
+function resetInsightBanner() {
+    const text = document.getElementById('aiInsightText');
+    const clone = document.getElementById('aiInsightTextClone');
+    const dateEl = document.getElementById('aiInsightDate');
+    if (text) text.textContent = 'Tocca per l\'analisi IA del periodo';
+    if (clone) clone.textContent = '';
+    if (dateEl) dateEl.textContent = '';
 }
 
 function onAiInsightCardTap() {
     openIaModal();
+    const cached = loadInsightCache(getInsightPeriodKey());
+    const respBox = document.getElementById('iaHistoryResponseModal');
+    if (cached && respBox) { respBox.style.display = 'block'; respBox.innerText = cached.analisi_completa; }
     generateInsightCard();
 }
 
-async function generateInsightCard() {
+async function generateInsightCard(force = false) {
     const aiText = document.getElementById('aiInsightText');
-    if (!aiText || aiInsightPending) return;
+    const refreshBtn = document.getElementById('aiInsightRefresh');
+    if (aiInsightPending) return;
+    const key = getInsightPeriodKey();
+    const cached = loadInsightCache(key);
+    if (cached && !force) { renderInsightBanner(cached); return; }
     const months = filterMonthsByPeriod(await db.months.toArray());
-    if (!months.length) { aiText.textContent = 'Nessun dato nel periodo selezionato.'; return; }
+    if (!months.length) {
+        if (aiText) aiText.textContent = 'Nessun dato nel periodo selezionato.';
+        return;
+    }
     const dataText = months.map(m => {
         const savings = (m.totalIncome || 0) - (m.totalActual || 0);
         return `- ${m.month}: Entrate ${fmtE(m.totalIncome || 0)}, Uscite ${fmtE(m.totalActual || 0)}, Risparmio ${fmtE(savings)}`;
     }).join('\n');
-    const prompt = `Agisci come un analista finanziario. Lingua: Italiano. Analizza questo periodo di ${months.length} mesi:\n${dataText}\nScrivi un commento breve e diretto (massimo 2-3 righe, max 200 caratteri) su trend di spesa e salute finanziaria del periodo.`;
+    const systemPrompt = 'Sei un analista finanziario esperto. Rispondi SEMPRE in lingua italiana. Restituisci SOLO un oggetto JSON valido, senza testo aggiuntivo, con esattamente due chiavi: "analisi_completa" (testo lungo, discorsivo e dettagliato in italiano) e "riassunto_telegrafico" (una singola frase molto sintetica in italiano, es. "Spese in aumento del 10%. Attenzione al carburante. Risparmi stabili.").';
+    const prompt = `Analizza questo periodo di ${months.length} mesi:\n${dataText}\nRispondi in italiano con il JSON richiesto.`;
     aiInsightPending = true;
+    if (aiText) aiText.textContent = '🤖 Analisi in corso...';
+    if (refreshBtn) refreshBtn.disabled = true;
     try {
-        await callAIEndpoint(prompt, 'aiInsightText', '');
+        const content = await invokeAI(prompt, systemPrompt);
+        const parsed = parseAIJson(content);
+        const payload = {
+            analisi_completa: parsed.analisi_completa || content,
+            riassunto_telegrafico: parsed.riassunto_telegrafico || '',
+            ts: Date.now()
+        };
+        saveInsightCache(key, payload);
+        renderInsightBanner(payload);
+        const respBox = document.getElementById('iaHistoryResponseModal');
+        if (respBox) { respBox.style.display = 'block'; respBox.innerText = payload.analisi_completa; }
+    } catch (err) {
+        const msg = await extractFunctionError(err);
+        if (aiText) aiText.textContent = '❌ Errore: ' + msg;
     } finally {
         aiInsightPending = false;
+        if (refreshBtn) refreshBtn.disabled = false;
     }
 }
 
@@ -5635,7 +5821,21 @@ async function resolveAIModel(model) {
     return model;
 }
 
-async function callAIEndpoint(promptText, responseBoxId, btnId) {
+async function invokeAI(promptText, systemPrompt) {
+    const modelSelect = document.getElementById('openrouter-model-select');
+    const selected = modelSelect && modelSelect.value ? modelSelect.value : undefined;
+    const model = await resolveAIModel(selected);
+    const messages = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: promptText });
+    const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
+        body: { model, messages }
+    });
+    if (error) throw error;
+    return data.content;
+}
+
+async function callAIEndpoint(promptText, responseBoxId, btnId, systemPrompt) {
     const errorBox = document.getElementById('hub-ia-error-box');
     const box = document.getElementById(responseBoxId);
     const btn = document.getElementById(btnId);
@@ -5645,16 +5845,8 @@ async function callAIEndpoint(promptText, responseBoxId, btnId) {
     if (errorBox) errorBox.style.display = 'none';
 
     try {
-        const modelSelect = document.getElementById('openrouter-model-select');
-        const selected = modelSelect && modelSelect.value ? modelSelect.value : undefined;
-        const model = await resolveAIModel(selected);
-        const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
-            body: { model, messages: [{ role: 'user', content: promptText }] }
-        });
-        
-        if (error) throw error;
-        
-        if (box) box.innerText = data.content;
+        const content = await invokeAI(promptText, systemPrompt);
+        if (box) box.innerText = content;
     } catch(err) {
         const msg = await extractFunctionError(err);
         if (box) box.innerText = "❌ Errore: " + msg;
