@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-08-14] - Analisi v6: KPI griglia 3x1 fissa, sezione centrale 50/50 (anomalie compatte + card Risparmi&Investimenti), rimossa barra Fisse/Variabili
+
+### ✅ Completed Changes
+- **KPI 3x1 fissi**: `.kpi-swipe` da row scroll-snap → **`display:grid; grid-template-columns:repeat(3,1fr); gap:8px`** (rimosse scrollbar/overflow). `.kpi-card` padding `6px 8px`, `min-height:44px`, flex column centrata; font ridotti: label 8px, value 12px, delta 9px con ellipsis → 3 KPI leggibili insieme su mobile senza scroll.
+- **Barra Fisse/Variabili RIMOSSA**: eliminati HTML `#fixedVarBar`, CSS `.fixedvar-*` e le scritture JS (branch empty + main). `isFixed()` resta SOLO per l'esclusione delle anomalie.
+- **Sezione centrale 50/50**: `.anomaly-carousel` e nuova `.savings-card` entrambi `flex:1 1 0; min-height:0` → metà altezza ciascuno, impilati, zero scroll. Sparkline compatta `clamp(44px, 10vh, 84px)`.
+- **Card Sintesi Risparmi & Investimenti** `#savingsCard` (header "Risparmi & Investimenti"): metrica 1 `#savRateValue` "X% del reddito" (accantonato nel periodo = Σ `investmentMovements` type=deposit con `date` nel periodSet / Σ `db.income` nel periodSet); metrica 2 `#savCashflowValue` cashflow netto = entrate − uscite del periodo (verde/rosso, `fmtEPlain` include già " €"); micro-bar `#savTargetBar` vs target = `localStorage['eb_savings_target_pct']` default **20** → fill `min(100, tasso/target*100)`, classe `on-target` (#10b981) se tasso≥target, altrimenti ambra #f59e0b; label `#savTargetLabel` "Target 20% · In linea / Sotto target / Nessun accantonamento"; empty → "–".
+- **TODO**: target non configurabile da UI — impostabile in futuro da Investimenti/Impostazioni come % OPPURE cifra fissa (vedi MEMORY).
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Analisi v5: carousel anomalie a slide orizzontale + area flex-grow (spec finale)
 
 ### ✅ Completed Changes

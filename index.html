@@ -500,17 +500,24 @@
             </div>
         </div>
 
-        <!-- MOBILE: CAROUSEL ANOMALIE + BARRA FISSE/VARIABILI (hidden on desktop) -->
+        <!-- MOBILE: CAROUSEL ANOMALIE + SINTESI RISPARMI (hidden on desktop) -->
         <div class="anomaly-carousel hide-desktop" id="anomalyCarousel" aria-label="Anomalie di spesa"></div>
 
-        <div class="fixedvar-bar hide-desktop" id="fixedVarBar">
-            <div class="fixedvar-label">
-                <span>Fisse vs Variabili</span>
-                <span id="fixedVarPct">Fisse 0% · Variabili 0%</span>
+        <div class="savings-card hide-desktop" id="savingsCard">
+            <div class="savings-header">Risparmi &amp; Investimenti</div>
+            <div class="savings-metric">
+                <span class="savings-value" id="savRateValue">–</span>
+                <span class="savings-sub">accantonato nel periodo</span>
             </div>
-            <div class="fixedvar-track">
-                <div class="fixedvar-seg fixed" id="fixedVarFixed"></div>
-                <div class="fixedvar-seg var" id="fixedVarVar"></div>
+            <div class="savings-metric">
+                <span class="savings-value" id="savCashflowValue">–</span>
+                <span class="savings-sub">Cashflow Netto del periodo</span>
+            </div>
+            <div class="savings-target">
+                <div class="savings-target-track" aria-hidden="true">
+                    <div class="savings-target-bar" id="savTargetBar"></div>
+                </div>
+                <div class="savings-target-label" id="savTargetLabel">Target 20%</div>
             </div>
         </div>
 

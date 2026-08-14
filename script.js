@@ -5185,12 +5185,7 @@ async function renderAnalisiMobile() {
         topDelta.textContent = 'Nessun dato nel periodo';
         topDelta.className = 'trend-delta trend-flat';
         renderAnomalyCarousel([]);
-        const segF = document.getElementById('fixedVarFixed');
-        const segV = document.getElementById('fixedVarVar');
-        const pctEl = document.getElementById('fixedVarPct');
-        if (segF) segF.style.width = '0%';
-        if (segV) segV.style.width = '0%';
-        if (pctEl) pctEl.textContent = 'Fisse 0% · Variabili 0%';
+        await renderSavingsSummary(new Set(), 0, 0);
         const diffVal = document.getElementById('budgetDiffValue');
         const diffDelta = document.getElementById('budgetDiffDelta');
         if (diffVal) diffVal.textContent = '–';
@@ -5277,17 +5272,8 @@ async function renderAnalisiMobile() {
     anomalies.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     renderAnomalyCarousel(anomalies.slice(0, 3));
 
-    // — Barra Fisse vs Variabili —
-    let fTot = 0, vTot = 0;
-    expenses.forEach(e => { if (e.actual <= 0) return; if (isFixed(e)) fTot += e.actual; else vTot += e.actual; });
-    const grand = fTot + vTot;
-    const pctF = grand > 0 ? Math.round((fTot / grand) * 100) : 0;
-    const segF = document.getElementById('fixedVarFixed');
-    const segV = document.getElementById('fixedVarVar');
-    const pctEl = document.getElementById('fixedVarPct');
-    if (segF) segF.style.width = pctF + '%';
-    if (segV) segV.style.width = (100 - pctF) + '%';
-    if (pctEl) pctEl.textContent = `Fisse ${pctF}% · Variabili ${100 - pctF}%`;
+    // — Card Risparmi & Investimenti (tasso accantonamento + cashflow netto) —
+    await renderSavingsSummary(periodSet, sum(spentList));
 
     // — Scostamento dal Budget (piano vs effettivo nel periodo) —
     const plannedSum = monthRows.reduce((s, m) => s + (m.totalPlanned || 0), 0);
@@ -5315,6 +5301,43 @@ async function renderAnalisiMobile() {
             }
         }
     }
+}
+
+async function renderSavingsSummary(periodSet, spendTot) {
+    const rateEl = document.getElementById('savRateValue');
+    const cfEl = document.getElementById('savCashflowValue');
+    const barEl = document.getElementById('savTargetBar');
+    const labelEl = document.getElementById('savTargetLabel');
+    if (!rateEl || !cfEl || !barEl || !labelEl) return;
+    let incomeTot = 0, depTot = 0;
+    try {
+        const incomes = await db.income.toArray();
+        incomes.forEach(i => { if (periodSet.has(i.month)) incomeTot += i.amount || 0; });
+        const movs = await db.investmentMovements.toArray();
+        movs.forEach(m => {
+            if (m.type === 'deposit' && m.date && periodSet.has(m.date.slice(0, 7))) depTot += m.amount || 0;
+        });
+    } catch (e) {}
+    if (!periodSet.size) {
+        rateEl.textContent = '–';
+        cfEl.textContent = '–';
+        cfEl.classList.remove('positive', 'negative');
+        barEl.style.width = '0%';
+        barEl.classList.remove('on-target');
+        labelEl.textContent = 'Nessun dato nel periodo';
+        return;
+    }
+    const target = parseFloat(localStorage.getItem('eb_savings_target_pct')) || 20;
+    const tasso = incomeTot > 0 ? Math.round((depTot / incomeTot) * 100) : (depTot > 0 ? 100 : 0);
+    rateEl.textContent = `${tasso}% del reddito`;
+    const cf = incomeTot - (spendTot || 0);
+    cfEl.textContent = (cf > 0 ? '+' : '') + fmtEPlain(cf, 0);
+    cfEl.classList.toggle('positive', cf >= 0);
+    cfEl.classList.toggle('negative', cf < 0);
+    const fill = Math.min(100, Math.max(0, (tasso / target) * 100));
+    barEl.style.width = fill + '%';
+    barEl.classList.toggle('on-target', tasso >= target);
+    labelEl.textContent = tasso >= target ? `Target ${target}% · In linea` : (tasso > 0 ? `Target ${target}% · Sotto target` : `Target ${target}% · Nessun accantonamento`);
 }
 
 function renderAnomalyCarousel(slides) {

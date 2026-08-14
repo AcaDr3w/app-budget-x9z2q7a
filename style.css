@@ -688,41 +688,36 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: rgba(124,58,237,0.1);
     }
 
-    /* Row 3: KPI — swipeable row con snap (Media, Top Crescita, Scostamento) */
+    /* Row 3: KPI — griglia fissa 3x1 (Media, Top Crescita, Scostamento) */
     .kpi-swipe {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
         flex-shrink: 0;
-        scrollbar-width: none;
-        padding-bottom: 2px;
-    }
-    .kpi-swipe::-webkit-scrollbar {
-        display: none;
     }
     .kpi-card {
-        flex: 0 0 75%;
-        scroll-snap-align: start;
         background: rgba(255,255,255,0.9);
         border-radius: 14px;
-        padding: 8px 12px;
+        padding: 6px 8px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 44px;
     }
     .trend-label {
-        font-size: 9.5px;
+        font-size: 8px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
         color: #64748b;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     .trend-value {
-        font-size: 15px;
+        font-size: 12px;
         font-weight: 800;
         color: #1e293b;
         margin-top: 2px;
@@ -731,19 +726,21 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         text-overflow: ellipsis;
     }
     .trend-delta {
-        font-size: 10.5px;
+        font-size: 9px;
         font-weight: 700;
         margin-top: 2px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .trend-delta.trend-up { color: #ef4444; }
     .trend-delta.trend-down { color: #10b981; }
     .trend-delta.trend-flat { color: #94a3b8; }
     .trend-delta .trend-arrow { margin-right: 2px; }
 
-    /* Row 4: carousel anomalie (flex-grow, riempie lo spazio) + barra fisse/variabili (bottom) */
+    /* Row 4: centrale 50/50 — carousel anomalie (compatto) + card Risparmi & Investimenti */
     .anomaly-carousel {
-        flex: 1 1 auto;
+        flex: 1 1 0;
         min-height: 0;
         position: relative;
         overflow: hidden;
@@ -808,7 +805,7 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     .anomaly-delta.flat { color: #94a3b8; }
     .anomaly-slide .sparkline-svg {
         width: 100%;
-        height: clamp(64px, 18vh, 140px);
+        height: clamp(44px, 10vh, 84px);
         flex: none;
     }
     .sparkline-svg {
@@ -837,39 +834,84 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         background: #7c3aed;
     }
 
-    /* Barra Fisse vs Variabili — fondo pagina */
-    .fixedvar-bar {
-        flex-shrink: 0;
-        background: rgba(255,255,255,0.9);
-        border-radius: 12px;
-        padding: 8px 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .fixedvar-label {
+    /* Card Risparmi & Investimenti — metà inferiore della sezione centrale */
+    .savings-card {
+        flex: 1 1 0;
+        min-height: 0;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        font-size: 10px;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.9);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 8px 12px;
+    }
+    .savings-header {
+        flex-shrink: 0;
+        font-size: 9.5px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.3px;
-        color: #64748b;
+        color: #94a3b8;
         margin-bottom: 6px;
     }
-    .fixedvar-track {
+    .savings-metric {
         display: flex;
-        height: 10px;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 0;
+    }
+    .savings-value {
+        font-size: 13px;
+        font-weight: 800;
+        color: #1e293b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .savings-value.positive { color: #10b981; }
+    .savings-value.negative { color: #ef4444; }
+    .savings-sub {
+        flex-shrink: 1;
+        min-width: 0;
+        font-size: 9px;
+        font-weight: 600;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .savings-target {
+        flex-shrink: 0;
+        margin-top: auto;
+        padding-top: 6px;
+    }
+    .savings-target-track {
+        height: 6px;
         border-radius: 999px;
         overflow: hidden;
         background: #e2e8f0;
     }
-    .fixedvar-seg {
+    .savings-target-bar {
         height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: #f59e0b;
         transition: width 0.4s ease;
     }
-    .fixedvar-seg.fixed { background: #ef4444; }
-    .fixedvar-seg.var { background: #10b981; }
+    .savings-target-bar.on-target { background: #10b981; }
+    .savings-target-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 4px;
+        font-size: 8.5px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
 
     /* Vecchi componenti mobili RIMOSSI dalla view (restano su desktop >=768) */
     #recordsHubContainer,
