@@ -1,5 +1,20 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Refactoring layout Previsioni: 100vh + sheet 3 modalità + categoria
+
+### ✅ Completed Changes
+- **Height budget mobile 100vh**: `.future-chart-card` = `flex:1 1 36%; min-height:140px; max-height:40vh` (mai schiacciato), header 42px / sim card compatta (padding 8px 10px) / milestone 44px / hub pill 44px, tutti `flex-shrink:0`. Zero scroll confermato.
+- **Asse Y max 4 livelli**: `maxTicksLimit:4` nei ticks di `renderFutureChart` (con `precision:0` esistente → es. 0 / 500 / 1.000 €).
+- **Card simulatore compact**: chip valore centrato → slider sottile → riga unica `📈 [input %] /anno ... ↻` (Reset spostato dal chip in basso; input % inline `40px`).
+- **Action Hub = pillole**: `border-radius:999px`, min-height 44px, nowrap; override `#futureActionHub` nella media query 768 corretto (padding 4px).
+- **Sheet Pianificatore**: segmented control 3 modalità `[📅 Giorno Singolo] [📆 Intero Mese] [🔁 Ricorrente]` (nowrap/ellipsis, 44px); `Intero Mese` = input `type=month` con `day:''`; campi Titolo Spesa + riga Importo € + **Categoria** (`select` da `userCategories` + 'Varie', emoji via `getCatIcon`).
+- **Mini-calendario RIMOSSO ovunque**: `renderDeadlineCal` + `dlCalMonth/Grid/Recurring-{d,s}` + CSS `.deadline-cal-grid` + init riga 349 + 6 call nei render (add/delete/toggle/updateFutureDashboard/renderAnnualDeadlines/openFutureSheet). `renderCalendar` (tab Mese) intatto — usa classi proprie.
+- **Lista micro-card**: `.dl-micro-card` (icona 32px, titolo ellipsis, meta "quando · categoria", importo, azioni `✓` pagata/`↩` annulla + `✕` elimina); `.dl-list-scroll` max-height 30vh scroll interno alla sheet. Desktop usa le stesse micro-card in `#annualDeadlinesList`.
+- **Migration `20260818_deadline_category.sql`**: `ALTER TABLE annual_deadlines ADD COLUMN IF NOT EXISTS "category" TEXT;` + allowlist adapter (`'category'`).
+- Verifica: `node --check` OK, brace CSS 877/877, grep zero residui (`dlCal*`, `renderDeadlineCal`, `deadline-cal-grid`, `futureInvestGrowthValM`).
+
+### ⚙ Status: COMPLETATO (migration `20260818_deadline_category.sql` da applicare manualmente su Supabase, insieme a `20260818_recurring_deadlines.sql`)
+
 ## [2026-08-18] - Fix 4 bug visivi/funzionali pagina Previsioni
 
 ### ✅ Completed Changes

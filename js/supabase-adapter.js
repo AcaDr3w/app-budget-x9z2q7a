@@ -114,7 +114,7 @@ class SupabaseTable {
             income: ['id', 'month', 'desc', 'amount'],
             expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage', 'isShared', 'sharedPayer', 'settled', 'debtId'],
             categories: ['name', 'macro', 'icon'],
-            annual_deadlines: ['id', 'month', 'day', 'desc', 'amount', 'isPaid', 'recurring', 'endMonth'],
+            annual_deadlines: ['id', 'month', 'day', 'desc', 'amount', 'isPaid', 'recurring', 'endMonth', 'category'],
             savings_goals: ['name', 'targetAmount', 'importo_accumulato', 'createdAt'],
             sync_state: ['id', 'counter', 'deviceId', 'lastUpdated'],
             settings: ['key', 'value'],

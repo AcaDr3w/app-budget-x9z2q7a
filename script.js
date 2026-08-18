@@ -346,7 +346,6 @@ const dateNow = new Date();
 let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
 document.getElementById('currentMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
 const initMonthVal = `${initYear}-${String(initMonth).padStart(2,'0')}`;
-if (document.getElementById('dlCalMonth-d')) document.getElementById('dlCalMonth-d').value = initMonthVal;
 if (document.getElementById('futureCalMonthM')) document.getElementById('futureCalMonthM').value = initMonthVal;
 document.getElementById('expDate').value = dateNow.toISOString().slice(0,10);
 const iaProviderEl = document.getElementById('iaProviderSelect');
@@ -3510,7 +3509,6 @@ async function deleteAnnualDeadline(id) {
         await updateGlobalVersion();
         annualDeadlines = await db.annualDeadlines.toArray();
         renderDeadlineListFor('d'); renderDeadlineListFor('s');
-        renderDeadlineCal('d'); renderDeadlineCal('s');
         checkAnnualAlertForCurrentMonth();
         updateFutureDashboard();
     }
@@ -3520,13 +3518,11 @@ async function toggleDeadlinePaid(id, isPaid) {
     await updateGlobalVersion();
     annualDeadlines = await db.annualDeadlines.toArray();
     renderDeadlineListFor('d'); renderDeadlineListFor('s');
-    renderDeadlineCal('d'); renderDeadlineCal('s');
     checkAnnualAlertForCurrentMonth();
     updateFutureDashboard();
 }
 function renderAnnualDeadlines() {
     renderDeadlineListFor('d');
-    renderDeadlineCal('d');
 }
 function checkAnnualAlertForCurrentMonth() {
     const currentMonthVal = document.getElementById('currentMonth').value;
@@ -5814,6 +5810,7 @@ function renderFutureChart() {
                     suggestedMax: Math.max(1000, Math.ceil(maxVal * 1.15)),
                     ticks: {
                         precision: 0,
+                        maxTicksLimit: 4,
                         callback: (v) => { const r = Math.round(v); return (r === 0 ? '0' : r.toLocaleString('it-IT')) + ' €'; },
                         font: { size: 9 }
                     }
@@ -5868,8 +5865,6 @@ async function updateFutureDashboard() {
     renderFutureChart();
     renderDeadlineListFor('d');
     renderDeadlineListFor('s');
-    renderDeadlineCal('d');
-    renderDeadlineCal('s');
 }
 
 function syncSimSlider() {
@@ -5926,16 +5921,9 @@ function openFutureSheet(action) {
         title.textContent = '🗓️ Pianificatore Scadenze';
         body.innerHTML = `
             ${plannerFormHTML('s')}
-            <div style="margin:16px 0 6px;font-size:12px;color:#64748b;">Mini-calendario del mese:</div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                <input type="month" id="dlCalMonth-s" class="responsive-input" style="width:auto;" value="${monthKey(0)}" onchange="renderDeadlineCal('s')">
-                <span id="dlCalRecurring-s" style="font-size:11px;color:#8b5cf6;"></span>
-            </div>
-            <div id="dlCalGrid-s" class="deadline-cal-grid"></div>
-            <div style="margin:16px 0 6px;font-size:12px;color:#64748b;">Scadenze registrate:</div>
-            <div id="dlList-s" style="display:flex;flex-direction:column;gap:10px;"></div>`;
+            <div style="margin:16px 0 6px;font-size:12px;color:#64748b;">Scadenze registrate nell'anno:</div>
+            <div id="dlList-s" class="dl-list-scroll"></div>`;
         renderDeadlineListFor('s');
-        renderDeadlineCal('s');
     } else if (action === 'ia') {
         title.textContent = '🤖 Analisi IA Futura';
         body.innerHTML = `
@@ -5961,16 +5949,25 @@ function closeFutureSheet() {
     document.body.classList.remove('sheet-open');
 }
 
+function categoryOptionsHTML() {
+    const cats = [...new Set([...(userCategories || []), 'Varie'])];
+    return cats.map(c => `<option value="${c}">${getCatIcon(c)} ${c}</option>`).join('');
+}
 function plannerFormHTML(p) {
     return `
         <div class="dl-type-toggle">
-            <button type="button" class="dl-type-btn active" data-dl-type="${p}" data-mode="single" onclick="setDeadlineMode('${p}','single')">📅 Giorno singolo</button>
-            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="recurring" onclick="setDeadlineMode('${p}','recurring')">🔁 Ricorrente mensile</button>
+            <button type="button" class="dl-type-btn active" data-dl-type="${p}" data-mode="single" onclick="setDeadlineMode('${p}','single')">📅 Giorno Singolo</button>
+            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="month" onclick="setDeadlineMode('${p}','month')">📆 Intero Mese</button>
+            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="recurring" onclick="setDeadlineMode('${p}','recurring')">🔁 Ricorrente</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
-            <input type="text" id="dlDesc-${p}" class="responsive-input" placeholder="Es. Bollo Auto / Rata mutuo">
-            <input type="number" id="dlAmount-${p}" class="responsive-input" placeholder="Importo €" min="0" step="0.01">
+            <input type="text" id="dlDesc-${p}" class="responsive-input" placeholder="Titolo spesa (es. Bollo Auto)">
+            <div class="dl-inline-row">
+                <input type="number" id="dlAmount-${p}" class="responsive-input" placeholder="Importo €" min="0" step="0.01">
+                <select id="dlCat-${p}" class="responsive-input">${categoryOptionsHTML()}</select>
+            </div>
             <div id="dlDateRow-${p}"><input type="date" id="dlDate-${p}" class="responsive-input"></div>
+            <div id="dlMonthRow-${p}" style="display:none;"><input type="month" id="dlMonth-${p}" class="responsive-input" value="${monthKey(0)}"></div>
             <div id="dlRecRow-${p}" style="display:none;gap:8px;">
                 <input type="month" id="dlStart-${p}" class="responsive-input" value="${monthKey(0)}">
                 <input type="month" id="dlEnd-${p}" class="responsive-input">
@@ -5980,24 +5977,31 @@ function plannerFormHTML(p) {
 }
 function setDeadlineMode(p, mode) {
     document.querySelectorAll(`[data-dl-type="${p}"]`).forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-    const rec = mode === 'recurring';
     const dateRow = document.getElementById('dlDateRow-' + p);
+    const monthRow = document.getElementById('dlMonthRow-' + p);
     const recRow = document.getElementById('dlRecRow-' + p);
-    if (dateRow) dateRow.style.display = rec ? 'none' : 'block';
-    if (recRow) recRow.style.display = rec ? 'flex' : 'none';
+    if (dateRow) dateRow.style.display = mode === 'single' ? 'block' : 'none';
+    if (monthRow) monthRow.style.display = mode === 'month' ? 'block' : 'none';
+    if (recRow) recRow.style.display = mode === 'recurring' ? 'flex' : 'none';
 }
 function addDeadlinePlanner(p) {
     const desc = document.getElementById('dlDesc-' + p).value.trim();
     const amount = parseFloat(document.getElementById('dlAmount-' + p).value) || 0;
+    const catEl = document.getElementById('dlCat-' + p);
+    const category = catEl ? catEl.value : 'Varie';
     const modeBtn = document.querySelector(`[data-dl-type="${p}"].active`);
     const mode = modeBtn ? modeBtn.dataset.mode : 'single';
-    if (!desc || amount <= 0) { showToast('Compila descrizione e importo', true); return; }
-    const item = { id: Date.now(), month: monthKey(0), day: '', desc, amount, isPaid: false, recurring: false, endMonth: null };
+    if (!desc || amount <= 0) { showToast('Compila titolo e importo', true); return; }
+    const item = { id: Date.now(), month: monthKey(0), day: '', desc, amount, category, isPaid: false, recurring: false, endMonth: null };
     if (mode === 'recurring') {
         const start = document.getElementById('dlStart-' + p).value;
         const end = document.getElementById('dlEnd-' + p).value;
         if (!start || !end || end < start) { showToast('Seleziona mese inizio e fine validi', true); return; }
         item.recurring = true; item.month = start; item.endMonth = end;
+    } else if (mode === 'month') {
+        const mv = document.getElementById('dlMonth-' + p).value;
+        if (!mv) { showToast('Seleziona il mese', true); return; }
+        item.month = mv; item.day = '';
     } else {
         const date = document.getElementById('dlDate-' + p).value;
         if (!date) { showToast('Seleziona la data', true); return; }
@@ -6009,12 +6013,11 @@ function addDeadlinePlanner(p) {
         document.getElementById('dlDesc-' + p).value = '';
         document.getElementById('dlAmount-' + p).value = '';
         document.getElementById('dlDate-' + p).value = '';
+        document.getElementById('dlMonth-' + p).value = monthKey(0);
         document.getElementById('dlEnd-' + p).value = '';
         annualDeadlines = await db.annualDeadlines.toArray();
         renderDeadlineListFor('d');
         renderDeadlineListFor('s');
-        renderDeadlineCal('d');
-        renderDeadlineCal('s');
         checkAnnualAlertForCurrentMonth();
         updateFutureDashboard();
         showToast('Scadenza salvata', false);
@@ -6030,45 +6033,25 @@ function renderDeadlineListFor(p) {
     }
     [...annualDeadlines].sort((a, b) => String(a.month + (a.day || '')).localeCompare(String(b.month + (b.day || '')))).forEach(item => {
         const when = item.recurring
-            ? `🔁 ogni mese · da ${fmtMonth(item.month)} a ${fmtMonth(item.endMonth || item.month)}`
-            : `${fmtMonth(item.month)}${item.day ? ' (g.' + item.day + ')' : ''}`;
-        const row = document.createElement('div');
-        row.className = 'item-row';
-        if (item.isPaid) row.style.opacity = '0.65';
-        row.innerHTML = `
-            <span class="item-name">${item.isPaid ? '✅' : item.recurring ? '🔁' : '⏰'} <strong>${item.desc}</strong><span class="item-meta">${when}</span></span>
-            <span class="item-vals">
-                <span style="color:var(--previsto);font-weight:bold;font-size:13px;">${fmtE(item.amount)}</span>
-                ${!item.isPaid ? `<button class="btn-action btn-pay" onclick="toggleDeadlinePaid(${item.id},true)">Pagato</button>` : `<button class="btn-action" style="background:#64748b;" onclick="toggleDeadlinePaid(${item.id},false)">Annulla</button>`}
-                <button class="btn-del" onclick="deleteAnnualDeadline(${item.id})">✕</button>
+            ? `ogni mese · ${fmtMonth(item.month)} → ${fmtMonth(item.endMonth || item.month)}`
+            : (item.day ? `g. ${item.day} ${fmtMonth(item.month)}` : `${fmtMonth(item.month)} (mese)`);
+        const cat = item.category || 'Varie';
+        const icon = getCatIcon(cat);
+        const card = document.createElement('div');
+        card.className = 'dl-micro-card' + (item.isPaid ? ' paid' : '');
+        card.innerHTML = `
+            <span class="dl-micro-icon">${item.recurring ? '🔁' : icon}</span>
+            <span class="dl-micro-main">
+                <span class="dl-micro-title">${item.desc}</span>
+                <span class="dl-micro-meta">${when} · ${cat}</span>
+            </span>
+            <span class="dl-micro-amount">${fmtE(item.amount)}</span>
+            <span class="dl-micro-actions">
+                <button class="dl-micro-btn" title="${item.isPaid ? 'Segna da pagare' : 'Segna pagata'}" onclick="toggleDeadlinePaid(${item.id},${!item.isPaid})">${item.isPaid ? '↩' : '✓'}</button>
+                <button class="dl-micro-btn del" title="Elimina" onclick="deleteAnnualDeadline(${item.id})">✕</button>
             </span>`;
-        container.appendChild(row);
+        container.appendChild(card);
     });
-}
-function renderDeadlineCal(p) {
-    const grid = document.getElementById('dlCalGrid-' + p);
-    const monthInput = document.getElementById('dlCalMonth-' + p);
-    if (!grid || !monthInput || !monthInput.value) return;
-    const monthVal = monthInput.value;
-    grid.innerHTML = '';
-    const range = getMonthRange(monthVal);
-    ['L', 'M', 'M', 'G', 'V', 'S', 'D'].forEach(d => { const h = document.createElement('div'); h.className = 'calendar-day-header'; h.innerText = d; grid.appendChild(h); });
-    let firstDayIndex = (range.start.getDay() + 6) % 7;
-    for (let i = 0; i < firstDayIndex; i++) { const e = document.createElement('div'); e.className = 'calendar-day empty'; grid.appendChild(e); }
-    const active = (annualDeadlines || []).filter(d => !d.isPaid);
-    const recurringHere = active.filter(d => d.recurring && d.month <= monthVal && monthVal <= (d.endMonth || d.month));
-    const recurLabel = document.getElementById('dlCalRecurring-' + p);
-    if (recurLabel) recurLabel.innerHTML = recurringHere.length ? `🔁 ${recurringHere.map(d => d.desc).join(', ')}` : '';
-    let cursor = new Date(range.start);
-    while (cursor <= range.end) {
-        const dayNum = cursor.getDate();
-        const hit = recurringHere.length > 0 || active.some(a => a.month === monthVal && (!a.day || parseInt(a.day) === dayNum));
-        const d = document.createElement('div');
-        d.className = 'calendar-day' + (hit ? ' has-deadline' : '');
-        d.innerHTML = `${cursor.getDate()}`;
-        grid.appendChild(d);
-        cursor.setDate(cursor.getDate() + 1);
-    }
 }
 async function buildFutureIAPrompt() {
     const base = await getProjectionBase();
