@@ -1,5 +1,8 @@
 # Project Core Memory
 
+## ⚠ SUPABASE CDN = SINCRONO (2026-08-18)
+- **`@supabase/supabase-js@2` (index.html:14) NON deve avere `defer`/`async`**: `supabase-adapter.js:4` usa `window.supabase.createClient()` a top-level (parse time). Un tentativo di defer ha rotto l'app (TypeError createClient). Chart.js e Google API invece possono restare defer (usati solo post-DOMContentLoaded).
+
 ## 🗂 TABLIST A11Y + TOUCH TARGET (2026-08-18)
 - **`setupTablistA11y()`** (script.js, DOMContentLoaded): su ogni `[role="tablist"]` imposta `role="tab"` sui button, sincronizza `aria-selected` con `.active` (click + apertura), navigazione Frecce + Home/End con attivazione automatica (`next.click()`). Le `.condivise-tabs` hanno ora `role="tablist"` + `aria-label="Spese condivise"` (le altre tablist già presenti in HTML).
 - **`.popup-close`**: hit-area 44×44 via `::before { inset:-6px }` — visuale 32px invariata. NON togliere il ::before.

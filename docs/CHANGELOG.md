@@ -1,5 +1,8 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Fix regression: Supabase CDN sync
+- Rimosso `defer` dal tag `@supabase/supabase-js@2` (index.html:14): `supabase-adapter.js:4` chiama `window.supabase.createClient()` a top-level (parse time) e con defer il bundle girava dopo il parsing → `Uncaught TypeError: Cannot read properties of undefined (reading 'createClient')`. Ripristinato caricamento sincrono. Chart.js/Google restano defer (usati solo post-DOMContentLoaded).
+
 ## [2026-08-18] - Audit round 2: adapt + harden tablist + colorize + polish
 
 ### ✅ Completed Changes
