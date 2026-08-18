@@ -4542,7 +4542,7 @@ async function renderSavingsGoals() {
     if (depositSelect) {
         depositSelect.disabled = false;
         // Show only the name of the savings goal in the dropdown
-        depositSelect.innerHTML = goals.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        depositSelect.innerHTML = goals.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
     }
     
     goals.forEach(g => {
@@ -4557,7 +4557,7 @@ async function renderSavingsGoals() {
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
-                    <button onclick="deleteSavingsGoal(${g.id})" title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
+                    <button onclick="deleteSavingsGoal('${encodeURIComponent(g.name)}')" title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
                         🗑️
                     </button>
                 </div>
@@ -4578,27 +4578,32 @@ async function addSavingsGoal() {
     if (!nameEl || !amountEl) return; // UI not present
     const name = nameEl.value.trim();
     const amount = parseFloat(amountEl.value) || 0;
-    if (!name || amount <= 0) { alert('Inserisci un nome e un target valido.'); return; }
+    if (!name || amount <= 0) { showToast('Inserisci un nome e un target valido.', true); return; }
     await db.savingsGoals.put({name, targetAmount: amount, importo_accumulato: 0, createdAt: Date.now()});
     await updateGlobalVersion();
     nameEl.value = ''; amountEl.value = '';
     renderSavingsGoals();
 }
-async function deleteSavingsGoal(id) {
-    if(confirm('Eliminare questo obiettivo?')) { await db.savingsGoals.delete(id); await updateGlobalVersion(); renderSavingsGoals(); }
+async function deleteSavingsGoal(name) {
+    if (typeof name === 'string') name = decodeURIComponent(name);
+    const confirmed = await showConfirmDialog({ title: 'Elimina salvadanaio', message: 'Eliminare questo obiettivo?', okLabel: 'Elimina', cancelLabel: 'Annulla', danger: true });
+    if (!confirmed) return;
+    await db.savingsGoals.delete(name);
+    await updateGlobalVersion();
+    renderSavingsGoals();
 }
 
 async function depositToSavingsGoal() {
     const select = document.getElementById('depositSavingsSelect');
     const amountInput = document.getElementById('depositAmount');
     if (!select || !amountInput) return;
-    const id = parseInt(select.value, 10);
+    const name = select.value;
     const amount = parseFloat(amountInput.value) || 0;
-    if (!id || amount <= 0) { alert('Inserisci un importo valido da depositare.'); return; }
-    const goal = await db.savingsGoals.get(id);
-    if (!goal) { alert('Salvadanaio non trovato.'); return; }
+    if (!name || amount <= 0) { showToast('Inserisci un importo valido da depositare.', true); return; }
+    const goal = await db.savingsGoals.get(name);
+    if (!goal) { showToast('Salvadanaio non trovato.', true); return; }
     const newTotal = (goal.importo_accumulato || 0) + amount;
-    await db.savingsGoals.update(id, {importo_accumulato: newTotal});
+    await db.savingsGoals.update(name, {importo_accumulato: newTotal});
     await updateGlobalVersion();
     amountInput.value = '';
     const feedback = document.getElementById('depositFeedback');
@@ -4630,6 +4635,10 @@ let currentInvestments = [];
 let selectedInvestId = null;
 let selectedInvestType = null;
 
+function genId() {
+    return Date.now() * 1000 + Math.floor(Math.random() * 1000);
+}
+
 async function loadInvestments() {
     try {
         currentInvestments = await db.investments.toArray();
@@ -4649,11 +4658,14 @@ async function getInvestMovements(investId) {
 }
 
 function calcInvestStats(asset, movements) {
-    const deposits = movements.filter(m => m.type === 'deposit' || m.type === 'profit').reduce((s, m) => s + m.amount, 0);
-    const withdrawals = movements.filter(m => m.type === 'withdrawal' || m.type === 'expense').reduce((s, m) => s + m.amount, 0);
-    const currentValue = deposits - withdrawals;
-    const totalInvested = (asset.initialCapital || 0) + movements.filter(m => m.type === 'deposit').reduce((s, m) => s + m.amount, 0);
-    const totalProfits = movements.filter(m => m.type === 'profit').reduce((s, m) => s + m.amount, 0);
+    const initial = asset.initialCapital || 0;
+    const deposits = movements.filter(m => m.type === 'deposit').reduce((s, m) => s + m.amount, 0);
+    const withdrawals = movements.filter(m => m.type === 'withdrawal').reduce((s, m) => s + m.amount, 0);
+    const profits = movements.filter(m => m.type === 'profit').reduce((s, m) => s + m.amount, 0);
+    const expenses = movements.filter(m => m.type === 'expense').reduce((s, m) => s + m.amount, 0);
+    const totalInvested = initial + deposits - withdrawals;
+    const totalProfits = profits - expenses;
+    const currentValue = totalInvested + totalProfits;
     const roi = totalInvested > 0 ? (totalProfits / totalInvested) * 100 : 0;
     return { currentValue, totalInvested, totalProfits, roi };
 }
@@ -4688,9 +4700,9 @@ async function renderInvestments() {
     }
     const globalRoi = totalInvestedWeighted > 0 ? (totalRoiWeighted / totalInvestedWeighted) : 0;
     const heroValue = document.getElementById('investTotalValue');
-    if (heroValue) heroValue.textContent = fmtEPlain(totalValue, 0) + ' €';
+    if (heroValue) heroValue.textContent = fmtEPlain(totalValue, 0);
     const heroCashflow = document.getElementById('investMonthlyCashflow');
-    if (heroCashflow) heroCashflow.textContent = (monthlyCashflow >= 0 ? '+' : '') + fmtEPlain(monthlyCashflow, 0) + ' €';
+    if (heroCashflow) heroCashflow.textContent = (monthlyCashflow >= 0 ? '+' : '') + fmtEPlain(monthlyCashflow, 0);
     const heroRoi = document.getElementById('investGlobalRoi');
     if (heroRoi) heroRoi.textContent = (globalRoi >= 0 ? '+' : '') + globalRoi.toFixed(1) + '%';
 
@@ -4776,9 +4788,10 @@ async function saveNewInvestment() {
     const targetInput = document.getElementById('investNewTarget');
     const targetAmount = selectedInvestType === 'salvadanai' ? (parseFloat(targetInput?.value) || 0) : 0;
     const initialCapital = parseFloat(document.getElementById('investNewInitialCapital').value) || 0;
-    const asset = { id: Date.now(), type: selectedInvestType, name, targetAmount, initialCapital, createdAt: Date.now() };
+    const asset = { id: genId(), type: selectedInvestType, name, targetAmount, initialCapital, createdAt: Date.now() };
     try {
         await db.investments.put(asset);
+        await updateGlobalVersion();
         closeInvestAddPopup();
         await renderInvestments();
         showToast('Asset creato!', false);
@@ -4791,18 +4804,27 @@ async function saveNewInvestment() {
 function editInvestInitialCapital(assetId) {
     const asset = currentInvestments.find(a => a.id === assetId);
     if (!asset) return;
-    const newVal = prompt('Capitale Investito Iniziale (€):', asset.initialCapital || '0');
-    if (newVal === null) return;
-    const parsed = parseFloat(newVal.replace(',', '.'));
-    if (isNaN(parsed) || parsed < 0) { showToast('Inserisci un valore valido', true); return; }
-    asset.initialCapital = parsed;
-    db.investments.put(asset).then(() => {
-        renderInvestAssetDetail(asset);
-        renderInvestments();
-        showToast('Capitale iniziale aggiornato', false);
-    }).catch(e => {
-        console.error('[Invest] Errore aggiornamento:', e);
-        showToast('Errore aggiornamento', true);
+    showPromptDialog({
+        title: 'Capitale Investito Iniziale',
+        message: 'Importo in € (virgola o punto decimale):',
+        defaultValue: String(asset.initialCapital || '0'),
+        placeholder: 'Es. 5000',
+        okLabel: 'Salva',
+        cancelLabel: 'Annulla'
+    }).then(newVal => {
+        if (newVal === null) return;
+        const parsed = parseFloat(String(newVal).replace(',', '.'));
+        if (isNaN(parsed) || parsed < 0) { showToast('Inserisci un valore valido', true); return; }
+        asset.initialCapital = parsed;
+        db.investments.put(asset).then(() => {
+            updateGlobalVersion();
+            renderInvestAssetDetail(asset);
+            renderInvestments();
+            showToast('Capitale iniziale aggiornato', false);
+        }).catch(e => {
+            console.error('[Invest] Errore aggiornamento:', e);
+            showToast('Errore aggiornamento', true);
+        });
     });
 }
 
@@ -4881,6 +4903,7 @@ async function renderInvestAssetDetail(asset) {
                     <span class="invest-mov-date">${dateStr}${m.desc ? ' · ' + m.desc : ''}</span>
                 </div>
                 <span class="invest-mov-amount" style="color:${color};">${sign}${fmtEPlain(Math.abs(m.amount))}</span>
+                <button onclick="deleteInvestMovement(${m.id})" title="Elimina movimento" style="background:transparent;border:none;color:#ef4444;font-size:14px;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;">🗑️</button>
             </div>
         `;
     }).join('');
@@ -4906,9 +4929,10 @@ async function saveInvestMovement() {
     const type = document.getElementById('investMovType').value;
     const date = document.getElementById('investMovDate').value || new Date().toISOString().slice(0, 10);
     const desc = document.getElementById('investMovDesc').value.trim() || '';
-    const mov = { id: Date.now(), investmentId: selectedInvestId, date, type, amount, desc };
+    const mov = { id: genId(), investmentId: selectedInvestId, date, type, amount, desc };
     try {
         await db.investmentMovements.put(mov);
+        await updateGlobalVersion();
         closeInvestMovementForm();
         const asset = currentInvestments.find(a => a.id === selectedInvestId);
         if (asset) await renderInvestAssetDetail(asset);
@@ -4917,6 +4941,41 @@ async function saveInvestMovement() {
     } catch (e) {
         console.error('[Invest] Errore movimento:', e);
         showToast('Errore salvataggio movimento', true);
+    }
+}
+
+async function deleteInvestMovement(movId) {
+    const confirmed = await showConfirmDialog({ title: 'Elimina movimento', message: 'Eliminare questo movimento?', okLabel: 'Elimina', cancelLabel: 'Annulla', danger: true });
+    if (!confirmed) return;
+    try {
+        await db.investmentMovements.delete(movId);
+        await updateGlobalVersion();
+        const asset = currentInvestments.find(a => a.id === selectedInvestId);
+        if (asset) await renderInvestAssetDetail(asset);
+        await renderInvestments();
+        showToast('Movimento eliminato', false);
+    } catch (e) {
+        console.error('[Invest] Errore eliminazione movimento:', e);
+        showToast('Errore eliminazione movimento', true);
+    }
+}
+
+async function deleteInvestAsset(assetId) {
+    const asset = currentInvestments.find(a => a.id === assetId);
+    if (!asset) return;
+    const confirmed = await showConfirmDialog({ title: 'Elimina asset', message: `Eliminare "${asset.name}" e tutti i suoi movimenti?`, okLabel: 'Elimina', cancelLabel: 'Annulla', danger: true });
+    if (!confirmed) return;
+    try {
+        const movIds = await db.investmentMovements.where('investmentId').equals(assetId).primaryKeys();
+        if (movIds && movIds.length) await db.investmentMovements.bulkDelete(movIds);
+        await db.investments.delete(assetId);
+        await updateGlobalVersion();
+        closeInvestAssetPopup();
+        await renderInvestments();
+        showToast('Asset eliminato', false);
+    } catch (e) {
+        console.error('[Invest] Errore eliminazione asset:', e);
+        showToast('Errore eliminazione asset', true);
     }
 }
 

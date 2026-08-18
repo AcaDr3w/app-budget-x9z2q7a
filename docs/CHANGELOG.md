@@ -1,5 +1,19 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Fix menu Investimenti: capitale iniziale, sync Drive, salvadanai, delete asset/movimenti
+
+### ✅ Completed Changes
+- **`calcInvestStats` riformulata**: `currentValue` ora include `initialCapital` (prima ignorato → asset da 5000€ mostrava Valore 0); `totalInvested = initial + deposit − withdrawal` (prima i prelievi non erano sottratti); `totalProfits = profit − expense` (prima le spese non riducevano il profitto netto); ROI = profitti netti / capitale investito.
+- **Hero "€ €"**: `fmtEPlain(x,0)` include già " €" → rimossi i suffissi doppi su `investTotalValue` e `investMonthlyCashflow`.
+- **Sync Drive mancante**: `updateGlobalVersion()` aggiunto in `saveNewInvestment`, `editInvestInitialCapital`, `saveInvestMovement` (prima il counter versione non saliva → backup GDrive mai triggerato dai cambi investimenti, nonostante il backup includa `investments`/`investmentMovements`).
+- **Salvadanai riparati**: PK reale è `name` (nessuna colonna `id`): select deposito ora usa `g.name`, `deleteSavingsGoal` passa il nome (encodeURIComponent per safety), `depositToSavingsGoal` fa `get(name)`/`update(name)` — prima tutto usava `g.id` undefined → deposito sempre "Salvadanaio non trovato", delete mai funzionante.
+- **Convenzione UI**: `prompt()` → `showPromptDialog` in `editInvestInitialCapital`; `alert()`/`confirm()` → `showToast`/`showConfirmDialog` nei salvadanai.
+- **`genId()`** (Date.now*1000 + random) al posto di `Date.now()` per asset e movimenti → niente collisioni upsert.
+- **Delete asset/movimento**: `deleteInvestAsset(id)` (conferma, delete cascata movimenti via `where().equals().primaryKeys()` + `bulkDelete`, chiude popup) e `deleteInvestMovement(id)`; UI: bottone "🗑️ Elimina Asset" nel popup dettaglio + icona 🗑️ per riga movimento.
+- Verifica: `node --check` OK su script.js.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-18] - Fix Spese Previste: dedupe debtId reale, outbox filtrata per mese, cloni ricorrenti fuori dal mese corrente
 
 ### ✅ Completed Changes

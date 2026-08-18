@@ -740,6 +740,7 @@
                 <div id="investPopupBody" class="popup-body" style="gap:12px;display:flex;flex-direction:column;">
                     <div id="investPopupSummary" class="invest-popup-summary"></div>
                     <button class="btn-spesa" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);margin:0;" onclick="openInvestMovementForm()">+ Aggiungi Movimento</button>
+                    <button style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%;" onclick="deleteInvestAsset(selectedInvestId)">🗑️ Elimina Asset</button>
                     <div id="investMovementForm" style="display:none;flex-direction:column;gap:10px;padding:12px;background:#f8fafc;border-radius:12px;">
                         <input type="number" id="investMovAmount" class="sheet-input" step="0.01" placeholder="Importo €">
                         <select id="investMovType" class="sheet-input">

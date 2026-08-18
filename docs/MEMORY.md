@@ -1,5 +1,15 @@
 # Project Core Memory
 
+## 🐛 FIX MENU INVESTIMENTI — capitale, sync Drive, salvadanai, delete (2026-08-18)
+- **`calcInvestStats(asset, movements)`**: `currentValue = initialCapital + Σdeposit − Σwithdrawal + Σprofit − Σexpense`; `totalInvested = initialCapital + Σdeposit − Σwithdrawal`; `totalProfits = Σprofit − Σexpense`; `roi = totalProfits/totalInvested*100`. MAI ignorare `initialCapital` nel valore attuale.
+- **`fmtEPlain(n,0)` include già " €"** — NON concatenare `+ ' €'` (doppio € negli hero invest).
+- **Ogni mutazione dati DEVE chiamare `updateGlobalVersion()`** (→ counter + `debouncedAutoSync` → backup GDrive). Mancava in `saveNewInvestment`/`editInvestInitialCapital`/`saveInvestMovement` — fixato. Se si aggiunge una scrittura su `db.*`, chiamarla sempre.
+- **`savings_goals` ha PK `name`, NESSUNA colonna `id`**: select deposito, `get`, `update`, `delete` usano SEMPRE `g.name` (mai `g.id`). `deleteSavingsGoal` accetta il nome (encodeURIComponent nell'onclick, decode in funzione).
+- **ID univoci**: `genId()` = `Date.now()*1000 + random` (mai `Date.now()` nudo → collisioni upsert nello stesso ms).
+- **`prompt()`/`alert()`/`confirm()` vietati** → `showPromptDialog`/`showToast`/`showConfirmDialog` (ui-dialogs.js).
+- **Delete cascata movimenti**: `db.investmentMovements.where('investmentId').equals(id).primaryKeys()` → `bulkDelete(ids)` (implementati nell'adapter).
+- **RLS investimenti è DISATTIVATA** (migration commentata) — isolamento via filtro `user_id` dell'adapter. Se i dati non sincronizzano: verificare che `supabase/migrations/20260811_investments.sql` sia applicato e che `eb_outbox_investments`/`eb_outbox_investment_movements` in localStorage siano vuoti.
+
 ## 🐛 FIX SPESE PREVISTE — dedupe debtId + outbox filtrata (2026-08-18)
 - **`debtId` DEVE esistere in `expenses`** (migration `20260818_expenses_debtId.sql` + allowlist adapter): `syncSharedDebts` deduplica su di esso — senza colonna, ogni apertura pagina ricreava le spese "Da saldare a X" → badge Spese Previste in crescita.
 - **`_mergeOutbox(rows, filter)`**: le letture filtrate (`where().equals/anyOf`) passano un filtro sul campo originale — l'outbox NON è più mergeato intero: spese di altri mesi (es. cloni ricorrenti salvati offline) non finiscono più in `currentData` del mese corrente.
