@@ -345,7 +345,9 @@ const MACRO_THEME = {
 const dateNow = new Date();
 let initYear = dateNow.getFullYear(), initMonth = dateNow.getMonth() + 1;
 document.getElementById('currentMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
-document.getElementById('annDeadlineMonth').value = `${initYear}-${String(initMonth).padStart(2,'0')}`;
+const initMonthVal = `${initYear}-${String(initMonth).padStart(2,'0')}`;
+if (document.getElementById('dlCalMonth-d')) document.getElementById('dlCalMonth-d').value = initMonthVal;
+if (document.getElementById('futureCalMonthM')) document.getElementById('futureCalMonthM').value = initMonthVal;
 document.getElementById('expDate').value = dateNow.toISOString().slice(0,10);
 const iaProviderEl = document.getElementById('iaProviderSelect');
 if (iaProviderEl && localStorage.getItem('ia_provider')) iaProviderEl.value = localStorage.getItem('ia_provider');
@@ -534,7 +536,7 @@ function switchTab(tabId, buttonEl) {
         if (window.innerWidth < 768) { renderAnalisiMobile(); }
         else { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
     }
-    if (tabId === 'future-tab') { renderFutureProjections(); renderSavingsGoals(); renderAnnualDeadlines(); }
+    if (tabId === 'future-tab') { updateFutureDashboard(); renderSavingsGoals(); }
     if (tabId === 'investimenti-tab') { renderInvestments(); }
     if (tabId !== 'history-tab') stopAnomalyCarousel();
     const customPopup = document.getElementById('customRangePopup');
@@ -3155,12 +3157,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize future tab bottom sheet (action hub, overlay, swipe-to-close)
 document.addEventListener('DOMContentLoaded', () => {
+    const dlFormWrap = document.getElementById('dlFormWrap-d');
+    if (dlFormWrap) dlFormWrap.innerHTML = plannerFormHTML('d');
     const actionHub = document.getElementById('futureActionHub');
     if (actionHub) {
         actionHub.querySelectorAll('[data-action]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const action = btn.getAttribute('data-action');
-                if (action === 'simula') openFutureSheet('simula');
+                if (action === 'simula') toggleFutureSimRow();
                 else if (action === 'scadenze') openFutureSheet('scadenze');
                 else if (action === 'ia') openFutureSheet('ia');
             });
@@ -3492,71 +3496,45 @@ async function saveNotes() {
 }
 
 // =====================================================================
-// SCADENZARIO ANNUALE
+// SCADENZARIO ANNUALE & PIANIFICATORE
 // =====================================================================
 async function loadAnnualDeadlines() {
     annualDeadlines = await db.annualDeadlines.toArray();
-    await renderAnnualDeadlines();
+    renderDeadlineListFor('d');
     checkAnnualAlertForCurrentMonth();
-}
-async function addAnnualDeadline() {
-    const month = document.getElementById('annDeadlineMonth').value;
-    const day = document.getElementById('annDeadlineDay').value;
-    const desc = document.getElementById('annDeadlineDesc').value.trim();
-    const amount = parseFloat(document.getElementById('annDeadlineAmount').value) || 0;
-    if (!month || !desc || amount <= 0) { alert("Compila mese, descrizione e importo."); return; }
-    let item = {id: Date.now(), month, day, desc, amount, isPaid: false};
-    await db.annualDeadlines.put(item);
-    await updateGlobalVersion();
-    document.getElementById('annDeadlineDesc').value = '';
-    document.getElementById('annDeadlineAmount').value = '';
-    document.getElementById('annDeadlineDay').value = '';
-    loadAnnualDeadlines();
+    if (localStorage.getItem('push_notifications_enabled') === 'true') checkPushNotifications();
 }
 async function deleteAnnualDeadline(id) {
-    if (confirm("Eliminare questa scadenza?")) { await db.annualDeadlines.delete(id); await updateGlobalVersion(); loadAnnualDeadlines(); }
+    if (confirm("Eliminare questa scadenza?")) {
+        await db.annualDeadlines.delete(id);
+        await updateGlobalVersion();
+        annualDeadlines = await db.annualDeadlines.toArray();
+        renderDeadlineListFor('d'); renderDeadlineListFor('s');
+        renderDeadlineCal('d'); renderDeadlineCal('s');
+        checkAnnualAlertForCurrentMonth();
+        updateFutureDashboard();
+    }
 }
 async function toggleDeadlinePaid(id, isPaid) {
-    await db.annualDeadlines.update(id, {isPaid}); await updateGlobalVersion(); loadAnnualDeadlines();
-}
-async function renderAnnualDeadlines() {
-    await loadAnnualDeadlines_db();
-}
-async function loadAnnualDeadlines_db() {
+    await db.annualDeadlines.update(id, {isPaid});
+    await updateGlobalVersion();
     annualDeadlines = await db.annualDeadlines.toArray();
-    const container = document.getElementById('annualDeadlinesList'); if (!container) return;
-    container.innerHTML = '';
-    if (annualDeadlines.length === 0) { container.innerHTML = `<p style="color:#94a3b8;font-size:13px;text-align:center;padding:20px;">Nessuna scadenza inserita.</p>`; return; }
-    annualDeadlines.sort((a,b) => {
-        let da = new Date(a.month + '-' + (a.day ? String(a.day).padStart(2,'0') : '01'));
-        let db2 = new Date(b.month + '-' + (b.day ? String(b.day).padStart(2,'0') : '01'));
-        return da - db2;
-    });
-    const today = new Date();
-    annualDeadlines.forEach(item => {
-        const row = document.createElement('div'); row.className = 'item-row';
-        let isPast = !item.isPaid && new Date(item.month + '-' + (item.day ? String(item.day).padStart(2,'0') : '01')) < today;
-        let formattedM = item.month.split('-').reverse().join('/') + (item.day ? ` (g.${item.day})` : '');
-        if (isPast) row.style.cssText = 'background:#fee2e2;border-left:4px solid #ef4444;padding-left:10px;border-radius:6px;';
-        else if (item.isPaid) row.style.opacity = '0.65';
-        row.innerHTML = `
-            <span class="item-name">${item.isPaid ? '✅' : isPast ? '🚨' : '⏰'} <strong>${item.desc}</strong><span class="item-meta">${formattedM}</span></span>
-            <span class="item-vals">
-                <span style="color:var(--previsto);font-weight:bold;font-size:13px;">${fmtE(item.amount)}</span>
-                ${!item.isPaid ? `<button class="btn-action btn-pay" onclick="toggleDeadlinePaid(${item.id},true)">Pagato</button>` : `<button class="btn-action" style="background:#64748b;" onclick="toggleDeadlinePaid(${item.id},false)">Annulla</button>`}
-                <button class="btn-del" onclick="deleteAnnualDeadline(${item.id})">✕</button>
-            </span>`;
-        container.appendChild(row);
-    });
-    if (localStorage.getItem('push_notifications_enabled') === 'true') checkPushNotifications();
+    renderDeadlineListFor('d'); renderDeadlineListFor('s');
+    renderDeadlineCal('d'); renderDeadlineCal('s');
+    checkAnnualAlertForCurrentMonth();
+    updateFutureDashboard();
+}
+function renderAnnualDeadlines() {
+    renderDeadlineListFor('d');
+    renderDeadlineCal('d');
 }
 function checkAnnualAlertForCurrentMonth() {
     const currentMonthVal = document.getElementById('currentMonth').value;
     const alertBox = document.getElementById('annualMonthAlert'); if (!alertBox) return;
-    const match = (annualDeadlines||[]).filter(d => d.month === currentMonthVal && !d.isPaid);
+    const match = (annualDeadlines||[]).filter(d => !d.isPaid && (d.month === currentMonthVal || (d.recurring && d.month <= currentMonthVal && currentMonthVal <= (d.endMonth || d.month))));
     if (match.length > 0) {
         let txt = `🔔 <strong>Scadenze annuali da pagare questo mese:</strong><ul style="margin:6px 0 0 18px;">`;
-        match.forEach(d => { txt += `<li>${d.desc}${d.day ? ' (g.'+d.day+')' : ''}: <strong>${fmtE(d.amount)}</strong></li>`; });
+        match.forEach(d => { txt += `<li>${d.desc}${d.day ? ' (g.'+d.day+')' : ''}${d.recurring ? ' (ricorrente)' : ''}: <strong>${fmtE(d.amount)}</strong></li>`; });
         txt += `</ul>`;
         alertBox.innerHTML = txt; alertBox.style.display = 'block';
     } else { alertBox.style.display = 'none'; }
@@ -3816,7 +3794,7 @@ function renderCalendar() {
         const ds = cursor.toISOString().slice(0,10);
         const dayNum = cursor.getDate();
         const hasPlanned = currentData.expenses.some(e => e.date === ds && e.planned > 0);
-        const hasDeadline = annualDeadlines.some(a => a.month === monthVal && (!a.day || parseInt(a.day) === dayNum) && !a.isPaid);
+        const hasDeadline = annualDeadlines.some(a => !a.isPaid && ((a.month === monthVal && (!a.day || parseInt(a.day) === dayNum)) || (a.recurring && a.month <= monthVal && monthVal <= (a.endMonth || a.month))));
         const isHighlight = hasPlanned || hasDeadline;
         let d = document.createElement('div'); d.className = `calendar-day${isHighlight?' has-deadline':''}${selectedFilterDate===ds?' selected':''}`;
         d.innerHTML = `${cursor.getDate()}<span>${cursor.getMonth()+1}/${cursor.getFullYear().toString().slice(-2)}</span>`;
@@ -5698,83 +5676,239 @@ function applyCustomRange() {
 }
 
 // =====================================================================
-// PROIEZIONI FUTURE (Matematiche)
+// PREVISIONI — Dashboard di proiezione finanziaria
 // =====================================================================
-async function renderFutureProjections(isSimulated = false) {
-    let simAmount = 0;
-    if (isSimulated) {
-        simAmount = parseFloat(document.getElementById('simulatedExpense').value) || 0;
-    }
+let futureChart = null;
+let futureSimAmount = 0;
+let futureInvestGrowth = 4;
+let lastProjectionBase = null;
 
-    let months = await db.months.toArray();
-    let numMonths = months.length;
-    let totalIncome = months.reduce((s,m) => s+m.totalIncome,0);
-    let totalActual = months.reduce((s,m) => s+m.totalActual,0);
-    let avgIncome = numMonths > 0 ? totalIncome / numMonths : 0;
-    let avgActual = numMonths > 0 ? (totalActual / numMonths) + simAmount : simAmount;
-    let avgSavings = avgIncome - avgActual;
-
-    const gridContainer = document.getElementById('futureProjectionsGrid');
-    const avgMobile = document.getElementById('futureAvgBoxMobile');
-
-    // Avviso accuratezza
-    const warnBox = document.getElementById('futureAccuracyWarning');
-    const avgBox = document.getElementById('futureAvgBox');
-    if (numMonths === 0) {
-        warnBox.innerHTML = `⚠️ <strong>Nessun dato registrato.</strong> Inizia ad inserire entrate e spese per ottenere le proiezioni.`;
-        warnBox.style.display = 'block';
-        const listContainer = document.getElementById('futureProjectionsList');
-        if (listContainer) {
-            listContainer.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;">Inserisci dati per attivare le proiezioni.</div>`;
-        }
-        if (gridContainer) gridContainer.innerHTML = `<div class="proj-empty">Inserisci dati per attivare le proiezioni.</div>`;
-        if (avgMobile) avgMobile.innerHTML = '';
-        return;
-    } else if (numMonths < 3) {
-        warnBox.innerHTML = `⚠️ <strong>Precisione limitata:</strong> I calcoli si basano su ${numMonths} mese${numMonths>1?'i':''}. Con più dati storici le proiezioni a lungo termine saranno molto più accurate.`;
-        warnBox.style.display = 'block';
-    } else { warnBox.style.display = 'none'; }
-
-    avgBox.innerHTML = `<strong>Base di calcolo:</strong> ${numMonths} mes${numMonths===1?'e':'i'} archiviati · Media entrate: <strong>${fmtE(avgIncome)}/mese</strong> · Media uscite: <strong>${fmtE(avgActual)}/mese</strong> · Risparmio medio: <strong style="color:${avgSavings>=0?'#10b981':'#ef4444'}">${fmtE(avgSavings)}/mese</strong>`;
-
-    const periods = [
-        {label:'3 Mesi', m:3}, {label:'6 Mesi', m:6}, {label:'1 Anno', m:12},
-        {label:'2 Anni', m:24}, {label:'5 Anni', m:60}, {label:'10 Anni', m:120}
-    ];
-    const listContainer = document.getElementById('futureProjectionsList'); listContainer.innerHTML = '';
-    periods.forEach(p => {
-        let estSavings = avgSavings * p.m;
-        let row = document.createElement('div');
-        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding: 14px; background: var(--panel); border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid " + (estSavings>=0?'#10b981':'#ef4444') + ";";
-        row.className = estSavings >= 0 ? 'proj-row-positive' : 'proj-row-negative';
-        row.innerHTML = `<span style="font-weight:bold; font-size:14px; color:var(--primary);">${p.label}</span><span class="text-right" style="font-size:16px;">${fmtE(estSavings)}</span>`;
-        listContainer.appendChild(row);
-    });
-
-    // --- MOBILE: griglia 2×3 + base di calcolo compatta ---
-    if (gridContainer) {
-        gridContainer.innerHTML = '';
-        periods.forEach(p => {
-            let estSavings = avgSavings * p.m;
-            let card = document.createElement('div');
-            card.className = 'proj-card';
-            card.style.borderLeftColor = estSavings >= 0 ? '#10b981' : '#ef4444';
-            card.innerHTML = `<span class="proj-label">${p.label}</span><span class="proj-value">${fmtE(estSavings, 0)}</span>`;
-            gridContainer.appendChild(card);
-        });
-    }
-    if (avgMobile) {
-        avgMobile.innerHTML = `<strong>Base:</strong> ${numMonths} mes${numMonths===1?'e':'i'} · Media entrate <strong>${fmtE(avgIncome)}</strong> · Media uscite <strong>${fmtE(avgActual)}</strong> · Risparmio <strong style="color:${avgSavings>=0?'#10b981':'#ef4444'}">${fmtE(avgSavings)}</strong>/mese`;
-    }
+function monthKey(offset) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function monthOffset(fromKey, toKey) {
+    const [fy, fm] = String(fromKey).split('-').map(Number);
+    const [ty, tm] = String(toKey).split('-').map(Number);
+    return (ty - fy) * 12 + (tm - fm);
+}
+function fmtMonth(m) {
+    if (!m) return '';
+    const [y, mo] = String(m).split('-');
+    return `${mo}/${y}`;
 }
 
+async function getProjectionBase() {
+    const months = await db.months.toArray();
+    const numMonths = months.length;
+    const totalIncome = months.reduce((s, m) => s + (m.totalIncome || 0), 0);
+    const totalActual = months.reduce((s, m) => s + (m.totalActual || 0), 0);
+    let investBase = 0;
+    try {
+        for (const a of (currentInvestments || [])) {
+            const movs = await getInvestMovements(a.id);
+            investBase += calcInvestStats(a, movs).currentValue;
+        }
+    } catch (e) { console.warn('[Future] Invest base:', e); }
+    return {
+        numMonths,
+        avgIncome: numMonths ? totalIncome / numMonths : 0,
+        avgActual: numMonths ? totalActual / numMonths : 0,
+        avgSavings: numMonths ? (totalIncome - totalActual) / numMonths : 0,
+        investBase
+    };
+}
+
+// Serie patrimonio personale: risparmio medio + aggiustamenti scadenze/rate
+function buildProjectionSeries(base, simAmount) {
+    const today = monthKey(0);
+    const active = (annualDeadlines || []).filter(d => !d.isPaid);
+    const adj = {};
+    active.forEach(d => {
+        if (!d.recurring) {
+            const o = monthOffset(today, d.month);
+            if (o >= 0 && o <= 120) adj[o] = (adj[o] || 0) - d.amount;
+        } else {
+            const s = monthOffset(today, d.month);
+            const e = d.endMonth ? monthOffset(today, d.endMonth) : s;
+            if (s <= 0) {
+                // Rata già attiva: dopo la fine il risparmio torna libero (scalino visibile)
+                if (e >= 0) for (let t = e + 1; t <= 120; t++) adj[t] = (adj[t] || 0) + d.amount;
+            } else if (s <= 120) {
+                for (let t = s; t <= Math.min(e, 120); t++) adj[t] = (adj[t] || 0) - d.amount;
+            }
+        }
+    });
+    const monthly = base.avgSavings + simAmount;
+    const series = [];
+    let val = 0;
+    for (let t = 0; t <= 120; t++) { val += monthly + (adj[t] || 0); series.push(Math.max(0, val)); }
+    return series;
+}
+
+function buildInvestSeries(base, growthPct) {
+    const m = Math.max(0, growthPct || 0) / 100 / 12;
+    const out = [];
+    for (let t = 0; t <= 120; t++) out.push(Math.round(base.investBase * Math.pow(1 + m, t)));
+    return out;
+}
+
+function fmtCompactE(n) {
+    const abs = Math.abs(n || 0);
+    if (abs >= 1000000) return `${(n / 1000000).toFixed(1).replace('.', ',')}M €`;
+    if (abs >= 1000) return `${(n / 1000).toFixed(1).replace('.', ',')}k €`;
+    return `${Math.round(n).toLocaleString('it-IT')} €`;
+}
+
+function futureChartLabels() {
+    const out = [];
+    for (let t = 0; t <= 120; t++) {
+        if (t === 0) out.push('Oggi');
+        else if (t % 12 === 0) out.push(`+${t / 12}a`);
+        else out.push('');
+    }
+    return out;
+}
+
+function renderFutureChart() {
+    const isMobile = window.innerWidth < 768;
+    const canvas = document.getElementById(isMobile ? 'futureChartCanvas' : 'futureChartCanvasD');
+    if (!canvas || canvas.offsetParent === null) return; // tab nascosto: render al cambio tab
+    const base = lastProjectionBase;
+    if (!base || base.numMonths === 0) return;
+    if (futureChart) { futureChart.destroy(); futureChart = null; }
+    const baseSeries = buildProjectionSeries(base, 0);
+    const simSeries = futureSimAmount !== 0 ? buildProjectionSeries(base, futureSimAmount) : null;
+    const invSeries = buildInvestSeries(base, futureInvestGrowth);
+    const datasets = [
+        { label: 'Patrimonio', data: baseSeries, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 0 },
+        { label: 'Investimenti', data: invSeries, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.08)', borderWidth: 2, borderDash: [6, 4], fill: false, tension: 0.35, pointRadius: 0 }
+    ];
+    if (simSeries) {
+        const positive = futureSimAmount > 0;
+        datasets.splice(1, 0, {
+            label: 'Simulazione',
+            data: simSeries,
+            borderColor: positive ? '#10b981' : '#ef4444',
+            backgroundColor: positive ? 'rgba(16,185,129,0.10)' : 'rgba(239,68,68,0.10)',
+            borderWidth: 3, fill: true, tension: 0.35, pointRadius: 0
+        });
+    }
+    futureChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: { labels: futureChartLabels(), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { boxWidth: 12, boxHeight: 3, font: { size: 10 } } },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => {
+                            const i = items[0].dataIndex;
+                            return i === 0 ? 'Oggi' : (i % 12 === 0 ? `+${i / 12}a` : `+${i}m`);
+                        },
+                        label: (item) => ` ${item.dataset.label}: ${fmtEPlain(item.parsed.y, 0)}`
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { autoSkip: true, maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } },
+                y: { ticks: { callback: (v) => fmtCompactE(v), font: { size: 9 } } }
+            }
+        }
+    });
+}
+
+function renderFutureBaseLine(base) {
+    const elM = document.getElementById('futureBaseLine');
+    const elD = document.getElementById('futureBaseLineD');
+    if (!elM && !elD) return;
+    if (base.numMonths === 0) {
+        const msg = '⚠️ Inserisci dati mensili per attivare le proiezioni.';
+        if (elM) elM.innerHTML = msg;
+        if (elD) elD.innerHTML = msg;
+        return;
+    }
+    const sign = base.avgSavings >= 0 ? '+' : '';
+    const color = base.avgSavings >= 0 ? '#10b981' : '#ef4444';
+    if (elM) elM.innerHTML = `Base attuale: <strong style="color:${color}">${sign}${fmtEPlain(base.avgSavings, 0)}/mese</strong> di risparmio netto · Investimenti: <strong>${fmtEPlain(base.investBase, 0)}</strong>`;
+    if (elD) elD.innerHTML = `Base di calcolo: ${base.numMonths} mes${base.numMonths === 1 ? 'e' : 'i'} · Entrate <strong>${fmtE(base.avgIncome)}</strong>/mese · Uscite <strong>${fmtE(base.avgActual)}</strong>/mese · Risparmio netto <strong style="color:${color}">${sign}${fmtE(base.avgSavings)}</strong>/mese · Investimenti attuali <strong>${fmtE(base.investBase)}</strong>`;
+}
+
+function renderFutureMilestones(base) {
+    if (!base || base.numMonths === 0) return;
+    const periods = [{ label: '6 Mesi', m: 6 }, { label: '1 Anno', m: 12 }, { label: '5 Anni', m: 60 }, { label: '10 Anni', m: 120 }];
+    const sim = buildProjectionSeries(base, futureSimAmount);
+    const ref = buildProjectionSeries(base, 0);
+    const html = periods.map(p => {
+        const v = sim[p.m], r = ref[p.m];
+        const delta = v - r;
+        const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'flat';
+        return `<div class="future-milestone ${tone}">
+            <span class="fm-label">${p.label}</span>
+            <span class="fm-value">${fmtEPlain(v, 0)}</span>
+            <span class="fm-delta">${delta > 0 ? '+' : ''}${fmtEPlain(delta, 0)}</span>
+        </div>`;
+    }).join('');
+    const elD = document.getElementById('futureMilestonesD');
+    const elM = document.getElementById('futureMilestonesM');
+    if (elD) elD.innerHTML = html;
+    if (elM) elM.innerHTML = html;
+}
+
+async function updateFutureDashboard() {
+    const base = await getProjectionBase();
+    lastProjectionBase = base;
+    renderFutureBaseLine(base);
+    renderFutureMilestones(base);
+    renderFutureChart();
+    renderDeadlineListFor('d');
+    renderDeadlineListFor('s');
+    renderDeadlineCal('d');
+    renderDeadlineCal('s');
+}
+
+function syncSimSlider() {
+    ['', 'M'].forEach(s => {
+        const el = document.getElementById('futureSimSlider' + s);
+        if (el) el.value = futureSimAmount;
+        const chip = document.getElementById('futureSimValue' + s);
+        if (chip) {
+            chip.textContent = (futureSimAmount > 0 ? '+' : '') + futureSimAmount + ' €/mese';
+            chip.className = 'future-sim-chip ' + (futureSimAmount > 0 ? 'pos' : futureSimAmount < 0 ? 'neg' : '');
+        }
+    });
+}
+function onFutureSimInput(suffix) {
+    const el = document.getElementById('futureSimSlider' + suffix);
+    if (!el) return;
+    futureSimAmount = parseFloat(el.value) || 0;
+    syncSimSlider();
+    updateFutureDashboard();
+}
 function resetFutureSimulation() {
-    const input = document.getElementById('simulatedExpense');
-    if (input) input.value = '';
-    const inputMobile = document.getElementById('simulatedExpenseMobile');
-    if (inputMobile) inputMobile.value = '';
-    // Ricalcola e ripristina i valori di default senza simulazione
-    renderFutureProjections();
+    futureSimAmount = 0;
+    syncSimSlider();
+    updateFutureDashboard();
+}
+function onFutureInvestGrowthInput() {
+    const elD = document.getElementById('futureInvestGrowth');
+    const elM = document.getElementById('futureInvestGrowthM');
+    const v = parseFloat((elD && elD.value !== '') ? elD.value : (elM ? elM.value : 4)) || 0;
+    futureInvestGrowth = v;
+    if (elD) elD.value = v;
+    if (elM) elM.value = v;
+    updateFutureDashboard();
+}
+function toggleFutureSimRow() {
+    const row = document.getElementById('futureSimRow');
+    if (!row) return;
+    const hidden = row.classList.toggle('sim-hidden');
+    const meta = document.querySelector('.future-sim-meta');
+    if (meta) meta.style.display = hidden ? 'none' : '';
+    const btn = document.querySelector('#futureActionHub [data-action="simula"]');
+    if (btn) btn.textContent = hidden ? '⚡ Simula' : '⚡ Simulatore attivo';
 }
 
 // =====================================================================
@@ -5787,38 +5921,27 @@ function openFutureSheet(action) {
     const body = document.getElementById('futureSheetBody');
     if (!overlay || !sheet || !title || !body) return;
 
-    if (action === 'simula') {
-        title.textContent = '🤔 Simula spesa extra';
+    if (action === 'scadenze') {
+        title.textContent = '🗓️ Pianificatore Scadenze';
         body.innerHTML = `
-            <div class="sheet-inputs-compact">
-                <label style="font-size:12px; color:#64748b;">Quanto spendi in più ogni mese? (€)</label>
-                <input type="number" id="simulatedExpenseMobile" class="sheet-input" placeholder="Es. 120" value="">
-                <div class="sheet-actions">
-                    <button class="btn-spesa" id="btnFutureSimMobile" style="background:#3b82f6; margin:0;">Simula</button>
-                    <button class="btn-spesa" id="btnFutureResetMobile" style="background:#64748b; margin:0;">Reset</button>
-                </div>
+            ${plannerFormHTML('s')}
+            <div style="margin:16px 0 6px;font-size:12px;color:#64748b;">Mini-calendario del mese:</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <input type="month" id="dlCalMonth-s" class="responsive-input" style="width:auto;" value="${monthKey(0)}" onchange="renderDeadlineCal('s')">
+                <span id="dlCalRecurring-s" style="font-size:11px;color:#8b5cf6;"></span>
             </div>
-            <div id="futureSimPreview" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;"></div>`;
-        document.getElementById('btnFutureSimMobile').addEventListener('click', () => {
-            const v = parseFloat(document.getElementById('simulatedExpenseMobile').value) || 0;
-            renderFutureProjectionsPreview(document.getElementById('futureSimPreview'), v);
-        });
-        document.getElementById('btnFutureResetMobile').addEventListener('click', () => {
-            document.getElementById('simulatedExpenseMobile').value = '';
-            renderFutureProjectionsPreview(document.getElementById('futureSimPreview'), 0);
-        });
-        renderFutureProjectionsPreview(document.getElementById('futureSimPreview'), 0);
-    } else if (action === 'scadenze') {
-        title.textContent = '🗓️ Scadenziario';
-        body.innerHTML = `<div id="annualDeadlinesListSheet" class="sheet-body-list" style="display:flex; flex-direction:column; gap:10px;"></div>`;
-        renderAnnualDeadlinesInSheet();
+            <div id="dlCalGrid-s" class="deadline-cal-grid"></div>
+            <div style="margin:16px 0 6px;font-size:12px;color:#64748b;">Scadenze registrate:</div>
+            <div id="dlList-s" style="display:flex;flex-direction:column;gap:10px;"></div>`;
+        renderDeadlineListFor('s');
+        renderDeadlineCal('s');
     } else if (action === 'ia') {
-        title.textContent = '🤖 Analisi Predittiva I.A.';
+        title.textContent = '🤖 Analisi IA Futura';
         body.innerHTML = `
-            <p style="font-size:12px; color:#475569; margin-bottom:12px;">L'IA leggerà le proiezioni matematiche e indicherà le categorie critiche su cui agire.</p>
-            <button class="btn-ia" id="btnFutureIASheet" onclick="runFuturePredictionIASheet()">🧠 Attiva Analisi Predittiva I.A.</button>
+            <p style="font-size:12px;color:#475569;margin-bottom:12px;">L'IA analizza la sostenibilità delle spese previste nei prossimi 12 mesi (scadenze e rate) rispetto al trend di risparmio.</p>
+            <button class="btn-ia" id="btnFutureIASheet" onclick="runFuturePredictionIASheet()">🤖 Genera Analisi Futura</button>
             <div id="iaFutureResponseSheet" class="ia-response-box"></div>`;
-    }
+    } else { return; }
 
     document.body.classList.add('sheet-open');
     overlay.classList.add('open');
@@ -5837,71 +5960,138 @@ function closeFutureSheet() {
     document.body.classList.remove('sheet-open');
 }
 
-async function renderFutureProjectionsPreview(container, simAmount = 0) {
+function plannerFormHTML(p) {
+    return `
+        <div class="dl-type-toggle">
+            <button type="button" class="dl-type-btn active" data-dl-type="${p}" data-mode="single" onclick="setDeadlineMode('${p}','single')">📅 Giorno singolo</button>
+            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="recurring" onclick="setDeadlineMode('${p}','recurring')">🔁 Ricorrente mensile</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+            <input type="text" id="dlDesc-${p}" class="responsive-input" placeholder="Es. Bollo Auto / Rata mutuo">
+            <input type="number" id="dlAmount-${p}" class="responsive-input" placeholder="Importo €" min="0" step="0.01">
+            <div id="dlDateRow-${p}"><input type="date" id="dlDate-${p}" class="responsive-input"></div>
+            <div id="dlRecRow-${p}" style="display:none;gap:8px;">
+                <input type="month" id="dlStart-${p}" class="responsive-input" value="${monthKey(0)}">
+                <input type="month" id="dlEnd-${p}" class="responsive-input">
+            </div>
+            <button class="btn-spesa" style="background:var(--warning);margin:0;" onclick="addDeadlinePlanner('${p}')">+ Salva Scadenza</button>
+        </div>`;
+}
+function setDeadlineMode(p, mode) {
+    document.querySelectorAll(`[data-dl-type="${p}"]`).forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    const rec = mode === 'recurring';
+    const dateRow = document.getElementById('dlDateRow-' + p);
+    const recRow = document.getElementById('dlRecRow-' + p);
+    if (dateRow) dateRow.style.display = rec ? 'none' : 'block';
+    if (recRow) recRow.style.display = rec ? 'flex' : 'none';
+}
+function addDeadlinePlanner(p) {
+    const desc = document.getElementById('dlDesc-' + p).value.trim();
+    const amount = parseFloat(document.getElementById('dlAmount-' + p).value) || 0;
+    const modeBtn = document.querySelector(`[data-dl-type="${p}"].active`);
+    const mode = modeBtn ? modeBtn.dataset.mode : 'single';
+    if (!desc || amount <= 0) { showToast('Compila descrizione e importo', true); return; }
+    const item = { id: Date.now(), month: monthKey(0), day: '', desc, amount, isPaid: false, recurring: false, endMonth: null };
+    if (mode === 'recurring') {
+        const start = document.getElementById('dlStart-' + p).value;
+        const end = document.getElementById('dlEnd-' + p).value;
+        if (!start || !end || end < start) { showToast('Seleziona mese inizio e fine validi', true); return; }
+        item.recurring = true; item.month = start; item.endMonth = end;
+    } else {
+        const date = document.getElementById('dlDate-' + p).value;
+        if (!date) { showToast('Seleziona la data', true); return; }
+        item.month = date.slice(0, 7);
+        item.day = String(parseInt(date.slice(8, 10), 10));
+    }
+    db.annualDeadlines.put(item).then(async () => {
+        await updateGlobalVersion();
+        document.getElementById('dlDesc-' + p).value = '';
+        document.getElementById('dlAmount-' + p).value = '';
+        document.getElementById('dlDate-' + p).value = '';
+        document.getElementById('dlEnd-' + p).value = '';
+        annualDeadlines = await db.annualDeadlines.toArray();
+        renderDeadlineListFor('d');
+        renderDeadlineListFor('s');
+        renderDeadlineCal('d');
+        renderDeadlineCal('s');
+        checkAnnualAlertForCurrentMonth();
+        updateFutureDashboard();
+        showToast('Scadenza salvata', false);
+    });
+}
+function renderDeadlineListFor(p) {
+    const container = document.getElementById(p === 'd' ? 'annualDeadlinesList' : 'dlList-' + p);
     if (!container) return;
-    let months = await db.months.toArray();
-    let numMonths = months.length;
-    let totalIncome = months.reduce((s,m) => s+m.totalIncome,0);
-    let totalActual = months.reduce((s,m) => s+m.totalActual,0);
-    let avgIncome = numMonths > 0 ? totalIncome / numMonths : 0;
-    let avgActual = numMonths > 0 ? (totalActual / numMonths) + simAmount : simAmount;
-    let avgSavings = avgIncome - avgActual;
-
-    if (numMonths === 0) {
-        container.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:16px;">Inserisci dati per attivare le proiezioni.</div>`;
+    container.innerHTML = '';
+    if (!annualDeadlines || annualDeadlines.length === 0) {
+        container.innerHTML = `<p style="color:#94a3b8;font-size:13px;text-align:center;padding:16px;">Nessuna scadenza registrata.</p>`;
         return;
     }
-
-    const periods = [
-        {label:'3 Mesi', m:3}, {label:'6 Mesi', m:6}, {label:'1 Anno', m:12},
-        {label:'2 Anni', m:24}, {label:'5 Anni', m:60}, {label:'10 Anni', m:120}
-    ];
-    container.innerHTML = '';
-    periods.forEach(p => {
-        let estSavings = avgSavings * p.m;
-        let row = document.createElement('div');
-        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding: 12px; background: var(--panel); border-radius: 10px; border-left: 4px solid " + (estSavings>=0?'#10b981':'#ef4444') + ";";
-        row.innerHTML = `<span style="font-weight:bold; font-size:14px; color:var(--primary);">${p.label}</span><span style="font-size:15px;">${fmtE(estSavings)}</span>`;
+    [...annualDeadlines].sort((a, b) => String(a.month + (a.day || '')).localeCompare(String(b.month + (b.day || '')))).forEach(item => {
+        const when = item.recurring
+            ? `🔁 ogni mese · da ${fmtMonth(item.month)} a ${fmtMonth(item.endMonth || item.month)}`
+            : `${fmtMonth(item.month)}${item.day ? ' (g.' + item.day + ')' : ''}`;
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        if (item.isPaid) row.style.opacity = '0.65';
+        row.innerHTML = `
+            <span class="item-name">${item.isPaid ? '✅' : item.recurring ? '🔁' : '⏰'} <strong>${item.desc}</strong><span class="item-meta">${when}</span></span>
+            <span class="item-vals">
+                <span style="color:var(--previsto);font-weight:bold;font-size:13px;">${fmtE(item.amount)}</span>
+                ${!item.isPaid ? `<button class="btn-action btn-pay" onclick="toggleDeadlinePaid(${item.id},true)">Pagato</button>` : `<button class="btn-action" style="background:#64748b;" onclick="toggleDeadlinePaid(${item.id},false)">Annulla</button>`}
+                <button class="btn-del" onclick="deleteAnnualDeadline(${item.id})">✕</button>
+            </span>`;
         container.appendChild(row);
     });
 }
-
-async function renderAnnualDeadlinesInSheet() {
-    const listContainer = document.getElementById('annualDeadlinesListSheet');
-    if (!listContainer) return;
-
-    let deadlines = await db.annualDeadlines.toArray();
-    if (deadlines.length === 0) {
-        listContainer.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;">Nessuna scadenza impostata.<br>Aggiungile da Impostazioni → Scadenziario.</div>`;
-        return;
+function renderDeadlineCal(p) {
+    const grid = document.getElementById('dlCalGrid-' + p);
+    const monthInput = document.getElementById('dlCalMonth-' + p);
+    if (!grid || !monthInput || !monthInput.value) return;
+    const monthVal = monthInput.value;
+    grid.innerHTML = '';
+    const range = getMonthRange(monthVal);
+    ['L', 'M', 'M', 'G', 'V', 'S', 'D'].forEach(d => { const h = document.createElement('div'); h.className = 'calendar-day-header'; h.innerText = d; grid.appendChild(h); });
+    let firstDayIndex = (range.start.getDay() + 6) % 7;
+    for (let i = 0; i < firstDayIndex; i++) { const e = document.createElement('div'); e.className = 'calendar-day empty'; grid.appendChild(e); }
+    const active = (annualDeadlines || []).filter(d => !d.isPaid);
+    const recurringHere = active.filter(d => d.recurring && d.month <= monthVal && monthVal <= (d.endMonth || d.month));
+    const recurLabel = document.getElementById('dlCalRecurring-' + p);
+    if (recurLabel) recurLabel.innerHTML = recurringHere.length ? `🔁 ${recurringHere.map(d => d.desc).join(', ')}` : '';
+    let cursor = new Date(range.start);
+    while (cursor <= range.end) {
+        const dayNum = cursor.getDate();
+        const hit = recurringHere.length > 0 || active.some(a => a.month === monthVal && (!a.day || parseInt(a.day) === dayNum));
+        const d = document.createElement('div');
+        d.className = 'calendar-day' + (hit ? ' has-deadline' : '');
+        d.innerHTML = `${cursor.getDate()}`;
+        grid.appendChild(d);
+        cursor.setDate(cursor.getDate() + 1);
     }
-
-    let today = new Date();
-    today.setHours(0,0,0,0);
-    let sorted = [...deadlines].sort((a,b) => new Date(a.date) - new Date(b.date));
-    listContainer.innerHTML = '';
-    sorted.forEach(d => {
-        let deadlineDate = new Date(d.date);
-        deadlineDate.setHours(0,0,0,0);
-        let diffDays = Math.round((deadlineDate - today) / 86400000);
-        let row = document.createElement('div');
-        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px; background:var(--panel); border-radius:10px; border-left:4px solid #10b981;";
-        if (diffDays < 0) {
-            row.style.borderLeftColor = '#ef4444';
-            row.innerHTML = `<span style="font-size:14px; font-weight:bold;">${d.title}</span><span class="deadline-badge" style="background:#fee2e2; color:#ef4444;">Scaduta ${Math.abs(diffDays)}g</span>`;
-        } else if (diffDays <= 7) {
-            row.style.borderLeftColor = '#f59e0b';
-            row.innerHTML = `<span style="font-size:14px; font-weight:bold;">${d.title}</span><span class="deadline-badge" style="background:#fef3c7; color:#f59e0b;">⚠️ ${diffDays===0?'Oggi':diffDays+'g'}</span>`;
-        } else {
-            row.innerHTML = `<span style="font-size:14px; font-weight:bold;">${d.title}</span><span style="font-size:13px; color:#64748b;">${deadlineDate.toLocaleDateString('it-IT')}</span>`;
-        }
-        listContainer.appendChild(row);
-    });
 }
-
+async function buildFutureIAPrompt() {
+    const base = await getProjectionBase();
+    const today = monthKey(0);
+    const active = (annualDeadlines || []).filter(d => !d.isPaid);
+    const perMonth = {};
+    active.forEach(d => {
+        if (d.recurring) {
+            const s = Math.max(0, monthOffset(today, d.month));
+            const e = Math.min(11, d.endMonth ? monthOffset(today, d.endMonth) : 11);
+            for (let t = s; t <= e; t++) { const k = monthKey(t); perMonth[k] = (perMonth[k] || 0) + d.amount; }
+        } else {
+            const o = monthOffset(today, d.month);
+            if (o >= 0 && o <= 11) perMonth[d.month] = (perMonth[d.month] || 0) + d.amount;
+        }
+    });
+    const sim = buildProjectionSeries(base, futureSimAmount);
+    const ref = buildProjectionSeries(base, 0);
+    const monthlyLines = Object.keys(perMonth).sort().map(k => `  - ${fmtMonth(k)}: ${fmtEPlain(perMonth[k], 0)}`).join('\n') || '  - nessuna';
+    return `Sei un consulente finanziario esperto. Analizza la sostenibilità delle spese programmate nei prossimi 12 mesi rispetto al trend di risparmio dell'utente.\nDati:\n- Risparmio medio storico: ${fmtEPlain(base.avgSavings, 0)}/mese su ${base.numMonths} mesi\n- Simulazione what-if attiva: ${futureSimAmount >= 0 ? '+' : ''}${futureSimAmount} €/mese\n- Spese programmate per mese (prossimi 12 mesi):\n${monthlyLines}\n- Proiezione patrimonio: 6 mesi ${fmtEPlain(sim[6], 0)} (base ${fmtEPlain(ref[6], 0)}), 1 anno ${fmtEPlain(sim[12], 0)} (base ${fmtEPlain(ref[12], 0)}), 5 anni ${fmtEPlain(sim[60], 0)}, 10 anni ${fmtEPlain(sim[120], 0)}\nRispondi in italiano, massimo 6 frasi, indicando: 1) se le spese previste sono sostenibili, 2) i mesi più critici, 3) un consiglio pratico per mantenere il trend di risparmio.`;
+}
 async function runFuturePredictionIASheet() {
-    const prompt = `Sei un consulente finanziario esperto. Analizza queste proiezioni per il futuro e indica le categorie di spesa critiche su cui agire:\n${document.getElementById('futureAvgBox')?.innerText || ''}`;
-    await callAIEndpoint(prompt, 'iaFutureResponseSheet', 'btnFutureIASheet');
+    const prompt = await buildFutureIAPrompt();
+    callAIEndpoint(prompt, 'iaFutureResponseSheet', 'btnFutureIASheet');
 }
 
 function setupFutureSwipeToClose() {
@@ -6182,19 +6372,7 @@ async function runHistoryAnalysisIA() {
     await callAIEndpoint(prompt, 'iaHistoryResponse', 'btnHistoryIA');
 }
 async function runFuturePredictionIA() {
-    const months = await db.months.toArray();
-    const numM = months.length;
-    const totalIncome = months.reduce((s, m) => s + m.totalIncome, 0);
-    const totalActual = months.reduce((s, m) => s + m.totalActual, 0);
-    const avgSavings = numM > 0 ? (totalIncome - totalActual) / numM : 0;
-    const projected1 = avgSavings * 12;
-    const projected5 = avgSavings * 60;
-    const projected10 = avgSavings * 120;
-    const categoryTotals = {};
-    currentData.expenses.forEach(e => { categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.actual; });
-    const categoryLines = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([cat, val]) => `- ${cat}: ${fmtE(val)}/mese`).join('\n');
-    const dataText = `Dati Proiezioni 10 anni:\n- Risparmio medio mensile: ${fmtE(avgSavings)}\n- Patrimonio stimato a 1 anno: ${fmtE(projected1)}\n- Patrimonio stimato a 5 anni: ${fmtE(projected5)}\n- Patrimonio stimato a 10 anni: ${fmtE(projected10)}\nCategorie di spesa attuali:\n${categoryLines}`;
-    const prompt = `Agisci come un pianificatore finanziario lungimirante. Lingua: Italiano. Esamina questa proiezione matematica basata sui dati attuali: ${dataText}. Fai una considerazione critica sul risultato a lungo termine (il traguardo a 10 anni è realistico o rischioso?). Indica quali categorie di spesa attuali potrebbero minacciare questa proiezione a causa dell'inflazione o di spese impreviste. Massimo 4 frasi, stile diretto e motivazionale.`;
+    const prompt = await buildFutureIAPrompt();
     await callAIEndpoint(prompt, 'iaFutureResponse', 'btnFutureIA');
 }
 

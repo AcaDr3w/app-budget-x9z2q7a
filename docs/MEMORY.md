@@ -1,5 +1,16 @@
 # Project Core Memory
 
+## 🔮 DASHBOARD PREVISIONI — architettura proiezioni (2026-08-18)
+- **Tre linee separate nel grafico** (`renderFutureChart`, Chart.js): Patrimonio (base blu), Simulazione (verde #10b981 se slider>0 / rossa #ef4444 se <0, solo se ≠0), Investimenti (viola tratteggiata). MAI sommate tra loro — le due "crescita patrimonio" e "previsioni investimenti" sono proiezioni indipendenti.
+- **`buildProjectionSeries(base, simAmount)`**: 121 punti mensili (0→10 anni), `patrimonio[t] = Σ(risparmio medio + simAmount) + aggiustamenti`. Aggiustamenti: one-off → −amount nel mese; ricorrente già attiva (start ≤ oggi) → +amount DOPO `endMonth` (la rata è già dentro la media storica → alla fine torna libera, scalino visibile); ricorrente futura → −amount da start a end. `isPaid` esclusi.
+- **`buildInvestSeries(base, growthPct)`**: `base.investBase` = Σ `calcInvestStats(a, movs).currentValue` su `currentInvestments`; crescita composta mensile `(1+r/12)^t`, r da input `#futureInvestGrowth`/`#futureInvestGrowthM` (default 4, sincronizzati da `onFutureInvestGrowthInput`).
+- **Scadenze ricorrenti**: `annual_deadlines` ha `recurring` (bool) + `endMonth` (TEXT YYYY-MM); `month` = mese evento (one-off) o start (ricorrente); `day` vuoto = intero mese. Richiede migration `20260818_recurring_deadlines.sql` (2 ALTER ADD COLUMN IF NOT EXISTS) + colonne in allowlist `_allowedColumns` adapter.
+- **Planner condiviso**: `plannerFormHTML(p)` genera il form per prefisso `d` (desktop, iniettato in `#dlFormWrap-d` al DOMContentLoaded) e `s` (sheet mobile, iniettato in `openFutureSheet('scadenze')`). MAI duplicare id senza prefisso. `renderDeadlineListFor(p)`/`renderDeadlineCal(p)` idem.
+- **`updateFutureDashboard()`** = orchestratore unico (base → sottotitolo → milestone → chart → liste/calendari): chiamata da switchTab future-tab, slider, growth, add/delete/toggle scadenza. `renderFutureChart` fa no-op se canvas nascosto (`offsetParent === null`) — il render avviene al cambio tab.
+- **Chart.js su tab nascosto**: canvas in tab `display:none` ha dimensione 0 → distruggere/ricreare l'istanza `futureChart` SOLO quando il tab è attivo.
+- **Slider bipolare**: `futureSimAmount` variabile globale; `syncSimSlider()` allinea entrambe le UI (desktop + mobile); bottone hub "⚡ Simula" = `toggleFutureSimRow()` (collapse riga slider).
+- **IA futura**: `buildFutureIAPrompt()` (prompt unico) usato da `runFuturePredictionIA` (desktop) e `runFuturePredictionIASheet` (mobile). Include spese programmate per mese nei prossimi 12 mesi (ricorrenti proiettate nel range start..end).
+
 ## 🐛 RLS SENZA POLICY = dati mai sincronizzati (2026-08-18)
 - **Sintomo**: menu Investimenti (e salvadanai) non salvano/sincronizzano, `put` fallisce, dati solo in outbox locale.
 - **Causa**: le tabelle nuove (`investments`, `investment_movements`, `savings_goals`, `settings`) avevano RLS **ENABLED ma ZERO policy** (abilitata manualmente sul DB, non dalle migration del repo — quelle legacy `months`/`expenses` hanno le policy). RLS senza policy = DENY su tutto, anche per l'utente autenticato.

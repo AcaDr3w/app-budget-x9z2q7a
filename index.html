@@ -608,54 +608,59 @@
         </div>
     </div>
 
-    <!-- =================== TAB 3: FUTURO =================== -->
+<!-- =================== TAB 3: FUTURO =================== -->
     <div id="future-tab" class="tab-content hidden">
 
-        <!-- DESKTOP: contenuto originale -->
+        <!-- DESKTOP: dashboard previsioni -->
         <div class="hide-mobile">
             <div class="card">
-                <h2>🔮 E nel futuro come sto messo?</h2>
-                <p style="font-size: 13px; color: #475569; margin-bottom: 14px;">
-                    Proiezione matematica lineare basata sulla media reale delle tue entrate e uscite nel database.
-                    Se il trend rimane costante, ecco quanto risparmio potresti accumulare nel tempo.
-                </p>
+                <h2>🔮 Previsioni</h2>
+                <div id="futureBaseLineD" style="font-size:12px;color:#475569;margin-bottom:12px;"></div>
+                <div id="futureChartWrapD" style="position:relative;height:300px;margin-top:8px;">
+                    <canvas id="futureChartCanvasD"></canvas>
+                </div>
+            </div>
 
-                <div class="card" style="background:#f1f5f9; border:1px solid #cbd5e1; margin-bottom: 16px; box-shadow: none; padding: 12px;">
-                    <h3 style="margin-top:0; font-size: 14px;">🤔 Simulatore "Che succede se...?"</h3>
-                    <p style="font-size: 11px; color: #475569; margin-bottom: 10px;">Vuoi comprare a rate o abbonarti a qualcosa? Scopri l'impatto sul tuo futuro.</p>
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <input type="number" id="simulatedExpense" class="responsive-input" placeholder="Spesa mensile fissa €">
-                        <button class="btn-spesa" style="background:#3b82f6; margin:0; padding: 10px 18px; font-size:14px;" onclick="renderFutureProjections(true)">Simula</button>
-                        <button class="btn-spesa" style="background:#64748b; margin:0; padding: 10px 18px; font-size:14px;" onclick="resetFutureSimulation()">Reset</button>
+            <div class="card">
+                <h3 style="margin-top:0;font-size:14px;">⚡ Simulatore What-If</h3>
+                <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:260px;">
+                        <input type="range" id="futureSimSlider" min="-500" max="500" step="5" value="0" style="width:100%;" oninput="onFutureSimInput('')">
                     </div>
+                    <span id="futureSimValue" class="future-sim-chip">0 €/mese</span>
+                    <button class="btn-spesa" style="background:#64748b;margin:0;padding:10px 16px;font-size:13px;" onclick="resetFutureSimulation()">Reset</button>
                 </div>
-
-                <div id="futureAccuracyWarning" class="proj-info-box" style="display:none;"></div>
-                <div id="futureProjectionsList" style="display:flex; flex-direction:column; gap:10px;"></div>
-                <div id="futureAvgBox" style="font-size:12px; color:#64748b; margin-top:10px;"></div>
+                <div style="margin-top:12px;font-size:12px;color:#64748b;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span>📈 Crescita investimenti</span>
+                    <input type="number" id="futureInvestGrowth" class="responsive-input" value="4" min="0" max="20" step="0.5" style="width:80px;padding:6px 8px;" oninput="onFutureInvestGrowthInput()">
+                    <span>%/anno</span>
+                </div>
             </div>
 
             <div class="card">
-                <h2>📅 Aggiungi Scadenza Futura</h2>
-                <div class="grid-inputs">
-                    <div class="input-group"><label>Mese Scadenza</label><input type="month" id="annDeadlineMonth"></div>
-                    <div class="input-group"><label>Giorno (opz.)</label><input type="number" id="annDeadlineDay" min="1" max="31" placeholder="Es. 15"></div>
-                </div>
-                <div class="input-group"><label>Descrizione</label><input type="text" id="annDeadlineDesc" placeholder="Es. Bollo Auto..."></div>
-                <div class="input-group"><label>Importo Previsto (€)</label><input type="number" id="annDeadlineAmount" step="0.01" placeholder="0.00"></div>
-                <button class="btn-spesa" onclick="addAnnualDeadline()" style="background: var(--warning);">Salva Scadenza</button>
+                <h3 style="margin-top:0;font-size:14px;">🎯 Traguardi Patrimoniali</h3>
+                <div id="futureMilestonesD" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
             </div>
+
             <div class="card">
-                <h2>📋 Scadenziario Programmato</h2>
+                <h2>📅 Pianificatore Scadenze</h2>
+                <div id="dlFormWrap-d"></div>
+                <div style="margin:14px 0 6px;font-size:12px;color:#64748b;">Mini-calendario del mese:</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <input type="month" id="dlCalMonth-d" class="responsive-input" style="width:auto;" onchange="renderDeadlineCal('d')">
+                    <span id="dlCalRecurring-d" style="font-size:11px;color:#8b5cf6;"></span>
+                </div>
+                <div id="dlCalGrid-d" class="deadline-cal-grid"></div>
+                <div style="margin:14px 0 6px;font-size:12px;color:#64748b;">Scadenze registrate:</div>
                 <div id="annualDeadlinesList"></div>
             </div>
 
-            <div class="card" style="border: 2px solid var(--ia-color); background: #fdfaff;">
-                <h2>🤖 Analisi Predittiva I.A. (Su Richiesta)</h2>
-                <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">
-                    L'IA leggerà le proiezioni matematiche qui sopra e indicherà le categorie di spesa critiche su cui agire per proteggere o migliorare il tuo futuro finanziario.
+            <div class="card" style="border:2px solid var(--ia-color);background:#fdfaff;">
+                <h2>🤖 Analisi IA Futura</h2>
+                <p style="font-size:12px;color:#475569;margin-bottom:12px;">
+                    L'IA analizza la sostenibilità delle spese previste nei prossimi 12 mesi (scadenze e rate) rispetto al trend di risparmio.
                 </p>
-                <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🧠 Attiva Analisi Predittiva I.A.</button>
+                <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🤖 Genera Analisi Futura</button>
                 <div id="iaFutureResponse" class="ia-response-box"></div>
             </div>
         </div>
@@ -663,15 +668,31 @@
         <!-- MOBILE: Zero-Scroll Dashboard -->
         <div class="hide-desktop future-mobile-dashboard">
             <div class="future-header-compact">
-                <h2>🔮 E nel futuro come sto messo?</h2>
-                <div id="futureAvgBoxMobile"></div>
+                <h2>🔮 Previsioni</h2>
+                <div id="futureBaseLine"></div>
             </div>
-            <div id="futureProjectionsGrid"></div>
-            <div id="futureProjectionsLegacyList" style="display:none;"></div>
+
+            <div class="future-chart-card">
+                <canvas id="futureChartCanvas"></canvas>
+            </div>
+
+            <div class="future-sim-row" id="futureSimRow">
+                <input type="range" id="futureSimSliderM" min="-500" max="500" step="5" value="0" oninput="onFutureSimInput('M')">
+                <span id="futureSimValueM" class="future-sim-chip">0 €/mese</span>
+                <button id="btnSimResetM" onclick="resetFutureSimulation()">↺</button>
+            </div>
+            <div class="future-sim-meta">
+                <span>📈 Investimenti</span>
+                <input type="number" id="futureInvestGrowthM" class="responsive-input" value="4" min="0" max="20" step="0.5" oninput="onFutureInvestGrowthInput()">
+                <span>%/anno</span>
+            </div>
+
+            <div id="futureMilestonesM" class="future-milestones"></div>
+
             <div id="futureActionHub">
-                <button data-action="simula">🤔 Simula</button>
+                <button data-action="simula">⚡ Simula</button>
                 <button data-action="scadenze">🗓️ Scadenze</button>
-                <button data-action="ia">🤖 I.A.</button>
+                <button data-action="ia">🤖 IA Futura</button>
             </div>
         </div>
 

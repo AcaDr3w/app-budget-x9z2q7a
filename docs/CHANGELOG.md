@@ -1,5 +1,20 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Refactoring completo pagina Previsioni → dashboard proiezione finanziaria
+
+### ✅ Completed Changes
+- **Dashboard zero-scroll mobile**: header "Previsioni" + sottotitolo base, grafico Chart.js centrale (flex:1, unico elemento flessibile), simulatore bipolare −500/+500 €/mese, 4 badge traguardi (6M/1A/5A/10A), Action Hub (⚡ Simula toggle riga / 🗓️ Scadenze sheet / 🤖 IA Futura sheet). Desktop: stessa dashboard in card normali.
+- **Motore proiezione** (`getProjectionBase`/`buildProjectionSeries`/`buildInvestSeries`): patrimonio personale = media risparmio mensile storica (`db.months`) + aggiustamenti scadenze; linea INVESTIMENTI separata (mai sommata) = valore attuale asset (`calcInvestStats`) con crescita composta mensile configurabile (default 4%/anno, input dedicato).
+- **Spese ricorrenti a durata limitata**: `annual_deadlines` estesa con `recurring` + `endMonth` (migration `20260818_recurring_deadlines.sql` + allowlist adapter). Rata già attiva → scalino positivo dopo la fine (risparmio liberato); rata futura → sottratta da start a end; one-off → sottratta una sola volta nel mese. Pagate (`isPaid`) escluse.
+- **Pianificatore Scadenze** (sostituisce vecchio form+lista): toggle "📅 Giorno singolo / 🔁 Ricorrente mensile" (date / start+end month), mini-calendario mensile con evidenza one-off e banda 🔁 ricorrenti, lista con Pagato/Elimina. Desktop = card, mobile = bottom sheet esistente (swipe-to-close). Ogni modifica → `updateFutureDashboard()` → grafico aggiornato istantaneo.
+- **Simulatore What-If**: slider bipolare con chip colorato (+verde / −rosso) e Reset; aggiornamento istantaneo chart+milestone (riga simulata verde/rossa, milestone con delta vs base). Tasso crescita investimenti sincronizzato desktop/mobile.
+- **Analisi IA Futura**: prompt condiviso `buildFutureIAPrompt()` (risparmio medio, simulazione attiva, spese programmate per mese nei prossimi 12 mesi incluse rate ricorrenti, proiezioni 6m/1a/5a/10a) → `callAIEndpoint`. Desktop card + sheet mobile.
+- **`renderCalendar`/`checkAnnualAlertForCurrentMonth`** aggiornati per evidenziare scadenze ricorrenti attive nel mese.
+- **Legacy rimosso**: `renderFutureProjections`, `renderFutureProjectionsPreview`, `renderAnnualDeadlinesInSheet`, `loadAnnualDeadlines_db`, `addAnnualDeadline`, vecchi id (`simulatedExpense*`, `futureProjectionsGrid/List`, `futureAvgBox*`, `annDeadline*`), CSS `.proj-card`/`.proj-*`.
+- Verifica: `node --check` OK (script.js, supabase-adapter.js), brace-check CSS OK.
+
+### ⚙ Status: COMPLETATO (migration `20260818_recurring_deadlines.sql` da applicare manualmente su Supabase)
+
 ## [2026-08-18] - Fix sync Investimenti: RLS attiva senza policy sulle tabelle nuove → migration 20260818_investments_rls.sql
 
 ### ✅ Completed Changes
