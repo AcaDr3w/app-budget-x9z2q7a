@@ -623,17 +623,17 @@
 
             <div class="card">
                 <h3 style="margin-top:0;font-size:14px;">⚡ Simulatore What-If</h3>
-                <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:260px;">
-                        <input type="range" id="futureSimSlider" min="-500" max="500" step="5" value="0" style="width:100%;" oninput="onFutureSimInput('')">
+                <div class="future-sim-card">
+                    <div class="sim-value-row">
+                        <span id="futureSimValue" class="future-sim-chip">0 €/mese</span>
+                        <button class="sim-reset" onclick="resetFutureSimulation()" title="Azzeera la simulazione">↻</button>
                     </div>
-                    <span id="futureSimValue" class="future-sim-chip">0 €/mese</span>
-                    <button class="btn-spesa" style="background:#64748b;margin:0;padding:10px 16px;font-size:13px;" onclick="resetFutureSimulation()">Reset</button>
-                </div>
-                <div style="margin-top:12px;font-size:12px;color:#64748b;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <span>📈 Crescita investimenti</span>
-                    <input type="number" id="futureInvestGrowth" class="responsive-input" value="4" min="0" max="20" step="0.5" style="width:80px;padding:6px 8px;" oninput="onFutureInvestGrowthInput()">
-                    <span>%/anno</span>
+                    <input type="range" class="sim-range" id="futureSimSlider" min="-500" max="500" step="10" value="0" oninput="onFutureSimInput('')">
+                    <div class="sim-growth-row">
+                        <span>📈 Crescita investimenti</span>
+                        <input type="number" id="futureInvestGrowth" class="responsive-input" value="4" min="0" max="20" step="0.5" oninput="onFutureInvestGrowthInput()">
+                        <span>%/anno</span>
+                    </div>
                 </div>
             </div>
 
@@ -676,15 +676,17 @@
                 <canvas id="futureChartCanvas"></canvas>
             </div>
 
-            <div class="future-sim-row" id="futureSimRow">
-                <input type="range" id="futureSimSliderM" min="-500" max="500" step="5" value="0" oninput="onFutureSimInput('M')">
-                <span id="futureSimValueM" class="future-sim-chip">0 €/mese</span>
-                <button id="btnSimResetM" onclick="resetFutureSimulation()">↺</button>
-            </div>
-            <div class="future-sim-meta">
-                <span>📈 Investimenti</span>
-                <input type="number" id="futureInvestGrowthM" class="responsive-input" value="4" min="0" max="20" step="0.5" oninput="onFutureInvestGrowthInput()">
-                <span>%/anno</span>
+            <div class="future-sim-card" id="futureSimRow">
+                <div class="sim-value-row">
+                    <span id="futureSimValueM" class="future-sim-chip">0 €/mese</span>
+                    <button class="sim-reset" onclick="resetFutureSimulation()" title="Azzeera la simulazione">↻</button>
+                </div>
+                <input type="range" class="sim-range" id="futureSimSliderM" min="-500" max="500" step="10" value="0" oninput="onFutureSimInput('M')">
+                <div class="sim-growth-row">
+                    <span>📈 Investimenti</span>
+                    <input type="number" id="futureInvestGrowthM" class="responsive-input" value="4" min="0" max="20" step="0.5" oninput="onFutureInvestGrowthInput()">
+                    <span>%/anno</span>
+                </div>
             </div>
 
             <div id="futureMilestonesM" class="future-milestones"></div>

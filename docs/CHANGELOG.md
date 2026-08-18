@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Fix 4 bug visivi/funzionali pagina Previsioni
+
+### ✅ Completed Changes
+- **Slider Simulatore riparato**: niente più thumb bloccato a sinistra — nuovo blocco unico `.future-sim-card` con `.sim-range` custom cross-browser (`appearance:none`, track 6px `#e2e8f0`, thumb 22px `#3b82f6` con bordo bianco + `::-webkit-slider-thumb`/`::-moz-range-*`), `width:100%`. Range −500..+500, `step=10`, valore centrato sopra lo slider con Reset ↻ accanto; aggiornamento real-time chart+milestone invariato (`oninput`).
+- **Blocco Simulazione & Investimenti unificato**: slider + chip valore + ↻ + riga "📈 Crescita investimenti %/anno" in UN solo card (mobile e desktop); eliminata la riga separata `.future-sim-meta`. Id `futureSimRow` resta solo sul blocco mobile (desktop senza id → niente duplicati, `toggleFutureSimRow` corretto).
+- **Asse Y Chart.js pulito**: `suggestedMin:0`, `suggestedMax:max(1000, maxVal*1.15)`, `ticks.precision:0` (niente tick frazionari duplicati tipo "1 €"/"1 €") + callback intero `toLocaleString('it-IT') + ' €'` con guardia `r===0` (mai "-0 €"). Rimosso `fmtCompactE` (inutilizzato).
+- **Milestone a 0€**: `delta === 0` → testo `—` al posto di "0 €" ridondante; `.fm-value`/`.fm-delta` con `white-space:nowrap; line-height:1.25; overflow:hidden; text-overflow:ellipsis` → niente sovrapposizione/schiacciamento.
+- Verifica: `node --check` OK, brace-check CSS 866/866, grep zero residui (`future-sim-row`, `future-sim-meta`, `btnSimResetM`, `fmtCompactE`, `simulatedExpense`).
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-18] - Refactoring completo pagina Previsioni → dashboard proiezione finanziaria
 
 ### ✅ Completed Changes

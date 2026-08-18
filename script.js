@@ -5753,13 +5753,6 @@ function buildInvestSeries(base, growthPct) {
     return out;
 }
 
-function fmtCompactE(n) {
-    const abs = Math.abs(n || 0);
-    if (abs >= 1000000) return `${(n / 1000000).toFixed(1).replace('.', ',')}M €`;
-    if (abs >= 1000) return `${(n / 1000).toFixed(1).replace('.', ',')}k €`;
-    return `${Math.round(n).toLocaleString('it-IT')} €`;
-}
-
 function futureChartLabels() {
     const out = [];
     for (let t = 0; t <= 120; t++) {
@@ -5794,6 +5787,8 @@ function renderFutureChart() {
             borderWidth: 3, fill: true, tension: 0.35, pointRadius: 0
         });
     }
+    let maxVal = 0;
+    [baseSeries, simSeries, invSeries].forEach(s => { if (s) maxVal = Math.max(maxVal, ...s); });
     futureChart = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: { labels: futureChartLabels(), datasets },
@@ -5814,7 +5809,15 @@ function renderFutureChart() {
             },
             scales: {
                 x: { ticks: { autoSkip: true, maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } },
-                y: { ticks: { callback: (v) => fmtCompactE(v), font: { size: 9 } } }
+                y: {
+                    suggestedMin: 0,
+                    suggestedMax: Math.max(1000, Math.ceil(maxVal * 1.15)),
+                    ticks: {
+                        precision: 0,
+                        callback: (v) => { const r = Math.round(v); return (r === 0 ? '0' : r.toLocaleString('it-IT')) + ' €'; },
+                        font: { size: 9 }
+                    }
+                }
             }
         }
     });
@@ -5848,7 +5851,7 @@ function renderFutureMilestones(base) {
         return `<div class="future-milestone ${tone}">
             <span class="fm-label">${p.label}</span>
             <span class="fm-value">${fmtEPlain(v, 0)}</span>
-            <span class="fm-delta">${delta > 0 ? '+' : ''}${fmtEPlain(delta, 0)}</span>
+            <span class="fm-delta">${delta === 0 ? '—' : (delta > 0 ? '+' : '') + fmtEPlain(delta, 0)}</span>
         </div>`;
     }).join('');
     const elD = document.getElementById('futureMilestonesD');
@@ -5905,8 +5908,6 @@ function toggleFutureSimRow() {
     const row = document.getElementById('futureSimRow');
     if (!row) return;
     const hidden = row.classList.toggle('sim-hidden');
-    const meta = document.querySelector('.future-sim-meta');
-    if (meta) meta.style.display = hidden ? 'none' : '';
     const btn = document.querySelector('#futureActionHub [data-action="simula"]');
     if (btn) btn.textContent = hidden ? '⚡ Simula' : '⚡ Simulatore attivo';
 }

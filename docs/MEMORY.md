@@ -1,5 +1,11 @@
 # Project Core Memory
 
+## 🔧 FIX UI PREVISIONI — slider, asse Y, milestone (2026-08-18)
+- **Range slider**: MAI `input[type=range]` nativo dentro flex `flex:1;min-width:0` con solo `accent-color` (su WebKit/Android la traccia collassa e il thumb resta bloccato a sinistra). Usare classe `.sim-range` custom: `-webkit-appearance:none`, `display:block;width:100%`, `::-webkit-slider-runnable-track` (6px, `border-radius:999px`), `::-webkit-slider-thumb` (22px, `margin-top:-8px` = (track 6 - thumb 22)/2) + controparti `::-moz-*`. Id `futureSimRow` SOLO sul blocco mobile (desktop senza id — id duplicati rompono `toggleFutureSimRow`).
+- **Asse Y tick duplicati/frazionari** (`renderFutureChart`): `precision: 0` nei ticks + `suggestedMin: 0` + `suggestedMax: Math.max(1000, maxVal*1.15)`; callback `(v) => { const r = Math.round(v); return (r === 0 ? '0' : r.toLocaleString('it-IT')) + ' €'; }` — `Math.round(-0.4) === -0` → SEMPRE guardia `r === 0` prima di usare `toLocaleString` (altrimenti "-0 €").
+- **Milestone**: `delta === 0` → render `—` (mai doppio "0 €"); `.fm-value`/`.fm-delta` sempre `white-space:nowrap; line-height:1.25; overflow:hidden; text-overflow:ellipsis` (schede compatte).
+- **Blocco simulatore**: struttura fissa = `.future-sim-card` (column, gap 8, padding 10/12) > `.sim-value-row` (chip centrato + `.sim-reset` ↻ 44px) > `.sim-range` > `.sim-growth-row` (input 56px). Stesso markup desktop/mobile con suffisso id `M`.
+
 ## 🔮 DASHBOARD PREVISIONI — architettura proiezioni (2026-08-18)
 - **Tre linee separate nel grafico** (`renderFutureChart`, Chart.js): Patrimonio (base blu), Simulazione (verde #10b981 se slider>0 / rossa #ef4444 se <0, solo se ≠0), Investimenti (viola tratteggiata). MAI sommate tra loro — le due "crescita patrimonio" e "previsioni investimenti" sono proiezioni indipendenti.
 - **`buildProjectionSeries(base, simAmount)`**: 121 punti mensili (0→10 anni), `patrimonio[t] = Σ(risparmio medio + simAmount) + aggiustamenti`. Aggiustamenti: one-off → −amount nel mese; ricorrente già attiva (start ≤ oggi) → +amount DOPO `endMonth` (la rata è già dentro la media storica → alla fine torna libera, scalino visibile); ricorrente futura → −amount da start a end. `isPaid` esclusi.

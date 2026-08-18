@@ -945,8 +945,25 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
-.future-milestone .fm-value { font-size: 14px; font-weight: 800; color: #0f172a; }
-.future-milestone .fm-delta { font-size: 10px; font-weight: 600; }
+.future-milestone .fm-value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.future-milestone .fm-delta {
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
 .future-milestone.pos .fm-delta { color: #059669; }
 .future-milestone.neg .fm-delta { color: #dc2626; }
 .future-milestone.flat .fm-delta { color: #94a3b8; }
@@ -999,26 +1016,27 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         height: 100% !important;
     }
 
-    /* Simulatore bipolare compatto */
-    .future-sim-row {
+    /* Simulatore bipolare compatto — blocco unico (slider + valore + crescita) */
+    .future-sim-card {
         display: flex;
-        align-items: center;
-        gap: 10px;
+        flex-direction: column;
+        gap: 8px;
         flex-shrink: 0;
-        padding: 8px 10px;
+        padding: 10px 12px;
         border-radius: 14px;
         background: var(--panel);
         border: 1px solid #e2e8f0;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    .future-sim-row.sim-hidden { display: none; }
-    .future-sim-row input[type="range"] {
-        flex: 1;
-        min-width: 0;
-        height: 32px;
-        accent-color: #3b82f6;
+    .future-sim-card.sim-hidden { display: none; }
+    .sim-value-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 40px;
     }
-    .future-sim-row #btnSimResetM {
+    .sim-reset {
         flex-shrink: 0;
         min-width: 44px;
         min-height: 44px;
@@ -1026,19 +1044,63 @@ th { background-color: #f8fafc; color: var(--primary); font-weight: 700; font-si
         border-radius: 12px;
         background: #f1f5f9;
         color: #475569;
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
+        cursor: pointer;
+        line-height: 1;
     }
-    .future-sim-meta {
+    .sim-reset:active { transform: scale(0.94); }
+
+    /* Range custom cross-browser: la traccia occupa tutta la larghezza, il pallino scorre */
+    .sim-range {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 100%;
+        height: 24px;
+        margin: 0;
+        background: transparent;
+        outline: none;
+        cursor: pointer;
+    }
+    .sim-range::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 999px;
+        background: #e2e8f0;
+    }
+    .sim-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 22px;
+        height: 22px;
+        margin-top: -8px;
+        border-radius: 50%;
+        background: #3b82f6;
+        border: 3px solid #fff;
+        box-shadow: 0 1px 5px rgba(15, 23, 42, 0.35);
+    }
+    .sim-range::-moz-range-track {
+        height: 6px;
+        border-radius: 999px;
+        background: #e2e8f0;
+    }
+    .sim-range::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #3b82f6;
+        border: 3px solid #fff;
+        box-shadow: 0 1px 5px rgba(15, 23, 42, 0.35);
+    }
+    .sim-growth-row {
         display: flex;
         align-items: center;
         gap: 6px;
-        flex-shrink: 0;
         font-size: 10px;
         color: #64748b;
         padding: 0 2px;
     }
-    .future-sim-meta input {
+    .sim-growth-row input {
         width: 56px !important;
         padding: 4px 6px !important;
         font-size: 12px !important;
