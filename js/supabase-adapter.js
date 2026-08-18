@@ -21,6 +21,7 @@ function writeOutbox(tableName, items) {
     try { localStorage.setItem(outboxKey(tableName), JSON.stringify(items)); } catch (e) {}
 }
 window.readOutbox = readOutbox;
+window.writeOutbox = writeOutbox;
 window.flushOutbox = flushOutbox;
 function enqueueOutbox(tableName, item) {
     const queue = readOutbox(tableName);
@@ -71,12 +72,13 @@ class SupabaseTable {
         return this.primaryKey;
     }
 
-    _mergeOutbox(rows) {
+    _mergeOutbox(rows, filter) {
         const queue = readOutbox(this.tableName);
         if (!queue.length) return rows;
         const pk = this._pk();
         const byId = new Map(rows.map(r => [String(r[pk]), r]));
         for (const item of queue) {
+            if (filter && !filter(item)) continue;
             if (item && item.__update) {
                 const existing = byId.get(String(item.__id));
                 if (existing) Object.assign(existing, item.__changes);
@@ -110,7 +112,7 @@ class SupabaseTable {
         const map = {
             months: ['month_id', 'totalIncome', 'totalPlanned', 'totalActual', 'notes', 'iaNotes'],
             income: ['id', 'month', 'desc', 'amount'],
-            expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage', 'isShared', 'sharedPayer', 'settled'],
+            expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage', 'isShared', 'sharedPayer', 'settled', 'debtId'],
             categories: ['name', 'macro', 'icon'],
             annual_deadlines: ['id', 'month', 'day', 'desc', 'amount', 'isPaid'],
             savings_goals: ['name', 'targetAmount', 'importo_accumulato', 'createdAt'],
@@ -253,13 +255,13 @@ class SupabaseTable {
         return {
             equals: (val) => ({
                 toArray: async () => {
-                    if (!window.supabaseUser) return self._mergeOutbox([]);
+                    if (!window.supabaseUser) return self._mergeOutbox([], item => item != null && String(item[field]) === String(val));
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
                     const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').eq(f, val));
                     if (error) console.error(error);
-                    return self._mergeOutbox((data || []).map(self._mapOut.bind(self)));
+                    return self._mergeOutbox((data || []).map(self._mapOut.bind(self)), item => item != null && String(item[field]) === String(val));
                 },
                 primaryKeys: async () => {
                     if (!window.supabaseUser) return [];
@@ -273,13 +275,13 @@ class SupabaseTable {
             }),
             anyOf: (arr) => ({
                 toArray: async () => {
-                    if (!window.supabaseUser || !arr.length) return self._mergeOutbox([]);
+                    if (!window.supabaseUser || !arr.length) return self._mergeOutbox([], item => item != null && arr.some(a => String(item[field]) === String(a)));
                     let f = field;
                     if (self.tableName === 'months' && field === 'month') f = 'month_id';
                     
                     const { data, error } = await self._uidEq(supabaseClient.from(self.tableName).select('*').in(f, arr));
                     if (error) console.error(error);
-                    return self._mergeOutbox((data || []).map(self._mapOut.bind(self)));
+                    return self._mergeOutbox((data || []).map(self._mapOut.bind(self)), item => item != null && arr.some(a => String(item[field]) === String(a)));
                 }
             })
         };

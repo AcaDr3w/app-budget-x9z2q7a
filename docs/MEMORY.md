@@ -1,5 +1,12 @@
 # Project Core Memory
 
+## 🐛 FIX SPESE PREVISTE — dedupe debtId + outbox filtrata (2026-08-18)
+- **`debtId` DEVE esistere in `expenses`** (migration `20260818_expenses_debtId.sql` + allowlist adapter): `syncSharedDebts` deduplica su di esso — senza colonna, ogni apertura pagina ricreava le spese "Da saldare a X" → badge Spese Previste in crescita.
+- **`_mergeOutbox(rows, filter)`**: le letture filtrate (`where().equals/anyOf`) passano un filtro sul campo originale — l'outbox NON è più mergeato intero: spese di altri mesi (es. cloni ricorrenti salvati offline) non finiscono più in `currentData` del mese corrente.
+- **Cloni ricorrenti**: `saveRecurringClones` pusha in `currentData.expenses` SOLO se `clone.month === mese visualizzato` (partono da m+1 → mai). Il mese corrente è coperto dall'exp originale.
+- **Cleanup legacy**: a primo sync, spese `!debtId && desc startsWith 'Da saldare a' && planned>0 && !actual && !settled` del mese corrente → delete cloud + purge outbox (`window.writeOutbox` esposto) → ricreate una sola volta con debtId. `payExpense` ora ritrova `debtId` anche dopo reload.
+- **`window.writeOutbox`** esposto da supabase-adapter.js (accanto a `readOutbox`/`flushOutbox`) per purge selettivo dell'outbox.
+
 ## 📱 ANALISI mobile — STATO ATTUALE v6 (2026-08-14)
 - **Layout stretto**: `#history-tab.active` = flex column `gap:8px`, `padding:12px`, `min-height:0`, `overflow:hidden` (height 100% del `.container` = `calc(100dvh - header 60px - nav 71px)`). Blocchi: header+select, banner IA, **KPI griglia fissa 3×1**, **sezione centrale 50/50** (anomalie sopra, Risparmi sotto). Zero scroll verticale.
 - **KPI = GRIGLIA 3×1 FISSA**: `.kpi-swipe` = `display:grid; grid-template-columns:repeat(3,1fr); gap:8px` (NIENTE overflow-x/scroll-snap). `.kpi-card` `min-height:44px`, `padding:6px 8px`, flex column centrata; label 8px / value 12px / delta 9px con ellipsis. Card: Media Uscite `#trendAvg*`, Top Crescita `#trendTopCat*` (solo delta>1% altrimenti "Nessuna crescita"), Scostamento `#budgetDiff*` = Σactual−Σplanned da `db.months` (label "vs Previsto").

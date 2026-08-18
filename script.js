@@ -1017,7 +1017,7 @@ async function saveRecurringClones(originalExp, endMonthValue, groupId) {
             actual: 0,
             sharedPercentage: originalExp.sharedPercentage || 0
         };
-        currentData.expenses.push(clone);
+        if (clone.month === document.getElementById('currentMonth')?.value) currentData.expenses.push(clone);
         await db.expenses.put(clone);
     }
 }
@@ -1375,6 +1375,26 @@ async function syncSharedDebts() {
         const openForMe = debts.filter(d => d.status === 'open' && d.debtor_user_id === uid);
         if (openForMe.length) {
             const month = document.getElementById('currentMonth')?.value;
+            const all = await db.expenses.toArray();
+            // Cleanup legacy: duplicati materializzati prima della colonna debtId
+            // (senza debtId il dedupe falliva e ogni apertura ricreava le spese)
+            const legacyDupes = all.filter(e =>
+                !e.debtId && e.month === month &&
+                (e.desc || '').startsWith('Da saldare a') &&
+                e.planned > 0 && !e.actual && !e.settled
+            );
+            for (const e of legacyDupes) await db.expenses.delete(e.id);
+            currentData.expenses = currentData.expenses.filter(e =>
+                e.debtId || !(e.desc || '').startsWith('Da saldare a')
+            );
+            // Pulisce anche l'outbox da materializzazioni legacy (offline)
+            if (typeof window.writeOutbox === 'function') {
+                const legacyIds = new Set(legacyDupes.map(e => String(e.id)));
+                const queue = (window.readOutbox('expenses') || []).filter(item =>
+                    !legacyIds.has(String(item && item.id))
+                );
+                window.writeOutbox('expenses', queue);
+            }
             const existing = new Set((await db.expenses.toArray()).map(e => e.debtId ? String(e.debtId) : null).filter(Boolean));
             for (const d of openForMe) {
                 if (existing.has(String(d.id))) continue;

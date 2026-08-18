@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Fix Spese Previste: dedupe debtId reale, outbox filtrata per mese, cloni ricorrenti fuori dal mese corrente
+
+### ✅ Completed Changes
+- **Root cause crescita badge "Spese Previste" a ogni apertura**: `syncSharedDebts` deduplicava su `debtId`, ma la colonna NON esisteva in `expenses` (né in migration né in allowlist adapter → stripped in scrittura). Ogni run (startup + `online`) ricreava N spese "Da saldare a X" con `planned>0`.
+- **Migration `20260818_expenses_debtId.sql`**: `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS "debtId" TEXT` + `NOTIFY pgrst, 'reload schema'`.
+- **Adapter**: `debtId` aggiunto alla allowlist `expenses`; `_mergeOutbox(rows, filter)` ora supporta un filtro; `where().equals().toArray()` e `anyOf().toArray()` filtrano le righe outbox sul campo originale (anche nel ramo offline senza user) → le spese di altri mesi in outbox non inquinano più `currentData` del mese corrente.
+- **`syncSharedDebts`**: cleanup one-shot dei duplicati legacy del mese corrente (`!debtId && desc startsWith 'Da saldare a' && planned>0 && !actual && !settled`) → delete cloud + filtro su `currentData.expenses` + purge outbox (esposto `window.writeOutbox`); i debiti aperti vengono poi ricreati UNA volta con `debtId` persistente. Ora anche `payExpense` ritrova `debtId` dopo reload e salda il debito.
+- **`saveRecurringClones`**: `currentData.expenses.push(clone)` solo se `clone.month === mese visualizzato` (i cloni partono da m+1 → mai più mesi futuri conteggiati nel badge dopo salvataggio ricorrente).
+- Verifica: `node --check` OK su script.js e supabase-adapter.js.
+
+### ⚙ Status: COMPLETATO
+
 ## [2026-08-14] - Analisi v6: KPI griglia 3x1 fissa, sezione centrale 50/50 (anomalie compatte + card Risparmi&Investimenti), rimossa barra Fisse/Variabili
 
 ### ✅ Completed Changes
