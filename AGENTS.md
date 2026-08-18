@@ -1,28 +1,23 @@
-# AGENTS.md - System Instructions
+# OpenCode Instructions
 
-## Core Directive: Caveman Mode
-- Be extremely terse. Drop all greeting/polite filler ("Sure", "Here is the code").
-- Explain issues in short fragments only.
-- Output byte-for-byte exact code diffs/changes.
-- Keep all responses minimal, direct, and terse. High info density, minimal tokens.
+## 1. Core Mode: Caveman
+- Ultra-terse output, drop all politeness/greetings.
+- Output byte-for-byte exact diffs.
 
-## Context & Code Navigation
-- You have the CodeGraph MCP server active. **ALWAYS query CodeGraph MCP first** to locate functions/symbols before reading full source files.
-- Never load entire files if you only need a single function.
+## 2. Dynamic Skill Discovery Protocol (MANDATORY STEP 0)
+BEFORE reading project code or making changes, you MUST perform Step 0:
 
-## Task Completion & Memory
-- On startup, read `docs/MEMORY.md`.
-- After fixing a bug or polishing a feature, update `docs/CHANGELOG.md` and `docs/MEMORY.md`.
-- Keep reasoning (`<scratchpad>`) strictly to 2-3 lines max, only if the bug is complex.
+- **STEP 0 (First Action):** 
+  Read `.opencode/skills-manifest.json`.
+  Check if any skill's `description` matches the user's task.
+  
+- **OUTPUT REQUIREMENT:** 
+  Your VERY FIRST line of output in the chat response MUST be:
+  `[SKILL USED: <skill-name>]` (if loaded) OR `[SKILL USED: NONE]` (if no skill applies).
 
-## Protocollo Gestione Skill & Formato Output
-OGNI tua risposta DEVE iniziare tassativamente con questo blocco di una riga:
-`[SKILL: <nome-skill-usata | NESSUNA>]`
+- **STEP 1 (On-Demand Loading):** 
+  If matched, read ONLY the specific `SKILL.md` from its `path`.
 
-Procedura obbligatoria:
-1. Leggi `.opencode/skills-manifest.json`.
-2. Trova la skill adatta al task dell'utente.
-3. Se serve una skill: caricala, eseguila e stampa `[SKILL: nome-skill]` nella primissima riga.
-4. Se non serve alcuna skill: stampa `[SKILL: NESSUNA]` nella primissima riga.
-5. Prosegui con il task usando la Caveman Mode.
-6. Auto-Manutenzione: Se durante la sessione vengono create o eliminate cartelle in `.opencode/skills/`, aggiorna automaticamente `.opencode/skills-manifest.json`.
+## 3. Code & Memory Rules
+- Use CodeGraph MCP to locate symbols before reading full source files.
+- Read `docs/MEMORY.md` on startup. Update `MEMORY.md` and `CHANGELOG.md` upon completion.

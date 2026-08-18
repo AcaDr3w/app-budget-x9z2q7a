@@ -1,5 +1,21 @@
 # Project Core Memory
 
+## 🗂 TABLIST A11Y + TOUCH TARGET (2026-08-18)
+- **`setupTablistA11y()`** (script.js, DOMContentLoaded): su ogni `[role="tablist"]` imposta `role="tab"` sui button, sincronizza `aria-selected` con `.active` (click + apertura), navigazione Frecce + Home/End con attivazione automatica (`next.click()`). Le `.condivise-tabs` hanno ora `role="tablist"` + `aria-label="Spese condivise"` (le altre tablist già presenti in HTML).
+- **`.popup-close`**: hit-area 44×44 via `::before { inset:-6px }` — visuale 32px invariata. NON togliere il ::before.
+- **`theme-color` = `#ffffff`** (header/bottom-nav mobili bianchi). `<title>` = "Bilancio Pro" senza emoji.
+
+## ♿ ACCESSIBILITA' MODAL/SHEET — setupModalAccessibility (2026-08-18)
+- **`setupModalAccessibility()`** (script.js, chiamata nel DOMContentLoaded iniziale): Esc chiude popup/sheet attivi, focus trap Tab/Shift+Tab, focus → primo focusable all'apertura, ripristino alla chiusura.
+- **Meccanica**: MutationObserver su `class` di tutto il body; selettore overlay attivo = `.popup-overlay.active, #sheetOverlay.open, #incomeSheetOverlay.open, #futureSheetOverlay.open`; `focusScope()` per i sheet risolve il fratello tramite `SHEET_MAP` (overlay→sheet: `sheetOverlay`→`bottomSheet`, ecc. — il focus trap agisce sugli elementi DENTRO lo sheet, gli overlay sono vuoti). Flag `data-a11yFocused` su ogni overlay; ripulito su TUTTI i contenitori quando nulla è aperto (mai lasciare il flag su un overlay chiuso o il focus non parte alla riapertura).
+- **Esc**: popup → click sul `.popup-close` interno; sheet → `click()` sull'overlay (tutti e 3 gli overlay hanno click-to-close bindato).
+- **`#monthSelectorPill` è ora un `<button>` VERO** (era `div[role=button]` con 2 button annidati — invalido). Le frecce ‹ › vivono FUORI nel `.month-selector-group` (flex 1 1 100%, gap 6). Pill = `flex:1; margin-bottom:0` nel gruppo (larghezza invariata su mobile). `border:none; font-family:inherit` obbligatori sui button custom.
+- **Auth modal**: stili inline → classi `.auth-*`; `display:none` in CSS, JS toggla `style.display='flex'|'none'` (supabase-adapter.js) — NON toccare il toggle.
+- **html2pdf è lazy**: rimosso dal `<head>`; `ensureHtml2Pdf()` inietta il bundle on-demand in `exportPDF()`. supabase-js e chart.js hanno `defer`.
+- **reduced-motion** (style.css, fine file): marquee fermo, transizioni annullate SOLO per movimento spaziale (anomaly-track, sheet/overlay/popup, sheet-slider, dragging). Niente kill globale delle transizioni.
+- **`.box-sostenuto` = `rgba(185,28,28,.96)`** (bianco ≈5.9:1, WCAG AA). Vecchio rosso #e74c3c NON ripristinare.
+- **Classi estratte da inline** (riusare, non re-inlineare): `.btn-violet` (gradient 8b5cf6→6366f1), `.record-card-{violet,gold,red}`, `.invest-type-grid`, `.danger-zone-box/-text/-title/.btn-danger-full`, `.ia-future-card`, `.ia-modal-title`, `.popup-panel > h3` (margine 0 0 8px sui direct-child), `.noscript-banner`, `.month-selector-group`.
+
 ## 🔧 FIX LAYOUT PREVISIONI — 100vh + sheet 3 modalità + categoria (2026-08-18)
 - **Grafico = 35-40% vh, MAI schiacciato**: `.future-chart-card` mobile = `flex:1 1 36%; min-height:140px; max-height:40vh` (min-height salva il canvas su schermi corti); unico elemento flessibile del dashboard, tutto il resto `flex-shrink:0`.
 - **Asse Y**: `maxTicksLimit:4` + `precision:0` (griglia max 3-4 righe). NON aggiungere `stepSize` fisso (rompe il ridimensionamento con valori grandi).

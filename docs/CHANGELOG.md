@@ -1,5 +1,33 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Audit round 2: adapt + harden tablist + colorize + polish
+
+### ✅ Completed Changes
+- **adapt**: `.popup-close` hit-area 44×44px via `::before` (`inset:-6px`) — visuale invariata 32px, area tocco estesa (WCAG 2.5.8 / Apple 44px).
+- **harden**: `setupTablistA11y()` in script.js — `role="tab"` su tutti i button dei `[role="tablist"]`, `aria-selected` sincronizzato con la classe `.active` (click + apertura), navigazione frecce ←/→/↑/↓ + Home/End con attivazione automatica. `role="tablist"` + `aria-label="Spese condivise"` aggiunti alle `.condivise-tabs` (mancanti).
+- **colorize**: `theme-color` `#1e293b` → `#ffffff` (header e bottom-nav mobili sono bianchi).
+- **polish**: `<title>` da "📊 EcoBilancio Digitale" → "Bilancio Pro" (allineato al brand, niente emoji nel titolo).
+
+### ⚙ Status: COMPLETATO — `node --check` OK; detector: solo flat-type-hierarchy (eccezione documentata).
+
+## [2026-08-18] - Audit impeccabile: harden + animate + colorize + optimize + layout + typeset + polish
+
+### ✅ Completed Changes
+- **harden (a11y)**:
+  - `setupModalAccessibility()` in script.js: Esc chiude popup/sheet attivi (click sul `.popup-close` o sull'overlay), focus trap Tab/Shift+Tab nello scope del popup/sheet, focus spostato sul primo focusable all'apertura e ripristinato alla chiusura (MutationObserver su classi, flag `data-a11yFocused` ripulito su tutti i contenitori).
+  - Auth modal: input con `<label>` reali + `autocomplete` + `aria-required`; modal con `role=dialog aria-modal aria-labelledby`; stili inline → classi `.auth-*` in CSS.
+  - `role="button"` senza `tabindex` su 6 elementi (hero-mini-pill ×3, summary-box ×3) → `tabindex="0"` + handler Enter/Space.
+  - `aria-label="Chiudi popup"` sui pulsanti "×" mancanti (search/IA mese/IA storico/archive/custom range/invest add/invest asset/condivise).
+  - Interattivi annidati risolti: `#monthSelectorPill` da `div[role=button]` a `<button>` reale; frecce ‹ › spostate fuori nel nuovo `.month-selector-group`; CSS: `border:none; font-family:inherit` sul pill.
+  - `<noscript>` banner con fallback visibile se JS disabilitato.
+- **animate**: blocco `@media (prefers-reduced-motion: reduce)` in style.css — marquee `.ai-insight-track` fermo (statico), transizioni annullate solo per movimento spaziale (anomaly-track, sheet/overlay/popup, sheet-slider, dragging). Niente kill globale: hover/feedback conservati.
+- **colorize**: `.box-sostenuto` da `rgba(231,76,60,.96)` → `rgba(185,28,28,.96)` (#b91c1c, bianco ≈5.9:1, era ≈3.6:1 — WCAG AA 4.5:1).
+- **optimize**: `defer` su supabase-js e chart.js; html2pdf rimosso dal `<head>` → `ensureHtml2Pdf()` lazy load in `exportPDF()` (script iniettato on-demand).
+- **layout**: stili inline estratti in classi CSS — `.btn-violet` (gradient condivise/invest/PDF), `.record-card-{violet,gold,red}`, `.invest-type-grid`, `.danger-zone-box/.danger-zone-text/.danger-title/.btn-danger-full`, `.ia-future-card`, `.ia-modal-title`, `.popup-panel > h3` (margine unico direct-child), `.noscript-banner`, `.auth-*`.
+- **typeset**: h1 desktop nella `.top-nav-brand` (`.top-nav-brand h1`), scala corretta: `.pane-hint` 10→11px, `.popup-legend`/`.popup-note` 11→12px.
+
+### ⚙ Status: COMPLETATO — verifica `node --check script.js` OK; detector: solo warning pre-esistenti (side-tab/layout-transition) + flat-type-hierarchy (dashboard densa, eccezione documentata). Rilanciare `$impeccable audit` per nuovo punteggio.
+
 ## [2026-08-18] - Refactoring layout Previsioni: 100vh + sheet 3 modalità + categoria
 
 ### ✅ Completed Changes

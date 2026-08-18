@@ -398,6 +398,97 @@ function setupMonthNavigation() {
     if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(1); });
 }
 
+// =====================================================================
+// ACCESSIBILITA' MODAL/SHEET: Esc, focus trap, ripristino focus
+// =====================================================================
+function setupModalAccessibility() {
+    let lastFocus = null;
+    const SHEET_MAP = { sheetOverlay: 'bottomSheet', incomeSheetOverlay: 'incomeBottomSheet', futureSheetOverlay: 'futureBottomSheet' };
+
+    function currentOverlay() {
+        return document.querySelector('.popup-overlay.active, #sheetOverlay.open, #incomeSheetOverlay.open, #futureSheetOverlay.open');
+    }
+
+    function focusScope() {
+        const overlay = currentOverlay();
+        if (!overlay) return document.querySelector('#bottomSheet.open, #incomeBottomSheet.open, #futureBottomSheet.open');
+        if (overlay.classList.contains('popup-overlay')) return overlay;
+        const sheetId = SHEET_MAP[overlay.id];
+        return sheetId ? document.getElementById(sheetId) : overlay;
+    }
+
+    function firstFocusable(root) {
+        if (!root) return null;
+        const el = root.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        return el;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const open = currentOverlay();
+        if (!open) return;
+        e.preventDefault();
+        if (open.classList.contains('popup-overlay')) {
+            const btn = open.querySelector('.popup-close');
+            if (btn) btn.click();
+        } else {
+            open.click();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        const scope = focusScope();
+        if (!scope) return;
+        const focusables = scope.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    const mo = new MutationObserver(() => {
+        const open = currentOverlay();
+        if (open) {
+            if (open.dataset.a11yFocused === '1') return;
+            open.dataset.a11yFocused = '1';
+            const target = firstFocusable(focusScope());
+            if (target) { lastFocus = document.activeElement; target.focus(); }
+        } else {
+            document.querySelectorAll('.popup-overlay, #sheetOverlay, #incomeSheetOverlay, #futureSheetOverlay, #bottomSheet, #incomeBottomSheet, #futureBottomSheet')
+                .forEach(el => delete el.dataset.a11yFocused);
+            if (lastFocus && lastFocus.focus && document.activeElement === document.body) lastFocus.focus();
+            lastFocus = null;
+        }
+    });
+    mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+}
+
+// =====================================================================
+// TABLIST A11Y: frecce + Home/End + aria-selected
+// =====================================================================
+function setupTablistA11y() {
+    document.querySelectorAll('[role="tablist"]').forEach(tablist => {
+        const tabs = Array.from(tablist.querySelectorAll('button'));
+        if (!tabs.length) return;
+        tabs.forEach(t => t.setAttribute('role', 'tab'));
+        const sync = () => tabs.forEach(t => t.setAttribute('aria-selected', t.classList.contains('active') ? 'true' : 'false'));
+        sync();
+        tablist.addEventListener('click', sync);
+        tablist.addEventListener('keydown', (e) => {
+            const idx = tabs.indexOf(document.activeElement);
+            if (idx === -1) return;
+            let next = null;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(idx + 1) % tabs.length];
+            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(idx - 1 + tabs.length) % tabs.length];
+            else if (e.key === 'Home') next = tabs[0];
+            else if (e.key === 'End') next = tabs[tabs.length - 1];
+            if (next) { e.preventDefault(); next.focus(); next.click(); }
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const monthInputEl = document.getElementById('currentMonth');
     if (monthInputEl) {
@@ -405,6 +496,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     setupMonthNavigation();
     setupAnalysisPeriodSelector();
+    setupModalAccessibility();
+    setupTablistA11y();
 });
 
 // =====================================================================
@@ -6363,7 +6456,19 @@ async function runFuturePredictionIA() {
 // =====================================================================
 // EXPORT PDF - FIX DEFINITIVO
 // =====================================================================
+function ensureHtml2Pdf() {
+    if (window.html2pdf) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Impossibile caricare la libreria PDF'));
+        document.head.appendChild(s);
+    });
+}
+
 async function exportPDF() {
+    await ensureHtml2Pdf();
     const month = document.getElementById('currentMonth').value;
     let fileName = prompt("Nome del file PDF:", `Report_${month}`);
     if (!fileName) return;
