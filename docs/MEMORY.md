@@ -1,5 +1,12 @@
 # Project Core Memory
 
+## 🐛 RLS SENZA POLICY = dati mai sincronizzati (2026-08-18)
+- **Sintomo**: menu Investimenti (e salvadanai) non salvano/sincronizzano, `put` fallisce, dati solo in outbox locale.
+- **Causa**: le tabelle nuove (`investments`, `investment_movements`, `savings_goals`, `settings`) avevano RLS **ENABLED ma ZERO policy** (abilitata manualmente sul DB, non dalle migration del repo — quelle legacy `months`/`expenses` hanno le policy). RLS senza policy = DENY su tutto, anche per l'utente autenticato.
+- **Fix**: migration `20260818_investments_rls.sql` — `ENABLE ROW LEVEL SECURITY` + policy `FOR ALL USING (user_id::text = auth.uid()::text) WITH CHECK (...)` + `NOTIFY pgrst`.
+- **Regola**: OGNI nuova tabella Supabase = migration con RLS + policy esplicite (cast `::text` su entrambi i lati: user_id è TEXT, auth.uid() è UUID). MAI lasciare RLS senza policy.
+- **Verifica remota read-only** (proxy `http://proxy.interno.it:8080`, chiave dal repo): `curl` GET su `https://bkviudppelulwufzhrat.supabase.co/rest/v1/<tabella>?select=*&limit=2` — 400 = colonna/relazione mancante; 200 `[]` = RLS o tabella vuota. Tabella con dati noti (es. `months`) → `[]` = RLS attiva.
+
 ## 🐛 FIX MENU INVESTIMENTI — capitale, sync Drive, salvadanai, delete (2026-08-18)
 - **`calcInvestStats(asset, movements)`**: `currentValue = initialCapital + Σdeposit − Σwithdrawal + Σprofit − Σexpense`; `totalInvested = initialCapital + Σdeposit − Σwithdrawal`; `totalProfits = Σprofit − Σexpense`; `roi = totalProfits/totalInvested*100`. MAI ignorare `initialCapital` nel valore attuale.
 - **`fmtEPlain(n,0)` include già " €"** — NON concatenare `+ ' €'` (doppio € negli hero invest).

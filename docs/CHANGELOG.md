@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-08-18] - Fix sync Investimenti: RLS attiva senza policy sulle tabelle nuove → migration 20260818_investments_rls.sql
+
+### ✅ Completed Changes
+- **Root cause "non salva/sincronizza" menu Investimenti**: le tabelle `investments`, `investment_movements`, `savings_goals`, `settings` esistono (migration applicate, colonne verificate via API) ma l'RLS era abilitata **senza policy** → ogni INSERT/UPDATE DENIED → `put` fallisce → dati solo in outbox locale. Verificato con GET anonimo: `months`/`expenses` (RLS+policy) e le 4 nuove danno tutte `[]`, ma le legacy funzionano in app → le nuove non hanno policy.
+- **Migration `20260818_investments_rls.sql`**: `ENABLE ROW LEVEL SECURITY` + policy `FOR ALL USING (user_id::text = auth.uid()::text) WITH CHECK (...)` sulle 4 tabelle + `NOTIFY pgrst, 'reload schema'` (cast `::text` obbligatorio: user_id TEXT vs auth.uid() UUID).
+- **Da applicare manualmente** sul progetto Supabase `bkviudppelulwufzhrat` (SQL Editor o `supabase db push`). Dopo il reload l'app fa `flushOutbox()` automaticamente (evento auth) → l'outbox accumulato viene sincronizzato.
+
+### ⚙ Status: COMPLETATO (migration da applicare manualmente)
+
 ## [2026-08-18] - Fix menu Investimenti: capitale iniziale, sync Drive, salvadanai, delete asset/movimenti
 
 ### ✅ Completed Changes
