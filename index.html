@@ -10,10 +10,10 @@
     <meta name="description" content="Dashboard di gestione finanziaria personale con IA, scadenziario e proiezioni a lungo termine">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-512.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-512.png">
     <title>Bilancio Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
+        <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=1.5">
@@ -48,15 +48,15 @@
 
 <!-- TOP NAVBAR (DESKTOP ONLY) -->
 <nav class="top-nav hide-mobile" aria-label="Navigazione principale">
-    <a class="top-nav-brand" href="#" onclick="switchTab('current-month-tab')">
-        <i class="fas fa-chart-line"></i> <h1>Bilancio Pro</h1>
-    </a>
+    <button type="button" class="top-nav-brand" onclick="switchTab('current-month-tab')">
+        <i class="fas fa-chart-line" aria-hidden="true"></i> <span class="brand-title">Bilancio Pro</span>
+    </button>
     <div class="top-nav-links">
-        <a href="#" class="top-nav-link active" data-tab="current-month-tab" onclick="switchTab('current-month-tab')">Mese</a>
-        <a href="#" class="top-nav-link" data-tab="history-tab" onclick="switchTab('history-tab')">Analisi</a>
-        <a href="#" class="top-nav-link" data-tab="investimenti-tab" onclick="switchTab('investimenti-tab')">Investimenti</a>
-        <a href="#" class="top-nav-link" data-tab="future-tab" onclick="switchTab('future-tab')">Previsioni</a>
-        <a href="#" class="top-nav-link" data-tab="settings-tab" onclick="switchTab('settings-tab')">Impostazioni</a>
+        <button type="button" class="top-nav-link active" data-tab="current-month-tab" onclick="switchTab('current-month-tab')">Mese</button>
+        <button type="button" class="top-nav-link" data-tab="history-tab" onclick="switchTab('history-tab')">Analisi</button>
+        <button type="button" class="top-nav-link" data-tab="investimenti-tab" onclick="switchTab('investimenti-tab')">Investimenti</button>
+        <button type="button" class="top-nav-link" data-tab="future-tab" onclick="switchTab('future-tab')">Previsioni</button>
+        <button type="button" class="top-nav-link" data-tab="settings-tab" onclick="switchTab('settings-tab')">Impostazioni</button>
     </div>
 </nav>
 
@@ -68,34 +68,36 @@
 
 <!-- BOTTOM NAVIGATION (MOBILE) -->
 <nav class="bottom-nav" id="bottomNav">
-    <a href="#" class="nav-item active" id="navMese" onclick="switchTab('current-month-tab', document.getElementById('tab-btn-current'))">
-        <div class="nav-icon-wrapper"><i class="fas fa-calendar-day"></i></div>
+    <button type="button" class="nav-item active" id="navMese" onclick="switchTab('current-month-tab')">
+        <div class="nav-icon-wrapper"><i class="fas fa-calendar-day" aria-hidden="true"></i></div>
         <span class="nav-label">Mese</span>
-    </a>
-    <a href="#" class="nav-item" id="navAnalisi" onclick="switchTab('history-tab', document.getElementById('tab-btn-history'))">
-        <div class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></div>
+    </button>
+    <button type="button" class="nav-item" id="navAnalisi" onclick="switchTab('history-tab')">
+        <div class="nav-icon-wrapper"><i class="fas fa-chart-line" aria-hidden="true"></i></div>
         <span class="nav-label">Analisi</span>
-    </a>
-    <a href="#" class="nav-item" id="navInvestimenti" onclick="switchTab('investimenti-tab', document.getElementById('tab-btn-investimenti'))">
-        <div class="nav-icon-wrapper"><i class="fas fa-gem"></i></div>
+    </button>
+    <button type="button" class="nav-item" id="navInvestimenti" onclick="switchTab('investimenti-tab')">
+        <div class="nav-icon-wrapper"><i class="fas fa-gem" aria-hidden="true"></i></div>
         <span class="nav-label">Investimenti</span>
-    </a>
-    <a href="#" class="nav-item" id="navPrevisioni" onclick="switchTab('future-tab', document.getElementById('tab-btn-future'))">
-        <div class="nav-icon-wrapper"><i class="fas fa-arrow-trend-up"></i></div>
+    </button>
+    <button type="button" class="nav-item" id="navPrevisioni" onclick="switchTab('future-tab')">
+        <div class="nav-icon-wrapper"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></div>
         <span class="nav-label">Previsioni</span>
-    </a>
-    <a href="#" class="nav-item" id="navImpostazioni" onclick="switchTab('settings-tab', document.getElementById('tab-btn-settings'))">
-        <div class="nav-icon-wrapper"><i class="fas fa-cog"></i></div>
+    </button>
+    <button type="button" class="nav-item" id="navImpostazioni" onclick="switchTab('settings-tab')">
+        <div class="nav-icon-wrapper"><i class="fas fa-cog" aria-hidden="true"></i></div>
         <span class="nav-label">Impostazioni</span>
-    </a>
+    </button>
 </nav>
+
+<main id="appMain">
 
 <div class="container">
 
     <!-- RECOVERY ALERT -->
     <div id="recoveryAlertBox" class="recovery-alert-box">
         <p>⚠️ Database vuoto o nuovo dispositivo rilevato.</p>
-        <span style="display:block; margin-bottom:10px; font-size:12px; color:#7f1d1d;">Carica un backup .json per ripristinare i dati, oppure inizia ad inserire le tue spese.</span>
+        <span class="recovery-alert-sub">Carica un backup .json per ripristinare i dati, oppure inizia ad inserire le tue spese.</span>
         <button class="btn-recovery-trigger" onclick="document.getElementById('importFileInput').click()">📥 Carica Backup (.json)</button>
     </div>
 
@@ -107,7 +109,7 @@
                   <h2 class="hero-title">Riepilogo</h2>
                   <button type="button" class="hero-month-pill" id="heroMonthPill" aria-label="Seleziona mese">
                       <span id="heroMonthDisplay"></span>
-                      <i class="fas fa-chevron-down"></i>
+                      <i class="fas fa-chevron-down" aria-hidden="true"></i>
                   </button>
               </div>
               <div class="hero-insight-pill" id="heroInsightPill" role="button" tabindex="0" aria-label="Insight I.A. giornaliero, tocca per il prossimo">
@@ -136,12 +138,12 @@
                   </div>
 
                   <div class="month-selector-group">
-                      <button type="button" class="month-arrow hide-mobile" id="btnPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left"></i></button>
+                      <button type="button" class="month-arrow hide-mobile" id="btnPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                       <button type="button" class="month-selector-pill" id="monthSelectorPill" aria-label="Seleziona mese">
                           <span id="currentMonthDisplay"></span>
-                          <i class="fas fa-chevron-down"></i>
+                          <i class="fas fa-chevron-down" aria-hidden="true"></i>
                       </button>
-                      <button type="button" class="month-arrow hide-mobile" id="btnNextMonth" aria-label="Mese successivo"><i class="fas fa-chevron-right"></i></button>
+                      <button type="button" class="month-arrow hide-mobile" id="btnNextMonth" aria-label="Mese successivo"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
                   </div>
 
                   <div class="kpi-cluster kpi-right">
@@ -157,7 +159,7 @@
                         <h3 class="card-title">Casa e Utenze</h3>
                     </div>
                     <div class="card-body">
-                        <i class="fas fa-home card-hero-icon"></i>
+                        <i class="fas fa-home card-hero-icon" aria-hidden="true"></i>
                         <div class="card-glass">
                             <div class="card-micro-grid" id="microGrid-casa_utenze"></div>
                         </div>
@@ -173,7 +175,7 @@
                         <h3 class="card-title">Veicoli</h3>
                     </div>
                     <div class="card-body">
-                        <i class="fas fa-car card-hero-icon"></i>
+                        <i class="fas fa-car card-hero-icon" aria-hidden="true"></i>
                         <div class="card-glass">
                             <div class="card-micro-grid" id="microGrid-veicoli"></div>
                         </div>
@@ -189,7 +191,7 @@
                         <h3 class="card-title">Spese e Svago</h3>
                     </div>
                     <div class="card-body">
-                        <i class="fas fa-shopping-cart card-hero-icon"></i>
+                        <i class="fas fa-shopping-cart card-hero-icon" aria-hidden="true"></i>
                         <div class="card-glass">
                             <div class="card-micro-grid" id="microGrid-spese_svago"></div>
                         </div>
@@ -227,11 +229,11 @@
         </div>
 
         <!-- POPUP RICERCA -->
-        <div id="searchPopup" class="popup-overlay" onclick="closeSearchPopup(event)">
+        <div id="searchPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="searchPopupTitle" onclick="closeSearchPopup(event)">
             <div class="popup-panel" onclick="event.stopPropagation()">
                 <button class="popup-close" onclick="closeSearchPopup()" aria-label="Chiudi popup">×</button>
-                <h3>🔍 Ricerca Spese</h3>
-                <div class="popup-body" style="gap:8px;display:flex;flex-direction:column;">
+                <h3 id="searchPopupTitle">🔍 Ricerca Spese</h3>
+                <div class="popup-body popup-body-stack popup-gap-sm">
                     <input type="text" id="searchPopupInput" class="sheet-input" placeholder="Cerca per nome, nota o categoria..." oninput="filterSearchResults()">
                     <select id="searchPeriodSelect" class="sheet-input" onchange="toggleSearchCustomMonth()">
                         <option value="current">Mese corrente</option>
@@ -245,11 +247,11 @@
         </div>
 
         <!-- POPUP I.A. MESE -->
-        <div id="iaMonthPopup" class="popup-overlay" onclick="closeIaMonthPopup(event)">
+        <div id="iaMonthPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="iaMonthPopupTitle" onclick="closeIaMonthPopup(event)">
             <div class="popup-panel" onclick="event.stopPropagation()">
                 <button class="popup-close" onclick="closeIaMonthPopup()" aria-label="Chiudi popup">×</button>
-                <h3>🤖 Analisi I.A. del Mese</h3>
-                <div class="popup-body" style="gap:10px;display:flex;flex-direction:column;">
+                <h3 id="iaMonthPopupTitle">🤖 Analisi I.A. del Mese</h3>
+                <div class="popup-body popup-body-stack">
                     <p style="font-size:12px;color:#475569;margin:0;">Analisi mirata sulle spese e entrate del mese corrente.</p>
                     <button class="btn-ia" id="btnIaMonthAnalysis" onclick="runIaMonthAnalysis()" style="margin:0;">✨ Genera Analisi Mese</button>
                     <div id="iaMonthResponse" class="ia-response-box"></div>
@@ -277,14 +279,14 @@
                                 <summary>⚙️ Opzioni avanzate</summary>
                                 <div class="hub-ia-grid">
                                     <div class="input-group">
-                                        <label>Motore</label>
+                                        <label for="ai-engine-select">Motore</label>
                                         <select id="ai-engine-select">
                                             <option value="openrouter" selected>OpenRouter (Default)</option>
                                             <option value="ollama">Ollama</option>
                                         </select>
                                     </div>
                                     <div class="input-group">
-                                        <label>Modello OpenRouter</label>
+                                        <label for="openrouter-model-select">Modello OpenRouter</label>
                                         <select id="openrouter-model-select">
                                             <option value="random">🎲 Casuale (Free)</option>
                                             <option value="google/gemini-2.5-flash:free">google/gemini-2.5-flash:free</option>
@@ -298,17 +300,17 @@
                         </div>
                     </div>
                     <div class="ia-notes-pane" id="iaPaneNote">
-                        <div class="input-group"><label>Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..." onchange="saveNotes()"></textarea></div>
-                        <div class="input-group"><label>Note I.A.</label><textarea id="iaNotes" class="notes-textarea notes-ia-textarea" readonly placeholder="Qui verrà salvato l'ultimo resoconto IA..."></textarea></div>
+                        <div class="input-group"><label for="userNotes">Note personali</label><textarea id="userNotes" class="notes-textarea" placeholder="Scrivi qui le tue note..." onchange="saveNotes()"></textarea></div>
+                        <div class="input-group"><label for="iaNotes">Note I.A.</label><textarea id="iaNotes" class="notes-textarea notes-ia-textarea" readonly placeholder="Qui verrà salvato l'ultimo resoconto IA..."></textarea></div>
                     </div>
                     <div class="ia-notes-pane" id="iaPaneCharts">
                         <div class="ia-chart-block">
                             <div class="pane-title">📈 Stato Budget</div>
-                            <div class="chart-container ia-mini-chart"><canvas id="budgetChart"></canvas></div>
+                            <div class="chart-container ia-mini-chart"><canvas id="budgetChart" role="img" aria-label="Grafico stato budget del mese"></canvas></div>
                         </div>
                         <div class="ia-chart-block">
                             <div class="pane-title">🍕 Speso per Categoria</div>
-                            <div class="chart-container ia-mini-chart"><canvas id="categoryChart"></canvas></div>
+                            <div class="chart-container ia-mini-chart"><canvas id="categoryChart" role="img" aria-label="Grafico speso per categoria"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -336,25 +338,25 @@
 
                     <div class="form-pane active" id="formPaneEntrata">
                         <div class="grid-inputs">
-                            <div class="input-group"><label>Data</label><input type="date" id="incDate"></div>
-                            <div class="input-group"><label>Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
+                            <div class="input-group"><label for="incDate">Data</label><input type="date" id="incDate"></div>
+                            <div class="input-group"><label for="incDesc">Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
                         </div>
-                        <div class="input-group"><label>Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
+                        <div class="input-group"><label for="incAmount">Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
                         <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
                     </div>
 
                     <div class="form-pane" id="formPaneSpesa">
                         <div class="grid-inputs">
-                            <div class="input-group"><label>Data</label><input type="date" id="expDate"></div>
-                            <div class="input-group"><label>Categoria</label><select id="expenseCategory"></select></div>
+                            <div class="input-group"><label for="expDate">Data</label><input type="date" id="expDate"></div>
+                            <div class="input-group"><label for="expenseCategory">Categoria</label><select id="expenseCategory"></select></div>
                         </div>
-                        <div class="input-group"><label>Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
+                        <div class="input-group"><label for="expDesc">Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
                         <div class="grid-inputs">
-                            <div class="input-group"><label>Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
-                            <div class="input-group"><label>Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
+                            <div class="input-group"><label for="expPlanned">Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
+                            <div class="input-group"><label for="expActual">Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
                         </div>
                         <div class="input-group">
-                            <label>Quota a tuo carico % (opzionale)</label>
+                            <label for="expShared">Quota a tuo carico % (opzionale)</label>
                             <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
                         </div>
                         <div class="recurring-toggle-wrapper">
@@ -447,7 +449,7 @@
 
                 <!-- IA + NOTE QUICK CARD -->
                 <div class="card comp-card hide-mobile ia-quick-card">
-                    <button type="button" class="ia-month-trigger ia-quick-trigger" onclick="openIaNotesModal()"><i class="fas fa-robot"></i> IA &amp; Note del Mese</button>
+                    <button type="button" class="ia-month-trigger ia-quick-trigger" onclick="openIaNotesModal()"><i class="fas fa-robot" aria-hidden="true"></i> IA &amp; Note del Mese</button>
                 </div>
 
             </div>
@@ -558,12 +560,12 @@
             </div>
             <div class="chart-panel active" id="chartPanelBars">
                 <h2 class="hide-mobile">📊 Andamento Storico Plurimensile</h2>
-                <div class="large-chart-container"><canvas id="historyBarChart"></canvas></div>
+                <div class="large-chart-container"><canvas id="historyBarChart" role="img" aria-label="Grafico storico barrette delle spese"></canvas></div>
             </div>
             <div class="chart-panel" id="chartPanelLine">
                 <h2 class="hide-mobile">📈 Grafico Monitoraggio Continuo</h2>
                 <p class="hide-mobile" style="font-size: 11px; color:#64748b; margin-bottom: 12px;">Linee temporali sovrapposte mese per mese.</p>
-                <div class="large-chart-container"><canvas id="annualTradingChart"></canvas></div>
+                <div class="large-chart-container"><canvas id="annualTradingChart" role="img" aria-label="Grafico andamento linee plurimensile"></canvas></div>
             </div>
         </div>
 
@@ -586,11 +588,11 @@
     </div>
 
     <!-- IA MODAL (mobile) -->
-    <div id="iaModal" class="popup-overlay" onclick="closeIaModal(event)">
+    <div id="iaModal" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="iaModalTitle" onclick="closeIaModal(event)">
         <div class="popup-panel" onclick="event.stopPropagation()">
             <button class="popup-close" onclick="closeIaModal()" aria-label="Chiudi popup">×</button>
             <div style="overflow-y:auto;flex:1;">
-                <h3 class="ia-modal-title">🧠 Analisi Storica I.A. Multimese</h3>
+                <h3 class="ia-modal-title" id="iaModalTitle">🧠 Analisi Storica I.A. Multimese</h3>
                 <p style="font-size:12px; margin-bottom:10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
                 <button class="btn-ia" onclick="runHistoryAnalysisIAModal()">🔍 Genera Resoconto Storico</button>
                 <div id="iaHistoryResponseModal" class="ia-response-box"></div>
@@ -599,22 +601,22 @@
     </div>
 
     <!-- ARCHIVE MODAL (mobile) -->
-    <div id="archiveModal" class="popup-overlay" onclick="closeArchiveModal(event)">
+    <div id="archiveModal" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle" onclick="closeArchiveModal(event)">
         <div class="popup-panel" onclick="event.stopPropagation()">
             <button class="popup-close" onclick="closeArchiveModal()" aria-label="Chiudi popup">×</button>
-            <h3>📋 Registro Mesi Archiviati</h3>
+            <h3 id="archiveModalTitle">📋 Registro Mesi Archiviati</h3>
             <div id="archiveModalBody" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
         </div>
     </div>
 
     <!-- CUSTOM RANGE POPUP (mobile) -->
-    <div id="customRangePopup" class="popup-overlay" onclick="closeCustomRangePopup(event)">
+    <div id="customRangePopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="customRangePopupTitle" onclick="closeCustomRangePopup(event)">
         <div class="popup-panel" onclick="event.stopPropagation()">
             <button class="popup-close" onclick="closeCustomRangePopup()" aria-label="Chiudi popup">×</button>
-            <h3>📅 Range Personalizzato</h3>
-            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Da</label>
+            <h3 id="customRangePopupTitle">📅 Range Personalizzato</h3>
+            <label for="customRangeFrom" style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Da</label>
             <input type="month" id="customRangeFrom" class="responsive-input" style="margin-bottom:10px;">
-            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">A</label>
+            <label for="customRangeTo" style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">A</label>
             <input type="month" id="customRangeTo" class="responsive-input" style="margin-bottom:14px;">
             <button class="btn-ia" onclick="applyCustomRange()">Applica Range</button>
         </div>
@@ -629,7 +631,7 @@
                 <h2>🔮 Previsioni</h2>
                 <div id="futureBaseLineD" style="font-size:12px;color:#475569;margin-bottom:12px;"></div>
                 <div id="futureChartWrapD" style="position:relative;height:300px;margin-top:8px;">
-                    <canvas id="futureChartCanvasD"></canvas>
+                    <canvas id="futureChartCanvasD" role="img" aria-label="Grafico previsioni futuristiche"></canvas>
                 </div>
             </div>
 
@@ -679,7 +681,7 @@
             </div>
 
             <div class="future-chart-card">
-                <canvas id="futureChartCanvas"></canvas>
+                <canvas id="futureChartCanvas" role="img" aria-label="Grafico previsioni mobile"></canvas>
             </div>
 
             <div class="future-sim-card" id="futureSimRow">
@@ -741,11 +743,11 @@
         </div>
 
         <!-- POPUP NUOVO ASSET -->
-        <div id="investAddPopup" class="popup-overlay" onclick="closeInvestAddPopup(event)">
+        <div id="investAddPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="investAddPopupTitle" onclick="closeInvestAddPopup(event)">
             <div class="popup-panel" onclick="event.stopPropagation()">
                 <button class="popup-close" onclick="closeInvestAddPopup()" aria-label="Chiudi popup">×</button>
-                <h3>💎 Nuovo Asset</h3>
-                <div class="popup-body" style="gap:12px;display:flex;flex-direction:column;">
+                <h3 id="investAddPopupTitle">💎 Nuovo Asset</h3>
+                <div class="popup-body popup-body-stack popup-gap-lg">
                     <div class="invest-type-grid">
                         <button class="invest-type-btn" data-type="immobili" onclick="selectInvestType(this)">🏠 Immobili</button>
                         <button class="invest-type-btn" data-type="trading_crypto" onclick="selectInvestType(this)">📈 Trading/Crypto</button>
@@ -761,14 +763,14 @@
         </div>
 
         <!-- POPUP DETTAGLIO ASSET -->
-        <div id="investAssetPopup" class="popup-overlay" onclick="closeInvestAssetPopup(event)">
+        <div id="investAssetPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="investPopupTitle" onclick="closeInvestAssetPopup(event)">
             <div class="popup-panel" onclick="event.stopPropagation()">
                 <button class="popup-close" onclick="closeInvestAssetPopup()" aria-label="Chiudi popup">×</button>
                 <h3 id="investPopupTitle">Dettaglio Asset</h3>
                 <div id="investPopupBody" class="popup-body" style="gap:12px;display:flex;flex-direction:column;">
                     <div id="investPopupSummary" class="invest-popup-summary"></div>
                     <button class="btn-spesa btn-violet" style="margin:0;" onclick="openInvestMovementForm()">+ Aggiungi Movimento</button>
-                    <button style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%;" onclick="deleteInvestAsset(selectedInvestId)">🗑️ Elimina Asset</button>
+                    <button class="btn-danger-outline" onclick="deleteInvestAsset(selectedInvestId)">🗑️ Elimina Asset</button>
                     <div id="investMovementForm" style="display:none;flex-direction:column;gap:10px;padding:12px;background:#f8fafc;border-radius:12px;">
                         <input type="number" id="investMovAmount" class="sheet-input" step="0.01" placeholder="Importo €">
                         <select id="investMovType" class="sheet-input">
@@ -801,7 +803,7 @@
                     <span class="settings-tile-title">Categorie</span>
                     <span class="settings-tile-desc">Aggiungi, modifica o elimina le categorie di spesa</span>
                 </span>
-                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
             <button type="button" class="settings-tile" onclick="openSettingsPopup('app')">
                 <span class="settings-tile-icon">📱</span>
@@ -809,7 +811,7 @@
                     <span class="settings-tile-title">App &amp; Notifiche</span>
                     <span class="settings-tile-desc">Notifiche scadenze e installazione dell'app</span>
                 </span>
-                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
             <button type="button" class="settings-tile" onclick="openSettingsPopup('backup')">
                 <span class="settings-tile-icon">💾</span>
@@ -817,7 +819,7 @@
                     <span class="settings-tile-title">Backup Dati</span>
                     <span class="settings-tile-desc">Esporta o importa i tuoi dati (.json)</span>
                 </span>
-                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
             <button type="button" class="settings-tile" onclick="openSettingsPopup('cloud')">
                 <span class="settings-tile-icon">☁️</span>
@@ -825,7 +827,7 @@
                     <span class="settings-tile-title">Sincronizzazione Cloud</span>
                     <span class="settings-tile-desc">Copia di sicurezza su Google Drive</span>
                 </span>
-                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
             <button type="button" class="settings-tile" onclick="openSettingsPopup('ripetizioni')">
                 <span class="settings-tile-icon">🔁</span>
@@ -833,7 +835,7 @@
                     <span class="settings-tile-title">Ripetizioni</span>
                     <span class="settings-tile-desc">Gestisci le spese ricorrenti mensili</span>
                 </span>
-                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
             <button type="button" class="settings-tile settings-tile-danger" onclick="openSettingsPopup('danger')">
                 <span class="settings-tile-icon">⚠️</span>
@@ -841,7 +843,7 @@
                     <span class="settings-tile-title">Zona Pericolo</span>
                     <span class="settings-tile-desc">Elimina tutti i dati dell'app</span>
                 </span>
-                <i class="fas fa-chevron-right settings-tile-arrow"></i>
+                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
         </div>
 
@@ -897,7 +899,7 @@
                 <h3>📱 App &amp; Notifiche</h3>
                 <div class="popup-body">
                     <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
-                        <label style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
+                        <label for="pushNotifToggle" style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
                         <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
                     </div>
                     <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa App</button>
@@ -961,11 +963,13 @@
         </div>
     </div>
 
+    </main>
+
     <!-- POPUP SPESE CONDIVISE -->
-    <div id="popup-spese-condivise" class="popup-overlay" onclick="closeCondivisePopup(event)">
+    <div id="popup-spese-condivise" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="condivisePopupTitle" onclick="closeCondivisePopup(event)">
         <div class="popup-panel" onclick="event.stopPropagation()">
             <button class="popup-close" onclick="closeCondivisePopup()" aria-label="Chiudi popup">×</button>
-            <h3 class="condivise-title">👥 Spese Condivise</h3>
+            <h3 class="condivise-title" id="condivisePopupTitle">👥 Spese Condivise</h3>
             <div class="condivise-tabs condivise-segmented" role="tablist" aria-label="Spese condivise">
                 <button class="condivise-tab active" data-tab="amici" onclick="switchCondiviseTab('amici')">👤 Amici</button>
                 <button class="condivise-tab" data-tab="gruppi" onclick="switchCondiviseTab('gruppi')">👥 Gruppi</button>
@@ -1023,7 +1027,7 @@
         <div class="drag-handle-wrapper"><div class="sheet-handle"></div></div>
         <div class="bottom-sheet-header">
             <button type="button" class="btn-back-sheet" id="btn-back-to-categories" style="display:none;">
-                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
             </button>
             <h3 class="sheet-title" id="selected-category-title">Categoria</h3>
         </div>
@@ -1050,10 +1054,10 @@
                         <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Spesa Esselunga)">
                         <div class="sheet-note-actions">
                             <button type="button" class="note-action-btn" id="btnNoteCamera" title="Scatta una foto" aria-label="Scatta una foto">
-                                <i class="fas fa-camera"></i>
+                                <i class="fas fa-camera" aria-hidden="true"></i>
                             </button>
                             <button type="button" class="note-action-btn" id="btnNoteAttach" title="Allega un file" aria-label="Allega un file">
-                                <i class="fas fa-paperclip"></i>
+                                <i class="fas fa-paperclip" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>

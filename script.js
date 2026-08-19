@@ -77,7 +77,6 @@ async function updateGlobalVersion() {
     const currentCounter = state ? (state.counter || 0) : 0;
     const newCounter = currentCounter + 1;
     await db.syncState.put({ id: 'versionData', counter: newCounter, deviceId: getDeviceId(), lastUpdated: Date.now() });
-    console.log(`[SYNC] Version counter incrementato: ${currentCounter} → ${newCounter}`);
     debouncedAutoSync();
 }
 
@@ -602,7 +601,7 @@ function updateActivePageSubtitle(tabId) {
     if (!subtitle) return;
     subtitle.textContent = TAB_TITLES[tabId] || 'Dashboard';
 }
-function switchTab(tabId, buttonEl) {
+function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -3781,10 +3780,22 @@ async function updateUI() {
     renderCalendar();
 
     const btnClear = document.getElementById('btnClearAllFilters');
-    btnClear.style.display = (selectedFilterDate || selectedFilterCategory || searchQuery !== "") ? 'inline-block' : 'none';
+    // Lista voci (render isolato: la ricerca aggiorna solo la lista, non tutto il mese)
+    renderEntriesList();
 
-    // Lista voci
-    const listContainer = document.getElementById('entriesList'); listContainer.innerHTML = '';
+    // Grafici (solo con modal IA aperto; canvas nascosti = dimensione 0 per Chart.js)
+    if (document.getElementById('iaNotesModal')?.classList.contains('active')) {
+        renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums);
+    }
+}
+
+function renderEntriesList() {
+    const btnClear = document.getElementById('btnClearAllFilters');
+    if (btnClear) btnClear.style.display = (selectedFilterDate || selectedFilterCategory || searchQuery !== "") ? 'inline-block' : 'none';
+
+    const listContainer = document.getElementById('entriesList');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
     if (!selectedFilterDate && !selectedFilterCategory && searchQuery === "") {
         currentData.income.forEach(inc => {
             const incDate = inc.date ? inc.date.split('-').reverse().slice(0,2).join('/') : '–';
@@ -3843,27 +3854,23 @@ async function updateUI() {
         });
         listContainer.appendChild(row);
     });
-
-    // Grafici (solo con modal IA aperto; canvas nascosti = dimensione 0 per Chart.js)
-    if (document.getElementById('iaNotesModal')?.classList.contains('active')) {
-        renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums);
-    }
 }
 
-function renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums) {
+async function renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums) {
+    await ensureChartJs();
     const budgetCnv = document.getElementById('budgetChart');
     const categoryCnv = document.getElementById('categoryChart');
     if (!budgetCnv || !categoryCnv) return;
     if (chartB) chartB.destroy();
     chartB = new Chart(budgetCnv.getContext('2d'), {
         type:'bar', data:{labels:['Entrate','Spese Previste','Spese Sostenute'],datasets:[{data:[totalIncome,totalPlanned,totalActual],backgroundColor:['#10b981','#f97316','#ef4444'],borderRadius:6}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},animation:{duration:0}}
     });
     if (chartC) chartC.destroy();
     const activeCats = Object.keys(catSums).filter(c => catSums[c].actual > 0);
     chartC = new Chart(categoryCnv.getContext('2d'), {
         type:'doughnut', data:{labels:activeCats,datasets:[{data:activeCats.map(c => catSums[c].actual),backgroundColor:['#3b82f6','#8b5cf6','#475569','#0d9488','#10b981','#f59e0b','#f97316','#ef4444']}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:9}}}}}
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:9}}}},animation:{duration:0}}
     });
 }
 
@@ -3875,15 +3882,24 @@ function renderCalendar() {
     if (!grid) return; grid.innerHTML = '';
     const monthVal = document.getElementById('currentMonth').value; if (!monthVal) return;
     const range = getMonthRange(monthVal);
+    const plannedDates = new Set();
+    currentData.expenses.forEach(e => { if (e.planned > 0) plannedDates.add(e.date); });
+    const deadlineDates = new Set();
+    let monthWideDeadline = false;
+    annualDeadlines.forEach(a => {
+        if (a.isPaid) return;
+        if (a.month === monthVal && !a.day) monthWideDeadline = true;
+        else if (a.month === monthVal && a.day) deadlineDates.add(a.month + '-' + String(a.day).padStart(2, '0'));
+    });
+    const recurringDeadline = annualDeadlines.some(a => !a.isPaid && a.recurring && a.month <= monthVal && monthVal <= (a.endMonth || a.month));
     ['L','M','M','G','V','S','D'].forEach(d => { let h = document.createElement('div'); h.className = 'calendar-day-header'; h.innerText = d; grid.appendChild(h); });
     let firstDayIndex = (range.start.getDay()+6)%7;
     for (let i=0; i<firstDayIndex; i++) { let e = document.createElement('div'); e.className = 'calendar-day empty'; grid.appendChild(e); }
     let cursor = new Date(range.start);
     while (cursor <= range.end) {
         const ds = cursor.toISOString().slice(0,10);
-        const dayNum = cursor.getDate();
-        const hasPlanned = currentData.expenses.some(e => e.date === ds && e.planned > 0);
-        const hasDeadline = annualDeadlines.some(a => !a.isPaid && ((a.month === monthVal && (!a.day || parseInt(a.day) === dayNum)) || (a.recurring && a.month <= monthVal && monthVal <= (a.endMonth || a.month))));
+        const hasPlanned = plannedDates.has(ds);
+        const hasDeadline = monthWideDeadline || deadlineDates.has(ds) || recurringDeadline;
         const isHighlight = hasPlanned || hasDeadline;
         let d = document.createElement('div'); d.className = `calendar-day${isHighlight?' has-deadline':''}${selectedFilterDate===ds?' selected':''}`;
         d.innerHTML = `${cursor.getDate()}<span>${cursor.getMonth()+1}/${cursor.getFullYear().toString().slice(-2)}</span>`;
@@ -3903,7 +3919,12 @@ function scrollToRegistry() {
 }
 function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDate = null; scrollToRegistry(); updateUI(); }
 function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; scrollToRegistry(); updateUI(); }
-function handleSearch() { searchQuery = document.getElementById('searchInput').value.toLowerCase(); updateUI(); }
+let searchDebounceTimer = null;
+function handleSearch() {
+    searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(renderEntriesList, 150);
+}
 function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; updateUI(); }
 function switchFormTab(name) {
     const cap = name.charAt(0).toUpperCase() + name.slice(1);
@@ -4015,6 +4036,7 @@ function openSearchPopup() {
     document.body.classList.add('popup-open');
     const input = document.getElementById('searchPopupInput');
     if (input) input.value = '';
+    searchDatasetCache = null;
     const resultsList = document.getElementById('searchResultsList');
     if (resultsList) resultsList.innerHTML = '<div class="income-list-empty">Digita per cercare...</div>';
     const periodSelect = document.getElementById('searchPeriodSelect');
@@ -4041,7 +4063,16 @@ function toggleSearchCustomMonth() {
     filterSearchResults();
 }
 
+// Ricerca mobile: debounce 150ms + cache dataset per periodo (niente scan DB a ogni tasto)
+let searchFilterTimer = null;
+let searchDatasetCache = null;
+
 async function filterSearchResults() {
+    clearTimeout(searchFilterTimer);
+    searchFilterTimer = setTimeout(() => runSearchFilter(), 150);
+}
+
+async function runSearchFilter() {
     const query = document.getElementById('searchPopupInput').value.trim().toLowerCase();
     const period = document.getElementById('searchPeriodSelect').value;
     const resultsList = document.getElementById('searchResultsList');
@@ -4057,16 +4088,27 @@ async function filterSearchResults() {
 
     if (period === 'current') {
         const _month = document.getElementById('currentMonth').value;
-        expenses = currentData.expenses;
-        incomes = await getIncomesForMonth(_month);
+        const key = 'current:' + _month;
+        if (!searchDatasetCache || searchDatasetCache.key !== key) {
+            searchDatasetCache = { key, expenses: currentData.expenses, incomes: await getIncomesForMonth(_month) };
+        }
+        expenses = searchDatasetCache.expenses;
+        incomes = searchDatasetCache.incomes;
     } else if (period === 'all') {
-        expenses = await db.expenses.toArray();
-        incomes = await db.income.toArray();
+        if (!searchDatasetCache || searchDatasetCache.key !== 'all') {
+            searchDatasetCache = { key: 'all', expenses: await db.expenses.toArray(), incomes: await db.income.toArray() };
+        }
+        expenses = searchDatasetCache.expenses;
+        incomes = searchDatasetCache.incomes;
     } else if (period === 'custom') {
         const m = document.getElementById('searchCustomMonth').value;
         if (!m) { resultsList.innerHTML = '<div class="income-list-empty">Seleziona un mese.</div>'; return; }
-        expenses = await db.expenses.where('month').equals(m).toArray();
-        incomes = await db.income.where('month').equals(m).toArray();
+        const key = 'custom:' + m;
+        if (!searchDatasetCache || searchDatasetCache.key !== key) {
+            searchDatasetCache = { key, expenses: await db.expenses.where('month').equals(m).toArray(), incomes: await db.income.where('month').equals(m).toArray() };
+        }
+        expenses = searchDatasetCache.expenses;
+        incomes = searchDatasetCache.incomes;
     }
 
     const filteredExp = expenses.filter(e =>
@@ -5167,6 +5209,7 @@ function renderHistoryCardsMobile(data) {
 }
 
 async function renderGlobalHistory() {
+    await ensureChartJs();
     let months = await db.months.toArray();
     renderRecordsHub(months);
     let hd = months.map(m => ({month:m.month, income:m.totalIncome, planned:m.totalPlanned, actual:m.totalActual, savings:m.totalIncome-m.totalActual}));
@@ -5196,7 +5239,7 @@ async function renderGlobalHistory() {
             {label:'Budget Previsto', data:filtered.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
             {label:'Spesa Effettiva', data:filtered.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
         ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}}}
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}},animation:{duration:0}}
     });
 }
 
@@ -5204,6 +5247,7 @@ async function renderGlobalHistory() {
 // GRAFICO TRADING
 // =====================================================================
 async function renderTradingChart() {
+    await ensureChartJs();
     let months = await db.months.toArray();
     let hd = months.map(m => ({month:m.month, income:m.totalIncome, planned:m.totalPlanned, actual:m.totalActual}));
     hd.sort((a,b) => a.month.localeCompare(b.month));
@@ -5216,7 +5260,7 @@ async function renderTradingChart() {
             {label:'Budget', data:filtered.map(d=>d.planned), borderColor:'#f97316', backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], tension:0.2, pointRadius:2},
             {label:'Speso', data:filtered.map(d=>d.actual), borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:3, tension:0.1, pointRadius:4}
         ]},
-        options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}}},plugins:{legend:{position:'top',labels:{font:{size:10,weight:'bold'},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}}}
+        options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}}},plugins:{legend:{position:'top',labels:{font:{size:10,weight:'bold'},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},animation:{duration:0}}
     });
 }
 
@@ -5852,7 +5896,8 @@ function futureChartLabels() {
     return out;
 }
 
-function renderFutureChart() {
+async function renderFutureChart() {
+    await ensureChartJs();
     const isMobile = window.innerWidth < 768;
     const canvas = document.getElementById(isMobile ? 'futureChartCanvas' : 'futureChartCanvasD');
     if (!canvas || canvas.offsetParent === null) return; // tab nascosto: render al cambio tab
@@ -5908,7 +5953,8 @@ function renderFutureChart() {
                         font: { size: 9 }
                     }
                 }
-            }
+            },
+            animation: { duration: 0 }
         }
     });
 }
@@ -5955,7 +6001,7 @@ async function updateFutureDashboard() {
     lastProjectionBase = base;
     renderFutureBaseLine(base);
     renderFutureMilestones(base);
-    renderFutureChart();
+    await renderFutureChart();
     renderDeadlineListFor('d');
     renderDeadlineListFor('s');
 }
@@ -6454,6 +6500,24 @@ async function runFuturePredictionIA() {
 }
 
 // =====================================================================
+// CHART.JS — CARICAMENTO LAZY (solo al primo grafico creato)
+// =====================================================================
+let chartJsPromise = null;
+function ensureChartJs() {
+    if (window.Chart) return Promise.resolve();
+    if (!chartJsPromise) {
+        chartJsPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('Impossibile caricare Chart.js'));
+            document.head.appendChild(s);
+        });
+    }
+    return chartJsPromise;
+}
+
+// =====================================================================
 // EXPORT PDF - FIX DEFINITIVO
 // =====================================================================
 function ensureHtml2Pdf() {
@@ -6785,11 +6849,11 @@ function checkPushNotifications() {
 // =====================================================================
 // initApp() is now called by Supabase Auth listener in supabase-adapter.js
 
-// Re-render rendiconto on window resize for responsive behavior
+// Re-render calendario on window resize (solo visuale: nessuna scrittura DB/sync)
 let resizeTimer;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => updateUI(), 250);
+    resizeTimer = setTimeout(() => renderCalendar(), 250);
 });
 
 

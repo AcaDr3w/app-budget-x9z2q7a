@@ -1,7 +1,7 @@
 # Project Core Memory
 
 ## ⚠ SUPABASE CDN = SINCRONO (2026-08-18)
-- **`@supabase/supabase-js@2` (index.html:14) NON deve avere `defer`/`async`**: `supabase-adapter.js:4` usa `window.supabase.createClient()` a top-level (parse time). Un tentativo di defer ha rotto l'app (TypeError createClient). Chart.js e Google API invece possono restare defer (usati solo post-DOMContentLoaded).
+- **`@supabase/supabase-js@2` (index.html:14) NON deve avere `defer`/`async`**: `supabase-adapter.js:4` usa `window.supabase.createClient()` a top-level (parse time). Un tentativo di defer ha rotto l'app (TypeError createClient). Google API invece può restare defer (usati solo post-DOMContentLoaded). **Chart.js NON è più nel `<head>`**: caricato lazy da `ensureChartJs()` (iniettato al primo `new Chart`).
 
 ## 🗂 TABLIST A11Y + TOUCH TARGET (2026-08-18)
 - **`setupTablistA11y()`** (script.js, DOMContentLoaded): su ogni `[role="tablist"]` imposta `role="tab"` sui button, sincronizza `aria-selected` con `.active` (click + apertura), navigazione Frecce + Home/End con attivazione automatica (`next.click()`). Le `.condivise-tabs` hanno ora `role="tablist"` + `aria-label="Spese condivise"` (le altre tablist già presenti in HTML).
@@ -583,3 +583,32 @@ overscroll-behavior: none !important;
 - Link invito gruppo: window.location.origin + '?join_group=' + token.
 - Migration automatica da vecchia shared_expense_splits al nuovo schema (flag in settings).
 - Payer multiplo e split avanzati: FASE 2.
+
+## ? AUDIT A11Y ROUND 3 (2026-08-19)
+- **NAV = BUTTON, MAI `<a href="#">`**: top-nav (brand+link) e bottom-nav sono `<button type="button">` con reset CSS (`background:none;border:none;font-family:inherit;cursor:pointer`) + `:focus-visible`. Brand = `.brand-title` span (MAI `<h1>` dentro `<a>`). `switchTab(tabId)` NON ha piu' il 2o param (gli id `tab-btn-*` non esistono). `role="tab"` NON va messo su queste nav (tablist a11y e' solo per `.form-tabs`/`.condivise-tabs`).
+- **POPUP**: TUTTI i 16 `.popup-overlay` hanno `role="dialog" aria-modal="true"` + `aria-labelledby` sull'`<h3>` con id (8 aggiunti: searchPopup, iaMonthPopup, iaModal, archiveModal, customRangePopup, investAddPopup, investAssetPopup, popup-spese-condivise). Escape/focus trap/restore gia' coperti da `setupModalAccessibility()`.
+- **ICONE**: tutte le `<i class="fas ...">` decorative DEVONO avere `aria-hidden="true"` (oggi 23/23).
+- **CANVAS**: Chart.js canvas con `role="img"` + `aria-label` (6/6: budgetChart, categoryChart, historyBarChart, annualTradingChart, futureChartCanvas(D)).
+- **LABEL**: usare sempre `<label for>` + id (18 associate; toggle-switch/preset-card con wrap OK senza for).
+- **CLASSI DA STILE INLINE** (riusare): `.popup-body-stack` (flex column gap 10, +`.popup-gap-sm` 8 / `.popup-gap-lg` 12), `.btn-danger-outline` (delete asset, outline rosso), `.recovery-alert-sub`. NON re-inlineare.
+- **ENCODING INDEX.HTML = UTF-8 NO BOM**: NON usare PowerShell 5.1 `Get-Content`+`Set-Content`/`Out-File` su di esso (decodifica ANSI -> corrompe a/emoji in U+FFFD). Usare Edit tool o leggere/scrivere via `[IO.File]::ReadAllBytes`+`[Text.Encoding]::UTF8`.
+
+## ? COLORI AA - token scuriti (2026-08-19)
+- **NON ripristinare**: `--accent #2563eb`, `--entrate #15803d`, `--previsto #c2410c`, `--sostenuto #dc2626`, `--ia-color #7c3aed` (bianco su questi = >=4.5:1). Verde positivo testo = `#047857` (ex #059669/#10b981). Rosso testo/border button = `#dc2626`. Viola pill/badge attivi = `#7c3aed`. Arancio pending = `#b45309`.
+- Tinte pastello decorative (box-shadow, box-entrate/previsto/sostenuto, barre progress `#10b981`, bordi `#ef4444`) NON sono testo: lasciare.
+- **Icona PWA = mark geometrico polyline** (manifest data-URI, niente emoji non-encoded). theme_color #ffffff ovunque (manifest + meta).
+
+## ?? PERFORMANCE - updateUI vs renderEntriesList (2026-08-19)
+- **`renderEntriesList()`** (script.js) = lista voci SOLA (filtri search/data/categoria). `updateUI()` la chiama per il refresh pieno. **MAI chiamare updateUI da `handleSearch`** (faceva `db.months.put`+`updateGlobalVersion` per keystroke). `handleSearch` = debounce 150ms + `renderEntriesList()`.
+- **Touch target**: `button { min-height:44px }` globale; esenzioni fisse (popup-close 32px visuale + ::before, sim-reset 32px, month-arrow, btn-del ecc.) - non togliere l'esenzione.
+- **`<main id="appMain">`** avvolge container+tabs (da bottom-nav a settings-tab). Popup condivise/bottom-sheet FUORI dal main (overlay).
+
+## 🚀 PERFORMANCE ROUND 2 (2026-08-19)
+- **Chart.js = LAZY**: rimosso dal `<head>` (era `defer`, ~200KB parse per tutti). `ensureChartJs()` inietta `chart.umd.min.js` al primo grafico; i 4 renderer (`renderDashboardCharts`, `renderGlobalHistory`, `renderTradingChart`, `renderFutureChart`) sono async e fanno `await ensureChartJs()` prima di `new Chart`. `renderFutureChart` è ora async (chiamato con `await` da `updateFutureDashboard`). Caller fire-and-forget OK (chart appare al primo uso).
+- **Chart animation = 0**: TUTTI e 5 i grafici `animation:{duration:0}` (2 grafici Analisi = 2s di animazione per apertura tab). Ricreati wholesale a ogni render — l'animazione è solo jank.
+- **Resize = SOLO visuale**: `window resize` chiama `renderCalendar()` (250ms debounce), MAI `updateUI()` (prima: `db.months.put` + `updateGlobalVersion` + autosync ad ogni resize!). Chart.js si auto-ridimensiona (responsive).
+- **Ricerca mobile cache + debounce**: `filterSearchResults()` = shim 150ms → `runSearchFilter()`. Dataset caricato UNA volta per periodo (`searchDatasetCache` key `current:<mese>`/`all`/`custom:<mese>`), poi filtro in-memory. Cache azzerata in `openSearchPopup`. MAI `toArray()` per keystroke.
+- **`renderCalendar` O(giorni)**: Sets precomputati `plannedDates`/`deadlineDates` + flag `monthWideDeadline`/`recurringDeadline` (prima `.some()` per giorno = O(giorni×spese+scadenze)).
+- **`updateGlobalVersion()` senza console.log** (chiamata a ogni updateUI).
+- **Residuo documentato**: `filterByDate`/`filterByCategory`/`clearAllFilters` chiamano `updateUI()` (→ version bump + autosync se GDrive attivo). Accettato: azione singola con intento utente, costo irrisorio. NON cambiare senza motivo.
+- **Fuori scope**: `script.js` 325KB monolith (nessun bundler — split = rischio alto), Font Awesome full CSS resta blocking (scelta utente), Supabase CDN sync (pinned sopra).

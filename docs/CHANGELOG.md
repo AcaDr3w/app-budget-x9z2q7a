@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-08-19] - Optimize round 2: Chart.js lazy + zero DB writes su resize/search
+
+### ✅ Completed Changes
+- **Chart.js lazy-load**: rimosso `<script src="chart.js" defer>` dal `<head>` (era ~200KB parse per ogni sessione). Nuova `ensureChartJs()` (promise-inject UMD 4.4.1, pattern identico a `ensureHtml2Pdf`). `renderDashboardCharts`, `renderGlobalHistory`, `renderTradingChart`, `renderFutureChart` ora async con `await ensureChartJs()`; `renderFutureChart` è ora async (awaited da `updateFutureDashboard`).
+- **Chart animation disattivata**: `animation: {duration: 0}` su tutti e 5 i grafici (budget, category, historyBar, trading, future) — 2s di intro jank per apertura tab Analisi eliminati.
+- **Resize senza scritture DB**: handler `window resize` (250ms debounce) ora chiama solo `renderCalendar()` — prima `updateUI()` faceva `db.months.put` + `updateGlobalVersion` (write + version bump + autosync) a ogni resize.
+- **Ricerca mobile (popup)**: `filterSearchResults()` → shim 150ms + `runSearchFilter()`. Dataset IndexedDB caricato una sola volta per periodo (`searchDatasetCache` keyed `current:<mese>`/`all`/`custom:<mese>`), poi filtro in-memory; cache azzerata in `openSearchPopup`. Prima: `db.expenses.toArray()` + `db.income.toArray()` a ogni tasto con periodo "all"/"custom".
+- **`renderCalendar` O(giorni)**: Sets precomputati `plannedDates`/`deadlineDates` + flag `monthWideDeadline`/`recurringDeadline` al posto di `.some()` per giorno (O(giorni×spese+scadenze) → O(giorni+spese+scadenze)); rimosso `dayNum` morto.
+- **`updateGlobalVersion()`**: rimosso `console.log` per chiamata (invocata a ogni updateUI).
+
+### ⚙ Status: COMPLETATO — `node --check script.js` OK; detector: 0 findings; 0 U+FFFD in script.js/index.html. Residui documentati in MEMORY.md (filtri updateUI, monolith 325KB, FA blocking, Supabase sync pinned).
+
 ## [2026-08-18] - Fix regression: Supabase CDN sync
 - Rimosso `defer` dal tag `@supabase/supabase-js@2` (index.html:14): `supabase-adapter.js:4` chiama `window.supabase.createClient()` a top-level (parse time) e con defer il bundle girava dopo il parsing → `Uncaught TypeError: Cannot read properties of undefined (reading 'createClient')`. Ripristinato caricamento sincrono. Chart.js/Google restano defer (usati solo post-DOMContentLoaded).
 
@@ -1486,3 +1498,28 @@
 
 ### Status: COMPLETATO
 - node --check OK; braces CSS 735/735 OK
+
+## [2026-08-19] - Audit a11y index.html round 3
+### Completed Changes
+- Nav `href="#"` -> `<button type="button">` (top-nav brand+links, bottom-nav 5 item); `<h1>` dentro `<a>` -> `<span class="brand-title">`; reset button CSS (background/border/font) + focus-visible. Rimossi argomenti morti `document.getElementById('tab-btn-*')` (id inesistenti) e parametro `buttonEl` da `switchTab`.
+- 8 popup senza semantica dialog -> `role="dialog" aria-modal="true" aria-labelledby=<h3 id>`: searchPopup, iaMonthPopup, iaModal, archiveModal, customRangePopup, investAddPopup, investAssetPopup, popup-spese-condivise.
+- 23 icone FontAwesome decorative -> `aria-hidden="true"` (tutte).
+- 6 canvas Chart.js -> `role="img"` + `aria-label` descrittivo.
+- 16 label associate con `for` (ia-engine, openrouter-model, userNotes, iaNotes, incDate/Desc/Amount, expDate/Category/Desc/Planned/Actual/Shared, customRangeFrom/To, pushNotifToggle).
+- Stili inline estratti: `.recovery-alert-sub`, `.popup-body-stack` (+`.popup-gap-sm/lg`), `.btn-danger-outline` (delete asset, mantiene stile outline); 4 `.popup-body` flex-column ripuliti.
+### Notes
+- NO defer su supabase CDN (regressione documentata, NON ripristinare).
+- Focus trap/Esc/restore gia' esistenti: `setupModalAccessibility()` (script.js).
+- Encoding: NON usare Get-Content/Set-Content PS 5.1 su index.html (UTF-8 senza BOM, corrompe i non-ASCII). Verifica: 0 U+FFFD, div 319/319, node --check OK.
+
+## [2026-08-19] - Audit 13/20 -> fix batch (impeccable: optimize+colorize+harden+adapt+typeset)
+### Completed Changes
+- **optimize**: `renderEntriesList()` estratta da `updateUI()` (script.js); `handleSearch()` debounced 150ms e aggiorna SOLO la lista (prima: updateUI intero + scrittura IndexedDB `db.months.put`+`updateGlobalVersion()` per OGNI keystroke). `clearAllFilters` resta updateUI.
+- **colorize (contrasto AA 1.4.3)**: token scuriti: `--accent #3b82f6->#2563eb`, `--entrate #2ecc71->#15803d`, `--previsto #f97316->#c2410c`, `--sostenuto #ef4444->#dc2626`, `--ia-color #8b5cf6->#7c3aed`. Sweep letterali: testo `#ef4444/#059669/#10b981/#3b82f6/#f97316/#d97706` scurito (testo su bianco >=4.5:1), bg button `#3b82f6/#ef4444/#059669/#0ea5e9/#ea4335` scuriti, gradienti violetto `#8b5cf6,#6366f1 -> #7c3aed,#4f46e5`, `.btn-pay #d97706->#b45309`, popup-bar-fill, btn-danger-outline.
+- **harden**: manifest.json unificato (name "Bilancio Pro", theme/background #ffffff coerenti con meta); icone SVG data-URI senza emoji (mark geometrico polyline chart on-brand, prima emoji non percent-encoded); `<link apple-touch-icon href=icon-512.png>`.
+- **adapt**: `button { min-height: 44px }` globale + esenzioni per controlli icona/dimensione fissa (`month-arrow, popup-close, sim-reset, btn-back-sheet, btn-plus-solid, ripetizione-delete, btn-del, income-row-del, cat-del-btn, .cat-tag button`); landmark `<main id="appMain">` (da bottom-nav a settings-tab; popup/sheet sovrapposti fuori main).
+- **typeset**: floor 10px eliminato (26 occorrenze `font-size:10px -> 11px`, `11.5px -> 12px`).
+### Notes
+- CSP inline-onclick (113 handler): NON convertiti (rischio alto, batch singolo); follow-up dedicato.
+- Width-transition su progress-fill: pattern accettato (P3). Side-tab border: identita' categorie (P3).
+- Verifica: node --check OK, div 319/319, <main> 1/1, 0 U+FFFD, detector invariato (nessun nuovo finding).
