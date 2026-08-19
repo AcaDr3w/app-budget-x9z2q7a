@@ -1,5 +1,18 @@
 # Session Logs & Progress
 
+## [2026-08-19] - Fix proporzioni card Anomalie di Spesa (Analisi mobile)
+
+### Completed Changes
+- **layout**: sparkline anomalie ora `flex:1 1 0` + `width:100%` + `min-height:36px` (rimosso cap `clamp(44px,10vh,84px)`) → il grafico riempie l'intera altezza del `.anomaly-window` (misurato: 202px su window 243px a 414×896; 63px a 360×640; floor 36px a 320×568 senza clipping). `align-self:stretch` per larghezza piena.
+- **layout**: sezione centrale 50/50 → **55/45**: `.anomaly-carousel` `flex:1.2 1 0`, `.savings-card` `flex:1 1 0` (il grafico è il cuore visivo della pagina).
+- **layout**: gap slide carousel 4→3px (protezione schermi corti).
+- **layout**: dots carosello NON più stirati — causa: `button{min-height:44px}` globale (style.css:175) applicato a `.anomaly-dot` (era fuori dall'exception list). Aggiunto `button.anomaly-dot` alla lista `min-height:auto` (riga 177) + `.anomaly-dots{align-items:center}` + `.anomaly-dot{max-height:6px}` → pillole orizzontali compatte (6×6, attivo 16×6 viola, invariato).
+- **layout**: KPI compact — `.kpi-card` rimosso `min-height:44px` (non è touch target), `.trend-value` 12→11px, line-height label/value/delta 1.25→1.2 (type floor 10px rispettato: label e delta restano 10px).
+- **layout**: banner IA compact — `.ai-insight-text` 12→11px, `.ai-insight-icon` 15→13px; `min-height:44px` MANTENUTO (è `role=button`, touch target obbligatorio).
+- **verification**: audit headless CDP a 320/360/375/414px: nessun CUT/TRUNC nuovi (solo false positive noti: marquee, ↻ ::before, sheet-slider); slideContentH ≤ window su tutte le larghezze (52≤58 a 320; 235≤243 a 414); dots 6px ovunque. Misure: `verify-anomaly.mjs` (Temp) con `renderAnomalyCarousel` fake-data.
+
+### Status: COMPLETATO - 0 regressioni audit; braces CSS 924/924; node --check OK.
+
 ## [2026-08-19] - Mobile layout audit: truncation fixes + headless viewport verification (320-414px)
 
 ### Completed Changes
