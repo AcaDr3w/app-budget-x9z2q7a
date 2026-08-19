@@ -1,5 +1,18 @@
 # Session Logs & Progress
 
+## [2026-08-19] - Mobile layout audit: truncation fixes + headless viewport verification (320-414px)
+
+### Completed Changes
+- **verification**: audit headless Chrome (CDP) con stub Supabase locale (sessione fake) a 4 viewport (320/360/375/414) × 5 tab. Misure DOM: zero scroll orizzontale (`scrollWidth==clientWidth` ovunque), zero elementi tagliati fuori viewport. Evidenza: `docs/audit/before|after/` (PNG + report console). Server/stub/harness = fuori repo (Temp), riproducibile.
+- **layout**: `.trend-label` e `.trend-delta` (KPI Analisi) ora avvolgono su 2 righe (`-webkit-line-clamp:2` + `overflow-wrap:anywhere`) invece di `nowrap`+ellipsis — "Scostamento Budget" (77/119→77/77) e "Nessuna crescita" (77/78→77/77) non più troncati a 320px.
+- **layout**: `.card-progress-label`, `.hero-mini-label`, `.savings-sub`, `#mese-action-hub .hub-text` idem (wrap 2 righe) — "Condividi Budget" a 320px non più ellipsizzato.
+- **layout**: `.invest-hero-stat` `min-width:0`; `.invest-hero-value` `white-space:normal` + `overflow-wrap:anywhere` + `max-width:100%` (valori lunghi non sforano la riga 3-stat).
+- **layout**: `.header h1` `min-width:0` (safety flex), `.trend-value`/`.hero-mini-value` `max-width:100%` (fallback ellipsis).
+- **code**: `title` tooltip su `.anomaly-cat` in `renderAnomalyCarousel()` (slide + empty state).
+- **non-touch**: marquee AI, hit-area `↻` (`::before`), `.sheet-slider` = false positive intenzionali (documentato in MEMORY.md).
+
+### Status: COMPLETATO - 0 truncation residue verificabili; `scrollWidth==clientWidth` su 4×5 griglia; node --check OK. Bounded: 1 build batch, 1 verify round (baseline+after).
+
 ## [2026-08-19] - Normalize sweep: type floor + radii/motion/shadow scales + full hex tokenization
 
 ### Completed Changes

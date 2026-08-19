@@ -86,7 +86,7 @@ body.popup-open {
     box-shadow: 0 4px 20px rgba(0,0,0,0.25);
 }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .header p { font-size: 14px; opacity: 0.85; margin-top: 4px; line-height: 1.35; display: none; }
 
 /* ===== CONTAINER ===== */
@@ -760,9 +760,13 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         text-transform: uppercase;
         letter-spacing: 0.2px;
         color: var(--muted);
-        white-space: nowrap;
+        line-height: 1.25;
+        max-width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
     .trend-value {
         font-size: 12px;
@@ -772,14 +776,20 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
     .trend-delta {
         font-size: 10px;
         font-weight: 700;
         margin-top: 2px;
-        white-space: nowrap;
+        line-height: 1.25;
+        max-width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
     .trend-delta.trend-up { color: var(--danger); }
     .trend-delta.trend-down { color: var(--success-text); }
@@ -926,9 +936,14 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         font-size: 10px;
         font-weight: 600;
         color: var(--muted);
-        white-space: nowrap;
+        line-height: 1.25;
+        text-align: right;
+        max-width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
     .savings-target {
         flex-shrink: 0;
@@ -1791,9 +1806,13 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         font-size: clamp(8px, 2.3vw, 10px);
         font-weight: 600;
         color: var(--muted-mid);
-        white-space: nowrap;
+        line-height: 1.3;
+        max-width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
 
     /* ===== MONTH-HEAD: nascosto su mobile (sostituito dalla hero card) ===== */
@@ -1907,9 +1926,13 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         font-size: clamp(8px, 2.3vw, 10px);
         font-weight: 500;
         color: var(--muted);
-        white-space: nowrap;
+        line-height: 1.25;
+        max-width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
     .hero-mini-value {
         font-size: clamp(11px, 3.3vw, 14px);
@@ -1918,6 +1941,8 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
 
     /* ===== BOTTOM SHEET OVERLAY: blur trasparente (solo mobile) ===== */
@@ -2669,6 +2694,7 @@ cursor: pointer;
     }
     .invest-hero-stat {
         flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -2685,6 +2711,10 @@ cursor: pointer;
         font-size: clamp(13px, 4vw, 15px);
         font-weight: 800;
         color: var(--primary);
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
     }
     .invest-add-btn {
         flex-shrink: 0;
@@ -3524,11 +3554,13 @@ cursor: pointer;
 }
 #mese-action-hub button .hub-text {
     font-size: 11px;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.25;
     max-width: 100%;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 #mese-action-hub button:active {
     transform: scale(0.96);

@@ -1,5 +1,12 @@
 # Project Core Memory
 
+## MOBILE TRUNCATION RULES (2026-08-19)
+- **Label/descrizioni brevi su mobile**: MAI `white-space:nowrap`+ellipsis per label che possono superare la card (`.trend-label`, `.trend-delta`, `.card-progress-label`, `.hero-mini-label`, `.savings-sub`, `.hub-text`). Pattern: `display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere`.
+- **Valori numerici** (`.trend-value`, `.hero-mini-value`): `nowrap`+ellipsis OK ma con `max-width:100%` e `overflow-wrap:anywhere` come fallback. `.invest-hero-value`: `white-space:normal` + `overflow-wrap:anywhere` (può spezzarsi).
+- **Zero horizontal scroll invariante**: `html/body` bloccati su mobile; ogni contenitore largo (tabelle `min-width:640px`, records-hub, marquee, sheet-slider) DEVE stare dentro un wrapper `overflow-x:auto/hidden`. Verificato con audit headless (scrollWidth==clientWidth a 320-414px).
+- **False positive da ignorare nell'audit**: `.ai-insight-track` (marquee intenzionale, `width:max-content`), `.ai-insight-refresh` (scrollWidth>clientWidth per il `::before{inset:-5px}` dell'hit-area), `.sheet-slider` (pager orizzontale nascosto).
+- **Audit harness (fuori repo, Temp)**: `audit-server.mjs` (stub Supabase con sessione fake: `onAuthStateChange` fire con session → `mainAppWrapper` visibile, tabelle = Proxy thenable `{data:[],error:null,count:0}`) + `cdp-shots.mjs` (Chrome `--headless=new --remote-debugging-port`, misura CUT/TRUNC per tab×viewport). Screenshot evidenza in `docs/audit/before|after/`.
+
 ## NORMALIZE INVARIANTS (2026-08-19)
 - **Type floor**: nessun font-size < 10px, incluso .5 (es. 8.5/9.5px VIETATI — `.anomaly-header`, `.savings-header`, `.savings-target-label`, `.future-milestone .fm-label/.fm-delta`, `.dl-micro-meta` riportati a 10px).
 - **Radii scale**: 8 (piccoli controlli) / 10 (input, calendar-day) / 12-16 (card) / 20 / 999 (pill). Input/select/textarea 10px; btn-action/cat-del-btn/income-row-del/dl-type-btn/split-pill/condivise-tab/form-tab 8px; `.sim-growth-input` NIENTE `!important`.

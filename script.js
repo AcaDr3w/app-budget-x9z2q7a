@@ -5576,7 +5576,7 @@ function renderAnomalyCarousel(slides) {
             <div class="anomaly-window">
                 <div class="anomaly-track">
                     <div class="anomaly-slide">
-                        <span class="anomaly-cat">Nessuna anomalia rilevata</span>
+                        <span class="anomaly-cat" title="Nessuna anomalia rilevata">Nessuna anomalia rilevata</span>
                         <span class="anomaly-delta flat">Tutto nella norma nel periodo</span>
                     </div>
                 </div>
@@ -5589,7 +5589,7 @@ function renderAnomalyCarousel(slides) {
         <div class="anomaly-window">
             <div class="anomaly-track">` + slides.map((s, i) => `
                 <div class="anomaly-slide" aria-hidden="${i !== 0}">
-                    <span class="anomaly-cat">${s.cat}</span>
+                    <span class="anomaly-cat" title="${s.cat}">${s.cat}</span>
                     <span class="anomaly-delta ${s.delta > 0 ? 'up' : 'down'}">${s.delta > 0 ? '▲ +' : '▼ -'}${Math.abs(s.delta).toFixed(0)}% vs solito</span>
                     ${sparklineSVG(s.vals, s.total)}
                 </div>`).join('') + `</div>
