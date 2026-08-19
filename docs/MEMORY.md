@@ -1,5 +1,8 @@
 # Project Core Memory
 
+## INLINE ACTIONS DELEGATION (2026-08-19)
+- **Zero `onclick=` inline** in index.html (113) e script.js (15): convertiti in `data-act`/`data-act-close`/`data-act-stop` + `data-args='<json>'`/`data-el`/`data-var`, gestiti dal delegated listener di `setupInlineActions()` (chiamata nel DOMContentLoaded iniziale). `data-act-close` invoca la fn SENZA event (le `close*` guardano `event && event.target !== currentTarget`); `data-act-stop` = no-op (pannelli popup). Speciali: `data-ai-refresh="1"` (stopPropagation + `generateInsightCard(true)`) e `data-import-trigger="1"` (`#importFileInput.click()`) con binding diretti (lo stopPropagation DEVE girare prima del listener delegato). Solo handler NON-click restano inline (16: oninput/onchange/onsubmit/onkeyup/onkeydown/onfocus/onblur, incl. `onchange="importBackupJSON(event)"` su #importFileInput) — fuori scope. Tutte le 58 azioni risolvono a funzioni globali (2 in supabase-adapter.js: `window.handleLogin`/`handleSignup`).
+
 ## ⚠ SUPABASE CDN = SINCRONO (2026-08-18)
 - **`@supabase/supabase-js@2` (index.html:14) NON deve avere `defer`/`async`**: `supabase-adapter.js:4` usa `window.supabase.createClient()` a top-level (parse time). Un tentativo di defer ha rotto l'app (TypeError createClient). Google API invece può restare defer (usati solo post-DOMContentLoaded). **Chart.js NON è più nel `<head>`**: caricato lazy da `ensureChartJs()` (iniettato al primo `new Chart`).
 
@@ -612,3 +615,10 @@ overscroll-behavior: none !important;
 - **`updateGlobalVersion()` senza console.log** (chiamata a ogni updateUI).
 - **Residuo documentato**: `filterByDate`/`filterByCategory`/`clearAllFilters` chiamano `updateUI()` (→ version bump + autosync se GDrive attivo). Accettato: azione singola con intento utente, costo irrisorio. NON cambiare senza motivo.
 - **Fuori scope**: `script.js` 325KB monolith (nessun bundler — split = rischio alto), Font Awesome full CSS resta blocking (scelta utente), Supabase CDN sync (pinned sopra).
+
+## ✍️ AUDIT ROUND 3 FIXES (2026-08-19)
+- **Floor tipografico 10px**: eliminati TUTTI gli 8-9px (era: `.calendar-day span` 8px, `.trend-label` 8px; 9px su `.ai-insight-date`, `.trend-delta`, `.savings-sub`, `.invest-hero-label`, `.settled-badge`, `#calendarGridCompact .calendar-day-header`, `.item-vals .val-p`, `.reg-shared-pill`). Regola: MAI sotto 10px; 11px+ per label interattive. Chart.js font (9-10px in options) sono fuori (canvas).
+- **`.btn-del` hit-area 44px**: `min-width/min-height:34px` + `::before{inset:-5px}` (44×44 effettivi, visuale 34px). NUOVA regola: gli esenti da `min-height:44px` DEVONO avere hit-area `::before` o misura ≥44.
+- **`renderAnalisiMobile` senza full scan**: `db.expenses.where('month').anyOf(periodMonths)` + `anyOf(baseMonths)` al posto di `toArray()` + filtro in-memory (adapter supporta `anyOf(arr)` con merge outbox). Rimosso `allExp`/`baseSet` morti.
+- **DESIGN.md creato** (root progetto): cattura del mondo light-pastel, token AA, type floor, motion, invarianti performance, debiti noti. Da aggiornare quando il mondo cambia.
+- **Harden/CSP DEFFERITO di nuovo**: 113 onclick inline (statici + template dinamici). Refactor = rischio alto, serve verifica browser, zero beneficio oggi (nessun CSP attivo). Serve pass dedicato con browser.

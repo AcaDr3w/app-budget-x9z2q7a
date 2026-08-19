@@ -37,8 +37,8 @@
         <input type="email" id="authEmail" class="auth-input" placeholder="La tua Email" autocomplete="email" aria-required="true">
         <label class="auth-label" for="authPassword">Password</label>
         <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" aria-required="true">
-        <button type="button" onclick="handleLogin()" class="auth-btn-primary">Accedi</button>
-        <button type="button" onclick="handleSignup()" class="auth-btn-secondary">Registrati</button>
+        <button type="button" data-act="handleLogin" class="auth-btn-primary">Accedi</button>
+        <button type="button" data-act="handleSignup" class="auth-btn-secondary">Registrati</button>
         <p id="authMessage" class="auth-msg" role="alert"></p>
     </div>
 </div>
@@ -48,15 +48,15 @@
 
 <!-- TOP NAVBAR (DESKTOP ONLY) -->
 <nav class="top-nav hide-mobile" aria-label="Navigazione principale">
-    <button type="button" class="top-nav-brand" onclick="switchTab('current-month-tab')">
+    <button type="button" class="top-nav-brand" data-act="switchTab" data-args='["current-month-tab"]'>
         <i class="fas fa-chart-line" aria-hidden="true"></i> <span class="brand-title">Bilancio Pro</span>
     </button>
     <div class="top-nav-links">
-        <button type="button" class="top-nav-link active" data-tab="current-month-tab" onclick="switchTab('current-month-tab')">Mese</button>
-        <button type="button" class="top-nav-link" data-tab="history-tab" onclick="switchTab('history-tab')">Analisi</button>
-        <button type="button" class="top-nav-link" data-tab="investimenti-tab" onclick="switchTab('investimenti-tab')">Investimenti</button>
-        <button type="button" class="top-nav-link" data-tab="future-tab" onclick="switchTab('future-tab')">Previsioni</button>
-        <button type="button" class="top-nav-link" data-tab="settings-tab" onclick="switchTab('settings-tab')">Impostazioni</button>
+        <button type="button" class="top-nav-link active" data-tab="current-month-tab" data-act="switchTab" data-args='["current-month-tab"]'>Mese</button>
+        <button type="button" class="top-nav-link" data-tab="history-tab" data-act="switchTab" data-args='["history-tab"]'>Analisi</button>
+        <button type="button" class="top-nav-link" data-tab="investimenti-tab" data-act="switchTab" data-args='["investimenti-tab"]'>Investimenti</button>
+        <button type="button" class="top-nav-link" data-tab="future-tab" data-act="switchTab" data-args='["future-tab"]'>Previsioni</button>
+        <button type="button" class="top-nav-link" data-tab="settings-tab" data-act="switchTab" data-args='["settings-tab"]'>Impostazioni</button>
     </div>
 </nav>
 
@@ -68,23 +68,23 @@
 
 <!-- BOTTOM NAVIGATION (MOBILE) -->
 <nav class="bottom-nav" id="bottomNav">
-    <button type="button" class="nav-item active" id="navMese" onclick="switchTab('current-month-tab')">
+    <button type="button" class="nav-item active" id="navMese" data-act="switchTab" data-args='["current-month-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-calendar-day" aria-hidden="true"></i></div>
         <span class="nav-label">Mese</span>
     </button>
-    <button type="button" class="nav-item" id="navAnalisi" onclick="switchTab('history-tab')">
+    <button type="button" class="nav-item" id="navAnalisi" data-act="switchTab" data-args='["history-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-chart-line" aria-hidden="true"></i></div>
         <span class="nav-label">Analisi</span>
     </button>
-    <button type="button" class="nav-item" id="navInvestimenti" onclick="switchTab('investimenti-tab')">
+    <button type="button" class="nav-item" id="navInvestimenti" data-act="switchTab" data-args='["investimenti-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-gem" aria-hidden="true"></i></div>
         <span class="nav-label">Investimenti</span>
     </button>
-    <button type="button" class="nav-item" id="navPrevisioni" onclick="switchTab('future-tab')">
+    <button type="button" class="nav-item" id="navPrevisioni" data-act="switchTab" data-args='["future-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></div>
         <span class="nav-label">Previsioni</span>
     </button>
-    <button type="button" class="nav-item" id="navImpostazioni" onclick="switchTab('settings-tab')">
+    <button type="button" class="nav-item" id="navImpostazioni" data-act="switchTab" data-args='["settings-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-cog" aria-hidden="true"></i></div>
         <span class="nav-label">Impostazioni</span>
     </button>
@@ -98,7 +98,7 @@
     <div id="recoveryAlertBox" class="recovery-alert-box">
         <p>⚠️ Database vuoto o nuovo dispositivo rilevato.</p>
         <span class="recovery-alert-sub">Carica un backup .json per ripristinare i dati, oppure inizia ad inserire le tue spese.</span>
-        <button class="btn-recovery-trigger" onclick="document.getElementById('importFileInput').click()">📥 Carica Backup (.json)</button>
+        <button class="btn-recovery-trigger" data-import-trigger="1">📥 Carica Backup (.json)</button>
     </div>
 
      <!-- =================== TAB 1: MESE CORRENTE =================== -->
@@ -116,15 +116,15 @@
                   <span class="hero-insight-text"></span>
               </div>
               <div class="hero-mini-row">
-                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Entrate totali, apri rendiconto" onclick="openRendicontoPopup('entrate')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRendicontoPopup('entrate');}">
+                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Entrate totali, apri rendiconto" data-act="openRendicontoPopup" data-args='["entrate"]' onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRendicontoPopup('entrate');}">
                       <span class="hero-mini-label">Entrate Totali</span>
                       <span class="hero-mini-value" id="heroEntrateTotal">0 €</span>
                   </div>
-                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Spese previste, apri rendiconto" onclick="openRendicontoPopup('previsto')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRendicontoPopup('previsto');}">
+                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Spese previste, apri rendiconto" data-act="openRendicontoPopup" data-args='["previsto"]' onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRendicontoPopup('previsto');}">
                       <span class="hero-mini-label">Spese Previste</span>
                       <span class="hero-mini-value" id="heroSpesePreviste">0 €</span>
                   </div>
-                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Spese sostenute, apri rendiconto" onclick="openRendicontoPopup('sostenuto')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRendicontoPopup('sostenuto');}">
+                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Spese sostenute, apri rendiconto" data-act="openRendicontoPopup" data-args='["sostenuto"]' onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRendicontoPopup('sostenuto');}">
                       <span class="hero-mini-label">Spese Sostenute</span>
                       <span class="hero-mini-value" id="heroSpeseSostenute">0 €</span>
                   </div>
@@ -133,8 +133,8 @@
 
 <div class="month-head">
                   <div class="kpi-cluster kpi-left">
-                      <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" tabindex="0" aria-label="Apri rendiconto entrate" onclick="openRendicontoPopup('entrate')">Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-                      <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" tabindex="0" aria-label="Apri rendiconto spese previste" onclick="openRendicontoPopup('previsto')">Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
+                      <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" tabindex="0" aria-label="Apri rendiconto entrate" data-act="openRendicontoPopup" data-args='["entrate"]'>Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
+                      <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" tabindex="0" aria-label="Apri rendiconto spese previste" data-act="openRendicontoPopup" data-args='["previsto"]'>Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
                   </div>
 
                   <div class="month-selector-group">
@@ -147,7 +147,7 @@
                   </div>
 
                   <div class="kpi-cluster kpi-right">
-                      <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" tabindex="0" aria-label="Apri rendiconto spese sostenute" onclick="openRendicontoPopup('sostenuto')">Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
+                      <div id="summarySostenuto" class="summary-box box-sostenuto clickable" role="button" tabindex="0" aria-label="Apri rendiconto spese sostenute" data-act="openRendicontoPopup" data-args='["sostenuto"]'>Spese Sostenute<span id="sumSostenuto" class="summary-val">0 €</span></div>
                   </div>
               </div>
 
@@ -211,9 +211,9 @@
             <button data-action="condivise"><span class="hub-icon">👥</span><span class="hub-text">Condividi Budget</span></button>
         </div>
 
-        <div id="popup-rendiconto" class="popup-overlay" onclick="closeRendicontoPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" onclick="event.stopPropagation();">
-                <button class="popup-close" onclick="closeRendicontoPopup(event)" aria-label="Chiudi popup">×</button>
+        <div id="popup-rendiconto" class="popup-overlay" data-act-close="closeRendicontoPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeRendicontoPopup" aria-label="Chiudi popup">×</button>
                 <div class="popup-header">
                     <div>
                         <h3 id="popupTitle">Confronto rendiconto</h3>
@@ -229,9 +229,9 @@
         </div>
 
         <!-- POPUP RICERCA -->
-        <div id="searchPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="searchPopupTitle" onclick="closeSearchPopup(event)">
-            <div class="popup-panel" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSearchPopup()" aria-label="Chiudi popup">×</button>
+        <div id="searchPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="searchPopupTitle" data-act-close="closeSearchPopup">
+            <div class="popup-panel" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSearchPopup" aria-label="Chiudi popup">×</button>
                 <h3 id="searchPopupTitle">🔍 Ricerca Spese</h3>
                 <div class="popup-body popup-body-stack popup-gap-sm">
                     <input type="text" id="searchPopupInput" class="sheet-input" placeholder="Cerca per nome, nota o categoria..." oninput="filterSearchResults()">
@@ -247,22 +247,22 @@
         </div>
 
         <!-- POPUP I.A. MESE -->
-        <div id="iaMonthPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="iaMonthPopupTitle" onclick="closeIaMonthPopup(event)">
-            <div class="popup-panel" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeIaMonthPopup()" aria-label="Chiudi popup">×</button>
+        <div id="iaMonthPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="iaMonthPopupTitle" data-act-close="closeIaMonthPopup">
+            <div class="popup-panel" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeIaMonthPopup" aria-label="Chiudi popup">×</button>
                 <h3 id="iaMonthPopupTitle">🤖 Analisi I.A. del Mese</h3>
                 <div class="popup-body popup-body-stack">
                     <p style="font-size:12px;color:#475569;margin:0;">Analisi mirata sulle spese e entrate del mese corrente.</p>
-                    <button class="btn-ia" id="btnIaMonthAnalysis" onclick="runIaMonthAnalysis()" style="margin:0;">✨ Genera Analisi Mese</button>
+                    <button class="btn-ia" id="btnIaMonthAnalysis" data-act="runIaMonthAnalysis" style="margin:0;">✨ Genera Analisi Mese</button>
                     <div id="iaMonthResponse" class="ia-response-box"></div>
                 </div>
             </div>
         </div>
 
         <!-- POPUP IA + NOTE MESE (DESKTOP) -->
-        <div id="iaNotesModal" class="popup-overlay ia-notes-overlay" onclick="closeIaNotesModal(event)">
-            <div class="popup-panel ia-notes-panel" role="dialog" aria-modal="true" aria-labelledby="iaNotesModalTitle" onclick="event.stopPropagation();">
-                <button class="popup-close" onclick="closeIaNotesModal()" aria-label="Chiudi">×</button>
+        <div id="iaNotesModal" class="popup-overlay ia-notes-overlay" data-act-close="closeIaNotesModal">
+            <div class="popup-panel ia-notes-panel" role="dialog" aria-modal="true" aria-labelledby="iaNotesModalTitle" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeIaNotesModal" aria-label="Chiudi">×</button>
                 <h3 id="iaNotesModalTitle">🤖 IA &amp; Note del Mese</h3>
                 <div class="form-tabs ia-notes-tabs" role="tablist" aria-label="Pannello IA e note">
                     <button type="button" class="form-tab active" data-iatab="hub">🧠 HUB IA</button>
@@ -274,7 +274,7 @@
                         <div id="hub-ia-container" class="hub-ia-card">
                             <h2>🤖 HUB IA</h2>
                             <p class="hub-ia-hint">Analisi strategica del mese con intelligenza artificiale.</p>
-                            <button id="btn-analisi-strategica" class="btn-ia" onclick="runFinancialAnalysisIA()">✨ Analisi Strategica Mese</button>
+                            <button id="btn-analisi-strategica" class="btn-ia" data-act="runFinancialAnalysisIA">✨ Analisi Strategica Mese</button>
                             <details class="hub-ia-advanced">
                                 <summary>⚙️ Opzioni avanzate</summary>
                                 <div class="hub-ia-grid">
@@ -342,7 +342,7 @@
                             <div class="input-group"><label for="incDesc">Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
                         </div>
                         <div class="input-group"><label for="incAmount">Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
-                        <button class="btn-entrate" onclick="addIncome()">Registra Entrata</button>
+                        <button class="btn-entrate" data-act="addIncome">Registra Entrata</button>
                     </div>
 
                     <div class="form-pane" id="formPaneSpesa">
@@ -377,8 +377,8 @@
                                 <div class="adv-section">
                                     <span class="shared-field-label">Tipo voce</span>
                                     <div class="split-method-pills">
-                                        <button type="button" class="split-pill active" data-exp-type="planned" onclick="setExpenseTypePill(this)">📌 Prevista</button>
-                                        <button type="button" class="split-pill" data-exp-type="actual" onclick="setExpenseTypePill(this)">💸 Sostenuta</button>
+                                        <button type="button" class="split-pill active" data-exp-type="planned" data-act="setExpenseTypePill" data-el>📌 Prevista</button>
+                                        <button type="button" class="split-pill" data-exp-type="actual" data-act="setExpenseTypePill" data-el>💸 Sostenuta</button>
                                     </div>
                                     <p class="comp-hint" style="margin:6px 0 0;">Evidenzia il campo complementare: Prevista → Stima, Sostenuta → Pagato.</p>
                                 </div>
@@ -405,12 +405,12 @@
                                 </div>
                             </div>
                         </details>
-                        <button class="btn-spesa" onclick="addExpense()">Registra Spesa</button>
+                        <button class="btn-spesa" data-act="addExpense">Registra Spesa</button>
                     </div>
 
                     <div class="form-pane" id="formPaneCondivise">
                         <p class="comp-hint">Gestisci debiti e crediti con persone o gruppi.</p>
-                        <button class="btn-spesa btn-violet" onclick="openCondivisePopup()">Apri Saldi & Gruppi</button>
+                        <button class="btn-spesa btn-violet" data-act="openCondivisePopup">Apri Saldi & Gruppi</button>
                     </div>
                 </div>
 
@@ -438,18 +438,18 @@
                     <div class="pane-title" id="listTitle">📋 Registro Spese</div>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()">
-                        <button class="btn-clear-filters" id="btnClearAllFilters" onclick="clearAllFilters()">✕ Filtri</button>
+                        <button class="btn-clear-filters" id="btnClearAllFilters" data-act="clearAllFilters">✕ Filtri</button>
                     </div>
                     <div id="entriesList" style="padding-bottom: 10px;"></div>
                     <div class="grid-inputs" style="margin-bottom: 0;">
-                        <button class="btn-csv" onclick="exportCSV()">📥 CSV</button>
-                        <button class="btn-csv btn-violet" onclick="exportPDF()">📄 PDF</button>
+                        <button class="btn-csv" data-act="exportCSV">📥 CSV</button>
+                        <button class="btn-csv btn-violet" data-act="exportPDF">📄 PDF</button>
                     </div>
                 </div>
 
                 <!-- IA + NOTE QUICK CARD -->
                 <div class="card comp-card hide-mobile ia-quick-card">
-                    <button type="button" class="ia-month-trigger ia-quick-trigger" onclick="openIaNotesModal()"><i class="fas fa-robot" aria-hidden="true"></i> IA &amp; Note del Mese</button>
+                    <button type="button" class="ia-month-trigger ia-quick-trigger" data-act="openIaNotesModal"><i class="fas fa-robot" aria-hidden="true"></i> IA &amp; Note del Mese</button>
                 </div>
 
             </div>
@@ -461,10 +461,10 @@
 
         <!-- DESKTOP IA CARD (hidden on mobile) -->
         <div class="card ia-insight-card hide-mobile">
-            <h2 class="collapsible" onclick="toggleSection('iaHistorySection', this)">🧠 Analisi Storica I.A. Multimese</h2>
+            <h2 class="collapsible" data-act="toggleSection" data-args='["iaHistorySection"]' data-el>🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
-                <button class="btn-ia" id="btnHistoryIA" onclick="runHistoryAnalysisIA()">🔍 Genera Resoconto Storico</button>
+                <button class="btn-ia" id="btnHistoryIA" data-act="runHistoryAnalysisIA">🔍 Genera Resoconto Storico</button>
                 <div id="iaHistoryResponse" class="ia-response-box"></div>
             </div>
         </div>
@@ -481,7 +481,7 @@
         </div>
 
         <!-- MOBILE: AI INSIGHT CARD (hidden on desktop) -->
-        <div class="ai-insight-card hide-desktop" id="aiInsightCard" role="button" tabindex="0" onclick="onAiInsightCardTap()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onAiInsightCardTap();}">
+        <div class="ai-insight-card hide-desktop" id="aiInsightCard" role="button" tabindex="0" data-act="onAiInsightCardTap" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onAiInsightCardTap();}">
             <span class="ai-insight-icon" aria-hidden="true">✨</span>
             <span class="ai-insight-marquee">
                 <span class="ai-insight-track">
@@ -491,7 +491,7 @@
             </span>
             <span class="ai-insight-meta">
                 <span class="ai-insight-date" id="aiInsightDate"></span>
-                <button type="button" class="ai-insight-refresh" id="aiInsightRefresh" onclick="event.stopPropagation();generateInsightCard(true)" aria-label="Aggiorna analisi IA">↻</button>
+                <button type="button" class="ai-insight-refresh" id="aiInsightRefresh" data-ai-refresh="1" aria-label="Aggiorna analisi IA">↻</button>
             </span>
         </div>
 
@@ -588,37 +588,37 @@
     </div>
 
     <!-- IA MODAL (mobile) -->
-    <div id="iaModal" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="iaModalTitle" onclick="closeIaModal(event)">
-        <div class="popup-panel" onclick="event.stopPropagation()">
-            <button class="popup-close" onclick="closeIaModal()" aria-label="Chiudi popup">×</button>
+    <div id="iaModal" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="iaModalTitle" data-act-close="closeIaModal">
+        <div class="popup-panel" data-act-stop="1">
+            <button class="popup-close" data-act-close="closeIaModal" aria-label="Chiudi popup">×</button>
             <div style="overflow-y:auto;flex:1;">
                 <h3 class="ia-modal-title" id="iaModalTitle">🧠 Analisi Storica I.A. Multimese</h3>
                 <p style="font-size:12px; margin-bottom:10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
-                <button class="btn-ia" onclick="runHistoryAnalysisIAModal()">🔍 Genera Resoconto Storico</button>
+                <button class="btn-ia" data-act="runHistoryAnalysisIAModal">🔍 Genera Resoconto Storico</button>
                 <div id="iaHistoryResponseModal" class="ia-response-box"></div>
             </div>
         </div>
     </div>
 
     <!-- ARCHIVE MODAL (mobile) -->
-    <div id="archiveModal" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle" onclick="closeArchiveModal(event)">
-        <div class="popup-panel" onclick="event.stopPropagation()">
-            <button class="popup-close" onclick="closeArchiveModal()" aria-label="Chiudi popup">×</button>
+    <div id="archiveModal" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle" data-act-close="closeArchiveModal">
+        <div class="popup-panel" data-act-stop="1">
+            <button class="popup-close" data-act-close="closeArchiveModal" aria-label="Chiudi popup">×</button>
             <h3 id="archiveModalTitle">📋 Registro Mesi Archiviati</h3>
             <div id="archiveModalBody" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
         </div>
     </div>
 
     <!-- CUSTOM RANGE POPUP (mobile) -->
-    <div id="customRangePopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="customRangePopupTitle" onclick="closeCustomRangePopup(event)">
-        <div class="popup-panel" onclick="event.stopPropagation()">
-            <button class="popup-close" onclick="closeCustomRangePopup()" aria-label="Chiudi popup">×</button>
+    <div id="customRangePopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="customRangePopupTitle" data-act-close="closeCustomRangePopup">
+        <div class="popup-panel" data-act-stop="1">
+            <button class="popup-close" data-act-close="closeCustomRangePopup" aria-label="Chiudi popup">×</button>
             <h3 id="customRangePopupTitle">📅 Range Personalizzato</h3>
             <label for="customRangeFrom" style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Da</label>
             <input type="month" id="customRangeFrom" class="responsive-input" style="margin-bottom:10px;">
             <label for="customRangeTo" style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">A</label>
             <input type="month" id="customRangeTo" class="responsive-input" style="margin-bottom:14px;">
-            <button class="btn-ia" onclick="applyCustomRange()">Applica Range</button>
+            <button class="btn-ia" data-act="applyCustomRange">Applica Range</button>
         </div>
     </div>
 
@@ -640,7 +640,7 @@
                 <div class="future-sim-card">
                     <div class="sim-value-row">
                         <span id="futureSimValue" class="future-sim-chip">0 €/mese</span>
-                        <button class="sim-reset" onclick="resetFutureSimulation()" title="Azzeera la simulazione">↻</button>
+                        <button class="sim-reset" data-act="resetFutureSimulation" title="Azzeera la simulazione">↻</button>
                     </div>
                     <input type="range" class="sim-range" id="futureSimSlider" min="-500" max="500" step="10" value="0" oninput="onFutureSimInput('')">
                     <div class="sim-growth-row">
@@ -668,7 +668,7 @@
                 <p style="font-size:12px;color:#475569;margin-bottom:12px;">
                     L'IA analizza la sostenibilità delle spese previste nei prossimi 12 mesi (scadenze e rate) rispetto al trend di risparmio.
                 </p>
-                <button class="btn-ia" id="btnFutureIA" onclick="runFuturePredictionIA()">🤖 Genera Analisi Futura</button>
+                <button class="btn-ia" id="btnFutureIA" data-act="runFuturePredictionIA">🤖 Genera Analisi Futura</button>
                 <div id="iaFutureResponse" class="ia-response-box"></div>
             </div>
         </div>
@@ -692,7 +692,7 @@
                 <div class="sim-growth-row">
                     <span>📈 <input type="number" id="futureInvestGrowthM" class="sim-growth-input" value="4" min="0" max="20" step="0.5" oninput="onFutureInvestGrowthInput()">%/anno</span>
                     <span class="sim-growth-spacer"></span>
-                    <button class="sim-reset" onclick="resetFutureSimulation()" title="Azzeera la simulazione">↻</button>
+                    <button class="sim-reset" data-act="resetFutureSimulation" title="Azzeera la simulazione">↻</button>
                 </div>
             </div>
 
@@ -715,7 +715,7 @@
             <div class="card">
                 <h2>💎 Investimenti & Asset</h2>
                 <p style="font-size:13px;color:#475569;margin-bottom:14px;">Gestisci i tuoi investimenti: immobili, trading, salvadanai e side business.</p>
-                <button class="btn-spesa btn-violet" style="margin-bottom:16px;" onclick="openInvestAddSheet()">+ Nuovo Asset / Salvadanaio</button>
+                <button class="btn-spesa btn-violet" style="margin-bottom:16px;" data-act="openInvestAddSheet">+ Nuovo Asset / Salvadanaio</button>
                 <div id="investAssetListDesktop" style="display:flex;flex-direction:column;gap:10px;"></div>
             </div>
         </div>
@@ -737,40 +737,40 @@
                 </div>
             </div>
 
-            <button class="invest-add-btn" onclick="openInvestAddSheet()">+ Nuovo Asset / Salvadanaio</button>
+            <button class="invest-add-btn" data-act="openInvestAddSheet">+ Nuovo Asset / Salvadanaio</button>
 
             <div id="investAssetGrid" class="invest-asset-grid"></div>
         </div>
 
         <!-- POPUP NUOVO ASSET -->
-        <div id="investAddPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="investAddPopupTitle" onclick="closeInvestAddPopup(event)">
-            <div class="popup-panel" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeInvestAddPopup()" aria-label="Chiudi popup">×</button>
+        <div id="investAddPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="investAddPopupTitle" data-act-close="closeInvestAddPopup">
+            <div class="popup-panel" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeInvestAddPopup" aria-label="Chiudi popup">×</button>
                 <h3 id="investAddPopupTitle">💎 Nuovo Asset</h3>
                 <div class="popup-body popup-body-stack popup-gap-lg">
                     <div class="invest-type-grid">
-                        <button class="invest-type-btn" data-type="immobili" onclick="selectInvestType(this)">🏠 Immobili</button>
-                        <button class="invest-type-btn" data-type="trading_crypto" onclick="selectInvestType(this)">📈 Trading/Crypto</button>
-                        <button class="invest-type-btn" data-type="salvadanai" onclick="selectInvestType(this)">🐷 Salva-Danai</button>
-                        <button class="invest-type-btn" data-type="side_business" onclick="selectInvestType(this)">🚀 Side Business</button>
+                        <button class="invest-type-btn" data-type="immobili" data-act="selectInvestType" data-el>🏠 Immobili</button>
+                        <button class="invest-type-btn" data-type="trading_crypto" data-act="selectInvestType" data-el>📈 Trading/Crypto</button>
+                        <button class="invest-type-btn" data-type="salvadanai" data-act="selectInvestType" data-el>🐷 Salva-Danai</button>
+                        <button class="invest-type-btn" data-type="side_business" data-act="selectInvestType" data-el>🚀 Side Business</button>
                     </div>
                     <input type="text" id="investNewName" class="sheet-input" placeholder="Nome asset (es. Casa Mainz, ETF MSCI World)">
                     <input type="number" id="investNewTarget" class="sheet-input" step="0.01" min="0" placeholder="Obiettivo (facoltativo) €" style="display:none;">
                     <input type="number" id="investNewInitialCapital" class="sheet-input" step="0.01" min="0" placeholder="Capitale Investito Iniziale €">
-                    <button class="btn-spesa btn-violet" onclick="saveNewInvestment()">Salva Asset</button>
+                    <button class="btn-spesa btn-violet" data-act="saveNewInvestment">Salva Asset</button>
                 </div>
             </div>
         </div>
 
         <!-- POPUP DETTAGLIO ASSET -->
-        <div id="investAssetPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="investPopupTitle" onclick="closeInvestAssetPopup(event)">
-            <div class="popup-panel" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeInvestAssetPopup()" aria-label="Chiudi popup">×</button>
+        <div id="investAssetPopup" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="investPopupTitle" data-act-close="closeInvestAssetPopup">
+            <div class="popup-panel" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeInvestAssetPopup" aria-label="Chiudi popup">×</button>
                 <h3 id="investPopupTitle">Dettaglio Asset</h3>
                 <div id="investPopupBody" class="popup-body" style="gap:12px;display:flex;flex-direction:column;">
                     <div id="investPopupSummary" class="invest-popup-summary"></div>
-                    <button class="btn-spesa btn-violet" style="margin:0;" onclick="openInvestMovementForm()">+ Aggiungi Movimento</button>
-                    <button class="btn-danger-outline" onclick="deleteInvestAsset(selectedInvestId)">🗑️ Elimina Asset</button>
+                    <button class="btn-spesa btn-violet" style="margin:0;" data-act="openInvestMovementForm">+ Aggiungi Movimento</button>
+                    <button class="btn-danger-outline" data-act="deleteInvestAsset" data-var="selectedInvestId">🗑️ Elimina Asset</button>
                     <div id="investMovementForm" style="display:none;flex-direction:column;gap:10px;padding:12px;background:#f8fafc;border-radius:12px;">
                         <input type="number" id="investMovAmount" class="sheet-input" step="0.01" placeholder="Importo €">
                         <select id="investMovType" class="sheet-input">
@@ -782,8 +782,8 @@
                         <input type="date" id="investMovDate" class="sheet-input">
                         <input type="text" id="investMovDesc" class="sheet-input" placeholder="Nota (es. Acquisto quote)">
                         <div style="display:flex;gap:10px;">
-                            <button class="btn-secondary" style="margin:0;flex:1;" onclick="closeInvestMovementForm()">Annulla</button>
-                            <button class="btn-entrate" style="margin:0;flex:1;" onclick="saveInvestMovement()">Salva</button>
+                            <button class="btn-secondary" style="margin:0;flex:1;" data-act-close="closeInvestMovementForm">Annulla</button>
+                            <button class="btn-entrate" style="margin:0;flex:1;" data-act="saveInvestMovement">Salva</button>
                         </div>
                     </div>
                     <h4 style="font-size:13px;font-weight:700;margin:8px 0 4px;color:var(--primary);">Storico Movimenti</h4>
@@ -797,7 +797,7 @@
     <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
     <div id="settings-tab" class="tab-content hidden">
         <div class="settings-grid">
-            <button type="button" class="settings-tile" onclick="openSettingsPopup('categorie')">
+            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["categorie"]'>
                 <span class="settings-tile-icon">🛠️</span>
                 <span class="settings-tile-text">
                     <span class="settings-tile-title">Categorie</span>
@@ -805,7 +805,7 @@
                 </span>
                 <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
-            <button type="button" class="settings-tile" onclick="openSettingsPopup('app')">
+            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["app"]'>
                 <span class="settings-tile-icon">📱</span>
                 <span class="settings-tile-text">
                     <span class="settings-tile-title">App &amp; Notifiche</span>
@@ -813,7 +813,7 @@
                 </span>
                 <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
-            <button type="button" class="settings-tile" onclick="openSettingsPopup('backup')">
+            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["backup"]'>
                 <span class="settings-tile-icon">💾</span>
                 <span class="settings-tile-text">
                     <span class="settings-tile-title">Backup Dati</span>
@@ -821,7 +821,7 @@
                 </span>
                 <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
-            <button type="button" class="settings-tile" onclick="openSettingsPopup('cloud')">
+            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["cloud"]'>
                 <span class="settings-tile-icon">☁️</span>
                 <span class="settings-tile-text">
                     <span class="settings-tile-title">Sincronizzazione Cloud</span>
@@ -829,7 +829,7 @@
                 </span>
                 <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
-            <button type="button" class="settings-tile" onclick="openSettingsPopup('ripetizioni')">
+            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["ripetizioni"]'>
                 <span class="settings-tile-icon">🔁</span>
                 <span class="settings-tile-text">
                     <span class="settings-tile-title">Ripetizioni</span>
@@ -837,7 +837,7 @@
                 </span>
                 <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
             </button>
-            <button type="button" class="settings-tile settings-tile-danger" onclick="openSettingsPopup('danger')">
+            <button type="button" class="settings-tile settings-tile-danger" data-act="openSettingsPopup" data-args='["danger"]'>
                 <span class="settings-tile-icon">⚠️</span>
                 <span class="settings-tile-text">
                     <span class="settings-tile-title">Zona Pericolo</span>
@@ -848,9 +848,9 @@
         </div>
 
         <!-- POPUP: CATEGORIE -->
-        <div id="settingsPopup-categorie" class="popup-overlay" onclick="closeSettingsPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Categorie" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+        <div id="settingsPopup-categorie" class="popup-overlay" data-act-close="closeSettingsPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Categorie" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3>🛠️ Categorie</h3>
                 <div class="popup-body">
                     <div class="macro-group" data-macro="casa_utenze">
@@ -893,29 +893,29 @@
         </div>
 
         <!-- POPUP: APP & NOTIFICHE -->
-        <div id="settingsPopup-app" class="popup-overlay" onclick="closeSettingsPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="App e Notifiche" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+        <div id="settingsPopup-app" class="popup-overlay" data-act-close="closeSettingsPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="App e Notifiche" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3>📱 App &amp; Notifiche</h3>
                 <div class="popup-body">
                     <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                         <label for="pushNotifToggle" style="margin:0; font-size: 13px;">🔔 Attiva Notifiche Scadenze</label>
                         <input type="checkbox" id="pushNotifToggle" style="width: 24px; height: 24px; margin-left: 10px;" onchange="togglePushNotifications()">
                     </div>
-                    <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" onclick="installPWA()">📲 Installa App</button>
+                    <button id="btnInstallApp" class="btn-ia" style="display: block; margin-top: 14px; background: #059669;" data-act="installPWA">📲 Installa App</button>
                 </div>
             </div>
         </div>
 
         <!-- POPUP: BACKUP DATI -->
-        <div id="settingsPopup-backup" class="popup-overlay" onclick="closeSettingsPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Backup Dati" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+        <div id="settingsPopup-backup" class="popup-overlay" data-act-close="closeSettingsPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Backup Dati" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3>💾 Backup Dati</h3>
                 <div class="popup-body">
                     <div class="backup-action-grid">
-                        <button class="btn-backup-export" onclick="exportBackupJSON()">📤 Esporta JSON</button>
-                        <button class="btn-backup-import" onclick="document.getElementById('importFileInput').click()">📥 Importa JSON</button>
+                        <button class="btn-backup-export" data-act="exportBackupJSON">📤 Esporta JSON</button>
+                        <button class="btn-backup-import" data-import-trigger="1">📥 Importa JSON</button>
                     </div>
                     <input type="file" id="importFileInput" class="hidden-file-input" accept=".json" onchange="importBackupJSON(event)">
                     <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Esporta un backup completo o ripristina i dati da un file .json salvato in precedenza.</p>
@@ -924,22 +924,22 @@
         </div>
 
         <!-- POPUP: SINCRO CLOUD -->
-        <div id="settingsPopup-cloud" class="popup-overlay" onclick="closeSettingsPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Sincronizzazione Cloud" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+        <div id="settingsPopup-cloud" class="popup-overlay" data-act-close="closeSettingsPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Sincronizzazione Cloud" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3>☁️ Sincronizzazione Cloud</h3>
                 <div class="popup-body">
                     <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Salva una copia sicura su Google Drive.</p>
-                    <button class="btn-gdrive" id="btnGDriveAuth" onclick="handleAuthClick()">🔑 Connetti a Google Drive</button>
-                    <button class="btn-gdrive" id="btnGDriveSync" onclick="syncToDrive()" style="display: none;">☁️ Sincronizza ora</button>
+                    <button class="btn-gdrive" id="btnGDriveAuth" data-act="handleAuthClick">🔑 Connetti a Google Drive</button>
+                    <button class="btn-gdrive" id="btnGDriveSync" data-act="syncToDrive" style="display: none;">☁️ Sincronizza ora</button>
                 </div>
             </div>
         </div>
 
         <!-- POPUP: RIPETIZIONI -->
-        <div id="settingsPopup-ripetizioni" class="popup-overlay" onclick="closeSettingsPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Ripetizioni" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+        <div id="settingsPopup-ripetizioni" class="popup-overlay" data-act-close="closeSettingsPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Ripetizioni" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3>🔁 Ripetizioni</h3>
                 <div class="popup-body">
                     <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Qui trovi le spese ricorrenti attive e puoi eliminarle.</p>
@@ -949,14 +949,14 @@
         </div>
 
         <!-- POPUP: ZONA PERICOLO -->
-        <div id="settingsPopup-danger" class="popup-overlay" onclick="closeSettingsPopup(event)">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Zona Pericolo" onclick="event.stopPropagation()">
-                <button class="popup-close" onclick="closeSettingsPopup()" aria-label="Chiudi">×</button>
+        <div id="settingsPopup-danger" class="popup-overlay" data-act-close="closeSettingsPopup">
+            <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Zona Pericolo" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3 class="danger-title">⚠️ Zona Pericolo</h3>
                 <div class="popup-body">
                     <div class="danger-zone-box">
                         <p class="danger-zone-text">Elimina definitivamente tutti i dati: spese, entrate, categorie e scadenze. Consigliato un backup prima di procedere.</p>
-                        <button class="btn-action btn-danger-full" onclick="resetTotalDB()">🗑️ Elimina tutti i dati</button>
+                        <button class="btn-action btn-danger-full" data-act="resetTotalDB">🗑️ Elimina tutti i dati</button>
                     </div>
                 </div>
             </div>
@@ -966,13 +966,13 @@
     </main>
 
     <!-- POPUP SPESE CONDIVISE -->
-    <div id="popup-spese-condivise" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="condivisePopupTitle" onclick="closeCondivisePopup(event)">
-        <div class="popup-panel" onclick="event.stopPropagation()">
-            <button class="popup-close" onclick="closeCondivisePopup()" aria-label="Chiudi popup">×</button>
+    <div id="popup-spese-condivise" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="condivisePopupTitle" data-act-close="closeCondivisePopup">
+        <div class="popup-panel" data-act-stop="1">
+            <button class="popup-close" data-act-close="closeCondivisePopup" aria-label="Chiudi popup">×</button>
             <h3 class="condivise-title" id="condivisePopupTitle">👥 Spese Condivise</h3>
             <div class="condivise-tabs condivise-segmented" role="tablist" aria-label="Spese condivise">
-                <button class="condivise-tab active" data-tab="amici" onclick="switchCondiviseTab('amici')">👤 Amici</button>
-                <button class="condivise-tab" data-tab="gruppi" onclick="switchCondiviseTab('gruppi')">👥 Gruppi</button>
+                <button class="condivise-tab active" data-tab="amici" data-act="switchCondiviseTab" data-args='["amici"]'>👤 Amici</button>
+                <button class="condivise-tab" data-tab="gruppi" data-act="switchCondiviseTab" data-args='["gruppi"]'>👥 Gruppi</button>
             </div>
             <div class="popup-body" id="condiviseBody">
                 <div id="condiviseTabAmici" class="condivise-tab-content active"></div>

@@ -488,6 +488,36 @@ function setupTablistA11y() {
     });
 }
 
+// =====================================================================
+// INLINE ACTIONS — delegation (CSP: zero onclick inline, 2026-08-19)
+// =====================================================================
+function setupInlineActions() {
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-act], [data-act-close], [data-act-stop]');
+        if (!el) return;
+        if (el.dataset.actStop) return;
+        let fn;
+        if (el.dataset.actClose) {
+            fn = window[el.dataset.actClose];
+            if (typeof fn === 'function') fn();
+            return;
+        }
+        fn = window[el.dataset.act];
+        if (typeof fn !== 'function') return;
+        let args = [];
+        try { if (el.dataset.args) args = JSON.parse(el.dataset.args); } catch { args = []; }
+        if (el.dataset.var) args.push(window[el.dataset.var]);
+        if (el.dataset.el) args.push(el);
+        fn(...args);
+    });
+    document.querySelectorAll('[data-ai-refresh]').forEach((b) => {
+        b.addEventListener('click', (e) => { e.stopPropagation(); generateInsightCard(true); });
+    });
+    document.querySelectorAll('[data-import-trigger]').forEach((b) => {
+        b.addEventListener('click', () => { document.getElementById('importFileInput')?.click(); });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const monthInputEl = document.getElementById('currentMonth');
     if (monthInputEl) {
@@ -497,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAnalysisPeriodSelector();
     setupModalAccessibility();
     setupTablistA11y();
+    setupInlineActions();
 });
 
 // =====================================================================
@@ -2663,7 +2694,7 @@ async function renderRipetizioni() {
                     <span class="ripetizione-importo">${importo.toFixed(2)}€/mese</span>
                     <span class="ripetizione-durata">${durata === 'Senza scadenza' ? 'Senza scadenza' : 'Fino a: ' + durata}</span>
                 </div>
-                <button class="ripetizione-delete" title="Elimina ripetizione futura" onclick="deleteRecurringGroup('${safeGid}')">🗑️</button>
+                <button class="ripetizione-delete" title="Elimina ripetizione futura" data-act="deleteRecurringGroup" data-args='["${safeGid}"]'>🗑️</button>
             </div>`;
         }
         container.innerHTML = html || '<div class="ripetizioni-empty">Nessuna spesa ricorrente attiva</div>';
@@ -3810,7 +3841,7 @@ function renderEntriesList() {
                 </span>
                 <span class="item-vals">
                     <div><span class="val-s" style="color:var(--entrate);font-weight:bold;">+${fmtE(inc.amount)}</span></div>
-                    <div class="reg-actions"><button class="btn-del" onclick="deleteEntry('income',${inc.id})">✕</button></div>
+                    <div class="reg-actions"><button class="btn-del" data-act="deleteEntry" data-args='["income",${inc.id}]'>✕</button></div>
                 </span>`;
             listContainer.appendChild(row);
         });
@@ -3843,8 +3874,8 @@ function renderEntriesList() {
                     <span class="val-s ${isPending ? 'val-pending' : ''}">${exp.actual > 0 ? fmtE(exp.actual) : (isPending ? '⏳ Da pagare' : '—')}</span>
                 </div>
                 <div class="reg-actions">
-                    ${isPending ? `<button class="btn-action btn-pay" onclick="payExpense(${exp.id})">Paga</button>` : ''}
-                    <button class="btn-del" onclick="deleteEntry('expense',${exp.id})">🗑</button>
+                    ${isPending ? `<button class="btn-action btn-pay" data-act="payExpense" data-args='[${exp.id}]'>Paga</button>` : ''}
+                    <button class="btn-del" data-act="deleteEntry" data-args='["expense",${exp.id}]'>🗑</button>
                 </div>
             </span>`;
         row.style.cursor = 'pointer';
@@ -4666,7 +4697,7 @@ async function renderSavingsGoals() {
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
-                    <button onclick="deleteSavingsGoal('${encodeURIComponent(g.name)}')" title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
+                    <button data-act="deleteSavingsGoal" data-args='["${encodeURIComponent(g.name)}"]' title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
                         🗑️
                     </button>
                 </div>
@@ -4972,7 +5003,7 @@ async function renderInvestAssetDetail(asset) {
                 <span class="invest-stat-value">${fmtEPlain(stats.currentValue,0)}</span>
             </div>
             <div class="invest-stat-box">
-                <span class="invest-stat-label">Investito <span style="cursor:pointer;font-size:12px;color:#8b5cf6;" onclick="editInvestInitialCapital(${asset.id})" title="Modifica capitale iniziale">✏️</span></span>
+                <span class="invest-stat-label">Investito <span style="cursor:pointer;font-size:12px;color:#8b5cf6;" data-act="editInvestInitialCapital" data-args='[${asset.id}]' title="Modifica capitale iniziale">✏️</span></span>
                 <span class="invest-stat-value">${fmtEPlain(stats.totalInvested,0)}</span>
             </div>
             <div class="invest-stat-box">
@@ -5012,7 +5043,7 @@ async function renderInvestAssetDetail(asset) {
                     <span class="invest-mov-date">${dateStr}${m.desc ? ' · ' + m.desc : ''}</span>
                 </div>
                 <span class="invest-mov-amount" style="color:${color};">${sign}${fmtEPlain(Math.abs(m.amount))}</span>
-                <button onclick="deleteInvestMovement(${m.id})" title="Elimina movimento" style="background:transparent;border:none;color:#ef4444;font-size:14px;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;">🗑️</button>
+                <button data-act="deleteInvestMovement" data-args='[${m.id}]' title="Elimina movimento" style="background:transparent;border:none;color:#ef4444;font-size:14px;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;">🗑️</button>
             </div>
         `;
     }).join('');
@@ -5383,12 +5414,10 @@ async function renderAnalisiMobile() {
         return;
     }
 
-    const allExp = await db.expenses.toArray();
     const periodSet = new Set(periodMonths);
-    const expenses = allExp.filter(e => periodSet.has(e.month));
+    const expenses = await db.expenses.where('month').anyOf(periodMonths).toArray();
     const baseMonths = getBaselineCalendarMonths(periodMonths);
-    const baseSet = new Set(baseMonths);
-    const baseExpenses = allExp.filter(e => baseSet.has(e.month));
+    const baseExpenses = await db.expenses.where('month').anyOf(baseMonths).toArray();
     const isFixed = (e) => !!(e.isRecurring || e.recurringGroupId || /(mutuo|affitto|bollett|tass|luce|gas|acqua|telefon|internet|canone|assicuraz)/i.test(e.category || ''));
     const sum = (arr) => arr.reduce((s, v) => s + v, 0);
     const monthRows = (await db.months.toArray()).filter(m => periodSet.has(m.month));
@@ -5558,7 +5587,7 @@ function renderAnomalyCarousel(slides) {
                 </div>`).join('') + `</div>
         </div>
         <div class="anomaly-dots">` + slides.map((s, i) => `
-            <button type="button" class="anomaly-dot ${i === 0 ? 'active' : ''}" onclick="goAnomalySlide(${i})" aria-label="Anomalia ${i + 1}"></button>`).join('') + `</div>`;
+            <button type="button" class="anomaly-dot ${i === 0 ? 'active' : ''}" data-act="goAnomalySlide" data-args='[${i}]' aria-label="Anomalia ${i + 1}"></button>`).join('') + `</div>`;
     setupAnomalySwipe(box);
     if (slides.length > 1) {
         let idx = 0;
@@ -6067,7 +6096,7 @@ function openFutureSheet(action) {
         title.textContent = '🤖 Analisi IA Futura';
         body.innerHTML = `
             <p style="font-size:12px;color:#475569;margin-bottom:12px;">L'IA analizza la sostenibilità delle spese previste nei prossimi 12 mesi (scadenze e rate) rispetto al trend di risparmio.</p>
-            <button class="btn-ia" id="btnFutureIASheet" onclick="runFuturePredictionIASheet()">🤖 Genera Analisi Futura</button>
+            <button class="btn-ia" id="btnFutureIASheet" data-act="runFuturePredictionIASheet">🤖 Genera Analisi Futura</button>
             <div id="iaFutureResponseSheet" class="ia-response-box"></div>`;
     } else { return; }
 
@@ -6095,9 +6124,9 @@ function categoryOptionsHTML() {
 function plannerFormHTML(p) {
     return `
         <div class="dl-type-toggle">
-            <button type="button" class="dl-type-btn active" data-dl-type="${p}" data-mode="single" onclick="setDeadlineMode('${p}','single')">📅 Giorno Singolo</button>
-            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="month" onclick="setDeadlineMode('${p}','month')">📆 Intero Mese</button>
-            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="recurring" onclick="setDeadlineMode('${p}','recurring')">🔁 Ricorrente</button>
+            <button type="button" class="dl-type-btn active" data-dl-type="${p}" data-mode="single" data-act="setDeadlineMode" data-args='["${p}","single"]'>📅 Giorno Singolo</button>
+            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="month" data-act="setDeadlineMode" data-args='["${p}","month"]'>📆 Intero Mese</button>
+            <button type="button" class="dl-type-btn" data-dl-type="${p}" data-mode="recurring" data-act="setDeadlineMode" data-args='["${p}","recurring"]'>🔁 Ricorrente</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
             <input type="text" id="dlDesc-${p}" class="responsive-input" placeholder="Titolo spesa (es. Bollo Auto)">
@@ -6111,7 +6140,7 @@ function plannerFormHTML(p) {
                 <input type="month" id="dlStart-${p}" class="responsive-input" value="${monthKey(0)}">
                 <input type="month" id="dlEnd-${p}" class="responsive-input">
             </div>
-            <button class="btn-spesa" style="background:var(--warning);margin:0;" onclick="addDeadlinePlanner('${p}')">+ Salva Scadenza</button>
+            <button class="btn-spesa" style="background:var(--warning);margin:0;" data-act="addDeadlinePlanner" data-args='["${p}"]'>+ Salva Scadenza</button>
         </div>`;
 }
 function setDeadlineMode(p, mode) {
@@ -6186,8 +6215,8 @@ function renderDeadlineListFor(p) {
             </span>
             <span class="dl-micro-amount">${fmtE(item.amount)}</span>
             <span class="dl-micro-actions">
-                <button class="dl-micro-btn" title="${item.isPaid ? 'Segna da pagare' : 'Segna pagata'}" onclick="toggleDeadlinePaid(${item.id},${!item.isPaid})">${item.isPaid ? '↩' : '✓'}</button>
-                <button class="dl-micro-btn del" title="Elimina" onclick="deleteAnnualDeadline(${item.id})">✕</button>
+                <button class="dl-micro-btn" title="${item.isPaid ? 'Segna da pagare' : 'Segna pagata'}" data-act="toggleDeadlinePaid" data-args='[${item.id},${!item.isPaid}]'>${item.isPaid ? '↩' : '✓'}</button>
+                <button class="dl-micro-btn del" title="Elimina" data-act="deleteAnnualDeadline" data-args='[${item.id}]'>✕</button>
             </span>`;
         container.appendChild(card);
     });

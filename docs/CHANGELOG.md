@@ -1,5 +1,25 @@
 # Session Logs & Progress
 
+## [2026-08-19] - Audit round 4: colorize token sweep + CSP onclick delegation + hit-area + detector full-parse
+
+### Completed Changes
+- **adapt**: `.row-chevron` (36x36) + `::before` -> position:relative; consolidato blocco shared `::before{inset:-5px}` per `.income-row-del, .cat-del-btn, .btn-back-sheet, .ripetizione-delete, .row-chevron` (hit-area 44-46 effettivi).
+- **colorize**: 24 token colore in `:root` (surface/border/muted/ink/danger-bg/success/accent-dark ecc.); sweep 366 sostituzioni proprieta-aware (color/background/border/outline ecc.) -> `var(--x)`; hex letterali 535->148 (restano :root defs + fallback `var(--x,#hex)` + rgba/shadow/gradient). 0 U+FFFD, 0 doppio var().
+- **harden/CSP (onclick -> delegation)**: 128 handler inline (113 index.html + 15 script.js) rimossi -> attributi `data-act`/`data-act-close`/`data-act-stop` + `data-args` JSON/`data-el`/`data-var`. Delegated click listener in `setupInlineActions()` (script.js). Speciali: `data-ai-refresh` (stopPropagation + generateInsightCard) e `data-import-trigger` (file input click). Verifica: 0 onclick restanti, 58 nomi azione risolti (2 in supabase-adapter.js), node --check OK.
+- **tooling**: `npm i htmlparser2 css-select css-tree domutils` -> detector impeccable ora gira in FULL-PARSE (prima regex fallback DEGRADED). Exit 0.
+
+### Status: COMPLETATO - 0 onclick in entrambi i file; detector full-parse 0 findings; 0 U+FFFD; node --check OK. Residuo: 16 handler inline NON-click (oninput/onchange/onsubmit/onkeyup/onkeydown/onfocus/onblur) documentati in MEMORY.md.
+
+## [2026-08-19] - Audit round 3 fixes: typeset floor 10px + btn-del hit-area + analisi queries + DESIGN.md
+
+### ✅ Completed Changes
+- **typeset**: 8px/9px eliminati (`.calendar-day span` 8→10, `.trend-label` 8→10, `.ai-insight-date`, `.trend-delta`, `.savings-sub`, `.invest-hero-label`, `.settled-badge`, `#calendarGridCompact .calendar-day-header`, `.item-vals .val-p`, `.reg-shared-pill` 9→10).
+- **adapt**: `.btn-del` → 34×34 visuale + `::before{inset:-5px}` = 44×44 hit-area (pattern `.popup-close`); padding 0 4px rimosso, flex centratura.
+- **optimize**: `renderAnalisiMobile` — due query indicizzate `where('month').anyOf(periodMonths|baseMonths)` al posto del full scan `toArray()` + filtro; rimossi `allExp`/`baseSet` morti.
+- **document**: `DESIGN.md` creato alla root (modo, mondo light-pastel, token AA, type floor, motion, invarianti performance, debiti noti).
+
+### ⚙ Status: COMPLETATO — `node --check` OK; detector 0 findings; 0 U+FFFD (script.js/style.css/index.html/DESIGN.md); floor 10px verificato (0 match 8-9px in style.css). **Harden/CSP (113 onclick) DIFFERITO**: refactor ad alto rischio, zero beneficio immediato (nessun CSP attivo), richiede verifica browser.
+
 ## [2026-08-19] - Optimize round 2: Chart.js lazy + zero DB writes su resize/search
 
 ### ✅ Completed Changes

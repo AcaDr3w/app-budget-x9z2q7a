@@ -6,3 +6,6 @@ supabase/.temp/
 # Log e file di sistema
 *.log
 .DS_Store
+
+# Dipendenze
+node_modules/
