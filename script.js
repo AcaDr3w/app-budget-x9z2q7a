@@ -4705,7 +4705,7 @@ async function renderSavingsGoals() {
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
-                    <button data-act="deleteSavingsGoal" data-args='["${encodeURIComponent(g.name)}"]' title="Elimina" style="background:transparent; border:none; color:var(--danger); font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
+                    <button data-act="deleteSavingsGoal" data-args='["${encodeURIComponent(g.name)}"]' title="Elimina" class="btn-ghost-del lg">
                         🗑️
                     </button>
                 </div>
@@ -5051,7 +5051,7 @@ async function renderInvestAssetDetail(asset) {
                     <span class="invest-mov-date">${dateStr}${m.desc ? ' · ' + m.desc : ''}</span>
                 </div>
                 <span class="invest-mov-amount" style="color:${color};">${sign}${fmtEPlain(Math.abs(m.amount))}</span>
-                <button data-act="deleteInvestMovement" data-args='[${m.id}]' title="Elimina movimento" style="background:transparent;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;">🗑️</button>
+                <button data-act="deleteInvestMovement" data-args='[${m.id}]' title="Elimina movimento" class="btn-ghost-del">🗑️</button>
             </div>
         `;
     }).join('');

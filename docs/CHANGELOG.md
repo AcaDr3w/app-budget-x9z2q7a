@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-08-19] - Normalize sweep: type floor + radii/motion/shadow scales + full hex tokenization
+
+### Completed Changes
+- **typeset**: 6 violazioni floor frazionali (8.5/9.5px) -> 10px: `.anomaly-header`, `.savings-header`, `.savings-target-label`, `.future-milestone .fm-label/.fm-delta`, `.dl-micro-meta`. 0 font-size <10px.
+- **layout**: radius scale 8/10/12-16/20/999 (16 regole): input/select/textarea/search/btn-clear-filters/notes 9->10, `.calendar-day` + compact 7->10, btn-action/cat-del-btn/income-row-del/dl-type-btn/split-pill/condivise-tab/form-tab/badge-progress 6->8, `.sim-growth-input` 6px !important -> 8px senza !important.
+- **motion**: durate normalizzate a {0.15, 0.3, 0.5}s (0.18->0.15; 0.25/0.35/0.4->0.3; 10 sostituzioni).
+- **colorize**: 92 sostituzioni hex->token case-insensitive (2 batch). Nuovi token: `--danger-border/bg-soft/strong/deep`, `--ia-bg-soft/surface/surface-2/faint/muted/strong/deep/indigo`, `--accent-soft/border`, `--pending`, `--toggle-on`, `--warning-bg/border`, `--shadow-float/knob/popup`. Inclusi: Google-blue nav `#1A73E8`->`--accent`, flat-report `!important` (#ff9800/#e53935 -> --previsto/--sostenuto), ledger `#22c55e`->`--entrate`, `#ffffff`->`--panel`. Hex letterali 148->72 (solo :root defs, macro palette pinnata, var() fallback, progress #10b981); token refs 474->592.
+- **layout (G)**: `.macro-group-header` border-left 4px colorato -> background `--border-faint` (craft floor); rimossi 3 inline `border-left-color` in index.html.
+- **code**: `.btn-ghost-del` (.lg 16px) estratto dai template JS (deleteSavingsGoal/deleteInvestMovement) — stile inline rimosso.
+
+### Status: COMPLETATO - 0 font-size <10px; hex 148->72; token refs 592; detector full-parse 0 findings; node --check OK; 0 U+FFFD; CSS/HTML parse OK. Bounded: 1 build batch + 1 verify round.
+
 ## [2026-08-19] - Polish: keyboard delegation + labels + hit-area stragglers + token drift
 
 ### Completed Changes

@@ -17,14 +17,15 @@
 - `--accent #2563eb`, `--entrate #15803d`, `--previsto #c2410c`, `--sostenuto #dc2626`, `--ia-color #7c3aed` (white on all ≥4.5:1).
 - Positive text `#047857` · red text/borders `#dc2626` · pending `#b45309` · active violet pill `#7c3aed`.
 - Pastel tints (shadows, box fills, progress `#10b981`, borders `#ef4444`) are non-text: unchanged.
-- Reality: 535 raw hex literals remain against ~108 token refs — tokens carry the semantic core; literals are drift risk (see "Known debt"). **2026-08-19**: token sweep done — 474 token refs vs 148 literal hex (only `:root` defs, `var()` fallbacks, rgba/shadow/gradient remain).
+- Reality: 535 raw hex literals remain against ~108 token refs — tokens carry the semantic core; literals are drift risk (see "Known debt"). **2026-08-19**: token sweep done — 474 token refs vs 148 literal hex (only `:root` defs, `var()` fallbacks, rgba/shadow/gradient remain). **2026-08-19 (normalize)**: 592 token refs vs 72 literals — only `:root` defs (~30), pinned macro palette, `var()` fallbacks, progress `#10b981`. New tokens: `--previsto-bg`, `--danger-border/bg-soft/strong/deep`, `--ia-bg-soft/surface/surface-2/faint/muted/strong/deep/indigo`, `--accent-soft/border`, `--pending`, `--toggle-on`, `--warning-bg/border`, `--shadow-float/knob/popup`.
 
 ## Type
 - System stack (no webfonts): UI sans + `ui-monospace` only for code/data contexts. No display face, no monospace costume.
-- Floors (2026-08-19): 10px minimum anywhere (dense tables/badges/labels); 11px+ for interactive labels; body 13px; dense table cells 10-11px.
+- Floors (2026-08-19): 10px minimum anywhere — **including fractional sizes** (no 8.5/9.5px; normalized 2026-08-19); 11px+ for interactive labels; body 13px; dense table cells 10-11px.
 - Numerals: tabular-friendly formatting via `fmtEPlain`/`toLocaleString('it-IT')` + " €" suffix built into helpers (never appended twice).
 
 ## Motion
+- Duration scale (normalized 2026-08-19): **0.15s fast / 0.3s base / 0.5s slow** only.
 - One authored moment per context; exponential ease-out; transform/opacity only.
 - Marquee AI insight: 14s translateX(-50%) on `.ai-insight-track`, pauses on `:active`.
 - Hero insight: 250ms cross-fade, auto-rotate 4s, tap-next + 6s pause.
@@ -38,7 +39,7 @@
 - Touch floor: `button { min-height:44px }` with a fixed exemption set (month-arrow, popup-close 32px visual + `::before` 44px hit area, sim-reset, btn-back-sheet, btn-plus-solid, ripetizione-delete, btn-del 34px + `::before` 44px, income-row-del, cat-del-btn, row-chevron, ai-insight-refresh 36px + `::before` 44px, dl-micro-btn 32px + `::before` 42px, calendar-day 40px in dense 6-col grid — WCAG 2.5.8 minimum 24px met, documented exemption). `.toggle-switch` label is 44×44 (visual track 26px centered). Never remove exemptions without replacing the hit-area trick.
 
 ## Components (canonical)
-- **Macro cards**: badge stacked above centered title (never absolute-overlapping), `card-micro-grid` = `repeat(auto-fit, minmax(min(56px,100%),1fr))` with square FA-icon cells only (never text in cells).
+- **Macro cards**: badge stacked above centered title (never absolute-overlapping), `card-micro-grid` = `repeat(auto-fit, minmax(min(56px,100%),1fr))` with square FA-icon cells only (never text in cells). Macro-group headers: background `--border-faint` tint, no border-left accent (normalized 2026-08-19).
 - **KPI hero (mobile)**: fixed 3×1 grid (Entrate / Previste / Sostenute), tap → rendiconto popup.
 - **Desktop category cards**: SVG half-moon gauge `gaugeArcSVG(pct,color)` (LEN=125.66, butt caps), state colors green `#10b981`/amber `#f59e0b` >80%/red `#ef4444` over.
 - **Calendar**: 7-col grid; day = number + `GG/AA` sublabel; highlight classes `has-deadline`/`selected`; compact variant for registries.

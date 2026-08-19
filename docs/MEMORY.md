@@ -1,5 +1,14 @@
 # Project Core Memory
 
+## NORMALIZE INVARIANTS (2026-08-19)
+- **Type floor**: nessun font-size < 10px, incluso .5 (es. 8.5/9.5px VIETATI — `.anomaly-header`, `.savings-header`, `.savings-target-label`, `.future-milestone .fm-label/.fm-delta`, `.dl-micro-meta` riportati a 10px).
+- **Radii scale**: 8 (piccoli controlli) / 10 (input, calendar-day) / 12-16 (card) / 20 / 999 (pill). Input/select/textarea 10px; btn-action/cat-del-btn/income-row-del/dl-type-btn/split-pill/condivise-tab/form-tab 8px; `.sim-growth-input` NIENTE `!important`.
+- **Motion scale**: durate solo 0.15s / 0.3s / 0.5s (0.18/0.25/0.35/0.4s normalizzati).
+- **Shadow tokens**: `--shadow-card`, `--shadow-card-hover`, `--shadow-float` (soft lift), `--shadow-knob` (1px 4px), `--shadow-popup` (overlay). Niente box-shadow letterali fuori da questi.
+- **`.btn-ghost-del`** (.lg per 16px): delete ghost pattern nei template JS (deleteSavingsGoal, deleteInvestMovement) — non re-introdurre style inline.
+- **`.macro-group-header`**: background `--border-faint`, NESSUN border-left colore (craft floor). I 3 header macro non hanno più inline style.
+- **Flat-report colors**: `#ff9800`→`--previsto`, `#e53935`→`--sostenuto` (proiezioni); `#22c55e`→`--entrate` (ledger paid/saldo). Keep `!important` dove presente.
+
 ## INLINE ACTIONS DELEGATION (2026-08-19)
 - **Zero `onclick=` inline** in index.html (113) e script.js (15): convertiti in `data-act`/`data-act-close`/`data-act-stop` + `data-args='<json>'`/`data-el`/`data-var`, gestiti dal delegated listener di `setupInlineActions()` (chiamata nel DOMContentLoaded iniziale). `data-act-close` invoca la fn SENZA event (le `close*` guardano `event && event.target !== currentTarget`); `data-act-stop` = no-op (pannelli popup). Speciali: `data-ai-refresh="1"` (stopPropagation + `generateInsightCard(true)`) e `data-import-trigger="1"` (`#importFileInput.click()`) con binding diretti (lo stopPropagation DEVE girare prima del listener delegato). Solo handler NON-click restano inline (12: oninput/onchange/onkeyup/onkeydown/onfocus/onblur — i 4 `onkeydown` di pill/summary/card rimossi il 2026-08-19). Tutte le 58 azioni risolvono a funzioni globali (2 in supabase-adapter.js: `window.handleLogin`/`handleSignup`).
 - **KEYBOARD DELEGATION (2026-08-19)**: in `setupInlineActions()` c'è anche un delegated `keydown` — Enter/Space su `[role="button"][tabindex]` → `preventDefault()` + `el.click()` (copre 7 div attivi: hero pill, summary-box, dash-card, ai-insight-card). Guard nativo: se il target è `button/input/select/textarea/a[href]` il keydown non intercetta (NON rompere: il refresh dentro `#aiInsightCard` deve attivarsi da solo).
