@@ -35,7 +35,7 @@
 ## Shell & Layout
 - Mobile (≤767): zero-scroll — `body{height:100dvh;overflow:hidden}`, `.container` = `100dvh - 60px header - 71px nav`; each tab fills height with internal scroll only where needed.
 - Desktop (≥768): top nav bar; bottom-nav hidden; `#current-month-tab` = CSS grid `260px | 1fr | 320px` (alert / month-head / 3-col layout), ≥1600px 5 columns.
-- Touch floor: `button { min-height:44px }` with a fixed exemption set (month-arrow, popup-close 32px visual + `::before` 44px hit area, sim-reset, btn-back-sheet, btn-plus-solid, ripetizione-delete, btn-del 34px + `::before` 44px, income-row-del, cat-del-btn). Never remove exemptions without replacing the hit-area trick.
+- Touch floor: `button { min-height:44px }` with a fixed exemption set (month-arrow, popup-close 32px visual + `::before` 44px hit area, sim-reset, btn-back-sheet, btn-plus-solid, ripetizione-delete, btn-del 34px + `::before` 44px, income-row-del, cat-del-btn, row-chevron, ai-insight-refresh 36px + `::before` 44px, dl-micro-btn 32px + `::before` 42px, calendar-day 40px in dense 6-col grid — WCAG 2.5.8 minimum 24px met, documented exemption). `.toggle-switch` label is 44×44 (visual track 26px centered). Never remove exemptions without replacing the hit-area trick.
 
 ## Components (canonical)
 - **Macro cards**: badge stacked above centered title (never absolute-overlapping), `card-micro-grid` = `repeat(auto-fit, minmax(min(56px,100%),1fr))` with square FA-icon cells only (never text in cells).
@@ -57,8 +57,9 @@
 - Font Awesome full CSS stays blocking (user decision, 2026-08-19).
 
 ## Known debt (documented, do not "fix" silently)
-- **2026-08-19**: 113 inline `onclick` (index.html) + 15 (script.js) fully refactored to `data-act` delegation (see MEMORY.md "INLINE ACTIONS DELEGATION"). No CSP header yet — the header is the remaining harden item.
-- 16 inline NON-click handlers remain (oninput/onchange/onsubmit/onkeyup/onkeydown/onfocus/onblur, incl. `onchange="importBackupJSON(event)"` on #importFileInput). Low-risk, needs a single dedicated pass.
+- **2026-08-19**: 113 inline `onclick` (index.html) + 15 (script.js) fully refactored to `data-act` delegation (see MEMORY.md "INLINE ACTIONS DELEGATION"). No CSP header yet — the header is the remaining harden item. Keyboard activation delegated too (Enter/Space on `[role=button]` → `el.click()`).
+- 12 inline NON-click handlers remain (oninput/onchange/onkeyup/onkeydown/onfocus/onblur, incl. `onchange="importBackupJSON(event)"` on #importFileInput). Low-risk, needs a single dedicated pass.
+- JS runtime palette (CATEGORY_COLORS, `#ef4444`/`#10b981`/`#2a9d8f` chart fills, MACRO_COLOR) lives in JS by design — chart data, not tokens; delete buttons and "goal reached" text now use `var(--danger)`/`var(--success-text)`.
 - `script.js` ~325KB monolith (no bundler; split = high risk). `filterByDate`/`filterByCategory`/`clearAllFilters` call `updateUI()` (accepted: single-intent clicks).
 - Detector deps installed 2026-08-19 (`htmlparser2 css-select css-tree domutils`): full-parse active.
 

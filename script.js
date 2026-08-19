@@ -510,6 +510,14 @@ function setupInlineActions() {
         if (el.dataset.el) args.push(el);
         fn(...args);
     });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('button, input, select, textarea, a[href]')) return;
+        const el = e.target.closest('[role="button"][tabindex]');
+        if (!el) return;
+        e.preventDefault();
+        el.click();
+    });
     document.querySelectorAll('[data-ai-refresh]').forEach((b) => {
         b.addEventListener('click', (e) => { e.stopPropagation(); generateInsightCard(true); });
     });
@@ -4697,7 +4705,7 @@ async function renderSavingsGoals() {
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <span style="font-size:13px; color:#64748b; white-space:nowrap;">${fmtE(accumulated)} / ${fmtE(g.targetAmount)}</span>
-                    <button data-act="deleteSavingsGoal" data-args='["${encodeURIComponent(g.name)}"]' title="Elimina" style="background:transparent; border:none; color:#ef4444; font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
+                    <button data-act="deleteSavingsGoal" data-args='["${encodeURIComponent(g.name)}"]' title="Elimina" style="background:transparent; border:none; color:var(--danger); font-size:16px; cursor:pointer; padding:6px; border-radius:6px;">
                         🗑️
                     </button>
                 </div>
@@ -4707,7 +4715,7 @@ async function renderSavingsGoals() {
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px; font-size:13px; color:#334155;">
                 <span>Avanzamento: <strong>${pct.toFixed(1)}%</strong></span>
-                ${isComplete ? '<span style="color:#10b981; font-weight:700;">Obiettivo raggiunto</span>' : ''}
+                ${isComplete ? '<span style="color:var(--success-text); font-weight:700;">Obiettivo raggiunto</span>' : ''}
             </div>
         </div>`;
     });
@@ -5043,7 +5051,7 @@ async function renderInvestAssetDetail(asset) {
                     <span class="invest-mov-date">${dateStr}${m.desc ? ' · ' + m.desc : ''}</span>
                 </div>
                 <span class="invest-mov-amount" style="color:${color};">${sign}${fmtEPlain(Math.abs(m.amount))}</span>
-                <button data-act="deleteInvestMovement" data-args='[${m.id}]' title="Elimina movimento" style="background:transparent;border:none;color:#ef4444;font-size:14px;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;">🗑️</button>
+                <button data-act="deleteInvestMovement" data-args='[${m.id}]' title="Elimina movimento" style="background:transparent;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;">🗑️</button>
             </div>
         `;
     }).join('');

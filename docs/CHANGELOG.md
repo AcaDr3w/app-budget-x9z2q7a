@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-08-19] - Polish: keyboard delegation + labels + hit-area stragglers + token drift
+
+### Completed Changes
+- **a11y**: delegated `keydown` in `setupInlineActions()` — Enter/Space su `[role="button"][tabindex]` → `el.click()` (7 div prima senza tastiera: hero pill, 3 summary-box, 3 dash-card; guard nativo button/input/select/textarea/a). Rimossi i 4 `onkeydown` inline ridondanti (hero-mini-pill ×3, ai-insight-card) — residue inline 16→12.
+- **a11y**: 26 `aria-label` aggiunti (input senza etichetta programmatica: search, toggle desktop+mobile, slider simulazione, sheet invest/entrate/spese, input nascosti currentMonth/emoji/import file, ecc.).
+- **adapt**: `.ai-insight-refresh` (36px) e `.dl-micro-btn` (32px) nel blocco shared `::before{inset:-5px}` (hit-area 44/42); `.toggle-switch` label 26→44px (track visivo centrato con `top/bottom:9px`); `.calendar-day span` `opacity:0.6` → `color:var(--muted)` (contrasto ≥4.5).
+- **colorize**: token `--previsto-bg: #ffedd5`; `.calendar-day.has-deadline` → `var(--previsto-bg)`/`var(--previsto)`; delete buttons e "Obiettivo raggiunto" nei template JS → `var(--danger)`/`var(--success-text)`. Palette grafici e MACRO_COLOR restano dati JS (documentato).
+- **document**: MEMORY.md (pin keyboard delegation + guard nativo), DESIGN.md (exemption set aggiornato: calendar-day 40px documentato, toggle 44px, ai-insight-refresh/dl-micro-btn), CHANGELOG.
+
+### Status: COMPLETATO - 4 inline onkeydown rimossi (residuo non-click: 12); 26 aria-label; detector full-parse 0 findings; node --check OK; 0 U+FFFD; CSS/HTML parse OK. Bounded: 1 build batch, 1 verify round, nessun loop.
+
 ## [2026-08-19] - Audit round 4: colorize token sweep + CSP onclick delegation + hit-area + detector full-parse
 
 ### Completed Changes

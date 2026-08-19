@@ -4,6 +4,7 @@
     --primary: #2C333D;
     --accent: #2563eb;
     --previsto: #c2410c;
+    --previsto-bg: #ffedd5;
     --sostenuto: #dc2626;
     --entrate: #15803d;
     --text: #334155;
@@ -169,7 +170,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .btn-gdrive:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-del { background: none; color: var(--muted-faint); font-size: 18px; padding: 0; width: auto; margin: 0; line-height: 1; position: relative; min-width: 34px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; }
 .btn-del::before { content: ''; position: absolute; inset: -5px; }
-.income-row-del::before, .cat-del-btn::before, .btn-back-sheet::before, .ripetizione-delete::before, .row-chevron::before { content: ''; position: absolute; inset: -5px; }
+.income-row-del::before, .cat-del-btn::before, .btn-back-sheet::before, .ripetizione-delete::before, .row-chevron::before, .ai-insight-refresh::before, .dl-micro-btn::before { content: ''; position: absolute; inset: -5px; }
 .btn-del:hover { color: var(--danger); }
 .btn-action { border: none; padding: 5px 9px; border-radius: 6px; font-size: 11px; font-weight: bold; color: white; cursor: pointer; width: auto; margin: 0; }
 .btn-pay { background: #b45309; }
@@ -350,8 +351,8 @@ justify-content: center;
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
 .calendar-day-header { font-size: 11px; font-weight: bold; color: var(--muted-light); padding: 4px 0; }
 .calendar-day { padding: 8px 0; font-size: 11px; background: var(--surface-muted); border-radius: 7px; cursor: pointer; border: 1px solid var(--border-soft); font-weight: 600; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.calendar-day span { font-size: 10px; opacity: 0.6; font-weight: normal; }
-.calendar-day.has-deadline { background: #ffedd5; border-color: #c2410c; color: #c2410c; }
+.calendar-day span { font-size: 10px; color: var(--muted); font-weight: normal; }
+.calendar-day.has-deadline { background: var(--previsto-bg); border-color: var(--previsto); color: var(--previsto); }
 .calendar-day.selected { background: var(--accent) !important; color: white !important; border-color: var(--accent); }
 .calendar-day.empty { background: transparent; border: none; cursor: default; }
 
@@ -706,6 +707,7 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         justify-content: center;
         margin: 0;
         padding: 0;
+        position: relative;
     }
     .ai-insight-refresh:active {
         background: rgba(124,58,237,0.1);
@@ -1313,6 +1315,7 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     align-items: center;
     justify-content: center;
     line-height: 1;
+    position: relative;
 }
 .dl-micro-btn.del {
     background: var(--danger-bg);
@@ -2517,12 +2520,12 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     margin-top: 8px;
 }
 .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 26px;
-    flex-shrink: 0;
-    cursor: pointer;
+position: relative;
+display: inline-block;
+width: 44px;
+height: 44px;
+flex-shrink: 0;
+cursor: pointer;
 }
 .toggle-switch input {
     position: absolute;
@@ -2532,7 +2535,10 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
 }
 .toggle-slider {
     position: absolute;
-    inset: 0;
+    top: 9px;
+    right: 0;
+    bottom: 9px;
+    left: 0;
     background: var(--muted-faint);
     border-radius: 26px;
     transition: background 0.3s ease;
