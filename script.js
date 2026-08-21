@@ -3242,6 +3242,17 @@ async function saveTransactionFromSheet() {
     }
 }
 
+// ===== RICEVUTE: FOTO SCONTRINO -> ANALISI ASINCRONA -> CONFERMA =====
+// Stato dichiarato PRIMA dell'IIFE di setup: le funzioni vengono chiamate
+// a parse-time e una let in TDZ interromperebbe l'esecuzione top-level
+// (ReferenceError: Cannot access X before initialization a cascata).
+let receiptPending = false;      // upload in corso nello sheet
+let receiptObjectUrl = null;     // preview temporanea
+let receiptJobId = null;         // job attivo legato allo sheet aperto
+let receiptPollTimer = null;     // polling notifiche (10s)
+let receiptBannerJob = null;     // job mostrato nella barra di conferma
+let receiptNotified = {};        // jobId -> true (evita notifiche doppie)
+
 // Setup close button and save button handlers
 (function setupBottomSheetEvents() {
     const closeBtn = document.getElementById('closeSheetBtn');
@@ -3277,14 +3288,6 @@ async function saveTransactionFromSheet() {
     setupReceiptNoteActions();
 })();
 
-// ===== RICEVUTE: FOTO SCONTRINO -> ANALISI ASINCRONA -> CONFERMA =====
-let receiptPending = false;      // upload in corso nello sheet
-let receiptObjectUrl = null;     // preview temporanea
-let receiptJobId = null;         // job attivo legato allo sheet aperto
-let receiptPollTimer = null;     // polling notifiche (10s)
-let receiptBannerJob = null;     // job mostrato nella barra di conferma
-let receiptNotified = {};        // jobId -> true (evita notifiche doppie)
-
 function setupReceiptNoteActions() {
     const camBtn = document.getElementById('btnNoteCamera');
     const attachBtn = document.getElementById('btnNoteAttach');
@@ -3315,12 +3318,6 @@ function setupReceiptNoteActions() {
     if (dismissBtn) dismissBtn.addEventListener('click', () => {
         if (receiptBannerJob) localStorage.setItem('eb_receipt_ignored_' + receiptBannerJob.id, '1');
         hideReceiptBanner();
-    });
-
-    // Polling: cerca job pendenti non ancora notificati
-    startReceiptPolling();
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') { checkReceiptJobs(); startReceiptPolling(); }
     });
 }
 
@@ -3522,6 +3519,14 @@ async function confirmReceiptJob(job) {
         showToast('Spesa non trovata per questo scontrino', true);
     }
 }
+
+// Polling notifiche scontrino: avvio SOLO post-DOM (mai a parse-time)
+document.addEventListener('DOMContentLoaded', () => {
+    startReceiptPolling();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') { checkReceiptJobs(); startReceiptPolling(); }
+    });
+});
 
 // Initialize toggle when DOM ready
 document.addEventListener('DOMContentLoaded', () => {
