@@ -3364,9 +3364,9 @@ async function analyzeReceipt(dataUri, statusEl) {
                 model: selected,
                 vision: true,
                 messages: [
-                    { role: 'system', content: 'Sei un assistente di riconoscimento scontrini. Lingua: Italiano. Rispondi SEMPRE e SOLO con JSON valido, senza markdown.' },
+                    { role: 'system', content: 'Sei un OCR di scontrini italiani. Regola ASSOLUTA: il TOTALE è SOLO l\'ultimo importo in fondo allo scontrino, di solito preceduto da "TOTALE", "TOTAL", "DA PAGARE", "IMPORTO", "TOT. €", ed è il valore effettivamente pagato. NON sommare mai i prezzi delle singole voci e NON sommare il totale a se stesso. Se in fondo non c\'è un totale esplicito, importo: null. Non inventare, non arrotondare. Lingua: Italiano. Rispondi SEMPRE e SOLO con JSON valido, senza markdown.' },
                     { role: 'user', content: [
-                        { type: 'text', text: 'Estrai i dati da questo scontrino. Rispondi SOLO con JSON: {"importo": number|null, "negozio": string|null, "data": "YYYY-MM-DD"|null, "categoria_suggerita": string|null}. importo = TOTALE pagato, numero senza valuta e senza separatori. Se l\'immagine non è uno scontrino o l\'importo non è leggibile, imposta importo: null.' },
+                        { type: 'text', text: 'Estrai i dati da questo scontrino. Rispondi SOLO con JSON: {"importo": number|null, "somma_voci": number|null, "negozio": string|null, "data": "YYYY-MM-DD"|null, "categoria_suggerita": string|null}. importo = SOLO il TOTALE in fondo allo scontrino (numero senza valuta e senza separatori). somma_voci = somma dei prezzi delle singole voci (solo diagnostica, può essere null). Esempio: voci "Pane 1,20 / Latte 1,80" e in fondo "TOTALE € 3,00" → importo = 3.00 (MAI 6.00). Se l\'immagine non è uno scontrino o il totale non è leggibile, importo: null.' },
                         { type: 'image_url', image_url: { url: dataUri } }
                     ]}
                 ]
@@ -3382,6 +3382,21 @@ async function analyzeReceipt(dataUri, statusEl) {
             if (statusEl) statusEl.textContent = 'Scontrino non riconosciuto';
             showToast('Importo non leggibile dalla foto', true);
             return;
+        }
+
+        const fmtAmount = (Math.round(amount * 100) / 100).toFixed(2).replace('.', ',') + ' €';
+        if (amount > 500) {
+            const ok = await showConfirmDialog({
+                title: 'Importo alto rilevato',
+                message: 'Totale letto: ' + fmtAmount + '. Sembra spropositato per uno scontrino singolo. Compilarlo comunque?',
+                okLabel: 'Compila',
+                cancelLabel: 'Annulla'
+            });
+            if (!ok) {
+                if (statusEl) statusEl.textContent = 'Importo alto — non compilato';
+                showToast('Importo non compilato: controlla lo scontrino', true);
+                return;
+            }
         }
 
         const amountInput = document.getElementById('amountInput');
