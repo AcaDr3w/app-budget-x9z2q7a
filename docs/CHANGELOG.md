@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-08-21] - Fix TDZ regressione: receipt state prima dell'IIFE parse-time
+
+### Completed Changes
+- **bug critico** (introdotto da 7be2480): `setupReceiptNoteActions()` era chiamato dall'IIFE `setupBottomSheetEvents` a **parse-time** e invocava `startReceiptPolling()` che leggeva `receiptPollTimer` — `let` dichiarato DOPO l'IIFE → **ReferenceError TDZ a parse-time** → l'esecuzione top-level di script.js si interrompeva → tutte le `let/const` successive (`MACRO_CARD_META`, `freeModelsCache`, i listener DOMContentLoaded dopo riga ~3277) MAI inizializzate → errori a cascata "Cannot access X before initialization" da `renderMacroCards`/`fetchFreeModels`, macrocard non renderizzate/cliccabili, binding mancanti.
+- **fix**: le 6 dichiarazioni `let receipt*` spostate PRIMA dell'IIFE `setupBottomSheetEvents` (riga ~3245); `startReceiptPolling()` + listener `visibilitychange` spostati da parse-time a un blocco `document.addEventListener('DOMContentLoaded', ...)` (pattern del resto del file). Regola MEMORY: mai chiamare init che legge variabili `let/const` a parse-time — le dichiarazioni devono stare prima di qualsiasi IIFE.
+- `MACRO_CARD_META`/`freeModelsCache` NON erano fuori posto (già dichiarati prima delle rispettive funzioni) — erano sintomo dell'abort, non causa.
+
+### Status: COMPLETATO - node --check OK; push 4f91f2b. PENDING: migration `receipt_jobs` (db push --password) per il flusso scontrino.
+
 ## [2026-08-21] - Scontrino ASINCRONO: job background + notifica conferma (sostituisce la vision sincrona)
 
 ### Completed Changes
