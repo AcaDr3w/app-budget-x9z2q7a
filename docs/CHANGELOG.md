@@ -1,5 +1,18 @@
 # Session Logs & Progress
 
+## [2026-08-21] - Scontrino ASINCRONO: job background + notifica conferma (sostituisce la vision sincrona)
+
+### Completed Changes
+- **architettura**: la vision sincrona nello sheet (`analyzeReceipt`) è RIMOSSA. Nuovo flusso: attach foto → `startReceiptJob` (downscale → upload storage privato `receipts/<uid>/<jobId>.jpg` → riga `receipt_jobs` `pending` → invocazione fire-and-forget dell'edge `process-receipt`) → l'utente compila e salva normalmente (il job viene linkato con `expense_id` a salvataggio) → quando l'IA risponde: barra fixed `.receipt-confirm-bar` ("🧾 Importo scontrino: X € · [Conferma spesa] [✕]") + `new Notification` se il permesso push è attivo → tap Conferma → `editExpense(Number(job.expense_id))` con importo/negozio precompilati → job + foto ELIMINATI.
+- **edge `process-receipt`** (nuova): auth JWT (pattern chat-openrouter) → job `processing` → download foto da storage come utente → OpenRouter vision con `VISION_MODELS` sincronizzata con chat-openrouter + prompt totale blindato (solo riga TOTALE in fondo, temperature 0.2, timeout 45s) → job `done` `{importo, negozio, data_scontrino, categoria_suggerita}` o `failed` `{error}`.
+- **migration `20260821_receipt_jobs.sql`**: tabella `receipt_jobs` (id TEXT PK, user_id, expense_id, status pending|processing|done|failed, importo, negozio, data_scontrino, categoria_suggerita, error, created_at, updated_at) + RLS user_id + bucket storage `receipts` (privato) con policy `storage.foldername(name)[1] = auth.uid()::text` su insert/select/update/delete.
+- **adapter**: `db.receiptJobs` (`SupabaseTable('receipt_jobs','id')`) + allowlist 11 colonne.
+- **polling client** (10s da `setupReceiptNoteActions`, resume su `visibilitychange`): dedupe notifiche in memoria + `eb_receipt_ignored_<id>` per l'✕; self-healing job `processing` >2min → ri-invocazione; banner "Riprova" per i `failed`.
+- **cleanup**: `clearReceiptPreview` elimina job orfani (senza `expense_id`) + foto; `confirmReceiptJob` elimina job + foto alla conferma. La guardia >500€ non serve più (importo visibile nel banner prima della conferma esplicita).
+- **css**: `.receipt-confirm-bar` (fixed bottom 78px+safe-area, z-index 10050 — sopra bottomsheet 10000, sotto popup 10500, radius 14, `--shadow-card-hover`), `.receipt-confirm-msg` (13px wrap), `.receipt-confirm-btn` (pill `--accent`, 44px), `.receipt-confirm-dismiss` (44px).
+
+### Status: COMPLETATO (deploy edge OK) - **PENDING: migration `receipt_jobs` NON applicata** — `supabase db push` richiede la password del DB (non disponibile in sessione): eseguire `supabase db push --password <pw>` o dal Dashboard. node --check OK.
+
 ## [2026-08-21] - Foto scontrino con Vision IA (bottom sheet spesa)
 
 ### Completed Changes
