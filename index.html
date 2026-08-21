@@ -1117,6 +1117,13 @@
     </div>
 
     </div> <!-- END MAIN APP WRAPPER -->
+
+    <!-- Barra conferma importo scontrino (analisi in background) -->
+    <div id="receiptConfirmBar" class="receipt-confirm-bar" style="display:none;" role="status" aria-live="polite">
+        <span id="receiptConfirmMsg" class="receipt-confirm-msg">🧾 Importo scontrino</span>
+        <button type="button" id="receiptConfirmBtn" class="receipt-confirm-btn">Conferma spesa</button>
+        <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
+    </div>
     <script src="js/supabase-adapter.js"></script>
     <script src="script.js"></script>
 </body>

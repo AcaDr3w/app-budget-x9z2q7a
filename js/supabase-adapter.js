@@ -127,7 +127,8 @@ class SupabaseTable {
             shared_expense_splits: ['id', 'expenseId', 'personId', 'groupId', 'amount', 'splitType', 'paidBy', 'isPaid', 'settled', 'createdAt'],
             shared_expenses: ['id', 'expense_id', 'group_id', 'total_amount', 'split_method', 'created_by', 'created_at'],
             shared_expense_participants: ['id', 'shared_expense_id', 'person_id', 'participant_name', 'share_amount', 'paid_amount', 'split_value', 'settled', 'created_at'],
-            shared_debts: ['id', 'creditor_user_id', 'debtor_user_id', 'creditor_name', 'debtor_name', 'amount', 'description', 'category', 'expense_id', 'status', 'created_at']
+            shared_debts: ['id', 'creditor_user_id', 'debtor_user_id', 'creditor_name', 'debtor_name', 'amount', 'description', 'category', 'expense_id', 'status', 'created_at'],
+            receipt_jobs: ['id', 'user_id', 'expense_id', 'status', 'importo', 'negozio', 'data_scontrino', 'categoria_suggerita', 'error', 'created_at', 'updated_at']
         };
         return map[this.tableName] || null;
     }
@@ -332,7 +333,8 @@ window.db = {
     sharedExpenseSplits: new SupabaseTable('shared_expense_splits', 'id'),
     sharedExpenses: new SupabaseTable('shared_expenses', 'id', true),
     sharedExpenseParticipants: new SupabaseTable('shared_expense_participants', 'id', true),
-    sharedDebts: new SupabaseTable('shared_debts', 'id', true)
+    sharedDebts: new SupabaseTable('shared_debts', 'id', true),
+    receiptJobs: new SupabaseTable('receipt_jobs', 'id')
 };
 
 // Autenticazione Auth Modal Logic

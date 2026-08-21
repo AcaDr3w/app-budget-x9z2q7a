@@ -3211,6 +3211,11 @@ async function saveTransactionFromSheet() {
             exp.recurringEndMonth = recUntilEl?.value || '';
         }
 
+        // Link dello scontrino in analisi alla spesa appena salvata
+        if (receiptJobId) {
+            await db.receiptJobs.update(receiptJobId, { expense_id: exp.id, updated_at: Date.now() });
+        }
+
         currentData.expenses.push(exp);
         await db.expenses.put(exp);
 
@@ -3272,9 +3277,13 @@ async function saveTransactionFromSheet() {
     setupReceiptNoteActions();
 })();
 
-// ===== RICEVUTE: FOTO SCONTRINO -> VISION IA -> IMPORTO =====
-let receiptPending = false;
-let receiptObjectUrl = null;
+// ===== RICEVUTE: FOTO SCONTRINO -> ANALISI ASINCRONA -> CONFERMA =====
+let receiptPending = false;      // upload in corso nello sheet
+let receiptObjectUrl = null;     // preview temporanea
+let receiptJobId = null;         // job attivo legato allo sheet aperto
+let receiptPollTimer = null;     // polling notifiche (10s)
+let receiptBannerJob = null;     // job mostrato nella barra di conferma
+let receiptNotified = {};        // jobId -> true (evita notifiche doppie)
 
 function setupReceiptNoteActions() {
     const camBtn = document.getElementById('btnNoteCamera');
@@ -3287,9 +3296,51 @@ function setupReceiptNoteActions() {
     if (attachInput) attachInput.addEventListener('change', () => handleReceiptFile(attachInput.files && attachInput.files[0], attachInput));
     const clearBtn = document.getElementById('receiptPreviewClear');
     if (clearBtn) clearBtn.addEventListener('click', clearReceiptPreview);
+
+    // Barra di conferma importo scontrino
+    const confirmBtn = document.getElementById('receiptConfirmBtn');
+    const dismissBtn = document.getElementById('receiptConfirmDismiss');
+    if (confirmBtn) confirmBtn.addEventListener('click', () => {
+        const job = receiptBannerJob;
+        if (!job) return;
+        hideReceiptBanner();
+        if (job.status === 'done') {
+            confirmReceiptJob(job);
+        } else {
+            delete receiptNotified[job.id];
+            invokeProcessReceipt(job.id);
+            showToast('Nuova analisi avviata', false);
+        }
+    });
+    if (dismissBtn) dismissBtn.addEventListener('click', () => {
+        if (receiptBannerJob) localStorage.setItem('eb_receipt_ignored_' + receiptBannerJob.id, '1');
+        hideReceiptBanner();
+    });
+
+    // Polling: cerca job pendenti non ancora notificati
+    startReceiptPolling();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') { checkReceiptJobs(); startReceiptPolling(); }
+    });
 }
 
 function clearReceiptPreview() {
+    // Se lo sheet si chiude senza salvare, elimina il job orfano + foto (mai persistite)
+    if (receiptJobId && window.supabaseUser) {
+        const jobId = receiptJobId;
+        receiptJobId = null;
+        (async () => {
+            try {
+                const jobs = await db.receiptJobs.toArray();
+                const job = jobs.find(j => j.id === jobId);
+                if (job && !job.expense_id) {
+                    await db.receiptJobs.delete(jobId);
+                    await supabaseClient.storage.from('receipts').remove([window.supabaseUser.id + '/' + jobId + '.jpg']);
+                }
+            } catch (e) { console.warn('[RICEVUTE] cleanup job:', e); }
+        })();
+    }
+    receiptJobId = null;
     const wrap = document.getElementById('receiptPreviewWrap');
     const img = document.getElementById('receiptPreview');
     if (img) img.removeAttribute('src');
@@ -3316,12 +3367,10 @@ async function handleReceiptFile(file, input) {
         receiptObjectUrl = URL.createObjectURL(file);
         img.src = receiptObjectUrl;
         wrap.style.display = 'flex';
-        status.textContent = 'Analisi in corso…';
-        await analyzeReceipt(dataUri, status);
+        status.textContent = 'In analisi in background…';
+        await startReceiptJob(dataUri);
     } catch (err) {
         showToast('Errore lettura immagine: ' + err.message, true);
-    } finally {
-        // La foto NON viene mai salvata: preview e URL eliminati a risultato ottenuto
         clearReceiptPreview();
     }
 }
@@ -3354,75 +3403,123 @@ function downscaleReceiptImage(file) {
     });
 }
 
-async function analyzeReceipt(dataUri, statusEl) {
+// Avvia il job: upload foto nello storage + riga receipt_jobs + invocazione
+// fire-and-forget di process-receipt (nessuna attesa nello sheet)
+async function startReceiptJob(dataUri) {
     receiptPending = true;
     try {
-        const modelSelect = document.getElementById('openrouter-model-select');
-        const selected = modelSelect && modelSelect.value ? modelSelect.value : undefined;
-        const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
-            body: {
-                model: selected,
-                vision: true,
-                messages: [
-                    { role: 'system', content: 'Sei un OCR di scontrini italiani. Regola ASSOLUTA: il TOTALE è SOLO l\'ultimo importo in fondo allo scontrino, di solito preceduto da "TOTALE", "TOTAL", "DA PAGARE", "IMPORTO", "TOT. €", ed è il valore effettivamente pagato. NON sommare mai i prezzi delle singole voci e NON sommare il totale a se stesso. Se in fondo non c\'è un totale esplicito, importo: null. Non inventare, non arrotondare. Lingua: Italiano. Rispondi SEMPRE e SOLO con JSON valido, senza markdown.' },
-                    { role: 'user', content: [
-                        { type: 'text', text: 'Estrai i dati da questo scontrino. Rispondi SOLO con JSON: {"importo": number|null, "somma_voci": number|null, "negozio": string|null, "data": "YYYY-MM-DD"|null, "categoria_suggerita": string|null}. importo = SOLO il TOTALE in fondo allo scontrino (numero senza valuta e senza separatori). somma_voci = somma dei prezzi delle singole voci (solo diagnostica, può essere null). Esempio: voci "Pane 1,20 / Latte 1,80" e in fondo "TOTALE € 3,00" → importo = 3.00 (MAI 6.00). Se l\'immagine non è uno scontrino o il totale non è leggibile, importo: null.' },
-                        { type: 'image_url', image_url: { url: dataUri } }
-                    ]}
-                ]
-            }
+        const uid = window.supabaseUser ? window.supabaseUser.id : null;
+        if (!uid) { showToast('Devi essere autenticato per analizzare lo scontrino', true); return; }
+        const jobId = genId();
+        const path = uid + '/' + jobId + '.jpg';
+        const blob = await (await fetch(dataUri)).blob();
+        const { error: upErr } = await supabaseClient.storage.from('receipts').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (upErr) throw upErr;
+        await db.receiptJobs.put({
+            id: jobId,
+            user_id: uid,
+            expense_id: null,
+            status: 'pending',
+            created_at: Date.now(),
+            updated_at: Date.now()
         });
-        if (error) throw error;
-
-        const parsed = parseAIJson(data.content);
-        let rawAmount = parsed.importo;
-        if (typeof rawAmount === 'string') rawAmount = parseFloat(rawAmount.replace(',', '.').replace(/\s/g, ''));
-        const amount = Number(rawAmount);
-        if (!isFinite(amount) || amount <= 0) {
-            if (statusEl) statusEl.textContent = 'Scontrino non riconosciuto';
-            showToast('Importo non leggibile dalla foto', true);
-            return;
-        }
-
-        const fmtAmount = (Math.round(amount * 100) / 100).toFixed(2).replace('.', ',') + ' €';
-        if (amount > 500) {
-            const ok = await showConfirmDialog({
-                title: 'Importo alto rilevato',
-                message: 'Totale letto: ' + fmtAmount + '. Sembra spropositato per uno scontrino singolo. Compilarlo comunque?',
-                okLabel: 'Compila',
-                cancelLabel: 'Annulla'
-            });
-            if (!ok) {
-                if (statusEl) statusEl.textContent = 'Importo alto — non compilato';
-                showToast('Importo non compilato: controlla lo scontrino', true);
-                return;
-            }
-        }
-
-        const amountInput = document.getElementById('amountInput');
-        if (amountInput) {
-            amountInput.value = (Math.round(amount * 100) / 100).toFixed(2).replace('.', ',');
-        }
-
-        const noteEl = document.getElementById('sheetNote');
-        if (noteEl && !noteEl.value.trim() && parsed.negozio) noteEl.value = parsed.negozio;
-
-        if (parsed.data && /^\d{4}-\d{2}-\d{2}$/.test(parsed.data)) {
-            const dateEl = document.getElementById('sheetDate');
-            if (dateEl) dateEl.value = parsed.data;
-        }
-
-        if (parsed.categoria_suggerita && typeof userCategories !== 'undefined' && userCategories.includes(parsed.categoria_suggerita)) {
-            sheetSelectedCategory = parsed.categoria_suggerita;
-            const titleEl = document.getElementById('selected-category-title');
-            if (titleEl) titleEl.textContent = parsed.categoria_suggerita;
-        }
-
-        if (statusEl) statusEl.textContent = 'Importo compilato ✓';
-        showToast('Importo letto dallo scontrino', false);
+        receiptJobId = jobId;
+        invokeProcessReceipt(jobId);
+        showToast('Scontrino in analisi in background', false);
     } catch (err) {
-        if (statusEl) statusEl.textContent = 'Errore analisi';
-        showToast('Errore analisi scontrino: ' + (await extractFunctionError(err)), true);
+        receiptJobId = null;
+        showToast('Errore upload scontrino: ' + err.message, true);
+        clearReceiptPreview();
+    } finally {
+        receiptPending = false;
+    }
+}
+
+async function invokeProcessReceipt(jobId) {
+    try {
+        await window.supabaseClient.functions.invoke('process-receipt', { body: { jobId } });
+    } catch (err) {
+        console.warn('[RICEVUTE] process-receipt fallita (il polling ripeterà):', err.message);
+    }
+}
+
+function startReceiptPolling() {
+    if (receiptPollTimer) return;
+    checkReceiptJobs();
+    receiptPollTimer = setInterval(checkReceiptJobs, 10000);
+}
+
+async function checkReceiptJobs() {
+    if (!window.supabaseUser) return;
+    let jobs = [];
+    try { jobs = await db.receiptJobs.toArray(); } catch (e) { return; }
+    for (const j of jobs) {
+        const ts = j.updated_at || j.created_at || 0;
+        if (j.status === 'processing' && ts && Date.now() - ts > 120000) {
+            invokeProcessReceipt(j.id); // self-healing: job rimasto in processing
+        }
+        if ((j.status === 'done' || j.status === 'failed') && !receiptNotified[j.id] && !localStorage.getItem('eb_receipt_ignored_' + j.id)) {
+            receiptNotified[j.id] = true;
+            notifyReceiptJob(j);
+        }
+    }
+}
+
+function notifyReceiptJob(job) {
+    showReceiptBanner(job);
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const body = job.status === 'done'
+            ? (job.importo != null ? 'Importo: ' + fmtEPlain(job.importo, 2) + '. Tocca per confermare la spesa.' : 'Scontrino analizzato, ma importo non rilevato.')
+            : 'Analisi non riuscita. Tocca per riprovare.';
+        const n = new Notification('🧾 Scontrino analizzato', {
+            body,
+            icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%231e293b'/><text y='120' x='96' font-size='100' text-anchor='middle'>🧾</text></svg>"
+        });
+        n.onclick = () => { window.focus(); if (job.status === 'done') confirmReceiptJob(job); };
+    }
+}
+
+function showReceiptBanner(job) {
+    receiptBannerJob = job;
+    const bar = document.getElementById('receiptConfirmBar');
+    const msg = document.getElementById('receiptConfirmMsg');
+    const confirmBtn = document.getElementById('receiptConfirmBtn');
+    if (!bar || !msg || !confirmBtn) return;
+    if (job.status === 'done') {
+        msg.textContent = job.importo != null ? ('🧾 Importo scontrino: ' + fmtEPlain(job.importo, 2)) : '🧾 Scontrino analizzato (importo non rilevato)';
+        confirmBtn.textContent = 'Conferma spesa';
+    } else {
+        msg.textContent = '⚠️ Analisi scontrino non riuscita';
+        confirmBtn.textContent = 'Riprova';
+    }
+    bar.style.display = 'flex';
+}
+
+function hideReceiptBanner() {
+    receiptBannerJob = null;
+    const bar = document.getElementById('receiptConfirmBar');
+    if (bar) bar.style.display = 'none';
+}
+
+async function confirmReceiptJob(job) {
+    hideReceiptBanner();
+    if (job.expense_id) {
+        // Consuma il job: la foto non serve più
+        try {
+            await db.receiptJobs.delete(job.id);
+            if (window.supabaseUser) await supabaseClient.storage.from('receipts').remove([window.supabaseUser.id + '/' + job.id + '.jpg']);
+        } catch (e) { console.warn('[RICEVUTE] cleanup job confermato:', e); }
+        editExpense(Number(job.expense_id));
+        if (job.importo != null) {
+            const amountInput = document.getElementById('amountInput');
+            if (amountInput) amountInput.value = (Math.round(job.importo * 100) / 100).toFixed(2).replace('.', ',');
+        }
+        if (job.negozio) {
+            const noteEl = document.getElementById('sheetNote');
+            if (noteEl && !noteEl.value.trim()) noteEl.value = job.negozio;
+        }
+    } else {
+        showToast('Spesa non trovata per questo scontrino', true);
     }
 }
 
