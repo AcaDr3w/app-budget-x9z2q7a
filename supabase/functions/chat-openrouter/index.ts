@@ -16,19 +16,31 @@ function isValidFreeModel(model) {
   return typeof model === 'string' && /^[a-z0-9-]+\/[a-z0-9.\-]+:free$/i.test(model);
 }
 
-// Backup automatici quando il modello richiesto fallisce o sparisce
+// Backup automatici quando il modello richiesto fallisce o sparisce.
+// Aggiornato 2026-08-21: il free tier Gemini e' stato chiuso da Google
+// (fine 2025) e i vecchi ID gemini-2.x-exp/llama-3.3/qwen-coder sono stati
+// delistati da OpenRouter. Catalogo free di riferimento (agosto 2026):
+// https://openrouter.ai/collections/free-models — i free churnano ogni
+// settimana, quindi `openrouter/free` (router) resta l'ultima spiaggia.
 const FALLBACK_MODELS = [
-  'google/gemini-2.5-flash-exp:free',
-  'google/gemini-2.0-flash-exp:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'qwen/qwen-2.5-coder-32b-instruct:free'
+  'inclusionai/ling-3.0-flash:free',
+  'z-ai/glm-5.2:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'openai/gpt-oss-20b:free',
+  'openrouter/free'
 ];
 
 // Modelli vision gratuiti: SOLO questi sanno leggere un'immagine.
 // Usati quando il body chiede `vision: true` (es. OCR scontrini).
+// Gemma 4 31B/26B sono i migliori free multimodali; nemotron-12b-vl e'
+// un estrattore vision dedicato. `openrouter/free` filtra per capacita'
+// image-input (autoguarigione al churn del catalogo).
 const VISION_MODELS = [
-  'google/gemini-2.5-flash-exp:free',
-  'google/gemini-2.0-flash-exp:free'
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+  'openrouter/free'
 ];
 
 function shuffle(list) {
@@ -40,7 +52,7 @@ function shuffle(list) {
   return arr;
 }
 
-async function callOpenRouter(apiKey, payload) {
+async function callOpenRouter(apiKey, payload, timeoutMs = 30000) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -50,7 +62,7 @@ async function callOpenRouter(apiKey, payload) {
       "X-Title": "Bilancio Pro"
     },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(30000)
+    signal: AbortSignal.timeout(timeoutMs)
   });
   const text = await response.text();
   let parsed = null;
@@ -133,7 +145,7 @@ serve(async (req) => {
       };
 
       try {
-        const result = await callOpenRouter(apiKey, payload);
+        const result = await callOpenRouter(apiKey, payload, vision ? 45000 : 30000);
         if (result.ok) {
           const content = result.parsed?.choices?.[0]?.message?.content || '';
           return new Response(
