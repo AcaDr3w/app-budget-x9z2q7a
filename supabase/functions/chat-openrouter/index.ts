@@ -24,6 +24,13 @@ const FALLBACK_MODELS = [
   'qwen/qwen-2.5-coder-32b-instruct:free'
 ];
 
+// Modelli vision gratuiti: SOLO questi sanno leggere un'immagine.
+// Usati quando il body chiede `vision: true` (es. OCR scontrini).
+const VISION_MODELS = [
+  'google/gemini-2.5-flash-exp:free',
+  'google/gemini-2.0-flash-exp:free'
+];
+
 function shuffle(list) {
   const arr = [...list];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -82,7 +89,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Body JSON non valido' }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 });
     }
-    const { messages, system_instruction, model } = body;
+    const { messages, system_instruction, model, vision } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'messages mancante o vuoto' }),
@@ -108,7 +115,9 @@ serve(async (req) => {
     // 2) "random" -> fallback in ordine casuale
     // 3) altrimenti il fallback statico, senza duplicati
     let candidates;
-    if (model === 'random') {
+    if (vision) {
+      candidates = [...VISION_MODELS];
+    } else if (model === 'random') {
       candidates = shuffle(FALLBACK_MODELS);
     } else {
       candidates = [isValidFreeModel(model) ? model : 'openrouter/free', ...FALLBACK_MODELS];

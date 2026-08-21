@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-08-21] - Foto scontrino con Vision IA (bottom sheet spesa)
+
+### Completed Changes
+- **feature**: i pulsanti 📷 `#btnNoteCamera` e 📎 `#btnNoteAttach` del bottom sheet (erano no-op da index.html:1056) ora aprono rispettivamente `#receiptCamInput` (`capture="environment"`) e `#receiptAttachInput` (galleria, entrambi `accept="image/*"` hidden).
+- **pipeline**: `handleReceiptFile(file)` → guardie (tipo immagine, ≤10MB) → `downscaleReceiptImage()` (Image+canvas, lato lungo max 1280px, JPEG 0.75 ≈ 200-400KB base64) → `analyzeReceipt(dataUri)` chiama `chat-openrouter` con flag `vision: true` e user message `content: [text, image_url]` → `parseAIJson` → importo nel `#amountInput` (formato virgola, es. "12,50"), negozio in `#sheetNote` (se vuota), data in `#sheetDate` (se valida), categoria in `sheetSelectedCategory` + titolo (se in `userCategories`).
+- **foto MAI persistita** (decisione utente): preview + `URL.revokeObjectURL` eliminati appena l'IA risponde (`finally { clearReceiptPreview() }`), e in `closeTransactionSheet()`/`slideToInputView()`. Guardia anti-concorrenza `receiptPending` (bottoni ignorati durante l'analisi).
+- **edge function `chat-openrouter`**: nuovo flag `vision` nel body → candidate SOLO `VISION_MODELS` (`google/gemini-2.5-flash-exp:free`, `google/gemini-2.0-flash-exp:free`) — i fallback non-vision (llama/qwen) fallirebbero sull'immagine. `messages` passano già invariati (i `content` array con `image_url` funzionano senza altro).
+- **css**: `.receipt-preview` (flex, radius 12, `--shadow-card`, `--surface-muted`, bordo `--muted-faint`), `.receipt-preview-img` (64×64, cover, radius 10), `.receipt-preview-status` (13px, wrap anywhere), `.receipt-preview-clear` (44×44 pill, `--danger`, hover `--border-soft`), durate 0.15s/0.3s.
+
+### Status: COMPLETATO - node --check OK; deno non disponibile localmente (edge function verificata a vista).
+
 ## [2026-08-19] - Fix proporzioni card Anomalie di Spesa (Analisi mobile)
 
 ### Completed Changes

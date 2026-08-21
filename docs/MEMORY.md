@@ -1,5 +1,13 @@
 # Project Core Memory
 
+## 📸 FOTO SCONTRINO -> VISION IA -> IMPORTO (2026-08-21)
+- **Pulsanti**: `#btnNoteCamera` (capture) / `#btnNoteAttach` (galleria) nel bottom sheet → input hidden `#receiptCamInput`/`#receiptAttachInput` (`accept="image/*"`, `display:none`). Binding in `setupReceiptNoteActions()` (sostituisce i vecchi no-op).
+- **Pipeline**: `handleReceiptFile` → `downscaleReceiptImage` (Image+canvas, lato lungo MAX 1280, JPEG 0.75 → base64 ≤ ~400KB, sotto il limite body delle Edge Functions) → `analyzeReceipt` → edge function `chat-openrouter` con **`vision: true`** → `parseAIJson` → importo in `#amountInput` (formato virgola `(n).toFixed(2).replace('.',',')`), negozio→`#sheetNote` se vuota, data→`#sheetDate` se `YYYY-MM-DD`, categoria→`sheetSelectedCategory`+titolo se in `userCategories`.
+- **FOTO MAI PERSISTITA** (decisione utente): `finally { clearReceiptPreview() }` elimina preview + `URL.revokeObjectURL` appena l'IA risponde; cleanup anche in `closeTransactionSheet()`/`slideToInputView()`. Guardia anti-concorrenza `receiptPending` (bottoni no-op durante l'analisi). Nessuna colonna DB/allowlist da aggiungere.
+- **Edge function**: flag `vision` nel body → candidate SOLO `VISION_MODELS` = `google/gemini-2.5-flash-exp:free` + `google/gemini-2.0-flash-exp:free`. MAI mandare immagini ai fallback non-vision (llama-3.3-70b, qwen-2.5-coder fallirebbero). `messages` passano invariati → i `content` array `[{type:'text'},{type:'image_url', image_url:{url:dataUri}}]` funzionano senza altro.
+- **System prompt**: rispondi SEMPRE e SOLO JSON `{"importo": number|null, "negozio": string|null, "data": "YYYY-MM-DD"|null, "categoria_suggerita": string|null}`; importo null = scontrino non riconosciuto (toast errore).
+- **HEIC iOS**: Safari transcodifica in JPEG su `capture`; se il file non è decodificabile → toast errore.
+
 ## MOBILE TRUNCATION RULES (2026-08-19)
 - **Label/descrizioni brevi su mobile**: MAI `white-space:nowrap`+ellipsis per label che possono superare la card (`.trend-label`, `.trend-delta`, `.card-progress-label`, `.hero-mini-label`, `.savings-sub`, `.hub-text`). Pattern: `display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere`.
 - **Valori numerici** (`.trend-value`, `.hero-mini-value`): `nowrap`+ellipsis OK ma con `max-width:100%` e `overflow-wrap:anywhere` come fallback. `.invest-hero-value`: `white-space:normal` + `overflow-wrap:anywhere` (può spezzarsi).

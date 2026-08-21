@@ -2275,6 +2275,60 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     transform: scale(0.94);
 }
 
+/* Receipt preview (foto scontrino -> Vision IA) */
+.receipt-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--muted-faint);
+    border-radius: 12px;
+    background: var(--surface-muted);
+    box-shadow: var(--shadow-card);
+    transition: opacity 0.3s ease;
+}
+.receipt-preview-img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: var(--border-soft);
+}
+.receipt-preview-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.receipt-preview-status {
+    font-size: 13px;
+    line-height: 1.3;
+    color: var(--muted-mid);
+    overflow-wrap: anywhere;
+}
+.receipt-preview-clear {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 999px;
+    background: var(--border-soft);
+    color: var(--danger);
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.receipt-preview-clear:active {
+    background: var(--border-faint);
+}
+
 /* Sheet footer with two buttons */
 .sheet-footer {
     display: flex;

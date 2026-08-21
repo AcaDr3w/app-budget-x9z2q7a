@@ -884,6 +884,7 @@ function closeTransactionSheet() {
     sheetTransactionType = 'actual';
     sheetCurrentMacroGroup = null;
     editingExpenseId = null;
+    clearReceiptPreview();
 
     // Reset title color from macro theme
     const sheetTitleEl = document.getElementById('selected-category-title');
@@ -2956,6 +2957,7 @@ function slideToInputView(categoryName) {
     
     if (amountInput) amountInput.value = '';
     if (sheetDate) sheetDate.value = new Date().toISOString().slice(0, 10);
+    clearReceiptPreview();
     
     toggleOptions.forEach(opt => {
         opt.classList.toggle('active', opt.dataset.type === 'actual');
@@ -3266,12 +3268,148 @@ async function saveTransactionFromSheet() {
         });
     }
 
-    // Note actions (placeholder: logica foto/allegato in sviluppo)
+    // Note actions: foto scontrino (camera / allegato) -> Vision IA -> importo
+    setupReceiptNoteActions();
+})();
+
+// ===== RICEVUTE: FOTO SCONTRINO -> VISION IA -> IMPORTO =====
+let receiptPending = false;
+let receiptObjectUrl = null;
+
+function setupReceiptNoteActions() {
     const camBtn = document.getElementById('btnNoteCamera');
     const attachBtn = document.getElementById('btnNoteAttach');
-    if (camBtn) camBtn.addEventListener('click', () => {});
-    if (attachBtn) attachBtn.addEventListener('click', () => {});
-})();
+    const camInput = document.getElementById('receiptCamInput');
+    const attachInput = document.getElementById('receiptAttachInput');
+    if (camBtn && camInput) camBtn.addEventListener('click', () => { if (!receiptPending) camInput.click(); });
+    if (attachBtn && attachInput) attachBtn.addEventListener('click', () => { if (!receiptPending) attachInput.click(); });
+    if (camInput) camInput.addEventListener('change', () => handleReceiptFile(camInput.files && camInput.files[0], camInput));
+    if (attachInput) attachInput.addEventListener('change', () => handleReceiptFile(attachInput.files && attachInput.files[0], attachInput));
+    const clearBtn = document.getElementById('receiptPreviewClear');
+    if (clearBtn) clearBtn.addEventListener('click', clearReceiptPreview);
+}
+
+function clearReceiptPreview() {
+    const wrap = document.getElementById('receiptPreviewWrap');
+    const img = document.getElementById('receiptPreview');
+    if (img) img.removeAttribute('src');
+    if (wrap) wrap.style.display = 'none';
+    if (receiptObjectUrl) { URL.revokeObjectURL(receiptObjectUrl); receiptObjectUrl = null; }
+    receiptPending = false;
+}
+
+async function handleReceiptFile(file, input) {
+    if (input) input.value = '';
+    if (!file) return;
+    if (receiptPending) return;
+    if (!/^image\//.test(file.type)) { showToast('Seleziona un\'immagine', true); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('Immagine troppo grande (max 10 MB)', true); return; }
+
+    const wrap = document.getElementById('receiptPreviewWrap');
+    const img = document.getElementById('receiptPreview');
+    const status = document.getElementById('receiptPreviewStatus');
+    if (!wrap || !img || !status) return;
+
+    try {
+        const dataUri = await downscaleReceiptImage(file);
+        if (receiptObjectUrl) URL.revokeObjectURL(receiptObjectUrl);
+        receiptObjectUrl = URL.createObjectURL(file);
+        img.src = receiptObjectUrl;
+        wrap.style.display = 'flex';
+        status.textContent = 'Analisi in corso…';
+        await analyzeReceipt(dataUri, status);
+    } catch (err) {
+        showToast('Errore lettura immagine: ' + err.message, true);
+    } finally {
+        // La foto NON viene mai salvata: preview e URL eliminati a risultato ottenuto
+        clearReceiptPreview();
+    }
+}
+
+function downscaleReceiptImage(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const imgEl = new Image();
+        imgEl.onload = () => {
+            try {
+                const MAX = 1280;
+                const scale = Math.min(1, MAX / Math.max(imgEl.width, imgEl.height));
+                const w = Math.max(1, Math.round(imgEl.width * scale));
+                const h = Math.max(1, Math.round(imgEl.height * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) throw new Error('canvas non disponibile');
+                ctx.drawImage(imgEl, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.75));
+            } catch (e) {
+                reject(e);
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        };
+        imgEl.onerror = () => { URL.revokeObjectURL(url); reject(new Error('immagine non leggibile')); };
+        imgEl.src = url;
+    });
+}
+
+async function analyzeReceipt(dataUri, statusEl) {
+    receiptPending = true;
+    try {
+        const modelSelect = document.getElementById('openrouter-model-select');
+        const selected = modelSelect && modelSelect.value ? modelSelect.value : undefined;
+        const { data, error } = await window.supabaseClient.functions.invoke('chat-openrouter', {
+            body: {
+                model: selected,
+                vision: true,
+                messages: [
+                    { role: 'system', content: 'Sei un assistente di riconoscimento scontrini. Lingua: Italiano. Rispondi SEMPRE e SOLO con JSON valido, senza markdown.' },
+                    { role: 'user', content: [
+                        { type: 'text', text: 'Estrai i dati da questo scontrino. Rispondi SOLO con JSON: {"importo": number|null, "negozio": string|null, "data": "YYYY-MM-DD"|null, "categoria_suggerita": string|null}. importo = TOTALE pagato, numero senza valuta e senza separatori. Se l\'immagine non è uno scontrino o l\'importo non è leggibile, imposta importo: null.' },
+                        { type: 'image_url', image_url: { url: dataUri } }
+                    ]}
+                ]
+            }
+        });
+        if (error) throw error;
+
+        const parsed = parseAIJson(data.content);
+        let rawAmount = parsed.importo;
+        if (typeof rawAmount === 'string') rawAmount = parseFloat(rawAmount.replace(',', '.').replace(/\s/g, ''));
+        const amount = Number(rawAmount);
+        if (!isFinite(amount) || amount <= 0) {
+            if (statusEl) statusEl.textContent = 'Scontrino non riconosciuto';
+            showToast('Importo non leggibile dalla foto', true);
+            return;
+        }
+
+        const amountInput = document.getElementById('amountInput');
+        if (amountInput) {
+            amountInput.value = (Math.round(amount * 100) / 100).toFixed(2).replace('.', ',');
+        }
+
+        const noteEl = document.getElementById('sheetNote');
+        if (noteEl && !noteEl.value.trim() && parsed.negozio) noteEl.value = parsed.negozio;
+
+        if (parsed.data && /^\d{4}-\d{2}-\d{2}$/.test(parsed.data)) {
+            const dateEl = document.getElementById('sheetDate');
+            if (dateEl) dateEl.value = parsed.data;
+        }
+
+        if (parsed.categoria_suggerita && typeof userCategories !== 'undefined' && userCategories.includes(parsed.categoria_suggerita)) {
+            sheetSelectedCategory = parsed.categoria_suggerita;
+            const titleEl = document.getElementById('selected-category-title');
+            if (titleEl) titleEl.textContent = parsed.categoria_suggerita;
+        }
+
+        if (statusEl) statusEl.textContent = 'Importo compilato ✓';
+        showToast('Importo letto dallo scontrino', false);
+    } catch (err) {
+        if (statusEl) statusEl.textContent = 'Errore analisi';
+        showToast('Errore analisi scontrino: ' + (await extractFunctionError(err)), true);
+    }
+}
 
 // Initialize toggle when DOM ready
 document.addEventListener('DOMContentLoaded', () => {
