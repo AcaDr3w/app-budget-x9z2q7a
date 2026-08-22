@@ -1533,9 +1533,23 @@ async function syncSharedDebts() {
                 );
                 window.writeOutbox('expenses', queue);
             }
-            const existing = new Set((await db.expenses.toArray()).map(e => e.debtId ? String(e.debtId) : null).filter(Boolean));
+            // Build set of existing expense keys for deduplication
+            // Usa debtId se disponibile, altrimenti fallback su desc+month+planned
+            const hasDebtIdColumn = all.some(e => e.debtId !== undefined);
+            let existingKeys;
+            if (hasDebtIdColumn) {
+                existingKeys = new Set((await db.expenses.toArray()).map(e => String(e.debtId)).filter(Boolean));
+            } else {
+                // Fallback: dedup by desc+month+planned (chiave univoche anche senza colonna debtId)
+                existingKeys = new Set(
+                    all.filter(e => e.month === month && (e.desc || '').startsWith('Da saldare a') && e.planned > 0)
+                        .map(e => `${e.desc}|${e.month}|${e.planned}`)
+                );
+            }
+            let newExpensesCreated = 0;
             for (const d of openForMe) {
-                if (existing.has(String(d.id))) continue;
+                const key = hasDebtIdColumn ? String(d.id) : `${d.creditor_name}|${month}|${Number(d.amount) || 0}`;
+                if (existingKeys.has(key)) continue;
                 if (!month) continue;
                 const exp = {
                     id: genId(),
@@ -1546,14 +1560,17 @@ async function syncSharedDebts() {
                     planned: Number(d.amount) || 0,
                     actual: 0,
                     sharedPercentage: 0,
-                    debtId: String(d.id)
+                    debtId: hasDebtIdColumn ? String(d.id) : null
                 };
                 await db.expenses.put(exp);
                 currentData.expenses.push(exp);
-                existing.add(String(d.id));
+                existingKeys.add(key);
+                newExpensesCreated++;
             }
             await updateUI();
-            showToast('💸 ' + openForMe.length + ' debito/i da saldare aggiunti', false);
+            if (newExpensesCreated > 0) {
+                showToast('💸 ' + newExpensesCreated + ' debito/i da saldare aggiunti', false);
+            }
         }
         const settledForMe = debts.filter(d => d.creditor_user_id === uid && d.status === 'settled' && d.expense_id);
         for (const d of settledForMe) {
