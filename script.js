@@ -837,7 +837,7 @@ let sheetSelectedCategory = null;
 let sheetTransactionType = 'actual'; // 'actual' for Sostenuta, 'planned' for Prevista
 let editingExpenseId = null;
 
-function openTransactionSheet(categoryName) {
+function openTransactionSheet(categoryName, prefillAmount, prefillNote) {
     console.log("Card cliccata:", categoryName);
     sheetSelectedCategory = categoryName;
     sheetTransactionType = 'actual';
@@ -855,8 +855,13 @@ if (overlay && sheet && title) {
         overlay.classList.add('open');
         sheet.classList.add('open');
         
-        // Reset inputs
-        if (amountInput) amountInput.value = '';
+        // Imposta valori precompilati se forniti (evita il reset completo)
+        if (prefillAmount !== undefined) {
+            if (amountInput) amountInput.value = prefillAmount;
+        } else {
+            // Reset inputs
+            if (amountInput) amountInput.value = '';
+        }
         
         // Reset date to today
         if (sheetDate) {
@@ -3315,8 +3320,14 @@ function setupReceiptNoteActions() {
             showToast('Nuova analisi avviata', false);
         }
     });
-    if (dismissBtn) dismissBtn.addEventListener('click', () => {
-        if (receiptBannerJob) localStorage.setItem('eb_receipt_ignored_' + receiptBannerJob.id, '1');
+    if (dismissBtn) dismissBtn.addEventListener('click', async () => {
+        if (receiptBannerJob) {
+            try {
+                await db.receiptJobs.delete(receiptBannerJob.id);
+                if (window.supabaseUser) await supabaseClient.storage.from('receipts').remove([window.supabaseUser.id + '/' + receiptBannerJob.id + '.jpg']);
+            } catch (e) { console.warn('[RICEVUTE] cleanup job dismiss:', e); }
+            localStorage.setItem('eb_receipt_ignored_' + receiptBannerJob.id, '1');
+        }
         hideReceiptBanner();
     });
 }
@@ -3452,8 +3463,18 @@ async function checkReceiptJobs() {
     try { jobs = await db.receiptJobs.toArray(); } catch (e) { return; }
     for (const j of jobs) {
         const ts = j.updated_at || j.created_at || 0;
+        // Self-healing: job rimasto in processing > 2min
         if (j.status === 'processing' && ts && Date.now() - ts > 120000) {
-            invokeProcessReceipt(j.id); // self-healing: job rimasto in processing
+            invokeProcessReceipt(j.id);
+        }
+        // Pulizia automatica: job done/failed senza expense_id (orfano)
+        if ((j.status === 'done' || j.status === 'failed') && !j.expense_id) {
+            try {
+                await db.receiptJobs.delete(j.id);
+                if (window.supabaseUser) await supabaseClient.storage.from('receipts').remove([window.supabaseUser.id + '/' + j.id + '.jpg']);
+                receiptNotified[j.id] = true; // marcare come gestito per evitare notifiche future
+            } catch (e) { console.warn('[RICEVUTE] cleanup orphan job:', e); }
+            continue; // salta la notifica per questo job
         }
         if ((j.status === 'done' || j.status === 'failed') && !receiptNotified[j.id] && !localStorage.getItem('eb_receipt_ignored_' + j.id)) {
             receiptNotified[j.id] = true;
@@ -3500,12 +3521,14 @@ function hideReceiptBanner() {
 
 async function confirmReceiptJob(job) {
     hideReceiptBanner();
+    // Consuma sempre il job: elimina dalla DB e dallo storage
+    try {
+        await db.receiptJobs.delete(job.id);
+        if (window.supabaseUser) await supabaseClient.storage.from('receipts').remove([window.supabaseUser.id + '/' + job.id + '.jpg']);
+    } catch (e) { console.warn('[RICEVUTE] cleanup job confermato:', e); }
+
     if (job.expense_id) {
-        // Consuma il job: la foto non serve più
-        try {
-            await db.receiptJobs.delete(job.id);
-            if (window.supabaseUser) await supabaseClient.storage.from('receipts').remove([window.supabaseUser.id + '/' + job.id + '.jpg']);
-        } catch (e) { console.warn('[RICEVUTE] cleanup job confermato:', e); }
+        // La spesa esiste già: modificala in-place
         editExpense(Number(job.expense_id));
         if (job.importo != null) {
             const amountInput = document.getElementById('amountInput');
@@ -3516,8 +3539,28 @@ async function confirmReceiptJob(job) {
             if (noteEl && !noteEl.value.trim()) noteEl.value = job.negozio;
         }
     } else {
-        showToast('Spesa non trovata per questo scontrino', true);
+        // Nessuna spesa linkata: apri nuova spesa precompilata dai dati OCR
+        openNewExpenseFromOcr(job.importo, job.negozio);
     }
+}
+
+function openNewExpenseFromOcr(importo, negozio) {
+    // Imposta valori predefiniti nello sheet (prima di aprire, per sovrascrivere il reset)
+    const amountInput = document.getElementById('amountInput');
+    const sheetNote = document.getElementById('sheetNote');
+
+    if (amountInput) {
+        amountInput.value = (Math.round((importo || 0) * 100) / 100).toFixed(2).replace('.', ',');
+    }
+    if (sheetNote) {
+        if (!sheetNote.value.trim()) sheetNote.value = negozio || 'Importo scontrino';
+    }
+
+    // Apri lo sheet delle spese precompilato dai dati OCR
+    openTransactionSheet('Spese', amountInput?.value, sheetNote?.value);
+
+    // Mostra un toast informativo
+    showToast('Importo e negozio precompilati dallo scontrino. Modifica e salva.', false);
 }
 
 // Polling notifiche scontrino: avvio SOLO post-DOM (mai a parse-time)
