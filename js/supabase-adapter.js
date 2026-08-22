@@ -20,14 +20,34 @@ function readOutbox(tableName) {
 function writeOutbox(tableName, items) {
     try { localStorage.setItem(outboxKey(tableName), JSON.stringify(items)); } catch (e) {}
 }
+function clearOutbox(tableName) {
+    try { localStorage.removeItem(outboxKey(tableName)); } catch (e) {}
+    console.log('[OUTBOX] ' + tableName + ': cleared');
+}
+function clearAllOutboxes() {
+    for (const t of Object.keys(DB_ACCESSOR)) {
+        clearOutbox(t);
+    }
+    console.log('[OUTBOX] Tutte le code outbox pulite');
+}
 window.readOutbox = readOutbox;
 window.writeOutbox = writeOutbox;
 window.flushOutbox = flushOutbox;
+window.clearOutbox = clearOutbox;
+window.clearAllOutboxes = clearAllOutboxes;
+
 function enqueueOutbox(tableName, item) {
     const queue = readOutbox(tableName);
-    queue.push(item);
+    const pk = item && item.__id ? String(item.__id) : String(item && item.id ? item.id : Date.now());
+    // Deduplication: replace existing item with same primary key, otherwise append
+    const existingIdx = queue.findIndex(i => i && String(i.__id || i.id || Date.now()) === pk);
+    if (existingIdx >= 0) {
+        queue[existingIdx] = item;
+    } else {
+        queue.push(item);
+    }
     writeOutbox(tableName, queue);
-    console.warn('[OUTBOX] ' + tableName + ': 1 voce in attesa (' + queue.length + ' totali)');
+    console.log('[OUTBOX] ' + tableName + ': ' + (existingIdx >= 0 ? 'aggiornato' : 'aggiunto') + ' voce (coda ' + queue.length + ')');
     if (typeof showToast === 'function') showToast('⚠️ Salvataggio offline: dati in coda', true);
 }
 const DB_ACCESSOR = {
@@ -42,19 +62,51 @@ const DB_ACCESSOR = {
 };
 async function flushOutbox() {
     if (!window.supabaseUser) return;
+    let isFlushing = false;
     for (const tableName of Object.keys(DB_ACCESSOR)) {
+        if (isFlushing) break;
         const queue = readOutbox(tableName);
         if (!queue.length) continue;
         const table = window.db[DB_ACCESSOR[tableName]];
         const failed = [];
         for (const item of queue) {
+            if (isFlushing) break;
+            let retryCount = (item && item.__retries) ? Number(item.__retries) : 0;
             const error = (item && item.__update)
                 ? await table._update(item.__id, item.__changes)
                 : await table._upsert(item);
-            if (error) failed.push(item);
+            if (error) {
+                retryCount++;
+                // Se fallisce ripetutamente (>= 3 tentativi), quarantena invece di re-infinito retry
+                if (retryCount >= 3) {
+                    // Sposta in quarantena locale per rimuoverlo dalla coda attiva
+                    const qKey = 'eb_outbox_quarantine_' + tableName;
+                    let qQueue = [];
+                    try { qQueue = JSON.parse(localStorage.getItem(qKey) || '[]') || []; } catch (e) { qQueue = []; }
+                    // Aggiungi metadati di fallimento se non presenti
+                    const failedItem = { ...item, __retries: retryCount, __failed: true };
+                    qQueue.push(failedItem);
+                    writeOutbox(tableName, queue.filter(i => i !== item));
+                    writeOutbox(qKey, qQueue);
+                    console.warn('[OUTBOX] ' + tableName + ': elemento quarantena dopo ' + retryCount + ' fallimenti', failedItem);
+                } else {
+                    // Altrimenti incrementa il contatore e rimette in coda
+                    const updatedItem = { ...item, __retries: retryCount };
+                    failed.push(updatedItem);
+                }
+            } else {
+                // Successo: resetta il contatore retry se era stato marcato
+                if (item && item.__retries) {
+                    const qKey = 'eb_outbox_quarantine_' + tableName;
+                    let qQueue = [];
+                    try { qQueue = JSON.parse(localStorage.getItem(qKey) || '[]') || []; } catch (e) { qQueue = []; }
+                    writeOutbox(qKey, qQueue.filter(i => i !== item));
+                }
+                failed.push(item);
+            }
         }
         writeOutbox(tableName, failed);
-        console.log('[OUTBOX] ' + tableName + ': flush (' + (queue.length - failed.length) + ' ok, ' + failed.length + ' ancora in coda)');
+        console.log('[OUTBOX] ' + tableName + ': flush (' + (queue.length - failed.length) + ' ok, ' + failed.length + ' ancora in coda/quarantena)');
     }
 }
 window.addEventListener('online', flushOutbox);
