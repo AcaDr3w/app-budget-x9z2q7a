@@ -239,50 +239,36 @@ async function processSilentRestore(data, cloudCounter) {
 }
 
 const defaultCategories = {
-    casa_utenze: ["Alimentari", "Bolletta Acqua", "Bolletta Condominio", "Bolletta Gas", "Bolletta Luce", "Bolletta Rifiuti", "Bolletta Telefonia", "Igiene e Pulizia", "Mutuo"],
-    veicoli: ["Carburante Auto", "Carburante Moto", "Manutenzioni", "Tasse Auto", "Tasse Moto"],
-    spese_svago: ["Abbigliamento", "Cane", "Formazione", "Imprevisti e Svago", "Sanitarie", "Varie"]
+    casa: ["Mutuo/Affitto", "Bolletta Acqua", "Bolletta Luce", "Bolletta Gas", "Bolletta Rifiuti", "Bolletta Condominio", "Bolletta Telefonia", "Internet", "Igiene e Pulizia"],
+    cibo: ["Alimentari", "Delivery", "Bar"],
+    veicoli: ["Manutenzione", "Carburante", "Parcheggio", "Bollo", "Assicurazione", "Multe"],
+    svago_altro: ["Abbigliamento", "Cane", "Formazione", "Sanitarie", "Imprevisti e Svago", "Varie"]
 };
-const MACRO_LABELS = { casa_utenze: "Casa e Utenze", veicoli: "Veicoli", spese_svago: "Spese e Svago" };
-const MACRO_ICON = { casa_utenze: "🏠", veicoli: "🚗", spese_svago: "🎉" };
-const MACRO_COLOR = { casa_utenze: "#2a9d8f", veicoli: "#7bc043", spese_svago: "#6f42c1" };
+const MACRO_LABELS = { casa: "Casa e Utenze", cibo: "Cibo", veicoli: "Veicoli", svago_altro: "Svago e Altro" };
+const MACRO_ICON = { casa: "🏠", cibo: "🍔", veicoli: "🚗", svago_altro: "🎉" };
+const MACRO_COLOR = { casa: "#2a9d8f", cibo: "#f39c12", veicoli: "#7bc043", svago_altro: "#6f42c1" };
 const DEFAULT_ICONS = {
-    Alimentari: "🛒", "Bolletta Acqua": "💧", "Bolletta Condominio": "🏢", "Bolletta Gas": "🔥",
-    "Bolletta Luce": "💡", "Bolletta Rifiuti": "🗑️", "Bolletta Telefonia": "📞", "Igiene e Pulizia": "🧴",
-    Mutuo: "🏠", "Carburante Auto": "⛽", "Carburante Moto": "🏍️", Manutenzioni: "🔧",
-    "Tasse Auto": "💰", "Tasse Moto": "💰", Abbigliamento: "👕", Cane: "🐾",
-    Formazione: "📚", "Imprevisti e Svago": "🎉", Sanitarie: "🏥", Varie: "📦"
+    "Mutuo/Affitto": "🏠", "Bolletta Acqua": "💧", "Bolletta Condominio": "🏢", "Bolletta Gas": "🔥",
+    "Bolletta Luce": "💡", "Bolletta Rifiuti": "🗑️", "Bolletta Telefonia": "📞", Internet: "📶", "Igiene e Pulizia": "🧴",
+    Alimentari: "🛒", Delivery: "🛒", Bar: "🍽️",
+    Manutenzione: "🔧", Carburante: "⛽", Parcheggio: "🅿️", Bollo: "📄", Assicurazione: "🛡️", Multe: "⚠️",
+    Abbigliamento: "👕", Cane: "🐾", Formazione: "📚", Sanitarie: "🏥", "Imprevisti e Svago": "🎉", Varie: "📦"
 };
 const FA_ICON_MAP = {
-    Alimentari: 'fa-basket-shopping', "Bolletta Acqua": 'fa-droplet', "Bolletta Condominio": 'fa-building',
+    "Mutuo/Affitto": 'fa-house-chimney', "Bolletta Acqua": 'fa-droplet', "Bolletta Condominio": 'fa-building',
     "Bolletta Gas": 'fa-fire', "Bolletta Luce": 'fa-bolt', "Bolletta Rifiuti": 'fa-trash',
-    "Bolletta Telefonia": 'fa-phone', "Igiene e Pulizia": 'fa-pump-soap', Mutuo: 'fa-house-chimney',
-    "Carburante Auto": 'fa-gas-pump', "Carburante Moto": 'fa-motorcycle', Manutenzioni: 'fa-screwdriver-wrench',
-    "Tasse Auto": 'fa-file-invoice-dollar', "Tasse Moto": 'fa-file-invoice-dollar', Abbigliamento: 'fa-shirt',
-    Cane: 'fa-paw', Formazione: 'fa-book-open', "Imprevisti e Svago": 'fa-champagne-glasses',
-    Sanitarie: 'fa-briefcase-medical', Varie: 'fa-box'
+    "Bolletta Telefonia": 'fa-phone', "Igiene e Pulizia": 'fa-pump-soap', Alimentari: 'fa-basket-shopping',
+    Delivery: 'fa-box-open', Bar: 'fa-mug-hot', Manutenzione: 'fa-screwdriver-wrench', Carburante: 'fa-gas-pump',
+    Parcheggio: 'fa-square-parking', Bollo: 'fa-file-invoice', Assicurazione: 'fa-shield-halved', Multe: 'fa-triangle-exclamation',
+    Abbigliamento: 'fa-shirt', Cane: 'fa-paw', Formazione: 'fa-book-open', Sanitarie: 'fa-briefcase-medical',
+    "Imprevisti e Svago": 'fa-champagne-glasses', Varie: 'fa-box'
 };
-const MACRO_FA = { casa_utenze: 'fa-house', veicoli: 'fa-car', spese_svago: 'fa-cart-shopping' };
+const MACRO_FA = { casa: 'fa-house', cibo: 'fa-utensils', veicoli: 'fa-car', svago_altro: 'fa-cart-shopping' };
 function faIconFor(cat, macro) {
     return FA_ICON_MAP[cat] || MACRO_FA[macro] || 'fa-tag';
 }
-let userMacroCategories = {};
-let userCategories = [];
-let categoryIconMap = {}; // { 'Alimentari': '🛒', ... }
-let currentData = { income: [], expenses: [] };
-let annualDeadlines = [];
-let categoryToEdit = null;
-let selectedFilterDate = null;
-let selectedFilterCategory = null;
-let searchQuery = "";
-let chartB = null, chartC = null;
-let historyBarChart = null;
-let tradingChart = null;
-let activeChartType = 'bars';
-let analysisPeriod = '6m';
-let customRange = null;
-let aiInsightPending = false;
-let anomalyTimer = null;
+// Flag migrazione categorie v4 (eseguita una sola volta)
+let categoriesV4_migrated = false;
 
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
@@ -296,30 +282,35 @@ let anomalyTimer = null;
 // CATEGORIES MAP - Struttura dati centralizzata per macro-categorie
 // =====================================================================
 const CATEGORIES_MAP = {
-    "casa_utenze": [
-        { id: "alimentari", nome: "Alimentari", icona: "fa-shopping-cart", colore: "#2a9d8f" },
-        { id: "bolletta_acqua", nome: "Bolletta Acqua", icona: "fa-tint", colore: "#2a9d8f" },
-        { id: "bolletta_condominio", nome: "Bolletta Condominio", icona: "fa-building", colore: "#2a9d8f" },
-        { id: "bolletta_gas", nome: "Bolletta Gas", icona: "fa-fire", colore: "#2a9d8f" },
+    "casa": [
+        { id: "mutuo", nome: "Mutuo/Affitto", icona: "fa-house-chimney", colore: "#2a9d8f" },
+        { id: "bolletta_acqua", nome: "Bolletta Acqua", icona: "fa-droplet", colore: "#2a9d8f" },
         { id: "bolletta_luce", nome: "Bolletta Luce", icona: "fa-lightbulb", colore: "#2a9d8f" },
+        { id: "bolletta_gas", nome: "Bolletta Gas", icona: "fa-fire", colore: "#2a9d8f" },
         { id: "bolletta_rifiuti", nome: "Bolletta Rifiuti", icona: "fa-trash-alt", colore: "#2a9d8f" },
         { id: "bolletta_telefonia", nome: "Bolletta Telefonia", icona: "fa-phone", colore: "#2a9d8f" },
-        { id: "igiene_pulizia", nome: "Igiene e Pulizia", icona: "fa-pump-soap", colore: "#2a9d8f" },
-        { id: "mutuo", nome: "Mutuo", icona: "fa-home", colore: "#2a9d8f" }
+        { id: "internet", nome: "Internet", icona: "fa-wifi", colore: "#2a9d8f" },
+        { id: "igiene_pulizia", nome: "Igiene e Pulizia", icona: "fa-pump-soap", colore: "#2a9d8f" }
+    ],
+    "cibo": [
+        { id: "alimentari", nome: "Alimentari", icona: "fa-basket-shopping", colore: "#f39c12" },
+        { id: "delivery", nome: "Delivery", icona: "fa-box-open", colore: "#f39c12" },
+        { id: "bar", nome: "Bar", icona: "fa-mug-hot", colore: "#f39c12" }
     ],
     "veicoli": [
-        { id: "carburante_auto", nome: "Carburante Auto", icona: "fa-gas-pump", colore: "#7bc043" },
-        { id: "carburante_moto", nome: "Carburante Moto", icona: "fa-motorcycle", colore: "#7bc043" },
-        { id: "manutenzioni", nome: "Manutenzioni", icona: "fa-wrench", colore: "#7bc043" },
-        { id: "tasse_auto", nome: "Tasse Auto (Assic.)", icona: "fa-car", colore: "#7bc043" },
-        { id: "tasse_moto", nome: "Tasse Moto (Assic.)", icona: "fa-shield-alt", colore: "#7bc043" }
+        { id: "manutenzione", nome: "Manutenzione", icona: "fa-screwdriver-wrench", colore: "#7bc043" },
+        { id: "carburante", nome: "Carburante", icona: "fa-gas-pump", colore: "#7bc043" },
+        { id: "parcheggio", nome: "Parcheggio", icona: "fa-square-parking", colore: "#7bc043" },
+        { id: "bollo", nome: "Bollo", icona: "fa-file-invoice", colore: "#7bc043" },
+        { id: "assicurazione", nome: "Assicurazione", icona: "fa-shield-halved", colore: "#7bc043" },
+        { id: "multe", nome: "Multe", icona: "fa-triangle-exclamation", colore: "#7bc043" }
     ],
-    "spese_svago": [
+    "svago_altro": [
         { id: "abbigliamento", nome: "Abbigliamento", icona: "fa-tshirt", colore: "#6f42c1" },
         { id: "cane", nome: "Cane", icona: "fa-dog", colore: "#6f42c1" },
         { id: "formazione", nome: "Formazione", icona: "fa-book-open", colore: "#6f42c1" },
-        { id: "imprevisti_svago", nome: "Imprevisti e Svago", icona: "fa-glass-cheers", colore: "#6f42c1" },
         { id: "sanitarie", nome: "Sanitarie", icona: "fa-stethoscope", colore: "#6f42c1" },
+        { id: "imprevisti_svago", nome: "Imprevisti e Svago", icona: "fa-champagne-glasses", colore: "#6f42c1" },
         { id: "varie", nome: "Varie", icona: "fa-box", colore: "#6f42c1" }
     ]
 };
@@ -330,14 +321,15 @@ function getCategoryMacroGroup(catName) {
             return key;
         }
     }
-    return 'spese_svago'; // fallback per categorie non mappate
+    return 'svago_altro'; // fallback per categorie non mappate
 }
 
 // Tema cromatico per il bottom sheet delle macro-categorie
 const MACRO_THEME = {
-    casa_utenze: { accent: '#2a9d8f', tint: 'rgba(42,157,143,0.12)', border: 'rgba(42,157,143,0.30)' },
+    casa: { accent: '#2a9d8f', tint: 'rgba(42,157,143,0.12)', border: 'rgba(42,157,143,0.30)' },
+    cibo: { accent: '#f39c12', tint: 'rgba(243,156,18,0.12)', border: 'rgba(243,156,18,0.30)' },
     veicoli: { accent: '#7bc043', tint: 'rgba(123,192,67,0.12)', border: 'rgba(123,192,67,0.30)' },
-    spese_svago: { accent: '#6f42c1', tint: 'rgba(111,66,193,0.12)', border: 'rgba(111,66,193,0.30)' }
+    svago_altro: { accent: '#6f42c1', tint: 'rgba(111,66,193,0.12)', border: 'rgba(111,66,193,0.30)' }
 };
 
 // Inizializzazione valori UI
@@ -722,7 +714,7 @@ function rebuildUserCategories() {
     }
 }
 
-function loadCategories() {
+async function loadCategories() {
     const stored = localStorage.getItem('user_macro_categories');
     if (stored) {
         try {
@@ -734,7 +726,14 @@ function loadCategories() {
         userMacroCategories = JSON.parse(JSON.stringify(defaultCategories));
         localStorage.setItem('user_macro_categories', JSON.stringify(userMacroCategories));
     }
-    for (const key of ['casa_utenze', 'veicoli', 'spese_svago']) {
+    // Esegui migrazione una sola volta verso il modello a 4 macro
+    if (!categoriesV4_migrated) {
+        await migrateToFourMacros();
+        categoriesV4_migrated = true;
+        saveMacroToLocalStorage();
+    }
+    // Assicurati che tutte le 4 chiavi esistano
+    for (const key of ['casa', 'cibo', 'veicoli', 'svago_altro']) {
         if (!userMacroCategories[key]) userMacroCategories[key] = [];
     }
     categoryIconMap = {};
@@ -744,6 +743,116 @@ function loadCategories() {
         });
     }
     rebuildUserCategories();
+}
+
+async function migrateToFourMacros() {
+    // Mappa rinomina: vecchio nome → nuovo nome (se necessario)
+    const renameMap = {
+        "Mutuo": "Mutuo/Affitto",
+        "Manutenzioni": "Manutenzione",
+        "Carburante Auto": "Carburante",
+        "Carburante Moto": "Carburante",
+        "Tasse Auto": "Assicurazione",
+        "Tasse Moto": "Assicurazione"
+    };
+
+    // Nuove categorie di default mancanti (se non presenti in userMacroCategories)
+    const newCats = {
+        "Internet": "casa",
+        Delivery: "cibo",
+        Bar: "cibo",
+        Parcheggio: "veicoli",
+        Bollo: "veicoli",
+        Multe: "veicoli"
+    };
+
+    // Aggiungi nuove categorie ai gruppi appropriati se mancano
+    for (const [cat, macro] of Object.entries(newCats)) {
+        if (!userMacroCategories[macro].includes(cat)) {
+            userMacroCategories[macro].push(cat);
+        }
+    }
+
+    // Rinomina le categorie nelle spese e nelle tabelle DB
+    const allCategories = new Set();
+    for (const [macro, cats] of Object.entries(userMacroCategories)) {
+        cats.forEach(c => allCategories.add(c));
+    }
+
+    // Categorie da rinominare in currentData.expenses + db.expenses
+    const categoriesToRename = [];
+    for (const oldCat of allCategories) {
+        const newCat = renameMap[oldCat];
+        if (newCat && newCat !== oldCat) {
+            categoriesToRename.push({ old: oldCat, new: newCat });
+        }
+    }
+
+    // Esegui rinomina su tutte le tabelle rilevanti
+    const renamePromises = [];
+
+    // 1. Rinomina su currentData.expenses
+    for (const { old, new: newCat } of categoriesToRename) {
+        currentData.expenses.forEach(e => {
+            if (e.category === old) e.category = newCat;
+        });
+    }
+
+    // 2. Rinomina su db.expenses (tutti i mesi)
+    if (db && db.expenses) {
+        for (const { old, new: newCat } of categoriesToRename) {
+            const months = await db.months.toArray();
+            for (const monthData of months) {
+                if (monthData.expenses) {
+                    for (const exp of monthData.expenses) {
+if (exp.category === old) {
+                            await db.expenses.update(exp.id, { category: newCat });
+                        }
+                    }
+                }
+            // 3. Rinomina su db.categories
+    if (db && db.categories) {
+        for (const { old, new: newCat } of categoriesToRename) {
+            // Non possiamo usare update diretto su key; rinominiamo via put con nuova key e cancella vecchio
+            const cats = await db.categories.toArray();
+            for (const cat of cats) {
+                if (cat.name === old) {
+                    await db.categories.put({ name: newCat, macro: getCategoryMacroGroup(newCat), icon: categoryIconMap[newCat] || MACRO_ICON[getCategoryMacroGroup(newCat)] || '🏷️' });
+                    await db.categories.delete(cat.name);
+                }
+            }
+        }
+    }
+
+    // 4. Rinomina su annual_deadlines (se tabella esistente)
+    // Nota: MEMORY dice che annualDeadlines è una tabella Supabase; lo chiamiamo se disponibile
+    if (db && db.annualDeadlines) {
+        for (const { old, new: newCat } of categoriesToRename) {
+            const deadlines = await db.annualDeadlines.toArray();
+            for (const dl of deadlines) {
+                if (dl.category === old) {
+                    await db.annualDeadlines.update(dl.id, { category: newCat });
+                }
+            }
+        }
+    }
+
+    // 5. Rinomina su CATEGORIES_MAP (per coerenza futura)
+    for (const [macro, cats] of Object.entries(CATEGORIES_MAP)) {
+        for (let i = 0; i < cats.length; i++) {
+            if (cats[i].nome === old && categoriesToRename.some(r => r.old === old)) {
+                // Trova il nuovo nome
+                const renameEntry = categoriesToRename.find(r => r.old === old);
+                if (renameEntry) {
+                    cats[i].nome = renameEntry.new;
+                }
+            }
+        }
+    }
+}
+
+function saveMacroToLocalStorage() {
+    localStorage.setItem('user_macro_categories', JSON.stringify(userMacroCategories));
 }
 
 function saveMacroToLocalStorage() {
@@ -3634,7 +3743,7 @@ function renderCategoriesDropdown() {
 }
 
 function renderCategorySettings() {
-    const keys = ['casa_utenze', 'veicoli', 'spese_svago'];
+    const keys = ['casa', 'cibo', 'veicoli', 'svago_altro'];
     keys.forEach(key => {
         const ul = document.getElementById('catList-' + key);
         const count = document.getElementById('count-' + key);
@@ -4668,9 +4777,10 @@ async function runIaMonthAnalysis() {
 // MACRO CARDS MOBILE: glass micro-grid (2x3) + progress bar (speso/budget)
 // =====================================================================
 const MACRO_CARD_META = {
-    casa_utenze: { title: 'Casa e Utenze', icon: 'fas fa-home' },
+    casa: { title: 'Casa e Utenze', icon: 'fas fa-home' },
+    cibo: { title: 'Cibo', icon: 'fas fa-utensils' },
     veicoli: { title: 'Veicoli', icon: 'fas fa-car' },
-    spese_svago: { title: 'Spese e Svago', icon: 'fas fa-shopping-cart' }
+    svago_altro: { title: 'Svago e Altro', icon: 'fas fa-shopping-cart' }
 };
 
 function renderMacroCards() {
@@ -4678,6 +4788,8 @@ function renderMacroCards() {
         const grid = document.getElementById('microGrid-' + macro);
         const fill = document.getElementById('progressFill-' + macro);
         const label = document.getElementById('budgetLabel-' + macro);
+        const pctBadge = document.getElementById('pctBadge-' + macro);
+        const microList = document.getElementById('microList-' + macro);
         const cats = userMacroCategories[macro] || [];
         const catSet = new Set(cats);
         let planned = 0, actual = 0;
@@ -4685,6 +4797,32 @@ function renderMacroCards() {
             if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
         });
 
+        // Popola la micro-lista testuale separata da |
+        if (microList) {
+            if (cats.length === 0) {
+                microList.textContent = 'Nessuna categoria';
+            } else {
+                microList.textContent = cats.slice(0, 6).join(' | ');
+                if (cats.length > 6) microList.textContent += ' | ⋯';
+            }
+        }
+
+        // Aggiorna la barra di progresso e il badge %
+        if (fill) {
+            const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+            fill.style.width = pct + '%';
+            // Rimuovi classi vecchie
+            fill.classList.remove('fill-warn', 'fill-over');
+            if (planned > 0 && actual > planned) fill.classList.add('fill-over');
+            else if (pct >= 80) fill.classList.add('fill-warn');
+        }
+        if (pctBadge) {
+            const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+            pctBadge.textContent = Math.round(pct) + '%';
+        }
+        if (label) label.textContent = `Budget ${meta.title}: ${fmtEPlain(actual, 0)} / ${fmtEPlain(planned, 0)}`;
+
+        // Popola la griglia icone (prime 5 categorie)
         if (grid) {
             grid.innerHTML = '';
             grid.className = 'card-micro-grid';
@@ -4705,15 +4843,6 @@ function renderMacroCards() {
                 }
             }
         }
-
-        const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
-        if (fill) {
-            fill.classList.remove('fill-warn', 'fill-over');
-            if (planned > 0 && actual > planned) fill.classList.add('fill-over');
-            else if (pct >= 80) fill.classList.add('fill-warn');
-            fill.style.width = pct + '%';
-        }
-        if (label) label.textContent = `Budget ${meta.title}: ${fmtEPlain(actual, 0)} / ${fmtEPlain(planned, 0)}`;
     }
 }
 
@@ -7197,6 +7326,11 @@ function checkPushNotifications() {
 }
 
 // =====================================================================
+// OPEN PROFILE PLACEHOLDER
+function openProfilePlaceholder() {
+    showToast('Profilo: in arrivo', false);
+}
+
 // INIT
 // =====================================================================
 // initApp() is now called by Supabase Auth listener in supabase-adapter.js

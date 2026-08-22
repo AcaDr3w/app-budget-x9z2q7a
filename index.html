@@ -62,8 +62,11 @@
 
 <!-- TOP BAR (MOBILE ONLY) -->
 <div class="header">
-    <h1>📊 Bilancio Pro</h1>
-    <p id="activePageSubtitle">Mese</p>
+    <h1 class="brand-title">📊 Bilancio Pro</h1>
+    <p class="greeting" id="headerGreeting">Ciao <span id="headerUserName">Utente</span>!</p>
+    <button class="avatar-btn" id="headerAvatarBtn" aria-label="Profilo" data-act="openProfilePlaceholder">
+        <span id="headerAvatarInitials">U</span>
+    </button>
 </div>
 
 <!-- BOTTOM NAVIGATION (MOBILE) -->
@@ -153,31 +156,53 @@
 
           <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
           <div class="mobile-dashboard-container">
-                <div class="dash-card card-casa" data-category="casa_utenze" role="button" tabindex="0" aria-label="Apri Casa e Utenze">
+                <div class="dash-card card-casa" data-category="casa" role="button" tabindex="0" aria-label="Apri Casa e Utenze">
                     <div class="card-header">
                         <span class="card-badge">Gestione</span>
                         <h3 class="card-title">Casa e Utenze</h3>
+                        <span class="card-pct" id="pctBadge-casa">0%</span>
                     </div>
                     <div class="card-body">
                         <i class="fas fa-home card-hero-icon" aria-hidden="true"></i>
                         <div class="card-glass">
-                            <div class="card-micro-grid" id="microGrid-casa_utenze"></div>
+                            <div class="card-micro-grid" id="microGrid-casa"></div>
+                            <div class="card-micro-list" id="microList-casa">Mutuo/Affitto | Bolletta Acqua | Bolletta Luce | Bolletta Gas | Bolletta Rifiuti | Bolletta Condominio | Bolletta Telefonia | Internet | Igiene e Pulizia</div>
                         </div>
                     </div>
                     <div class="card-progress">
-                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-casa_utenze"></div></div>
-                        <span class="card-progress-label" id="budgetLabel-casa_utenze">Budget Casa e Utenze: 0 € / 0 €</span>
+                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-casa"></div></div>
+                        <span class="card-progress-label" id="budgetLabel-casa">Budget Casa e Utenze: 0 € / 0 €</span>
+                    </div>
+                </div>
+                <div class="dash-card card-cibo" data-category="cibo" role="button" tabindex="0" aria-label="Apri Cibo">
+                    <div class="card-header">
+                        <span class="card-badge">Cibo</span>
+                        <h3 class="card-title">Cibo</h3>
+                        <span class="card-pct" id="pctBadge-cibo">0%</span>
+                    </div>
+                    <div class="card-body">
+                        <i class="fas fa-utensils card-hero-icon" aria-hidden="true"></i>
+                        <div class="card-glass">
+                            <div class="card-micro-grid" id="microGrid-cibo"></div>
+                            <div class="card-micro-list" id="microList-cibo">Alimentari | Delivery | Bar</div>
+                        </div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-cibo"></div></div>
+                        <span class="card-progress-label" id="budgetLabel-cibo">Budget Cibo: 0 € / 0 €</span>
                     </div>
                 </div>
                 <div class="dash-card card-veicoli" data-category="veicoli" role="button" tabindex="0" aria-label="Apri Veicoli">
                     <div class="card-header">
                         <span class="card-badge">Flotta</span>
                         <h3 class="card-title">Veicoli</h3>
+                        <span class="card-pct" id="pctBadge-veicoli">0%</span>
                     </div>
                     <div class="card-body">
                         <i class="fas fa-car card-hero-icon" aria-hidden="true"></i>
                         <div class="card-glass">
                             <div class="card-micro-grid" id="microGrid-veicoli"></div>
+                            <div class="card-micro-list" id="microList-veicoli">Manutenzione | Carburante | Parcheggio | Bollo | Assicurazione | Multe</div>
                         </div>
                     </div>
                     <div class="card-progress">
@@ -185,20 +210,22 @@
                         <span class="card-progress-label" id="budgetLabel-veicoli">Budget Veicoli: 0 € / 0 €</span>
                     </div>
                 </div>
-                <div class="dash-card card-svago" data-category="spese_svago" role="button" tabindex="0" aria-label="Apri Spese e Svago">
+                <div class="dash-card card-svago_altro" data-category="svago_altro" role="button" tabindex="0" aria-label="Apri Svago e Altro">
                     <div class="card-header">
-                        <span class="card-badge">Lifestyles</span>
-                        <h3 class="card-title">Spese e Svago</h3>
+                        <span class="card-badge">Svago</span>
+                        <h3 class="card-title">Svago e Altro</h3>
+                        <span class="card-pct" id="pctBadge-svago_altro">0%</span>
                     </div>
                     <div class="card-body">
                         <i class="fas fa-shopping-cart card-hero-icon" aria-hidden="true"></i>
                         <div class="card-glass">
-                            <div class="card-micro-grid" id="microGrid-spese_svago"></div>
+                            <div class="card-micro-grid" id="microGrid-svago_altro"></div>
+                            <div class="card-micro-list" id="microList-svago_altro">Abbigliamento | Cane | Formazione | Sanitarie | Imprevisti e Svago | Varie</div>
                         </div>
                     </div>
                     <div class="card-progress">
-                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-spese_svago"></div></div>
-                        <span class="card-progress-label" id="budgetLabel-spese_svago">Budget Spese e Svago: 0 € / 0 €</span>
+                        <div class="card-progress-track"><div class="card-progress-fill" id="progressFill-svago_altro"></div></div>
+                        <span class="card-progress-label" id="budgetLabel-svago_altro">Budget Svago e Altro: 0 € / 0 €</span>
                     </div>
                 </div>
           </div>
@@ -853,12 +880,20 @@
                 <button class="popup-close" data-act-close="closeSettingsPopup" aria-label="Chiudi">×</button>
                 <h3>🛠️ Categorie</h3>
                 <div class="popup-body">
-                    <div class="macro-group" data-macro="casa_utenze">
+                    <div class="macro-group" data-macro="casa">
                         <div class="macro-group-header">
                             <span>🏠 Casa e Utenze</span>
-                            <span class="macro-group-count" id="count-casa_utenze">0</span>
+                            <span class="macro-group-count" id="count-casa">0</span>
                         </div>
-                        <ul class="macro-group-list" id="catList-casa_utenze"></ul>
+                        <ul class="macro-group-list" id="catList-casa"></ul>
+                    </div>
+
+                    <div class="macro-group" data-macro="cibo">
+                        <div class="macro-group-header">
+                            <span>🍔 Cibo</span>
+                            <span class="macro-group-count" id="count-cibo">0</span>
+                        </div>
+                        <ul class="macro-group-list" id="catList-cibo"></ul>
                     </div>
 
                     <div class="macro-group" data-macro="veicoli">
@@ -869,12 +904,12 @@
                         <ul class="macro-group-list" id="catList-veicoli"></ul>
                     </div>
 
-                    <div class="macro-group" data-macro="spese_svago">
+                    <div class="macro-group" data-macro="svago_altro">
                         <div class="macro-group-header">
-                            <span>🎉 Spese e Svago</span>
-                            <span class="macro-group-count" id="count-spese_svago">0</span>
+                            <span>🎉 Svago e Altro</span>
+                            <span class="macro-group-count" id="count-svago_altro">0</span>
                         </div>
-                        <ul class="macro-group-list" id="catList-spese_svago"></ul>
+                        <ul class="macro-group-list" id="catList-svago_altro"></ul>
                     </div>
 
                     <div class="grid-inputs" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 16px;">
@@ -882,9 +917,10 @@
                         <input type="text" id="emojiInput" class="emoji-input-hidden" maxlength="2" inputmode="text" autocomplete="off" aria-label="Emoji">
                         <input type="text" id="newCatName" placeholder="Nuova categoria..." style="flex: 1; min-width: 120px;" aria-label="Nuova categoria">
                         <select id="newCatMacro" class="responsive-select" style="flex: 0 0 auto; min-width: 160px; padding: 11px 12px;">
-                            <option value="casa_utenze">🏠 Casa e Utenze</option>
+                            <option value="casa">🏠 Casa e Utenze</option>
+                            <option value="cibo">🍔 Cibo</option>
                             <option value="veicoli">🚗 Veicoli</option>
-                            <option value="spese_svago">🎉 Spese e Svago</option>
+                            <option value="svago_altro">🎉 Svago e Altro</option>
                         </select>
                         <button class="btn-spesa" id="btnSaveCategory" style="margin:0; white-space: nowrap;">Aggiungi</button>
                     </div>
