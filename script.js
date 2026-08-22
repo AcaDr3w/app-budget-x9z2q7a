@@ -1253,7 +1253,7 @@ async function migrateSharedExpensesV2() {
                 group_id: representative.groupId || null,
                 total_amount: totalAmount,
                 split_method: representative.splitType === 'equal' ? 'equal' : 'exact',
-                created_by: window.supabaseUser ? window.supabaseUser.id : null,
+                created_by: window.supabaseUser?.id || '',
                 created_at: representative.createdAt || Date.now()
             });
             for (const s of splits) {
@@ -1302,7 +1302,7 @@ async function createGroup(name, description) {
         name: cleanName,
         description: (description || '').trim(),
         invite_token: generateInviteToken(),
-        created_by: window.supabaseUser ? window.supabaseUser.id : null,
+        created_by: window.supabaseUser?.id || '',
         createdAt: Date.now()
     };
     await db.groups.put(group);
@@ -1448,7 +1448,7 @@ async function saveSharedExpenseV2(expenseId, totalAmount, groupId, participantR
         group_id: groupId || null,
         total_amount: totalAmount,
         split_method: splitMethod || 'equal',
-        created_by: window.supabaseUser ? window.supabaseUser.id : null,
+        created_by: window.supabaseUser?.id || '',
         created_at: Date.now()
     });
     for (const r of participantRecords) {

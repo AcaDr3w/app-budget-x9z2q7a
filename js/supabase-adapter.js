@@ -111,7 +111,7 @@ class SupabaseTable {
     _allowedColumns() {
         const map = {
             months: ['month_id', 'totalIncome', 'totalPlanned', 'totalActual', 'notes', 'iaNotes'],
-            income: ['id', 'month', 'desc', 'amount'],
+            income: ['id', 'month', 'desc', 'amount', 'date'],
             expenses: ['id', 'month', 'date', 'category', 'desc', 'planned', 'actual', 'sharedPercentage', 'isShared', 'sharedPayer', 'settled', 'debtId'],
             categories: ['name', 'macro', 'icon'],
             annual_deadlines: ['id', 'month', 'day', 'desc', 'amount', 'isPaid', 'recurring', 'endMonth', 'category'],
@@ -170,7 +170,8 @@ class SupabaseTable {
 
     async _upsert(item) {
         if (!window.supabaseUser) return { message: 'utente non autenticato' };
-        const payload = { ...this._mapIn(item) };
+        let payload = { ...this._mapIn(item) };
+        payload = Object.fromEntries(Object.entries(payload).filter(([, v]) => v != null));
         if (!this.noUserId) payload.user_id = window.supabaseUser.id;
         const { error } = await supabaseClient.from(this.tableName).upsert(payload);
         return error;
@@ -186,7 +187,8 @@ class SupabaseTable {
 
     async _update(id, changes) {
         if (!window.supabaseUser) return { message: 'utente non autenticato' };
-        const payload = this._mapIn(changes);
+        let payload = this._mapIn(changes);
+        payload = Object.fromEntries(Object.entries(payload).filter(([, v]) => v != null));
         let query = this._uidEq(supabaseClient.from(this.tableName).update(payload));
         
         if (this.tableName === 'months') {
