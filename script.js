@@ -4223,8 +4223,8 @@ async function updateUI() {
         heroPrevisteEl.innerText = fmtE(forecastTotal, 0);
     }
     renderMacroCards();
-    renderMacroBudgetChart();
-    renderRecentTransactions();
+    await renderMacroBudgetChart();
+    await renderRecentTransactions();
     renderHeroInsight();
 
     const month = document.getElementById('currentMonth').value;
@@ -4851,18 +4851,20 @@ function renderMacroCards() {
 // =====================================================================
 // RENDER MONTHLY BUDGET PROGRESS CHART (chart card single)
 // =====================================================================
-function renderMacroBudgetChart() {
+async function renderMacroBudgetChart() {
     const canvas = document.getElementById('macroChartCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     // Destroy existing chart if present
     if (window.macroChartInstance) { window.macroChartInstance.destroy(); }
     const month = document.getElementById('currentMonth').value;
-    if (!month) { canvas.style.height = '180px'; canvas.innerHTML = '<span class="chart-no-data">Seleziona un mese</span>'; return; }
+    if (!month) { canvas.style.height = '85px'; canvas.innerHTML = '<span class="chart-no-data">Seleziona un mese</span>'; return; }
     const data = await db.expenses.where('month').equals(month).toArray();
     const planned = data.reduce((s, e) => s + (e.planned || 0), 0);
     const actual = data.reduce((s, e) => s + (e.actual || 0), 0);
-    const percentage = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+    const percentage = planned > 0 ? Math.min(100, Math.round((actual / planned) * 100)) : 0;
+    const pctEl = document.getElementById('macroChartTotalPct');
+    if (pctEl) { pctEl.textContent = percentage + '%'; }
     window.macroChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -4870,26 +4872,26 @@ function renderMacroBudgetChart() {
             datasets: [{
                 data: [planned, actual],
                 backgroundColor: ['#e2e8f0', '#3b82f6'],
-                borderRadius: 8
+                borderRadius: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 12 } } },
+                legend: { display: false },
                 tooltip: { enabled: false }
             },
             animation: { duration: 0 }
         }
     });
-    canvas.style.height = '180px';
+    canvas.style.height = '85px';
 }
 
 // =====================================================================
 // RENDER ULTIME TRANSAZIONI (recent transactions list)
 // =====================================================================
-function renderRecentTransactions() {
+async function renderRecentTransactions() {
     const listContainer = document.getElementById('recentTransactionsList');
     if (!listContainer) return;
     const month = document.getElementById('currentMonth').value;
