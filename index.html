@@ -62,11 +62,15 @@
 
 <!-- TOP BAR (MOBILE ONLY) -->
 <div class="header">
-    <h1 class="brand-title">📊 Bilancio Pro</h1>
-    <p class="greeting" id="headerGreeting">Ciao <span id="headerUserName">Utente</span>!</p>
-    <button class="avatar-btn" id="headerAvatarBtn" aria-label="Profilo" data-act="openProfilePlaceholder">
-        <span id="headerAvatarInitials">U</span>
-    </button>
+    <div class="header-left">
+        <span class="app-subtitle">Bilancio Pro</span>
+        <h1 class="user-greeting">Ciao <span id="headerUserName">Utente</span>!</h1>
+    </div>
+    <div class="header-right">
+        <div class="avatar-circle" id="headerAvatarBtn" role="button" tabindex="0" aria-label="Profilo utente" data-act="openProfilePlaceholder">
+            <span id="headerAvatarInitials">U</span>
+        </div>
+    </div>
 </div>
 
 <!-- BOTTOM NAVIGATION (MOBILE) -->
@@ -88,7 +92,7 @@
         <span class="nav-label">Previsioni</span>
     </button>
     <button type="button" class="nav-item" id="navImpostazioni" data-act="switchTab" data-args='["settings-tab"]'>
-        <div class="nav-icon-wrapper"><i class="fas fa-cog" aria-hidden="true"></i></div>
+        <div class="nav-icon-wrapper"><i class="fas fa-calendar-days" aria-hidden="true"></i></div>
         <span class="nav-label">Impostazioni</span>
     </button>
 </nav>
@@ -105,42 +109,133 @@
     </div>
 
      <!-- =================== TAB 1: MESE CORRENTE =================== -->
-      <div id="current-month-tab" class="tab-content active">
+<div id="current-month-tab" class="tab-content active">
 
-          <div id="mobile-hero-card" class="hide-desktop" aria-label="Riepilogo mese">
-              <div class="hero-head">
-                  <h2 class="hero-title">Riepilogo</h2>
-                  <button type="button" class="hero-month-pill" id="heroMonthPill" aria-label="Seleziona mese">
-                      <span id="heroMonthDisplay"></span>
-                      <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                  </button>
-              </div>
-              <div class="hero-insight-pill" id="heroInsightPill" role="button" tabindex="0" aria-label="Insight I.A. giornaliero, tocca per il prossimo">
-                  <span class="hero-insight-text"></span>
-              </div>
-              <div class="hero-mini-row">
-                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Entrate totali, apri rendiconto" data-act="openRendicontoPopup" data-args='["entrate"]'>
-                      <span class="hero-mini-label">Entrate Totali</span>
-                      <span class="hero-mini-value" id="heroEntrateTotal">0 €</span>
-                  </div>
-                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Spese previste, apri rendiconto" data-act="openRendicontoPopup" data-args='["previsto"]'>
-                      <span class="hero-mini-label">Spese Previste</span>
-                      <span class="hero-mini-value" id="heroSpesePreviste">0 €</span>
-                  </div>
-                  <div class="hero-mini-pill clickable" role="button" tabindex="0" aria-label="Spese sostenute, apri rendiconto" data-act="openRendicontoPopup" data-args='["sostenuto"]'>
-                      <span class="hero-mini-label">Spese Sostenute</span>
-                      <span class="hero-mini-value" id="heroSpeseSostenute">0 €</span>
-                  </div>
-              </div>
-          </div>
+    <!-- CARD RIEPILOGO UNICA -->
+    <div class="summary-card-single" id="mobileSummaryCard">
+        <div class="summary-card-top">
+            <button type="button" class="month-selector-badge" id="heroMonthPill" aria-label="Seleziona mese">
+                <span id="heroMonthDisplay">AGOSTO 2026</span>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="summary-card-bottom">
+            <div class="summary-col col-entrate clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["entrate"]'>
+                <span class="col-label">ENTRATE TOTALI</span>
+                <div class="col-line line-green"></div>
+                <span class="col-value" id="heroEntrateTotal">0 €</span>
+            </div>
+            <div class="summary-col col-previste clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["previsto"]'>
+                <span class="col-label">SPESE PREVISTE</span>
+                <div class="col-line line-amber"></div>
+                <span class="col-value" id="heroSpesePreviste">0 €</span>
+            </div>
+            <div class="summary-col col-sostenute clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["sostenuto"]'>
+                <span class="col-label">SPESE SOSTENUTE</span>
+                <div class="col-line line-blue"></div>
+                <span class="col-value" id="heroSpeseSostenute">0 €</span>
+            </div>
+        </div>
+    </div>
 
-<div class="month-head">
+    <!-- SEZIONE GRAFICO PROGRESSO SPESA VS BUDGET -->
+    <div class="chart-card-single" id="macroBudgetChartCard">
+        <div class="chart-card-header">
+            <span class="chart-title">PROGRESSO SPESA VS BUDGET</span>
+            <span class="chart-total-pct" id="macroChartTotalPct">0%</span>
+        </div>
+        <div class="chart-container-box">
+            <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa vs budget"></canvas>
+        </div>
+    </div>
+
+    <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
+    <div class="mobile-dashboard-grid">
+        <!-- Casa -->
+        <div class="macro-card-white card-casa" data-category="casa" role="button" tabindex="0">
+            <div class="macro-card-row1">
+                <div class="macro-card-title-group">
+                    <span class="macro-icon icon-casa"><i class="fas fa-home"></i></span>
+                    <span class="macro-name">Casa</span>
+                </div>
+                <span class="macro-pct" id="pctBadge-casa">0%</span>
+            </div>
+            <div class="macro-card-row2">
+                <div class="macro-progress-track">
+                    <div class="macro-progress-fill fill-casa" id="progressFill-casa"></div>
+                </div>
+            </div>
+            <div class="macro-card-row3">
+                <span class="macro-values" id="budgetLabel-casa">€0 / €0</span>
+            </div>
+        </div>
+        <!-- Cibo -->
+        <div class="macro-card-white card-cibo" data-category="cibo" role="button" tabindex="0">
+            <div class="macro-card-row1">
+                <div class="macro-card-title-group">
+                    <span class="macro-icon icon-cibo"><i class="fas fa-utensils"></i></span>
+                    <span class="macro-name">Cibo</span>
+                </div>
+                <span class="macro-pct" id="pctBadge-cibo">0%</span>
+            </div>
+            <div class="macro-card-row2">
+                <div class="macro-progress-track">
+                    <div class="macro-progress-fill fill-cibo" id="progressFill-cibo"></div>
+                </div>
+            </div>
+            <div class="macro-card-row3">
+                <span class="macro-values" id="budgetLabel-cibo">€0 / €0</span>
+            </div>
+        </div>
+        <!-- Veicoli -->
+        <div class="macro-card-white card-veicoli" data-category="veicoli" role="button" tabindex="0">
+            <div class="macro-card-row1">
+                <div class="macro-card-title-group">
+                    <span class="macro-icon icon-veicoli"><i class="fas fa-car"></i></span>
+                    <span class="macro-name">Veicoli</span>
+                </div>
+                <span class="macro-pct" id="pctBadge-veicoli">0%</span>
+            </div>
+            <div class="macro-card-row2">
+                <div class="macro-progress-track">
+                    <div class="macro-progress-fill fill-veicoli" id="progressFill-veicoli"></div>
+                </div>
+            </div>
+            <div class="macro-card-row3">
+                <span class="macro-values" id="budgetLabel-veicoli">€0 / €0</span>
+            </div>
+        </div>
+        <!-- Svago e Altro -->
+        <div class="macro-card-white card-svago_altro" data-category="svago_altro" role="button" tabindex="0">
+            <div class="macro-card-row1">
+                <div class="macro-card-title-group">
+                    <span class="macro-icon icon-svago"><i class="fas fa-cart-shopping"></i></span>
+                    <span class="macro-name">Svago e Altro</span>
+                </div>
+                <span class="macro-pct" id="pctBadge-svago_altro">0%</span>
+            </div>
+            <div class="macro-card-row2">
+                <div class="macro-progress-track">
+                    <div class="macro-progress-fill fill-svago" id="progressFill-svago_altro"></div>
+                </div>
+            </div>
+            <div class="macro-card-row3">
+                <span class="macro-values" id="budgetLabel-svago_altro">€0 / €0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="recentTransactionsSection" style="margin-top:8px;">
+        <h3 class="recent-transactions-title">ULTIME TRANSAZIONI</h3>
+        <div class="recent-transactions-list" id="recentTransactionsList">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+</div>
+
+
                   <div class="kpi-cluster kpi-left">
-                      <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" tabindex="0" aria-label="Apri rendiconto entrate" data-act="openRendicontoPopup" data-args='["entrate"]'>Entrate<span id="sumEntrate" class="summary-val">0 €</span></div>
-                      <div id="summaryPrevisto" class="summary-box box-previsto clickable" role="button" tabindex="0" aria-label="Apri rendiconto spese previste" data-act="openRendicontoPopup" data-args='["previsto"]'>Spese Previste<span id="sumPrevisto" class="summary-val">0 €</span></div>
-                  </div>
-
-                  <div class="month-selector-group">
+                      <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" tabindex="0" aria-label="Apri rendiconto entrate" 
                       <button type="button" class="month-arrow hide-mobile" id="btnPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                       <button type="button" class="month-selector-pill" id="monthSelectorPill" aria-label="Seleziona mese">
                           <span id="currentMonthDisplay"></span>

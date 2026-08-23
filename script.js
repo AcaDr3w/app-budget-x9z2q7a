@@ -4223,6 +4223,8 @@ async function updateUI() {
         heroPrevisteEl.innerText = fmtE(forecastTotal, 0);
     }
     renderMacroCards();
+    renderMacroBudgetChart();
+    renderRecentTransactions();
     renderHeroInsight();
 
     const month = document.getElementById('currentMonth').value;
@@ -4844,6 +4846,72 @@ function renderMacroCards() {
             }
         }
     }
+}
+
+// =====================================================================
+// RENDER MONTHLY BUDGET PROGRESS CHART (chart card single)
+// =====================================================================
+function renderMacroBudgetChart() {
+    const canvas = document.getElementById('macroChartCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    // Destroy existing chart if present
+    if (window.macroChartInstance) { window.macroChartInstance.destroy(); }
+    const month = document.getElementById('currentMonth').value;
+    if (!month) { canvas.style.height = '180px'; canvas.innerHTML = '<span class="chart-no-data">Seleziona un mese</span>'; return; }
+    const data = await db.expenses.where('month').equals(month).toArray();
+    const planned = data.reduce((s, e) => s + (e.planned || 0), 0);
+    const actual = data.reduce((s, e) => s + (e.actual || 0), 0);
+    const percentage = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+    window.macroChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Budget', 'Sostenuto'],
+            datasets: [{
+                data: [planned, actual],
+                backgroundColor: ['#e2e8f0', '#3b82f6'],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 12 } } },
+                tooltip: { enabled: false }
+            },
+            animation: { duration: 0 }
+        }
+    });
+    canvas.style.height = '180px';
+}
+
+// =====================================================================
+// RENDER ULTIME TRANSAZIONI (recent transactions list)
+// =====================================================================
+function renderRecentTransactions() {
+    const listContainer = document.getElementById('recentTransactionsList');
+    if (!listContainer) return;
+    const month = document.getElementById('currentMonth').value;
+    if (!month) { listContainer.innerHTML = '<div style="padding:12px;color:var(--muted)">Seleziona un mese</div>'; return; }
+    const data = await db.expenses.where('month').equals(month).toArray();
+    if (data.length === 0) { listContainer.innerHTML = '<div style="padding:12px;color:var(--muted)">Nessuna transazione</div>'; return; }
+    // Ordina per data decrescente
+    data.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    listContainer.innerHTML = data.slice(0, 10).map(exp => {
+        const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : exp.month.slice(0,7).replace('-','/');
+        const catIcon = getCatIcon(exp.category);
+        const catBg = getCategoryCardBg(exp.category);
+        const isSettled = exp.settled === true;
+        return `<div class="tx-list-row">
+            <span class="tx-list-icon"><i class="${catIcon}" style="color:${catBg}"></i></span>
+            <span class="tx-list-main">
+                <span class="tx-list-name">${exp.desc || 'spesa senza descrizione'}</span>
+                <span class="tx-list-meta">${fd} ${isSettled ? '<span style="color:var(--muted);font-size:10px;">✓</span>' : ''}</span>
+            </span>
+            <span class="tx-list-amount">${fmtE(exp.actual || 0, 0)}</span>
+        </div>`;
+    }).join('');
 }
 
 // =====================================================================
