@@ -528,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupModalAccessibility();
     setupTablistA11y();
     setupInlineActions();
+    loadMonthData();
 });
 
 // =====================================================================
@@ -7400,6 +7401,34 @@ function checkPushNotifications() {
 function openProfilePlaceholder() {
     showToast('Profilo: in arrivo', false);
 }
+
+// Ensure Google API callbacks are globally available (defense in depth)
+window.gapiLoaded = window.gapiLoaded || function() {
+    gapi.load('client', async () => {
+        await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+        gapiInited = true;
+        maybeEnableDriveButtons();
+    });
+};
+window.gisLoaded = window.gisLoaded || function() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: SCOPES,
+        callback: (resp) => {
+            if (resp.error) throw resp;
+            localStorage.setItem('gdrive_connected', 'true');
+            localStorage.setItem('gdrive_access_token', resp.access_token);
+            localStorage.setItem('gdrive_token_expires', (Date.now() + resp.expires_in * 1000).toString());
+            document.getElementById('btnGDriveAuth').style.display = 'none';
+            document.getElementById('btnGDriveSync').style.display = 'flex';
+            if (!window._silentLoginAttempting) {
+                showToast('Connesso a Google Drive!', false);
+                startupCloudCompare();
+            }
+        }
+    });
+    gisInited = true;
+    maybeEnableDriveButtons();
+};
 
 // INIT
 // =====================================================================
