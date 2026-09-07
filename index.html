@@ -144,12 +144,14 @@
             <span class="chart-title">PROGRESSO SPESA VS BUDGET</span>
             <span class="chart-total-pct" id="macroChartTotalPct">0%</span>
         </div>
-        <div class="chart-container-box">
+        <div class="chart-legend" id="macroChartLegend"></div>
+        <div class="chart-container-box" id="macroChartContainerBox">
             <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa vs budget"></canvas>
         </div>
     </div>
 
     <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
+    <h3 class="recent-transactions-title" style="margin-top:10px;">CATEGORIE PRINCIPALI</h3>
     <div class="mobile-dashboard-grid">
         <!-- Casa -->
         <div class="macro-card-white card-casa" data-category="casa" role="button" tabindex="0">
@@ -235,7 +237,7 @@
 
 
                   <div class="kpi-cluster kpi-left">
-                      <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" tabindex="0" aria-label="Apri rendiconto entrate" 
+                      <div id="summaryEntrate" class="summary-box box-entrate clickable" role="button" tabindex="0" aria-label="Apri rendiconto entrate" data-act="openRendicontoPopup" data-args='["entrate"]'>Entrate Totali<span id="sumEntrate" class="summary-val">0 €</span></div>
                       <button type="button" class="month-arrow hide-mobile" id="btnPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                       <button type="button" class="month-selector-pill" id="monthSelectorPill" aria-label="Seleziona mese">
                           <span id="currentMonthDisplay"></span>

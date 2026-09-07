@@ -806,12 +806,16 @@ async function migrateToFourMacros() {
             for (const monthData of months) {
                 if (monthData.expenses) {
                     for (const exp of monthData.expenses) {
-if (exp.category === old) {
+                        if (exp.category === old) {
                             await db.expenses.update(exp.id, { category: newCat });
                         }
                     }
                 }
-            // 3. Rinomina su db.categories
+            }
+        }
+    }
+
+    // 3. Rinomina su db.categories
     if (db && db.categories) {
         for (const { old, new: newCat } of categoriesToRename) {
             // Non possiamo usare update diretto su key; rinominiamo via put con nuova key e cancella vecchio
@@ -850,10 +854,6 @@ if (exp.category === old) {
             }
         }
     }
-}
-
-function saveMacroToLocalStorage() {
-    localStorage.setItem('user_macro_categories', JSON.stringify(userMacroCategories));
 }
 
 function saveMacroToLocalStorage() {
@@ -3127,15 +3127,15 @@ function slideBackToCategories() {
 
 // Setup macro dash card click handlers with event delegation
 function setupMacroDashCards() {
-    const container = document.querySelector('.mobile-dashboard-container');
-    if (!container) return;
-    
-    container.style.cursor = 'pointer';
-    container.addEventListener('click', (e) => {
-        const card = e.target.closest('[data-category]');
-        if (!card) return;
-        const macro = card.dataset.category;
-        if (macro) openBottomSheetFromMacro(macro);
+    const containers = document.querySelectorAll('.mobile-dashboard-container, .mobile-dashboard-grid');
+    containers.forEach(container => {
+        container.style.cursor = 'pointer';
+        container.addEventListener('click', (e) => {
+            const card = e.target.closest('[data-category]');
+            if (!card) return;
+            const macro = card.dataset.category;
+            if (macro) openBottomSheetFromMacro(macro);
+        });
     });
 }
 
@@ -4823,7 +4823,7 @@ function renderMacroCards() {
             const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
             pctBadge.textContent = Math.round(pct) + '%';
         }
-        if (label) label.textContent = `Budget ${meta.title}: ${fmtEPlain(actual, 0)} / ${fmtEPlain(planned, 0)}`;
+        if (label) label.textContent = `${fmtEPlain(actual, 0)} / ${fmtEPlain(planned, 0)}`;
 
         // Popola la griglia icone (prime 5 categorie)
         if (grid) {
@@ -4854,39 +4854,109 @@ function renderMacroCards() {
 // =====================================================================
 async function renderMacroBudgetChart() {
     const canvas = document.getElementById('macroChartCanvas');
+    const chartBox = document.getElementById('macroChartContainerBox');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     // Destroy existing chart if present
-    if (window.macroChartInstance) { window.macroChartInstance.destroy(); }
+    if (window.macroChartInstance) { window.macroChartInstance.destroy(); window.macroChartInstance = null; }
     const month = document.getElementById('currentMonth').value;
-    if (!month) { canvas.style.height = '85px'; canvas.innerHTML = '<span class="chart-no-data">Seleziona un mese</span>'; return; }
-    const data = await db.expenses.where('month').equals(month).toArray();
-    const planned = data.reduce((s, e) => s + (e.planned || 0), 0);
-    const actual = data.reduce((s, e) => s + (e.actual || 0), 0);
-    const percentage = planned > 0 ? Math.min(100, Math.round((actual / planned) * 100)) : 0;
     const pctEl = document.getElementById('macroChartTotalPct');
-    if (pctEl) { pctEl.textContent = percentage + '%'; }
-    window.macroChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Budget', 'Sostenuto'],
-            datasets: [{
-                data: [planned, actual],
-                backgroundColor: ['#e2e8f0', '#3b82f6'],
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
-            },
-            animation: { duration: 0 }
+    const legendEl = document.getElementById('macroChartLegend');
+    if (!month) {
+        canvas.style.height = '120px';
+        canvas.innerHTML = '<span class="chart-no-data">Seleziona un mese</span>';
+        return;
+    }
+
+    // Aggrega speso/budget per le 4 macrocategorie (stessi dati delle card 2x2)
+    const MACRO_ORDER = ['casa', 'cibo', 'veicoli', 'svago_altro'];
+    const MACRO_LABELS = { casa: 'Casa', cibo: 'Cibo', veicoli: 'Veicoli', svago_altro: 'Svago e Altro' };
+    const plannedByMacro = {}, actualByMacro = {};
+    MACRO_ORDER.forEach(m => { plannedByMacro[m] = 0; actualByMacro[m] = 0; });
+    const catToMacro = new Map();
+    for (const [macro, cats] of Object.entries(userMacroCategories)) {
+        cats.forEach(c => catToMacro.set(c, macro));
+    }
+    let totalPlanned = 0, totalActual = 0;
+    currentData.expenses.forEach(e => {
+        const macro = catToMacro.get(e.category) || getCategoryMacroGroup(e.category);
+        if (plannedByMacro[macro] !== undefined) {
+            plannedByMacro[macro] += e.planned || 0;
+            actualByMacro[macro] += e.actual || 0;
         }
     });
-    canvas.style.height = '85px';
+    MACRO_ORDER.forEach(m => { totalPlanned += plannedByMacro[m]; totalActual += actualByMacro[m]; });
+    const overallPct = totalPlanned > 0 ? Math.min(100, Math.round((totalActual / totalPlanned) * 100)) : 0;
+    if (pctEl) pctEl.textContent = overallPct + '%';
+    if (legendEl) legendEl.innerHTML =
+        '<span class="chart-legend-dot" style="background:#4db6a8;"></span><span class="chart-legend-label">Budget</span>' +
+        '<span class="chart-legend-dot" style="background:#f0a030;"></span><span class="chart-legend-label">Sostenuto</span>';
+
+    // Valori in %: Budget = 100 (baseline), Sostenuto = percentuale di budget
+    const labels = MACRO_ORDER.map(m => MACRO_LABELS[m]);
+    const budgetVals = MACRO_ORDER.map(m => plannedByMacro[m] > 0 ? 100 : 0);
+    const actualVals = MACRO_ORDER.map(m => plannedByMacro[m] > 0 ? Math.min(100, Math.round((actualByMacro[m] / plannedByMacro[m]) * 100)) : 0);
+
+    let chartRendered = false;
+    try {
+        await ensureChartJs();
+        window.macroChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Budget',
+                        data: budgetVals,
+                        backgroundColor: '#4db6a8',
+                        borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 },
+                        borderSkipped: false,
+                        barThickness: 10
+                    },
+                    {
+                        label: 'Sostenuto',
+                        data: actualVals,
+                        backgroundColor: '#f0a030',
+                        borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 },
+                        borderSkipped: false,
+                        barThickness: 10
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxRotation: 0 } },
+                    y: { beginAtZero: true, suggestedMax: 100, grid: { color: 'rgba(238,238,238,0.7)' }, ticks: { stepSize: 50, font: { size: 10 }, color: '#9ca3af' } }
+                },
+                animation: { duration: 0 }
+            }
+        });
+        chartRendered = true;
+    } catch (err) {
+        console.warn('[Chart] renderMacroBudgetChart fallback:', err);
+    }
+
+    if (chartBox) {
+        const prevNote = chartBox.querySelector('.chart-fallback-note');
+        if (prevNote) prevNote.remove();
+        chartBox.classList.toggle('chart-fallback', !chartRendered);
+    }
+    canvas.style.height = '120px';
+    canvas.style.display = chartRendered ? '' : 'none';
+    if (!chartRendered) {
+        const fb = document.createElement('div');
+        fb.className = 'chart-fallback-note';
+        fb.innerHTML = labels.map((lbl, i) =>
+            `<div class="fb-row"><span class="fb-name">${lbl}</span><span class="fb-bar"><span class="fb-fill" style="width:${actualVals[i]}%;background:#f0a030;"></span></span><span class="fb-pct">${actualVals[i]}%</span></div>`
+        ).join('');
+        chartBox.appendChild(fb);
+    }
 }
 
 // =====================================================================
@@ -4902,17 +4972,17 @@ async function renderRecentTransactions() {
     // Ordina per data decrescente
     data.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     listContainer.innerHTML = data.slice(0, 10).map(exp => {
-        const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : exp.month.slice(0,7).replace('-','/');
+        const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('.') : exp.month.slice(0,7).replace('-','.');
         const catIcon = getCatIcon(exp.category);
-        const catBg = getCategoryCardBg(exp.category);
         const isSettled = exp.settled === true;
+        const settledMark = isSettled ? '<span style="margin-left:2px;color:var(--success-text);font-size:10px;">✓</span>' : '';
         return `<div class="tx-list-row">
-            <span class="tx-list-icon"><i class="${catIcon}" style="color:${catBg}"></i></span>
+            <span class="tx-list-icon">${catIcon}</span>
             <span class="tx-list-main">
                 <span class="tx-list-name">${exp.desc || 'spesa senza descrizione'}</span>
-                <span class="tx-list-meta">${fd} ${isSettled ? '<span style="color:var(--muted);font-size:10px;">✓</span>' : ''}</span>
+                <span class="tx-list-meta">${fd} · ${exp.category}${settledMark}</span>
             </span>
-            <span class="tx-list-amount">${fmtE(exp.actual || 0, 0)}</span>
+            <span class="tx-list-amount">−${fmtE(exp.actual || 0, 0)}</span>
         </div>`;
     }).join('');
 }
