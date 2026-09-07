@@ -270,6 +270,16 @@ function faIconFor(cat, macro) {
 // Flag migrazione categorie v4 (eseguita una sola volta)
 let categoriesV4_migrated = false;
 
+// ===== STATO GLOBALE RUNTIME (dichiarato esplicitamente per evitare ReferenceError) =====
+let annualDeadlines = [];   // scadenze annuali caricate da db.annualDeadlines
+let userCategories = [];    // lista piatta delle categorie utente
+let currentData = { income: [], expenses: [] };
+let userMacroCategories = JSON.parse(JSON.stringify(defaultCategories));
+let categoryIconMap = {};
+let selectedFilterDate = null;
+let selectedFilterCategory = null;
+let searchQuery = "";
+
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
 
@@ -727,15 +737,16 @@ async function loadCategories() {
         userMacroCategories = JSON.parse(JSON.stringify(defaultCategories));
         localStorage.setItem('user_macro_categories', JSON.stringify(userMacroCategories));
     }
+    // Assicurati che tutte le 4 chiavi esistano PRIMA della migrazione,
+    // così migrateToFourMacros() non trova mai un gruppo undefined
+    for (const key of ['casa', 'cibo', 'veicoli', 'svago_altro']) {
+        if (!userMacroCategories[key]) userMacroCategories[key] = [];
+    }
     // Esegui migrazione una sola volta verso il modello a 4 macro
     if (!categoriesV4_migrated) {
         await migrateToFourMacros();
         categoriesV4_migrated = true;
         saveMacroToLocalStorage();
-    }
-    // Assicurati che tutte le 4 chiavi esistano
-    for (const key of ['casa', 'cibo', 'veicoli', 'svago_altro']) {
-        if (!userMacroCategories[key]) userMacroCategories[key] = [];
     }
     categoryIconMap = {};
     for (const [macro, cats] of Object.entries(userMacroCategories)) {
@@ -769,8 +780,8 @@ async function migrateToFourMacros() {
 
     // Aggiungi nuove categorie ai gruppi appropriati se mancano
     for (const [cat, macro] of Object.entries(newCats)) {
-        if (!userMacroCategories[macro].includes(cat)) {
-            userMacroCategories[macro].push(cat);
+        if (!(userMacroCategories[macro] || []).includes(cat)) {
+            (userMacroCategories[macro] || (userMacroCategories[macro] = [])).push(cat);
         }
     }
 
@@ -888,7 +899,7 @@ async function syncUserMacroToDB() {
 }
 
 async function initCategories() {
-    loadCategories();
+    await loadCategories();
     try {
         await syncUserMacroToDB();
     } catch (err) {
@@ -4209,9 +4220,12 @@ async function updateUI() {
     let totalPlanned = currentData.expenses.reduce((s,i) => s+i.planned,0);
     let totalActual = currentData.expenses.reduce((s,i) => s+i.actual,0);
 
-    document.getElementById('sumEntrate').innerText = fmtE(totalIncome,0);
-    document.getElementById('sumPrevisto').innerText = fmtE(totalPlanned,0);
-    document.getElementById('sumSostenuto').innerText = fmtE(totalActual,0);
+    const sumEntrateEl = document.getElementById('sumEntrate');
+    if (sumEntrateEl) sumEntrateEl.innerText = fmtE(totalIncome,0);
+    const sumPrevistoEl = document.getElementById('sumPrevisto');
+    if (sumPrevistoEl) sumPrevistoEl.innerText = fmtE(totalPlanned,0);
+    const sumSostenutoEl = document.getElementById('sumSostenuto');
+    if (sumSostenutoEl) sumSostenutoEl.innerText = fmtE(totalActual,0);
     const heroEntrateEl = document.getElementById('heroEntrateTotal');
     const heroPrevisteEl = document.getElementById('heroSpesePreviste');
     const heroSpeseEl = document.getElementById('heroSpeseSostenute');
