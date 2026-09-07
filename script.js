@@ -666,11 +666,19 @@ function switchTab(tabId) {
     if (navItem) navItem.classList.add('active');
     updateActivePageSubtitle(tabId);
     if (tabId === 'history-tab') {
-        if (window.innerWidth < 768) { renderAnalisiMobile(); }
-        else { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
+        try {
+            if (window.innerWidth < 768) { renderAnalisiMobile(); }
+            else { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
+        } catch (e) { console.warn('[Analisi] render fallito:', e); }
     }
-    if (tabId === 'future-tab') { updateFutureDashboard(); renderSavingsGoals(); }
-    if (tabId === 'investimenti-tab') { renderInvestments(); }
+    if (tabId === 'future-tab') {
+        try { updateFutureDashboard(); renderSavingsGoals(); }
+        catch (e) { console.warn('[Previsioni] render fallito:', e); }
+    }
+    if (tabId === 'investimenti-tab') {
+        try { renderInvestments(); }
+        catch (e) { console.warn('[Investimenti] render fallito:', e); }
+    }
     if (tabId !== 'history-tab') stopAnomalyCarousel();
     const customPopup = document.getElementById('customRangePopup');
     if (customPopup) customPopup.classList.remove('active');
@@ -5868,17 +5876,23 @@ async function renderGlobalHistory() {
             tbody.appendChild(tr);
         });
     }
-    if (historyBarChart) historyBarChart.destroy();
-    const filtered = hd.slice(-6);
-    const labels = filtered.map(d => d.month.split('-').reverse().join('/'));
-    historyBarChart = new Chart(document.getElementById('historyBarChart').getContext('2d'), {
-        type:'bar', data:{labels, datasets:[
-            {label:'Entrate', data:filtered.map(d=>d.income), backgroundColor:'#10b981', borderRadius:4},
-            {label:'Budget Previsto', data:filtered.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
-            {label:'Spesa Effettiva', data:filtered.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
-        ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}},animation:{duration:0}}
-    });
+    try {
+        await ensureChartJs();
+        if (historyBarChart) historyBarChart.destroy();
+        const filtered = hd.slice(-6);
+        const labels = filtered.map(d => d.month.split('-').reverse().join('/'));
+        const hbCanvas = document.getElementById('historyBarChart');
+        if (hbCanvas) {
+            historyBarChart = new Chart(hbCanvas.getContext('2d'), {
+                type:'bar', data:{labels, datasets:[
+                    {label:'Entrate', data:filtered.map(d=>d.income), backgroundColor:'#10b981', borderRadius:4},
+                    {label:'Budget Previsto', data:filtered.map(d=>d.planned), backgroundColor:'#f97316', borderRadius:4},
+                    {label:'Spesa Effettiva', data:filtered.map(d=>d.actual), backgroundColor:'#ef4444', borderRadius:4}
+                ]},
+                options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}},animation:{duration:0}}
+            });
+        }
+    } catch (e) { console.warn('[Analisi] Grafico barre non renderizzato:', e); }
 }
 
 // =====================================================================
@@ -5891,15 +5905,20 @@ async function renderTradingChart() {
     hd.sort((a,b) => a.month.localeCompare(b.month));
     const filtered = hd.slice(-6);
     const labels = filtered.map(d => d.month.split('-').reverse().join('/'));
-    if (tradingChart) tradingChart.destroy();
-    tradingChart = new Chart(document.getElementById('annualTradingChart').getContext('2d'), {
-        type:'line', data:{labels, datasets:[
-            {label:'Entrate', data:filtered.map(d=>d.income), borderColor:'#10b981', backgroundColor:'transparent', borderWidth:3, tension:0.2, pointRadius:4},
-            {label:'Budget', data:filtered.map(d=>d.planned), borderColor:'#f97316', backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], tension:0.2, pointRadius:2},
-            {label:'Speso', data:filtered.map(d=>d.actual), borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:3, tension:0.1, pointRadius:4}
-        ]},
-        options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}}},plugins:{legend:{position:'top',labels:{font:{size:10,weight:'bold'},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},animation:{duration:0}}
-    });
+    try {
+        await ensureChartJs();
+        if (tradingChart) tradingChart.destroy();
+        const ttCanvas = document.getElementById('annualTradingChart');
+        if (!ttCanvas) return;
+        tradingChart = new Chart(ttCanvas.getContext('2d'), {
+            type:'line', data:{labels, datasets:[
+                {label:'Entrate', data:filtered.map(d=>d.income), borderColor:'#10b981', backgroundColor:'transparent', borderWidth:3, tension:0.2, pointRadius:4},
+                {label:'Budget', data:filtered.map(d=>d.planned), borderColor:'#f97316', backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], tension:0.2, pointRadius:2},
+                {label:'Speso', data:filtered.map(d=>d.actual), borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:3, tension:0.1, pointRadius:4}
+            ]},
+            options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}}},plugins:{legend:{position:'top',labels:{font:{size:10,weight:'bold'},boxWidth:8,boxHeight:8,padding:8}},tooltip:{bodyFont:{size:11},titleFont:{size:11}}},animation:{duration:0}}
+        });
+    } catch (e) { console.warn('[Analisi] Grafico linee non renderizzato:', e); }
 }
 
 // =====================================================================
