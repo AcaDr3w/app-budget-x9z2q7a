@@ -1,5 +1,21 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Form spesa mobile allineato al riferimento pill
+
+### Completed Changes
+- **layout**: `#viewInput.sheet-form` — importo 44px + underline accento, toggle tipo a pill, data/nota a pill bianche, chip scontrino tondi, switch Ripeti/Dividi a riga intera tappabile, footer Annulla (bianco) + Salva (accento) a pill fissi sopra la safe-area.
+- **IDs invariati**: amountInput, sheetDate, sheetNote, recurringToggle, sharedToggle, save/close. Nessuna nuova logica save/receipt.
+
+### Status: COMPLETATO in locale. Form Bollo 390×844 allineato al riferimento: importo 44px, toggle/campi/footer a pill, switch funzionanti, footer visibile. `style.css?v=1.9`, SW `v8`.
+
+## [2026-09-15] - Bottomsheet: accento = colore icona macro
+
+### Completed Changes
+- **causa**: `MACRO_THEME` usava ottanio/ambra/verde/viola vecchi (`#2a9d8f`, `#7bc043`…), diversi dalle icone delle card Mese (`--accent-casa/cibo/veicoli/svago`: `#4DB6A8`, `#F0A030`, `#4E8FD8`, `#8B7CC8`).
+- **fix**: `getMacroAccent` legge i token CSS; `getMacroTheme` deriva tint/border/wash. `MACRO_COLOR` allineato. Veicoli passa da verde a blu come l'icona auto.
+
+### Status: COMPLETATO in locale. Titolo/chip/Salva coincidono con il colore icona card (Veicoli blu `#4E8FD8`). `script.js?v=2.0`, SW `v7`.
+
 ## [2026-09-15] - Restyle bottomsheet macrocategorie (griglia + form)
 
 ### Completed Changes

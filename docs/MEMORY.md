@@ -40,7 +40,7 @@
 - **HTML**: `.container` si chiude PRIMA di `</main>`; overlay/sheet restano fratelli di `<main>` dentro `#mainAppWrapper`.
 - **Tab Analisi/Investimenti/Previsioni/Impostazioni MAI orfani**: `#current-month-tab` NON si chiude dopo il blocco mobile Mese. I quattro tab (`#history-tab` ~583, `#future-tab` ~749, `#investimenti-tab` ~834, `#settings-tab` ~921) devono restare dentro `#mainAppWrapper` > `#appMain` > `.container`. Se escono dal wrapper, `overflow:hidden` su body/container li taglia → schermata bianca. NON è contenuto cancellato: è solo l'albero HTML.
 - **`anomalyTimer`**: dichiarato accanto a `searchQuery` (`let anomalyTimer = null`). `stopAnomalyCarousel()` lo legge; senza dichiarazione `switchTab` verso Investimenti/Previsioni/Impostazioni lancia ReferenceError. `stopAnomalyCarousel` è difensivo (`typeof` + try/catch in `switchTab`).
-- **PWA cache**: `CACHE_NAME = bilancio-pwa-v6`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=1.9`, `style.css?v=1.8`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
+- **PWA cache**: `CACHE_NAME = bilancio-pwa-v8`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.0`, `style.css?v=1.9`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
 
 ## CATEGORIE (2026-09-15)
 - **Fonte di verità**: `userMacroCategories` con SOLO le 4 chiavi `casa` / `cibo` / `veicoli` / `svago_altro`. Alias legacy `casa_utenze` → `casa`, `spese_svago`/`svago` → `svago_altro` via `foldLegacyMacroKeys()` in `loadCategories`.
@@ -48,7 +48,7 @@
 - **Mese card**: NESSUN elenco di microcategorie sotto Casa/Cibo/Veicoli/Svago (decisione 2026-09-15). `.card-micro-list` nascosta.
 - **Grafico mese** (`renderMacroBudgetChart`): titolo "Progresso spesa mese corrente". 3 barre Entrate `#22c55e` / Spese Previste `#eab308` / Spese Sostenute `#ef4444` (importi euro, stessi del hero). Linee KPI `.line-entrate/.line-previste/.line-sostenute` = stessi colori. Non ripristinare il grafico per-macro Budget vs Sostenuto.
 - **Settings**: `openSettingsPopup('categorie')` richiama `renderCategorySettings`; tap nome → `editCategory`; delete filtra tutti i 4 gruppi.
-- **Bottomsheet macro (2026-09-15)**: foglio tinto via `MACRO_THEME.wash` (`--macro-wash` + `data-macro` su `#bottomSheet`). Titoli da `MACRO_CARD_META` (`getMacroSheetTitle`), mai chiavi legacy `casa_utenze`/`spese_svago`. Griglia 3 col: chip 40px, nome clamp 2 righe, importo pill, barra 100% width. Form: importo 40px, Salva in `--macro-accent`. Isolare `#microCategoriesGrid` dalla griglia 4-col `.category-grid-mobile`. `clearMacroSheetTheme` in `closeTransactionSheet`. Non toccare income/future sheet.
+- **Bottomsheet macro (2026-09-15)**: foglio tinto via `getMacroTheme()` da `--accent-casa/cibo/veicoli/svago`. Form mobile `#viewInput.sheet-form`: importo hero, toggle pill, campi pill, switch-row intera tappabile, footer Annulla/Salva pill fissi. IDs invariati. Non toccare income/future sheet.
 
 ## CONTENUTO TAB (non cancellare, 2026-09-15)
 - **Analisi (`#history-tab`)**: periodo 3m/6m/year/custom, card insight IA, KPI swipe (media uscite / top crescita / scostamento budget), carosello anomalie, card risparmi, su desktop anche IA storica + registro mesi.

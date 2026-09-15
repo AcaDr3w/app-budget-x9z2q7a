@@ -3040,16 +3040,29 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
 #bottomSheet .btn-back-sheet:active {
     background: var(--macro-tint, var(--border-soft));
 }
+#bottomSheet #viewInput.sheet-form {
+    min-height: 0;
+    height: 100%;
+}
+#bottomSheet #viewInput.sheet-form > .sheet-body {
+    gap: 16px;
+    padding: 8px 4px 12px;
+}
 #bottomSheet .sheet-amount-display {
-    padding: 8px 0 4px;
+    padding: 12px 8px 4px;
+    gap: 8px;
 }
 #bottomSheet .amount-input {
-    font-size: 40px;
-    font-weight: 700;
-    width: min(100%, 240px);
+    font-size: 44px;
+    font-weight: 400;
+    width: min(100%, 200px);
     color: var(--ink);
-    border-bottom-color: var(--macro-accent, var(--border-soft));
+    border-bottom: 2px solid var(--macro-accent, var(--border-soft));
     caret-color: var(--macro-accent, var(--accent));
+}
+#bottomSheet .amount-input::placeholder {
+    color: #c5cdd6;
+    font-weight: 400;
 }
 #bottomSheet .amount-input:focus {
     border-color: var(--macro-accent, var(--primary));
@@ -3057,60 +3070,119 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
 #bottomSheet .currency-symbol {
     color: var(--macro-accent, var(--accent));
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 500;
+    margin-left: 0;
 }
 #bottomSheet .sheet-type-toggle {
     background: var(--macro-tint, var(--border-faint));
+    border-radius: 999px;
+    padding: 4px;
+    gap: 0;
+}
+#bottomSheet .toggle-option {
+    min-height: 44px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 #bottomSheet .toggle-option.active {
     background: #fff;
     box-shadow: var(--shadow-card);
 }
+#bottomSheet .sheet-inputs {
+    gap: 10px;
+}
 #bottomSheet .sheet-input {
-    border-color: var(--macro-border, var(--muted-faint));
+    min-height: 48px;
+    padding: 12px 18px;
+    border: none;
     background: #fff;
-    border-radius: 12px;
+    border-radius: 999px;
+    font-size: 15px;
+    color: var(--ink);
+    box-shadow: none;
 }
 #bottomSheet .sheet-input:focus {
-    outline: 2px solid var(--macro-accent, var(--accent));
-    outline-offset: 1px;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--macro-tint, rgba(78, 143, 216, 0.35));
+}
+#bottomSheet input[type="date"].sheet-input,
+#bottomSheet input[type="month"].sheet-input {
+    appearance: none;
+    -webkit-appearance: none;
+}
+#bottomSheet .sheet-note-actions {
+    gap: 10px;
+    margin-top: 2px;
+    padding-left: 2px;
 }
 #bottomSheet .note-action-btn {
     width: 44px;
     height: 44px;
-    background: var(--macro-tint, var(--surface-muted));
-    border-color: var(--macro-border, var(--muted-faint));
+    border: none;
+    border-radius: 50%;
+    background: #fff;
     color: var(--macro-accent, var(--muted-mid));
 }
 #bottomSheet .note-action-btn:active {
-    background: var(--macro-border, var(--border-soft));
+    background: var(--macro-tint, var(--border-soft));
+}
+#bottomSheet .sheet-switch-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 2px 0;
+}
+#bottomSheet .sheet-switch-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 48px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+#bottomSheet .recurring-toggle-wrapper,
+#bottomSheet .shared-toggle-wrapper {
+    margin-top: 0;
+    padding: 0;
+}
+#bottomSheet .toggle-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
 }
 #bottomSheet .sheet-footer {
-    padding-top: 4px;
+    gap: 12px;
+    padding: 8px 4px calc(10px + env(safe-area-inset-bottom));
+    background: var(--macro-wash, var(--panel));
+}
+#bottomSheet .sheet-footer .btn-spesa,
+#bottomSheet .sheet-footer .btn-secondary {
+    min-height: 50px;
+    border-radius: 999px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 0;
 }
 #bottomSheet .sheet-footer .btn-spesa {
     background: var(--macro-accent, var(--accent));
     color: #fff;
     border: none;
-    min-height: 48px;
-    border-radius: 12px;
-    font-weight: 700;
 }
 #bottomSheet .sheet-footer .btn-secondary {
     background: #fff;
-    border: 1px solid var(--macro-border, var(--border-soft));
-    color: var(--macro-accent, var(--text));
-    min-height: 48px;
-    margin-top: 0;
-    border-radius: 12px;
-    font-weight: 600;
+    border: none;
+    color: var(--text-primary, #1F2937);
 }
 #bottomSheet .toggle-switch input:checked + .toggle-slider {
     background: var(--macro-accent, var(--toggle-on));
 }
 #bottomSheet .receipt-preview {
-    border-color: var(--macro-border, var(--muted-faint));
-    background: rgba(255, 255, 255, 0.88);
+    border: none;
+    background: #fff;
+    border-radius: 16px;
 }
 #bottomSheet ::selection {
     background: var(--macro-tint, #dbeafe);

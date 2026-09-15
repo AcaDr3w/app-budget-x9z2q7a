@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=1.8">
+    <link rel="stylesheet" href="style.css?v=1.9">
 </head>
 <body>
 
@@ -1171,21 +1171,21 @@
                 <div id="microCategoriesGrid" class="category-grid-mobile"></div>
                 <div id="macroSheetRecent" class="macro-sheet-recent" style="display:none;"></div>
             </div>
-            <div id="viewInput" class="sheet-view">
+            <div id="viewInput" class="sheet-view sheet-form">
                 <div class="sheet-body">
                     <div class="sheet-amount-display">
                         <input type="text" id="amountInput" class="amount-input" inputmode="decimal" placeholder="0,00" autocomplete="off">
                         <span class="currency-symbol">€</span>
                     </div>
                     
-                    <div class="sheet-type-toggle">
+                    <div class="sheet-type-toggle" role="tablist" aria-label="Tipo spesa">
                         <label class="toggle-option active" data-type="actual">Spesa Sostenuta</label>
                         <label class="toggle-option" data-type="planned">Spesa Prevista</label>
                     </div>
                     
                     <div class="sheet-inputs">
                         <input type="date" id="sheetDate" class="sheet-input" aria-label="Data spesa">
-                        <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota... (es. Spesa Esselunga)" aria-label="Nota spesa">
+                        <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota..." aria-label="Nota spesa">
                         <div class="sheet-note-actions">
                             <button type="button" class="note-action-btn" id="btnNoteCamera" title="Scatta una foto" aria-label="Scatta una foto">
                                 <i class="fas fa-camera" aria-hidden="true"></i>
@@ -1205,24 +1205,26 @@
                         </div>
                     </div>
 
-                    <div class="recurring-toggle-wrapper">
-                        <label class="toggle-switch">
+                    <div class="sheet-switch-stack">
+                    <label class="recurring-toggle-wrapper sheet-switch-row">
+                        <span class="toggle-switch">
                             <input type="checkbox" id="recurringToggle" aria-label="Ripeti ogni mese">
                             <span class="toggle-slider"></span>
-                        </label>
+                        </span>
                         <span class="toggle-label">Ripeti ogni mese</span>
-                    </div>
+                    </label>
                     <div class="recurring-until-container" id="recurringUntilContainer">
                         <input type="month" id="recurringUntil" class="sheet-input recurring-until-input" aria-label="Ripeti fino a">
                         <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
                     </div>
 
-                    <div class="shared-toggle-wrapper">
-                        <label class="toggle-switch">
+                    <label class="shared-toggle-wrapper sheet-switch-row">
+                        <span class="toggle-switch">
                             <input type="checkbox" id="sharedToggle" aria-label="Spesa condivisa">
                             <span class="toggle-slider"></span>
-                        </label>
+                        </span>
                         <span class="toggle-label">Dividi spesa</span>
+                    </label>
                     </div>
                     <div class="shared-panel" id="sharedPanel">
                         <div class="shared-person-row">
@@ -1258,6 +1260,6 @@
         <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
     </div>
     <script src="js/supabase-adapter.js"></script>
-    <script src="script.js?v=1.9"></script>
+    <script src="script.js?v=2.0"></script>
 </body>
 </html>

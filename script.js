@@ -246,7 +246,7 @@ const defaultCategories = {
 };
 const MACRO_LABELS = { casa: "Casa e Utenze", cibo: "Cibo", veicoli: "Veicoli", svago_altro: "Svago e Altro" };
 const MACRO_ICON = { casa: "🏠", cibo: "🍔", veicoli: "🚗", svago_altro: "🎉" };
-const MACRO_COLOR = { casa: "#2a9d8f", cibo: "#f39c12", veicoli: "#7bc043", svago_altro: "#6f42c1" };
+const MACRO_COLOR = { casa: "#4DB6A8", cibo: "#F0A030", veicoli: "#4E8FD8", svago_altro: "#8B7CC8" };
 const DEFAULT_ICONS = {
     "Mutuo/Affitto": "🏠", "Bolletta Acqua": "💧", "Bolletta Condominio": "🏢", "Bolletta Gas": "🔥",
     "Bolletta Luce": "💡", "Bolletta Rifiuti": "🗑️", "Bolletta Telefonia": "📞", Internet: "📶", "Igiene e Pulizia": "🧴",
@@ -364,13 +364,42 @@ function getCategoryMacroGroup(catName) {
     return 'svago_altro';
 }
 
-// Tema cromatico per il bottom sheet delle macro-categorie
-const MACRO_THEME = {
-    casa: { accent: '#2a9d8f', tint: 'rgba(42,157,143,0.14)', border: 'rgba(42,157,143,0.22)', wash: '#eef6f4' },
-    cibo: { accent: '#f39c12', tint: 'rgba(243,156,18,0.16)', border: 'rgba(243,156,18,0.24)', wash: '#faf4ea' },
-    veicoli: { accent: '#7bc043', tint: 'rgba(123,192,67,0.16)', border: 'rgba(123,192,67,0.24)', wash: '#f3f7ec' },
-    svago_altro: { accent: '#6f42c1', tint: 'rgba(111,66,193,0.14)', border: 'rgba(111,66,193,0.22)', wash: '#f4f0f8' }
+function themeFromMacroColor(hex) {
+    const n = String(hex || '').replace('#', '');
+    const r = parseInt(n.slice(0, 2), 16) || 77;
+    const g = parseInt(n.slice(2, 4), 16) || 182;
+    const b = parseInt(n.slice(4, 6), 16) || 168;
+    return {
+        accent: hex,
+        tint: `rgba(${r},${g},${b},0.14)`,
+        border: `rgba(${r},${g},${b},0.22)`,
+        wash: `rgb(${Math.round(255 * 0.88 + r * 0.12)},${Math.round(255 * 0.88 + g * 0.12)},${Math.round(255 * 0.88 + b * 0.12)})`
+    };
+}
+
+const MACRO_ACCENT_VAR = {
+    casa: '--accent-casa',
+    cibo: '--accent-cibo',
+    veicoli: '--accent-veicoli',
+    svago_altro: '--accent-svago'
 };
+
+function getMacroAccent(macroGroup) {
+    const prop = MACRO_ACCENT_VAR[macroGroup];
+    if (prop) {
+        const cssVal = getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+        if (cssVal) return cssVal;
+    }
+    return MACRO_COLOR[macroGroup] || MACRO_COLOR.casa;
+}
+
+function getMacroTheme(macroGroup) {
+    return themeFromMacroColor(getMacroAccent(macroGroup));
+}
+
+const MACRO_THEME = Object.fromEntries(
+    Object.entries(MACRO_COLOR).map(([key, hex]) => [key, themeFromMacroColor(hex)])
+);
 
 function getMacroSheetTitle(macroGroup) {
     const meta = typeof MACRO_CARD_META !== 'undefined' ? MACRO_CARD_META[macroGroup] : null;
@@ -379,7 +408,7 @@ function getMacroSheetTitle(macroGroup) {
 
 function applyMacroSheetTheme(sheet, macroGroup) {
     if (!sheet) return;
-    const theme = MACRO_THEME[macroGroup];
+    const theme = getMacroTheme(macroGroup);
     sheet.classList.add('sheet-macro');
     if (macroGroup) sheet.dataset.macro = macroGroup;
     else delete sheet.dataset.macro;
@@ -2979,7 +3008,7 @@ async function openBottomSheetFromMacro(macroGroup) {
     if (!overlay || !sheet) return;
     
     applyMacroSheetTheme(sheet, macroGroup);
-    const theme = MACRO_THEME[macroGroup];
+    const theme = getMacroTheme(macroGroup);
     
     document.body.classList.add('sheet-open');
     document.body.style.overflow = 'hidden';
@@ -3101,7 +3130,7 @@ function renderMicroCategoriesGrid(macroGroup) {
         return;
     }
     
-    const theme = MACRO_THEME[macroGroup];
+    const theme = getMacroTheme(macroGroup);
     const wrapper = document.createElement('div');
     wrapper.className = 'bottom-sheet-grid';
     
@@ -3191,7 +3220,7 @@ function slideBackToCategories() {
         sheetTitle.textContent = getMacroSheetTitle(sheetCurrentMacroGroup);
     }
     
-    const backTheme = sheetCurrentMacroGroup ? MACRO_THEME[sheetCurrentMacroGroup] : null;
+    const backTheme = sheetCurrentMacroGroup ? getMacroTheme(sheetCurrentMacroGroup) : null;
     if (sheetTitle && backTheme) sheetTitle.style.color = backTheme.accent;
 
     // Restore budget banner on category selection screen
