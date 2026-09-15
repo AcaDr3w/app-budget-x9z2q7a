@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Categorie Impostazioni + tutte visibili nelle macro di Mese
+
+### Completed Changes
+- **bug settings**: `getCategoryMacroGroup` leggeva solo `CATEGORIES_MAP` statica → "Bolletta Condominio" e le categorie custom cadevano in `svago_altro`. Delete/edit non toglieva la voce dal gruppo vero. Fallback save `spese_svago` (chiave morta). `migrateToFourMacros` usava `old` fuori scope (ReferenceError) e non piegava `casa_utenze`/`spese_svago`.
+- **fix**: `normalizeMacroKey` + `foldLegacyMacroKeys`; lookup prima su `userMacroCategories`; merge da `db.categories`; delete/edit puliscono tutti i 4 gruppi; popup Categorie si ri-renderizza all'apertura; tap sul nome per modificare; toast su duplicato.
+- **Mese**: le 4 card Categorie Principali mostrano TUTTI i nomi (niente `slice(0,6)` / ellipsis). Stessa lista sulle dash-card. `script.js?v=1.7`, `style.css?v=1.6`, SW `v4`.
+
+### Status: COMPLETATO in locale.
+
 ## [2026-09-15] - Ripristino Analisi / Investimenti / Previsioni / Impostazioni
 
 ### Completed Changes

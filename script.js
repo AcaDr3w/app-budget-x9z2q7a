@@ -299,6 +299,7 @@ const CATEGORIES_MAP = {
         { id: "bolletta_luce", nome: "Bolletta Luce", icona: "fa-lightbulb", colore: "#2a9d8f" },
         { id: "bolletta_gas", nome: "Bolletta Gas", icona: "fa-fire", colore: "#2a9d8f" },
         { id: "bolletta_rifiuti", nome: "Bolletta Rifiuti", icona: "fa-trash-alt", colore: "#2a9d8f" },
+        { id: "bolletta_condominio", nome: "Bolletta Condominio", icona: "fa-building", colore: "#2a9d8f" },
         { id: "bolletta_telefonia", nome: "Bolletta Telefonia", icona: "fa-phone", colore: "#2a9d8f" },
         { id: "internet", nome: "Internet", icona: "fa-wifi", colore: "#2a9d8f" },
         { id: "igiene_pulizia", nome: "Igiene e Pulizia", icona: "fa-pump-soap", colore: "#2a9d8f" }
@@ -326,13 +327,41 @@ const CATEGORIES_MAP = {
     ]
 };
 
-function getCategoryMacroGroup(catName) {
-    for (const [key, subs] of Object.entries(CATEGORIES_MAP)) {
-        if (subs.some(sub => sub.nome === catName)) {
-            return key;
+const MACRO_CANONICAL = ['casa', 'cibo', 'veicoli', 'svago_altro'];
+const MACRO_KEY_ALIASES = {
+    casa: 'casa',
+    casa_utenze: 'casa',
+    cibo: 'cibo',
+    veicoli: 'veicoli',
+    svago_altro: 'svago_altro',
+    spese_svago: 'svago_altro',
+    svago: 'svago_altro'
+};
+
+function normalizeMacroKey(key) {
+    return MACRO_KEY_ALIASES[key] || (MACRO_CANONICAL.includes(key) ? key : 'svago_altro');
+}
+
+function foldLegacyMacroKeys() {
+    const folded = { casa: [], cibo: [], veicoli: [], svago_altro: [] };
+    for (const [rawKey, cats] of Object.entries(userMacroCategories || {})) {
+        if (!Array.isArray(cats)) continue;
+        const key = normalizeMacroKey(rawKey);
+        for (const name of cats) {
+            if (name && !folded[key].includes(name)) folded[key].push(name);
         }
     }
-    return 'svago_altro'; // fallback per categorie non mappate
+    userMacroCategories = folded;
+}
+
+function getCategoryMacroGroup(catName) {
+    for (const [m, cats] of Object.entries(userMacroCategories || {})) {
+        if ((cats || []).includes(catName)) return normalizeMacroKey(m);
+    }
+    for (const [key, subs] of Object.entries(CATEGORIES_MAP)) {
+        if (subs.some(sub => sub.nome === catName)) return key;
+    }
+    return 'svago_altro';
 }
 
 // Tema cromatico per il bottom sheet delle macro-categorie
@@ -749,21 +778,32 @@ async function loadCategories() {
         userMacroCategories = JSON.parse(JSON.stringify(defaultCategories));
         localStorage.setItem('user_macro_categories', JSON.stringify(userMacroCategories));
     }
-    // Assicurati che tutte le 4 chiavi esistano PRIMA della migrazione,
-    // così migrateToFourMacros() non trova mai un gruppo undefined
-    for (const key of ['casa', 'cibo', 'veicoli', 'svago_altro']) {
-        if (!userMacroCategories[key]) userMacroCategories[key] = [];
+    foldLegacyMacroKeys();
+    try {
+        const storedRows = await db.categories.toArray();
+        for (const row of storedRows || []) {
+            if (!row || !row.name) continue;
+            const key = normalizeMacroKey(row.macro);
+            if (!userMacroCategories[key]) userMacroCategories[key] = [];
+            if (!userMacroCategories[key].includes(row.name)) userMacroCategories[key].push(row.name);
+            if (row.icon) categoryIconMap[row.name] = row.icon;
+        }
+        foldLegacyMacroKeys();
+    } catch (e) {
+        console.warn('[Categorie] merge DB fallito:', e);
     }
-    // Esegui migrazione una sola volta verso il modello a 4 macro
     if (!categoriesV4_migrated) {
         await migrateToFourMacros();
         categoriesV4_migrated = true;
-        saveMacroToLocalStorage();
     }
-    categoryIconMap = {};
+    foldLegacyMacroKeys();
+    saveMacroToLocalStorage();
+    categoryIconMap = categoryIconMap || {};
     for (const [macro, cats] of Object.entries(userMacroCategories)) {
         cats.forEach(name => {
-            categoryIconMap[name] = DEFAULT_ICONS[name] || MACRO_ICON[macro] || '🏷️';
+            if (!categoryIconMap[name]) {
+                categoryIconMap[name] = DEFAULT_ICONS[name] || MACRO_ICON[macro] || '🏷️';
+            }
         });
     }
     rebuildUserCategories();
@@ -865,16 +905,14 @@ async function migrateToFourMacros() {
         }
     }
 
-    // 5. Rinomina su CATEGORIES_MAP (per coerenza futura)
-    for (const [macro, cats] of Object.entries(CATEGORIES_MAP)) {
-        for (let i = 0; i < cats.length; i++) {
-            if (cats[i].nome === old && categoriesToRename.some(r => r.old === old)) {
-                // Trova il nuovo nome
-                const renameEntry = categoriesToRename.find(r => r.old === old);
-                if (renameEntry) {
-                    cats[i].nome = renameEntry.new;
-                }
-            }
+    foldLegacyMacroKeys();
+    for (const { old: oldCat, new: newCat } of categoriesToRename) {
+        for (const key of MACRO_CANONICAL) {
+            const arr = userMacroCategories[key] || [];
+            const idx = arr.indexOf(oldCat);
+            if (idx === -1) continue;
+            arr.splice(idx, 1);
+            if (!arr.includes(newCat)) arr.push(newCat);
         }
     }
 }
@@ -3782,8 +3820,9 @@ function renderCategorySettings() {
         } else {
             cats.forEach(name => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${getCatIcon(name)} ${name}</span>
-                    <button class="cat-del-btn" data-cat="${name.replace(/'/g, "\\'")}">🗑️</button>`;
+                li.innerHTML = `<button type="button" class="cat-edit-btn">${getCatIcon(name)} ${name}</button>
+                    <button type="button" class="cat-del-btn" aria-label="Elimina ${name}">🗑️</button>`;
+                li.querySelector('.cat-edit-btn').addEventListener('click', () => editCategory(name));
                 li.querySelector('.cat-del-btn').addEventListener('click', () => deleteCategory(name));
                 ul.appendChild(li);
             });
@@ -3861,7 +3900,7 @@ async function saveCategory() {
     const name = input.value.trim();
     if (!name) return;
     const macroSelect = document.getElementById('newCatMacro');
-    const macro = macroSelect ? macroSelect.value : 'spese_svago';
+    const macro = normalizeMacroKey(macroSelect ? macroSelect.value : 'svago_altro');
     
     try {
         if (categoryToEdit) {
@@ -3872,12 +3911,13 @@ async function saveCategory() {
                 const allExp = await db.expenses.where('category').equals(categoryToEdit).toArray();
                 for (let e of allExp) { await db.expenses.update(e.id, {category: name}); }
                 currentData.expenses.forEach(e => { if (e.category === categoryToEdit) e.category = name; });
-                const oldMacro = getCategoryMacroGroup(categoryToEdit);
-                if (userMacroCategories[oldMacro]) {
-                    userMacroCategories[oldMacro] = userMacroCategories[oldMacro].filter(c => c !== categoryToEdit);
-                }
                 delete categoryIconMap[categoryToEdit];
                 await db.categories.delete(categoryToEdit);
+            }
+            for (const key of MACRO_CANONICAL) {
+                if (userMacroCategories[key]) {
+                    userMacroCategories[key] = userMacroCategories[key].filter(c => c !== categoryToEdit && c !== name);
+                }
             }
             if (!userMacroCategories[macro]) userMacroCategories[macro] = [];
             if (!userMacroCategories[macro].includes(name)) userMacroCategories[macro].push(name);
@@ -3892,7 +3932,10 @@ async function saveCategory() {
                 btn.style.background = 'var(--accent)';
             }
         } else {
-            if (userCategories.includes(name)) return;
+            if (userCategories.includes(name)) {
+                showToast('Categoria già esistente.', true);
+                return;
+            }
             if (!userMacroCategories[macro]) userMacroCategories[macro] = [];
             userMacroCategories[macro].push(name);
             const chosenEmoji = document.getElementById('emojiPickerBtn')?.textContent || '';
@@ -3913,9 +3956,10 @@ async function saveCategory() {
 }
 async function deleteCategory(cat) {
     if (!confirm(`Eliminare "${cat}"?`)) return;
-    const macro = getCategoryMacroGroup(cat);
-    if (userMacroCategories[macro]) {
-        userMacroCategories[macro] = userMacroCategories[macro].filter(c => c !== cat);
+    for (const key of MACRO_CANONICAL) {
+        if (userMacroCategories[key]) {
+            userMacroCategories[key] = userMacroCategories[key].filter(c => c !== cat);
+        }
     }
     delete categoryIconMap[cat];
     await db.categories.delete(cat);
@@ -4701,6 +4745,7 @@ function closeIaNotesModal(event) {
 function openSettingsPopup(name) {
     const pop = document.getElementById('settingsPopup-' + name);
     if (!pop) return;
+    if (name === 'categorie') renderCategorySettings();
     pop.classList.add('active');
     document.body.classList.add('popup-open');
 }
@@ -4818,15 +4863,10 @@ function renderMacroCards() {
             if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
         });
 
-        // Popola la micro-lista testuale separata da |
-        if (microList) {
-            if (cats.length === 0) {
-                microList.textContent = 'Nessuna categoria';
-            } else {
-                microList.textContent = cats.slice(0, 6).join(' | ');
-                if (cats.length > 6) microList.textContent += ' | ⋯';
-            }
-        }
+        const namesEl = document.getElementById('macroCats-' + macro);
+        const namesText = cats.length ? cats.join(' · ') : 'Nessuna categoria';
+        if (namesEl) namesEl.textContent = namesText;
+        if (microList) microList.textContent = namesText;
 
         // Aggiorna la barra di progresso e il badge %
         if (fill) {
@@ -4850,18 +4890,13 @@ function renderMacroCards() {
             if (cats.length === 0) {
                 grid.innerHTML = '<div class="micro-empty">✏️ Aggiungi categorie</div>';
             } else {
-                cats.slice(0, 5).forEach(cat => {
+                cats.forEach(cat => {
                     const cell = document.createElement('div');
                     cell.className = 'micro-cell';
+                    cell.title = cat;
                     cell.innerHTML = `<i class="fas ${faIconFor(cat, macro)}"></i>`;
                     grid.appendChild(cell);
                 });
-                if (cats.length > 5) {
-                    const more = document.createElement('div');
-                    more.className = 'micro-more';
-                    more.innerHTML = '⋯';
-                    grid.appendChild(more);
-                }
             }
         }
     }

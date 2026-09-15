@@ -42,6 +42,12 @@
 - **`anomalyTimer`**: dichiarato accanto a `searchQuery` (`let anomalyTimer = null`). `stopAnomalyCarousel()` lo legge; senza dichiarazione `switchTab` verso Investimenti/Previsioni/Impostazioni lancia ReferenceError. `stopAnomalyCarousel` è difensivo (`typeof` + try/catch in `switchTab`).
 - **PWA cache**: `CACHE_NAME = bilancio-pwa-v3`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=1.6` in index.html. Dopo un fix JS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve lo script vecchio (sintomo: tab vuoti o crash su `anomalyTimer`).
 
+## CATEGORIE (2026-09-15)
+- **Fonte di verità**: `userMacroCategories` con SOLO le 4 chiavi `casa` / `cibo` / `veicoli` / `svago_altro`. Alias legacy `casa_utenze` → `casa`, `spese_svago`/`svago` → `svago_altro` via `foldLegacyMacroKeys()` in `loadCategories`.
+- **`getCategoryMacroGroup`**: prima cerca in `userMacroCategories`, poi `CATEGORIES_MAP`. Mai usare solo la mappa statica (manca Bolletta Condominio e ignora le custom).
+- **Mese**: `#macroCats-<macro>` sotto ogni card Categorie Principali elenca TUTTE le microcategorie del gruppo (join ` · `). `renderMacroCards` non deve più fare `slice(0,6)` / `⋯`.
+- **Settings**: `openSettingsPopup('categorie')` richiama `renderCategorySettings`; tap nome → `editCategory`; delete filtra tutti i 4 gruppi.
+
 ## CONTENUTO TAB (non cancellare, 2026-09-15)
 - **Analisi (`#history-tab`)**: periodo 3m/6m/year/custom, card insight IA, KPI swipe (media uscite / top crescita / scostamento budget), carosello anomalie, card risparmi, su desktop anche IA storica + registro mesi.
 - **Investimenti (`#investimenti-tab`)**: hero Patrimonio/Cashflow/ROI, `+ Nuovo Asset / Salvadanaio`, griglia asset; desktop lista + sheet dettaglio/movimenti.
