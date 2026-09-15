@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.3">
+    <link rel="stylesheet" href="style.css?v=2.5">
 </head>
 <body>
 
@@ -51,12 +51,16 @@
     <button type="button" class="top-nav-brand" data-act="switchTab" data-args='["current-month-tab"]'>
         <i class="fas fa-chart-line" aria-hidden="true"></i> <span class="brand-title">Bilancio Pro</span>
     </button>
-    <div class="top-nav-links">
-        <button type="button" class="top-nav-link active" data-tab="current-month-tab" data-act="switchTab" data-args='["current-month-tab"]'>Mese</button>
-        <button type="button" class="top-nav-link" data-tab="history-tab" data-act="switchTab" data-args='["history-tab"]'>Analisi</button>
-        <button type="button" class="top-nav-link" data-tab="investimenti-tab" data-act="switchTab" data-args='["investimenti-tab"]'>Investimenti</button>
-        <button type="button" class="top-nav-link" data-tab="future-tab" data-act="switchTab" data-args='["future-tab"]'>Previsioni</button>
-        <button type="button" class="top-nav-link" data-tab="settings-tab" data-act="switchTab" data-args='["settings-tab"]'>Impostazioni</button>
+    <div class="top-nav-end">
+        <div class="top-nav-links">
+            <button type="button" class="top-nav-link active" data-tab="current-month-tab" data-act="switchTab" data-args='["current-month-tab"]'>Mese</button>
+            <button type="button" class="top-nav-link" data-tab="history-tab" data-act="switchTab" data-args='["history-tab"]'>Analisi</button>
+            <button type="button" class="top-nav-link" data-tab="investimenti-tab" data-act="switchTab" data-args='["investimenti-tab"]'>Investimenti</button>
+            <button type="button" class="top-nav-link" data-tab="future-tab" data-act="switchTab" data-args='["future-tab"]'>Previsioni</button>
+        </div>
+        <button type="button" class="avatar-circle top-nav-avatar" id="desktopAvatarBtn" aria-label="Impostazioni account" data-act="openAccountDrawer">
+            <span id="desktopAvatarInitials">U</span>
+        </button>
     </div>
 </nav>
 
@@ -67,7 +71,7 @@
         <h1 class="user-greeting">Ciao <span id="headerUserName">Utente</span>!</h1>
     </div>
     <div class="header-right">
-        <div class="avatar-circle" id="headerAvatarBtn" role="button" tabindex="0" aria-label="Profilo utente" data-act="openProfilePlaceholder">
+        <div class="avatar-circle" id="headerAvatarBtn" role="button" tabindex="0" aria-label="Impostazioni account" data-act="openAccountDrawer">
             <span id="headerAvatarInitials">U</span>
         </div>
     </div>
@@ -83,6 +87,9 @@
         <div class="nav-icon-wrapper"><i class="fas fa-chart-line" aria-hidden="true"></i></div>
         <span class="nav-label">Analisi</span>
     </button>
+    <button type="button" class="nav-item nav-item-add" id="navQuickAdd" aria-label="Aggiungi spesa">
+        <span class="nav-quick-add" aria-hidden="true"><i class="fas fa-plus"></i></span>
+    </button>
     <button type="button" class="nav-item" id="navInvestimenti" data-act="switchTab" data-args='["investimenti-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-gem" aria-hidden="true"></i></div>
         <span class="nav-label">Investimenti</span>
@@ -90,10 +97,6 @@
     <button type="button" class="nav-item" id="navPrevisioni" data-act="switchTab" data-args='["future-tab"]'>
         <div class="nav-icon-wrapper"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></div>
         <span class="nav-label">Previsioni</span>
-    </button>
-    <button type="button" class="nav-item" id="navImpostazioni" data-act="switchTab" data-args='["settings-tab"]'>
-        <div class="nav-icon-wrapper"><i class="fas fa-calendar-days" aria-hidden="true"></i></div>
-        <span class="nav-label">Impostazioni</span>
     </button>
 </nav>
 
@@ -917,59 +920,7 @@
 
     </div>
 
-    <!-- =================== TAB 5: IMPOSTAZIONI =================== -->
-    <div id="settings-tab" class="tab-content hidden">
-        <div class="settings-grid">
-            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["categorie"]'>
-                <span class="settings-tile-icon">🛠️</span>
-                <span class="settings-tile-text">
-                    <span class="settings-tile-title">Categorie</span>
-                    <span class="settings-tile-desc">Aggiungi, modifica o elimina le categorie di spesa</span>
-                </span>
-                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["app"]'>
-                <span class="settings-tile-icon">📱</span>
-                <span class="settings-tile-text">
-                    <span class="settings-tile-title">App &amp; Notifiche</span>
-                    <span class="settings-tile-desc">Notifiche scadenze e installazione dell'app</span>
-                </span>
-                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["backup"]'>
-                <span class="settings-tile-icon">💾</span>
-                <span class="settings-tile-text">
-                    <span class="settings-tile-title">Backup Dati</span>
-                    <span class="settings-tile-desc">Esporta o importa i tuoi dati (.json)</span>
-                </span>
-                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["cloud"]'>
-                <span class="settings-tile-icon">☁️</span>
-                <span class="settings-tile-text">
-                    <span class="settings-tile-title">Sincronizzazione Cloud</span>
-                    <span class="settings-tile-desc">Copia di sicurezza su Google Drive</span>
-                </span>
-                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["ripetizioni"]'>
-                <span class="settings-tile-icon">🔁</span>
-                <span class="settings-tile-text">
-                    <span class="settings-tile-title">Ripetizioni</span>
-                    <span class="settings-tile-desc">Gestisci le spese ricorrenti mensili</span>
-                </span>
-                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="settings-tile settings-tile-danger" data-act="openSettingsPopup" data-args='["danger"]'>
-                <span class="settings-tile-icon">⚠️</span>
-                <span class="settings-tile-text">
-                    <span class="settings-tile-title">Zona Pericolo</span>
-                    <span class="settings-tile-desc">Elimina tutti i dati dell'app</span>
-                </span>
-                <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
-            </button>
-        </div>
-
+    <div id="accountPopups">
         <!-- POPUP: CATEGORIE -->
         <div id="settingsPopup-categorie" class="popup-overlay" data-act-close="closeSettingsPopup">
             <div class="popup-panel" role="dialog" aria-modal="true" aria-label="Categorie" data-act-stop="1">
@@ -1098,6 +1049,76 @@
     </div>
 
     </main>
+
+    <div id="accountDrawerOverlay" class="account-drawer-overlay" data-act="closeAccountDrawer" hidden></div>
+    <aside id="accountDrawer" class="account-drawer" role="dialog" aria-modal="true" aria-labelledby="drawerUserName">
+        <div class="account-drawer-head">
+            <div class="avatar-circle" aria-hidden="true"><span id="drawerAvatarInitials">U</span></div>
+            <div class="account-drawer-who">
+                <p class="account-drawer-name" id="drawerUserName">Utente</p>
+                <p class="account-drawer-email" id="drawerUserEmail"></p>
+            </div>
+            <button type="button" class="popup-close" data-act="closeAccountDrawer" aria-label="Chiudi impostazioni">×</button>
+        </div>
+        <div class="account-drawer-body">
+            <div class="settings-grid">
+                <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["categorie"]'>
+                    <span class="settings-tile-icon">🛠️</span>
+                    <span class="settings-tile-text">
+                        <span class="settings-tile-title">Categorie</span>
+                        <span class="settings-tile-desc">Aggiungi, modifica o elimina le categorie di spesa</span>
+                    </span>
+                    <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["app"]'>
+                    <span class="settings-tile-icon">📱</span>
+                    <span class="settings-tile-text">
+                        <span class="settings-tile-title">App &amp; Notifiche</span>
+                        <span class="settings-tile-desc">Notifiche scadenze e installazione dell'app</span>
+                    </span>
+                    <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["backup"]'>
+                    <span class="settings-tile-icon">💾</span>
+                    <span class="settings-tile-text">
+                        <span class="settings-tile-title">Backup Dati</span>
+                        <span class="settings-tile-desc">Esporta o importa i tuoi dati (.json)</span>
+                    </span>
+                    <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["cloud"]'>
+                    <span class="settings-tile-icon">☁️</span>
+                    <span class="settings-tile-text">
+                        <span class="settings-tile-title">Sincronizzazione Cloud</span>
+                        <span class="settings-tile-desc">Copia di sicurezza su Google Drive</span>
+                    </span>
+                    <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="settings-tile" data-act="openSettingsPopup" data-args='["ripetizioni"]'>
+                    <span class="settings-tile-icon">🔁</span>
+                    <span class="settings-tile-text">
+                        <span class="settings-tile-title">Ripetizioni</span>
+                        <span class="settings-tile-desc">Gestisci le spese ricorrenti mensili</span>
+                    </span>
+                    <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="settings-tile settings-tile-danger" data-act="openSettingsPopup" data-args='["danger"]'>
+                    <span class="settings-tile-icon">⚠️</span>
+                    <span class="settings-tile-text">
+                        <span class="settings-tile-title">Zona Pericolo</span>
+                        <span class="settings-tile-desc">Elimina tutti i dati dell'app</span>
+                    </span>
+                    <i class="fas fa-chevron-right settings-tile-arrow" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <div id="quickAddRadial" class="quick-add-radial" hidden>
+        <button type="button" class="quick-add-dismiss" aria-label="Chiudi inserimento rapido" data-act="closeQuickAddRadial"></button>
+        <div class="quick-add-arc" id="quickAddArc"></div>
+        <p class="quick-add-hint" id="quickAddHint">Scegli una categoria</p>
+    </div>
 
     <!-- POPUP SPESE CONDIVISE -->
     <div id="popup-spese-condivise" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="condivisePopupTitle" data-act-close="closeCondivisePopup">
@@ -1278,6 +1299,6 @@
         <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
     </div>
     <script src="js/supabase-adapter.js"></script>
-    <script src="script.js?v=2.1"></script>
+    <script src="script.js?v=2.2"></script>
 </body>
 </html>

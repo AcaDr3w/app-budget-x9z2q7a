@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Nav: drawer account + plus radiale
+
+### Completed Changes
+- **nav**: Impostazioni tolta da bottom/top nav. Ordine mobile `Mese | Analisi | + | Investimenti | Previsioni`. Avatar header/desktop apre `#accountDrawer` con le stesse tile. Popup settings in `#accountPopups`.
+- **plus**: `#navQuickAdd` — tap apre arco 180° macro→micro; hold+drag evidenzia e in dwell passa alle micro; rilascio su micro apre il form (`openExpenseFormForCategory`).
+- **cache**: `style.css?v=2.5`, `script.js?v=2.2`, SW `bilancio-pwa-v11`.
+
+### Status: COMPLETATO. Verifica 390×844: nav senza Impostazioni, drawer 6 tile + popup Categorie, radiale 4 macro e 6 micro Veicoli, form Bollo da plus.
+
 ## [2026-09-15] - Form spesa a sezioni (dati, documenti, opzioni)
 
 ### Completed Changes

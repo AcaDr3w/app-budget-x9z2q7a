@@ -52,8 +52,7 @@ const TAB_TITLES = {
     'current-month-tab': 'Mese',
     'history-tab': 'Analisi',
     'investimenti-tab': 'Investimenti',
-    'future-tab': 'Previsioni',
-    'settings-tab': 'Impostazioni'
+    'future-tab': 'Previsioni'
 };
 
 // Responsive helper
@@ -505,7 +504,7 @@ function setupModalAccessibility() {
     const SHEET_MAP = { sheetOverlay: 'bottomSheet', incomeSheetOverlay: 'incomeBottomSheet', futureSheetOverlay: 'futureBottomSheet' };
 
     function currentOverlay() {
-        return document.querySelector('.popup-overlay.active, #sheetOverlay.open, #incomeSheetOverlay.open, #futureSheetOverlay.open');
+        return document.querySelector('.popup-overlay.active, #sheetOverlay.open, #incomeSheetOverlay.open, #futureSheetOverlay.open, #accountDrawerOverlay.open, #quickAddRadial.open');
     }
 
     function focusScope() {
@@ -530,6 +529,10 @@ function setupModalAccessibility() {
         if (open.classList.contains('popup-overlay')) {
             const btn = open.querySelector('.popup-close');
             if (btn) btn.click();
+        } else if (open.id === 'accountDrawerOverlay') {
+            closeAccountDrawer();
+        } else if (open.id === 'quickAddRadial') {
+            closeQuickAddRadial();
         } else {
             open.click();
         }
@@ -555,7 +558,7 @@ function setupModalAccessibility() {
             const target = firstFocusable(focusScope());
             if (target) { lastFocus = document.activeElement; target.focus(); }
         } else {
-            document.querySelectorAll('.popup-overlay, #sheetOverlay, #incomeSheetOverlay, #futureSheetOverlay, #bottomSheet, #incomeBottomSheet, #futureBottomSheet')
+            document.querySelectorAll('.popup-overlay, #sheetOverlay, #incomeSheetOverlay, #futureSheetOverlay, #bottomSheet, #incomeBottomSheet, #futureBottomSheet, #accountDrawerOverlay, #quickAddRadial')
                 .forEach(el => delete el.dataset.a11yFocused);
             if (lastFocus && lastFocus.focus && document.activeElement === document.body) lastFocus.focus();
             lastFocus = null;
@@ -636,6 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupModalAccessibility();
     setupTablistA11y();
     setupInlineActions();
+    setupQuickAddRadial();
     loadMonthData();
 });
 
@@ -688,6 +692,7 @@ async function initApp() {
         document.getElementById('pushNotifToggle').checked = true;
         checkPushNotifications();
     }
+    syncAccountHeader();
 }
 
 async function migrateFromLocalStorage() {
@@ -744,22 +749,23 @@ function updateActivePageSubtitle(tabId) {
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.nav-item:not(.nav-item-add)').forEach(n => n.classList.remove('active'));
     document.querySelectorAll('.top-nav-link').forEach(l => l.classList.remove('active'));
     const target = document.getElementById(tabId);
     if (!target) return;
     target.classList.remove('hidden');
     target.classList.add('active');
-    document.querySelectorAll('#settings-tab .popup-overlay.active').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#accountPopups .popup-overlay.active, #accountDrawer .popup-overlay.active').forEach(p => p.classList.remove('active'));
     document.body.classList.remove('sheet-open', 'popup-open');
+    closeAccountDrawer();
+    closeQuickAddRadial();
     const topLink = document.querySelector(`.top-nav-link[data-tab="${tabId}"]`);
     if (topLink) topLink.classList.add('active');
     const navMap = {
         'current-month-tab': 'navMese',
         'history-tab': 'navAnalisi',
         'investimenti-tab': 'navInvestimenti',
-        'future-tab': 'navPrevisioni',
-        'settings-tab': 'navImpostazioni'
+        'future-tab': 'navPrevisioni'
     };
     const navItem = document.getElementById(navMap[tabId]);
     if (navItem) navItem.classList.add('active');
@@ -1113,6 +1119,42 @@ if (overlay && sheet && title) {
         // Reset toggle to 'actual' (Sostenuta)
         toggleOptions.forEach(opt => opt.classList.toggle('active', opt.dataset.type === 'actual'));
     }
+}
+
+function openExpenseFormForCategory(categoryName) {
+    if (!categoryName || isDesktop()) return;
+    closeQuickAddRadial();
+    const macro = getCategoryMacroGroup(categoryName);
+    sheetCurrentMacroGroup = macro;
+    sheetSelectedCategory = categoryName;
+    sheetTransactionType = 'actual';
+    editingExpenseId = null;
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('bottomSheet');
+    const title = document.getElementById('selected-category-title');
+    if (!overlay || !sheet || !title) return;
+    applyMacroSheetTheme(sheet, macro);
+    document.body.classList.add('sheet-open');
+    document.body.style.overflow = 'hidden';
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+    title.textContent = categoryName;
+    title.style.color = '';
+    setSheetCategoryIcon(categoryName);
+    const backBtn = document.getElementById('btn-back-to-categories');
+    if (backBtn) backBtn.style.display = 'flex';
+    const subheader = document.getElementById('macroSheetSubheader');
+    if (subheader) subheader.style.display = 'none';
+    const slider = document.querySelector('#bottomSheet .sheet-slider');
+    if (slider) slider.style.transform = 'translateX(-100%)';
+    const amountInput = document.getElementById('amountInput');
+    if (amountInput) amountInput.value = '';
+    const sheetDate = document.getElementById('sheetDate');
+    if (sheetDate) sheetDate.value = new Date().toISOString().slice(0, 10);
+    document.querySelectorAll('#bottomSheet .toggle-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === 'actual');
+    });
+    renderMicroCategoriesGrid(macro);
 }
 
 function closeTransactionSheet() {
@@ -4810,7 +4852,7 @@ function openSettingsPopup(name) {
 }
 function closeSettingsPopup(event) {
     if (event && event.target !== event.currentTarget) return;
-    document.querySelectorAll('#settings-tab .popup-overlay.active').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#accountPopups .popup-overlay.active').forEach(p => p.classList.remove('active'));
     document.body.classList.remove('popup-open');
 }
 
@@ -7594,9 +7636,274 @@ function checkPushNotifications() {
 }
 
 // =====================================================================
-// OPEN PROFILE PLACEHOLDER
-function openProfilePlaceholder() {
-    showToast('Profilo: in arrivo', false);
+// ACCOUNT DRAWER + QUICK-ADD RADIAL
+// =====================================================================
+const QUICK_ADD_MACROS = ['casa', 'cibo', 'veicoli', 'svago_altro'];
+const QUICK_ADD_HOLD_MS = 180;
+const QUICK_ADD_DWELL_MS = 160;
+
+function syncAccountHeader() {
+    const nameEl = document.getElementById('headerUserName');
+    const initialsEl = document.getElementById('headerAvatarInitials');
+    const deskInit = document.getElementById('desktopAvatarInitials');
+    const email = (window.supabaseUser && window.supabaseUser.email) || '';
+    let name = (nameEl && nameEl.textContent.trim()) || 'Utente';
+    if (email && name === 'Utente') {
+        const local = email.split('@')[0] || 'Utente';
+        name = local.charAt(0).toUpperCase() + local.slice(1);
+        if (nameEl) nameEl.textContent = name;
+    }
+    const initials = (name || 'U').slice(0, 1).toUpperCase();
+    if (initialsEl) initialsEl.textContent = initials;
+    if (deskInit) deskInit.textContent = initials;
+    const drawerName = document.getElementById('drawerUserName');
+    const drawerEmail = document.getElementById('drawerUserEmail');
+    const drawerInit = document.getElementById('drawerAvatarInitials');
+    if (drawerName) drawerName.textContent = name;
+    if (drawerEmail) drawerEmail.textContent = email;
+    if (drawerInit) drawerInit.textContent = initials;
+}
+
+function openAccountDrawer() {
+    closeQuickAddRadial();
+    syncAccountHeader();
+    const overlay = document.getElementById('accountDrawerOverlay');
+    const drawer = document.getElementById('accountDrawer');
+    if (overlay) {
+        overlay.hidden = false;
+        overlay.classList.add('open');
+    }
+    if (drawer) drawer.classList.add('open');
+    document.body.classList.add('drawer-open');
+}
+
+function closeAccountDrawer() {
+    const overlay = document.getElementById('accountDrawerOverlay');
+    const drawer = document.getElementById('accountDrawer');
+    if (overlay) {
+        overlay.classList.remove('open');
+        overlay.hidden = true;
+    }
+    if (drawer) drawer.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+    document.querySelectorAll('#accountPopups .popup-overlay.active').forEach(p => p.classList.remove('active'));
+    document.body.classList.remove('popup-open');
+}
+
+function closeQuickAddRadial() {
+    const radial = document.getElementById('quickAddRadial');
+    if (radial) {
+        radial.classList.remove('open');
+        radial.hidden = true;
+    }
+    document.body.classList.remove('radial-open');
+    const arc = document.getElementById('quickAddArc');
+    if (arc) arc.innerHTML = '';
+    quickAdd.state.open = false;
+    quickAdd.state.level = 'macros';
+    quickAdd.state.macro = null;
+    quickAdd.state.hot = -1;
+}
+
+const quickAdd = {
+    state: { open: false, level: 'macros', macro: null, hot: -1, items: [] },
+    origin: { x: 0, y: 0 },
+    holdTimer: null,
+    dwellTimer: null,
+    dwellKey: '',
+    dragging: false
+};
+
+function quickAddAngle(x, y) {
+    return Math.atan2(quickAdd.origin.y - y, x - quickAdd.origin.x) * 180 / Math.PI;
+}
+
+function quickAddHitIndex(x, y, n) {
+    const dist = Math.hypot(x - quickAdd.origin.x, y - quickAdd.origin.y);
+    if (dist < 52 || n < 1) return -1;
+    const ang = quickAddAngle(x, y);
+    if (ang < -8 || ang > 188) return -1;
+    const clamped = Math.min(180, Math.max(0, ang));
+    const t = (180 - clamped) / 180;
+    return Math.min(n - 1, Math.max(0, Math.floor(t * n)));
+}
+
+function quickAddMacroItems() {
+    return QUICK_ADD_MACROS.map(id => {
+        const meta = MACRO_CARD_META[id] || { title: id, icon: 'fas fa-tag' };
+        return { id, label: meta.title, icon: meta.icon, accent: getMacroAccent(id), kind: 'macro' };
+    });
+}
+
+function quickAddMicroItems(macro) {
+    const cats = (userMacroCategories && userMacroCategories[macro]) || [];
+    const accent = getMacroAccent(macro);
+    return cats.map(name => ({
+        id: name,
+        label: name,
+        icon: 'fas ' + getFaIcon(name),
+        accent,
+        kind: 'micro'
+    }));
+}
+
+function renderQuickAddItems(items) {
+    const arc = document.getElementById('quickAddArc');
+    const hint = document.getElementById('quickAddHint');
+    if (!arc) return;
+    quickAdd.state.items = items;
+    const n = items.length || 1;
+    const radius = n > 6 ? 158 : n > 4 ? 142 : 128;
+    arc.innerHTML = items.map((item, i) => {
+        const deg = 180 - ((i + 0.5) * (180 / n));
+        const rad = deg * Math.PI / 180;
+        const x = quickAdd.origin.x + Math.cos(rad) * radius;
+        const y = quickAdd.origin.y - Math.sin(rad) * radius;
+        const delay = Math.min(i * 28, 160);
+        return `<button type="button" class="quick-add-wedge" data-idx="${i}" style="left:${x}px;top:${y}px;--wedge-accent:${item.accent};transition-delay:${delay}ms">
+            <i class="${item.icon}" aria-hidden="true"></i>
+            <span>${item.label}</span>
+        </button>`;
+    }).join('');
+    if (hint) hint.textContent = quickAdd.state.level === 'macros' ? 'Scegli una macro' : 'Scegli la categoria';
+    highlightQuickAdd(-1);
+}
+
+function highlightQuickAdd(idx) {
+    quickAdd.state.hot = idx;
+    document.querySelectorAll('#quickAddArc .quick-add-wedge').forEach((el, i) => {
+        el.classList.toggle('is-hot', i === idx);
+    });
+    const hint = document.getElementById('quickAddHint');
+    const item = idx >= 0 ? quickAdd.state.items[idx] : null;
+    if (hint) hint.textContent = item ? item.label : (quickAdd.state.level === 'macros' ? 'Scegli una macro' : 'Scegli la categoria');
+}
+
+function openQuickAddRadial(level, macro) {
+    if (isDesktop()) return;
+    const radial = document.getElementById('quickAddRadial');
+    const fab = document.getElementById('navQuickAdd');
+    if (!radial || !fab) return;
+    const r = fab.getBoundingClientRect();
+    quickAdd.origin.x = r.left + r.width / 2;
+    quickAdd.origin.y = r.top + r.height / 2;
+    quickAdd.state.open = true;
+    quickAdd.state.level = level;
+    quickAdd.state.macro = macro || null;
+    radial.hidden = false;
+    radial.classList.add('open');
+    document.body.classList.add('radial-open');
+    const items = level === 'micros' ? quickAddMicroItems(macro) : quickAddMacroItems();
+    renderQuickAddItems(items);
+}
+
+function confirmQuickAddHot() {
+    const item = quickAdd.state.items[quickAdd.state.hot];
+    if (!item) {
+        closeQuickAddRadial();
+        return;
+    }
+    if (item.kind === 'macro') {
+        openQuickAddRadial('micros', item.id);
+        return;
+    }
+    openExpenseFormForCategory(item.id);
+}
+
+function setupQuickAddRadial() {
+    const fab = document.getElementById('navQuickAdd');
+    const arc = document.getElementById('quickAddArc');
+    if (!fab) return;
+
+    const clearHold = () => {
+        if (quickAdd.holdTimer) { clearTimeout(quickAdd.holdTimer); quickAdd.holdTimer = null; }
+        if (quickAdd.dwellTimer) { clearTimeout(quickAdd.dwellTimer); quickAdd.dwellTimer = null; }
+        quickAdd.dwellKey = '';
+    };
+
+    const track = (x, y) => {
+        if (!quickAdd.state.open) return;
+        const idx = quickAddHitIndex(x, y, quickAdd.state.items.length);
+        highlightQuickAdd(idx);
+        if (quickAdd.state.level === 'macros' && idx >= 0 && quickAdd.dragging) {
+            const key = 'm' + idx;
+            if (quickAdd.dwellKey !== key) {
+                quickAdd.dwellKey = key;
+                if (quickAdd.dwellTimer) clearTimeout(quickAdd.dwellTimer);
+                quickAdd.dwellTimer = setTimeout(() => {
+                    const item = quickAdd.state.items[idx];
+                    if (item && item.kind === 'macro') openQuickAddRadial('micros', item.id);
+                }, QUICK_ADD_DWELL_MS);
+            }
+        }
+    };
+
+    fab.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        if (isDesktop()) return;
+        e.preventDefault();
+        quickAdd.dragging = false;
+        clearHold();
+        const r = fab.getBoundingClientRect();
+        quickAdd.origin.x = r.left + r.width / 2;
+        quickAdd.origin.y = r.top + r.height / 2;
+        try { fab.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        quickAdd.holdTimer = setTimeout(() => {
+            if (!quickAdd.state.open) openQuickAddRadial('macros');
+        }, QUICK_ADD_HOLD_MS);
+    });
+
+    fab.addEventListener('pointermove', (e) => {
+        if (!fab.hasPointerCapture || !fab.hasPointerCapture(e.pointerId)) {
+            if (e.buttons === 0) return;
+        }
+        const slop = Math.hypot(e.clientX - quickAdd.origin.x, e.clientY - quickAdd.origin.y);
+        if (!quickAdd.state.open && slop > 14) {
+            quickAdd.dragging = true;
+            clearHold();
+            const r = fab.getBoundingClientRect();
+            quickAdd.origin.x = r.left + r.width / 2;
+            quickAdd.origin.y = r.top + r.height / 2;
+            openQuickAddRadial('macros');
+        }
+        if (quickAdd.state.open) {
+            if (slop > 10) quickAdd.dragging = true;
+            track(e.clientX, e.clientY);
+        }
+    });
+
+    const endPointer = (e) => {
+        const wasOpen = quickAdd.state.open;
+        const dragging = quickAdd.dragging;
+        clearHold();
+        try { if (fab.hasPointerCapture(e.pointerId)) fab.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        if (!wasOpen) {
+            openQuickAddRadial('macros');
+            return;
+        }
+        if (quickAdd.state.hot >= 0) {
+            confirmQuickAddHot();
+            return;
+        }
+        if (dragging) closeQuickAddRadial();
+    };
+
+    fab.addEventListener('pointerup', endPointer);
+    fab.addEventListener('pointercancel', () => {
+        clearHold();
+        if (quickAdd.dragging) closeQuickAddRadial();
+    });
+    fab.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    if (arc) {
+        arc.addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-add-wedge');
+            if (!btn) return;
+            const idx = Number(btn.dataset.idx);
+            highlightQuickAdd(idx);
+            confirmQuickAddHot();
+        });
+    }
 }
 
 // Ensure Google API callbacks are globally available (defense in depth)

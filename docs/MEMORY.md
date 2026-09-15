@@ -35,26 +35,27 @@
 
 ## MENU WIRING (2026-09-15)
 - **Tab interni = `data-act`, mai IIFE `wireTabs`**: form desktop (`data-formtab` + `data-act="switchFormTab"`) e modal IA (`data-iatab` + `data-act="switchIaNotesTab"`). `wireTabs` usava la stessa chiave per dataset E prefisso id pane (`formPane`/`iaPane`) ma l'HTML ha `data-formtab`/`data-iatab` → `undefined.charAt` al click. NON reintrodurre.
-- **Nav principale**: top-nav + bottom-nav → `data-act="switchTab"` + `data-args='["<tab-id>"]'`. `TAB_TITLES` deve coincidere con le label (Mese/Analisi/Investimenti/Previsioni/Impostazioni).
+- **Nav principale**: top-nav + bottom-nav → `data-act="switchTab"` + `data-args='["<tab-id>"]'`. `TAB_TITLES` = Mese/Analisi/Investimenti/Previsioni. Impostazioni NON è un tab: avatar (`openAccountDrawer`) apre `#accountDrawer`. Bottom nav: `Mese | Analisi | #navQuickAdd (+) | Investimenti | Previsioni`. Il `+` non è un tab.
 - **Altri menu già delegati**: settings tiles → `openSettingsPopup`; condivise Amici/Gruppi → `switchCondiviseTab`; hub mese `#mese-action-hub [data-action]`; hub previsioni `#futureActionHub [data-action]`.
 - **HTML**: `.container` si chiude PRIMA di `</main>`; overlay/sheet restano fratelli di `<main>` dentro `#mainAppWrapper`.
 - **Tab Analisi/Investimenti/Previsioni/Impostazioni MAI orfani**: `#current-month-tab` NON si chiude dopo il blocco mobile Mese. I quattro tab (`#history-tab` ~583, `#future-tab` ~749, `#investimenti-tab` ~834, `#settings-tab` ~921) devono restare dentro `#mainAppWrapper` > `#appMain` > `.container`. Se escono dal wrapper, `overflow:hidden` su body/container li taglia → schermata bianca. NON è contenuto cancellato: è solo l'albero HTML.
 - **`anomalyTimer`**: dichiarato accanto a `searchQuery` (`let anomalyTimer = null`). `stopAnomalyCarousel()` lo legge; senza dichiarazione `switchTab` verso Investimenti/Previsioni/Impostazioni lancia ReferenceError. `stopAnomalyCarousel` è difensivo (`typeof` + try/catch in `switchTab`).
-- **PWA cache**: `CACHE_NAME = bilancio-pwa-v10`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.1`, `style.css?v=2.3`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
+- **PWA cache**: `CACHE_NAME = bilancio-pwa-v11`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.2`, `style.css?v=2.5`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
 
 ## CATEGORIE (2026-09-15)
 - **Fonte di verità**: `userMacroCategories` con SOLO le 4 chiavi `casa` / `cibo` / `veicoli` / `svago_altro`. Alias legacy `casa_utenze` → `casa`, `spese_svago`/`svago` → `svago_altro` via `foldLegacyMacroKeys()` in `loadCategories`.
 - **`getCategoryMacroGroup`**: prima cerca in `userMacroCategories`, poi `CATEGORIES_MAP`. Mai usare solo la mappa statica (manca Bolletta Condominio e ignora le custom).
 - **Mese card**: NESSUN elenco di microcategorie sotto Casa/Cibo/Veicoli/Svago (decisione 2026-09-15). `.card-micro-list` nascosta.
 - **Grafico mese** (`renderMacroBudgetChart`): titolo "Progresso spesa mese corrente". 3 barre Entrate `#22c55e` / Spese Previste `#eab308` / Spese Sostenute `#ef4444` (importi euro, stessi del hero). Linee KPI `.line-entrate/.line-previste/.line-sostenute` = stessi colori. Non ripristinare il grafico per-macro Budget vs Sostenuto.
-- **Settings**: `openSettingsPopup('categorie')` richiama `renderCategorySettings`; tap nome → `editCategory`; delete filtra tutti i 4 gruppi.
+- **Settings**: tile nel cassetto `#accountDrawer` (avatar header). Popup in `#accountPopups` (fuori dal transform del drawer). `openSettingsPopup` / `closeSettingsPopup` cercano `#accountPopups .popup-overlay`. Non reintrodurre tab Impostazioni in nav.
+- **Plus radiale**: tap o hold+drag su `#navQuickAdd` apre arco 180° verso l’alto (macro → micro). Conferma → `openExpenseFormForCategory` (sheet già su `viewInput`, senza `openBottomSheetFromMacro`). Solo mobile.
 - **Bottomsheet form (2026-09-15)**: sezioni Data/Nota + Documenti (scontrino/galleria) + Altre opzioni (ricorrente mensile + dividi). Header icona categoria via `setSheetCategoryIcon`. Toggle Sostenuta/Prevista filled. Ricorrenza resta solo mensile (`saveRecurringClones`). IDs invariati. Non toccare income/future.
 
 ## CONTENUTO TAB (non cancellare, 2026-09-15)
 - **Analisi (`#history-tab`)**: periodo 3m/6m/year/custom, card insight IA, KPI swipe (media uscite / top crescita / scostamento budget), carosello anomalie, card risparmi, su desktop anche IA storica + registro mesi.
 - **Investimenti (`#investimenti-tab`)**: hero Patrimonio/Cashflow/ROI, `+ Nuovo Asset / Salvadanaio`, griglia asset; desktop lista + sheet dettaglio/movimenti.
 - **Previsioni (`#future-tab`)**: grafico proiezioni, simulatore what-if (slider + crescita % + reset), traguardi, hub Simula/Scadenze/IA Futura.
-- **Impostazioni (`#settings-tab`)**: tile Categorie, App & Notifiche, Backup, Cloud Drive, Ripetizioni, Zona Pericolo (+ popup Spese Condivise).
+- **Impostazioni (drawer, non tab)**: tile Categorie, App & Notifiche, Backup, Cloud Drive, Ripetizioni, Zona Pericolo. Popup in `#accountPopups`. Spese Condivise resta popup a parte.
 
 ## INLINE ACTIONS DELEGATION (2026-08-19)
 - **Zero `onclick=` inline** in index.html (113) e script.js (15): convertiti in `data-act`/`data-act-close`/`data-act-stop` + `data-args='<json>'`/`data-el`/`data-var`, gestiti dal delegated listener di `setupInlineActions()` (chiamata nel DOMContentLoaded iniziale). `data-act-close` invoca la fn SENZA event (le `close*` guardano `event && event.target !== currentTarget`); `data-act-stop` = no-op (pannelli popup). Speciali: `data-ai-refresh="1"` (stopPropagation + `generateInsightCard(true)`) e `data-import-trigger="1"` (`#importFileInput.click()`) con binding diretti (lo stopPropagation DEVE girare prima del listener delegato). Solo handler NON-click restano inline (12: oninput/onchange/onkeyup/onkeydown/onfocus/onblur — i 4 `onkeydown` di pill/summary/card rimossi il 2026-08-19). Tutte le 58 azioni risolvono a funzioni globali (2 in supabase-adapter.js: `window.handleLogin`/`handleSignup`).
