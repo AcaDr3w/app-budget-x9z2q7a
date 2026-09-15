@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Form spesa a sezioni (dati, documenti, opzioni)
+
+### Completed Changes
+- **struttura**: header icona+titolo; importo unico; toggle Sostenuta/Prevista filled; card Data/Nota; griglia Scatta scontrino / Galleria; card Altre opzioni (ricorrente + chip "Ogni mese" + fine ricorrenza + dividi). Footer Annulla / Salva con check, fissi in basso (slider overflow visible, view stretch + min-height 0).
+- **funzionale**: IDs e save/receipt/split invariati. Niente settimanale/annuale (il clone è solo mensile).
+- **cache**: `style.css?v=2.3`, `script.js?v=2.1`, SW `bilancio-pwa-v10`.
+
+### Status: COMPLETATO. Verifica 390×844 Bollo: sezioni visibili, footer Annulla/Salva in viewport.
+
 ## [2026-09-15] - Form spesa mobile allineato al riferimento pill
 
 ### Completed Changes

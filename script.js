@@ -406,6 +406,17 @@ function getMacroSheetTitle(macroGroup) {
     return (meta && meta.title) || 'Categoria';
 }
 
+function setSheetCategoryIcon(catName) {
+    const icon = document.getElementById('sheetCategoryIcon');
+    if (!icon) return;
+    if (!catName) {
+        icon.hidden = true;
+        return;
+    }
+    icon.className = 'sheet-cat-icon fas ' + getFaIcon(catName);
+    icon.hidden = false;
+}
+
 function applyMacroSheetTheme(sheet, macroGroup) {
     if (!sheet) return;
     const theme = getMacroTheme(macroGroup);
@@ -1078,6 +1089,7 @@ function openTransactionSheet(categoryName, prefillAmount, prefillNote) {
     
 if (overlay && sheet && title) {
         title.textContent = categoryName;
+        setSheetCategoryIcon(categoryName);
         applyMacroSheetTheme(sheet, getCategoryMacroGroup(categoryName));
         document.body.classList.add('sheet-open');
         document.body.style.overflow = 'hidden';
@@ -3027,6 +3039,7 @@ async function openBottomSheetFromMacro(macroGroup) {
     // Hide back button
     const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) backBtn.style.display = 'none';
+    setSheetCategoryIcon(null);
     
     // Set title based on macro group
     const sheetTitle = document.getElementById('selected-category-title');
@@ -3191,6 +3204,7 @@ function slideToInputView(categoryName) {
     const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle) sheetTitle.textContent = categoryName;
     if (sheetTitle) sheetTitle.style.color = '';
+    setSheetCategoryIcon(categoryName);
     
     // Reset inputs
     const amountInput = document.getElementById('amountInput');
@@ -3213,6 +3227,7 @@ function slideBackToCategories() {
     // Hide back button
     const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) backBtn.style.display = 'none';
+    setSheetCategoryIcon(null);
     
     // Update title back to macro
     const sheetTitle = document.getElementById('selected-category-title');

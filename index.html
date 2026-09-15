@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=1.9">
+    <link rel="stylesheet" href="style.css?v=2.3">
 </head>
 <body>
 
@@ -1163,6 +1163,7 @@
             <button type="button" class="btn-back-sheet" id="btn-back-to-categories" style="display:none;">
                 <i class="fas fa-arrow-left" aria-hidden="true"></i>
             </button>
+            <i id="sheetCategoryIcon" class="sheet-cat-icon fas fa-tag" hidden aria-hidden="true"></i>
             <h3 class="sheet-title" id="selected-category-title">Categoria</h3>
         </div>
         <div id="macroSheetSubheader" class="macro-sheet-subheader" style="display:none;"></div>
@@ -1179,19 +1180,31 @@
                     </div>
                     
                     <div class="sheet-type-toggle" role="tablist" aria-label="Tipo spesa">
-                        <label class="toggle-option active" data-type="actual">Spesa Sostenuta</label>
-                        <label class="toggle-option" data-type="planned">Spesa Prevista</label>
+                        <label class="toggle-option active" data-type="actual"><i class="fas fa-check" aria-hidden="true"></i> Sostenuta</label>
+                        <label class="toggle-option" data-type="planned"><i class="far fa-clock" aria-hidden="true"></i> Prevista</label>
                     </div>
                     
-                    <div class="sheet-inputs">
-                        <input type="date" id="sheetDate" class="sheet-input" aria-label="Data spesa">
-                        <input type="text" id="sheetNote" class="sheet-input" placeholder="Aggiungi una nota..." aria-label="Nota spesa">
-                        <div class="sheet-note-actions">
-                            <button type="button" class="note-action-btn" id="btnNoteCamera" title="Scatta una foto" aria-label="Scatta una foto">
+                    <div class="sheet-inputs sheet-card">
+                        <label class="sheet-field">
+                            <span class="sheet-field-label">Data di pagamento</span>
+                            <input type="date" id="sheetDate" class="sheet-input" aria-label="Data di pagamento">
+                        </label>
+                        <label class="sheet-field">
+                            <span class="sheet-field-label">Nota</span>
+                            <input type="text" id="sheetNote" class="sheet-input" placeholder="es. Spesa Esselunga" aria-label="Nota spesa">
+                        </label>
+                    </div>
+
+                    <div class="sheet-section">
+                        <p class="sheet-section-label">Documenti</p>
+                        <div class="sheet-attach-grid sheet-note-actions">
+                            <button type="button" class="note-action-btn sheet-attach-btn" id="btnNoteCamera" title="Scatta una foto" aria-label="Scatta foto scontrino">
                                 <i class="fas fa-camera" aria-hidden="true"></i>
+                                <span>Scatta scontrino</span>
                             </button>
-                            <button type="button" class="note-action-btn" id="btnNoteAttach" title="Allega un file" aria-label="Allega un file">
+                            <button type="button" class="note-action-btn sheet-attach-btn" id="btnNoteAttach" title="Scegli dalla galleria" aria-label="Carica foto scontrino">
                                 <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                <span>Galleria</span>
                             </button>
                         </div>
                         <input type="file" id="receiptCamInput" accept="image/*" capture="environment" style="display:none;" aria-hidden="true" tabindex="-1">
@@ -1205,17 +1218,21 @@
                         </div>
                     </div>
 
-                    <div class="sheet-switch-stack">
+                    <div class="sheet-section">
+                        <p class="sheet-section-label">Altre opzioni</p>
+                        <div class="sheet-card sheet-switch-stack">
                     <label class="recurring-toggle-wrapper sheet-switch-row">
                         <span class="toggle-switch">
-                            <input type="checkbox" id="recurringToggle" aria-label="Ripeti ogni mese">
+                            <input type="checkbox" id="recurringToggle" aria-label="Spesa ricorrente ogni mese">
                             <span class="toggle-slider"></span>
                         </span>
-                        <span class="toggle-label">Ripeti ogni mese</span>
+                        <span class="toggle-label">Spesa ricorrente</span>
+                        <span class="sheet-freq-chip">Ogni mese</span>
                     </label>
                     <div class="recurring-until-container" id="recurringUntilContainer">
-                        <input type="month" id="recurringUntil" class="sheet-input recurring-until-input" aria-label="Ripeti fino a">
-                        <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
+                        <span class="sheet-field-label">Fine ricorrenza</span>
+                        <input type="month" id="recurringUntil" class="sheet-input recurring-until-input" aria-label="Fine ricorrenza">
+                        <span class="recurring-hint">Vuoto = ripeti ogni mese</span>
                     </div>
 
                     <label class="shared-toggle-wrapper sheet-switch-row">
@@ -1225,7 +1242,6 @@
                         </span>
                         <span class="toggle-label">Dividi spesa</span>
                     </label>
-                    </div>
                     <div class="shared-panel" id="sharedPanel">
                         <div class="shared-person-row">
                             <select id="sharedPersonSelect" class="sheet-input">
@@ -1234,18 +1250,20 @@
                             <button class="btn-plus-solid" id="btnNewPerson" title="Nuova persona">＋</button>
                         </div>
                         <div class="preset-grid" id="sharedPresets">
-                            <label class="preset-card active" data-preset="p1">🟢 Hai pagato tu, dividi equamente</label>
-                            <label class="preset-card" data-preset="p2">🔵 Per conto di <b class="preset-friend">…</b></label>
-                            <label class="preset-card" data-preset="p3">🟡 <b class="preset-friend">…</b> ha pagato, dividi equamente</label>
-                            <label class="preset-card" data-preset="p4">🔴 <b class="preset-friend">…</b> ha pagato per te</label>
+                            <label class="preset-card active" data-preset="p1">Hai pagato tu, dividi equamente</label>
+                            <label class="preset-card" data-preset="p2">Per conto di <b class="preset-friend">…</b></label>
+                            <label class="preset-card" data-preset="p3"><b class="preset-friend">…</b> ha pagato, dividi equamente</label>
+                            <label class="preset-card" data-preset="p4"><b class="preset-friend">…</b> ha pagato per te</label>
                         </div>
-                        <button type="button" class="btn-advanced" id="btnAdvancedSplit">⚙️ Personalizza quote (% / €)</button>
+                        <button type="button" class="btn-advanced" id="btnAdvancedSplit">Personalizza quote</button>
                         <div id="sharedDetailFields"></div>
+                    </div>
+                        </div>
                     </div>
                 </div>
                 <div class="sheet-footer">
                     <button id="closeSheetBtn" class="btn-secondary">Annulla</button>
-                    <button id="saveTransactionBtn" class="btn-spesa">Salva</button>
+                    <button id="saveTransactionBtn" class="btn-spesa"><i class="fas fa-check" aria-hidden="true"></i> Salva</button>
                 </div>
             </div>
         </div>
@@ -1260,6 +1278,6 @@
         <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
     </div>
     <script src="js/supabase-adapter.js"></script>
-    <script src="script.js?v=2.0"></script>
+    <script src="script.js?v=2.1"></script>
 </body>
 </html>

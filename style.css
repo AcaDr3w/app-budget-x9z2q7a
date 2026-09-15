@@ -2739,17 +2739,17 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     flex-direction: column;
     gap: 12px;
     flex: 1 1 auto;
-    min-height: 100px;
+    min-height: 0;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
     padding: 16px;
-    padding-bottom: 16px !important;
 }
 .bottom-sheet .sheet-slider {
     flex: 1;
     min-height: 0;
     overflow: visible;
+    align-items: stretch;
 }
 
 .bottom-sheet .sheet-slider .sheet-view {
@@ -2758,6 +2758,9 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     flex: 0 0 100%;
     min-width: 100%;
     min-height: 0;
+    max-height: none;
+    height: auto;
+    align-self: stretch;
 }
 #viewCategories {
     overflow-y: auto;
@@ -3040,65 +3043,116 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
 #bottomSheet .btn-back-sheet:active {
     background: var(--macro-tint, var(--border-soft));
 }
+#bottomSheet .sheet-cat-icon {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    color: var(--macro-accent, var(--ink));
+    width: 1.15em;
+    text-align: center;
+}
+#bottomSheet .sheet-title {
+    flex: 1;
+    min-width: 0;
+}
 #bottomSheet #viewInput.sheet-form {
     min-height: 0;
-    height: 100%;
+    height: auto;
+    max-height: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 #bottomSheet #viewInput.sheet-form > .sheet-body {
-    gap: 16px;
-    padding: 8px 4px 12px;
+    gap: 12px;
+    padding: 2px 2px 8px;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 #bottomSheet .sheet-amount-display {
-    padding: 12px 8px 4px;
-    gap: 8px;
+    padding: 6px 4px 2px;
+    gap: 6px;
 }
 #bottomSheet .amount-input {
-    font-size: 44px;
-    font-weight: 400;
-    width: min(100%, 200px);
+    font-size: 42px;
+    font-weight: 600;
+    width: min(100%, 220px);
     color: var(--ink);
-    border-bottom: 2px solid var(--macro-accent, var(--border-soft));
+    border: none;
+    border-bottom: none;
     caret-color: var(--macro-accent, var(--accent));
 }
 #bottomSheet .amount-input::placeholder {
     color: #c5cdd6;
-    font-weight: 400;
+    font-weight: 500;
 }
 #bottomSheet .amount-input:focus {
-    border-color: var(--macro-accent, var(--primary));
+    border-color: transparent;
 }
 #bottomSheet .currency-symbol {
     color: var(--macro-accent, var(--accent));
-    font-size: 28px;
-    font-weight: 500;
+    font-size: 26px;
+    font-weight: 600;
     margin-left: 0;
 }
 #bottomSheet .sheet-type-toggle {
-    background: var(--macro-tint, var(--border-faint));
+    background: rgba(255, 255, 255, 0.7);
     border-radius: 999px;
-    padding: 4px;
+    padding: 3px;
     gap: 0;
 }
 #bottomSheet .toggle-option {
-    min-height: 44px;
+    min-height: 42px;
     border-radius: 999px;
     font-size: 13px;
     font-weight: 600;
+    gap: 6px;
+    color: var(--muted);
     transition: color 0.15s ease, background-color 0.15s ease;
 }
+#bottomSheet .toggle-option i {
+    font-size: 12px;
+}
 #bottomSheet .toggle-option.active {
+    color: #fff;
+    background: var(--macro-accent, var(--accent));
+    box-shadow: none;
+}
+#bottomSheet .toggle-option[data-type="planned"].active {
+    color: #1F2937;
+    background: #eab308;
+}
+#bottomSheet .sheet-card {
     background: #fff;
-    box-shadow: var(--shadow-card);
+    border-radius: 16px;
+    padding: 12px 14px;
+}
+#bottomSheet .sheet-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#bottomSheet .sheet-section-label,
+#bottomSheet .sheet-field-label {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+}
+#bottomSheet .sheet-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 #bottomSheet .sheet-inputs {
-    gap: 10px;
+    gap: 12px;
 }
 #bottomSheet .sheet-input {
-    min-height: 48px;
-    padding: 12px 18px;
+    min-height: 44px;
+    padding: 10px 12px;
     border: none;
-    background: #fff;
-    border-radius: 999px;
+    background: var(--macro-wash, #f4f6f8);
+    border-radius: 12px;
     font-size: 15px;
     color: var(--ink);
     box-shadow: none;
@@ -3112,59 +3166,97 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     appearance: none;
     -webkit-appearance: none;
 }
-#bottomSheet .sheet-note-actions {
-    gap: 10px;
-    margin-top: 2px;
-    padding-left: 2px;
+#bottomSheet .sheet-attach-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
 }
-#bottomSheet .note-action-btn {
-    width: 44px;
-    height: 44px;
+#bottomSheet .note-action-btn.sheet-attach-btn {
+    width: auto;
+    height: auto;
+    min-height: 48px;
+    padding: 10px 12px;
     border: none;
-    border-radius: 50%;
+    border-radius: 14px;
     background: #fff;
-    color: var(--macro-accent, var(--muted-mid));
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
 }
-#bottomSheet .note-action-btn:active {
+#bottomSheet .note-action-btn.sheet-attach-btn i {
+    flex-shrink: 0;
+    color: var(--macro-accent, var(--muted-mid));
+    font-size: 15px;
+}
+#bottomSheet .note-action-btn.sheet-attach-btn:active {
     background: var(--macro-tint, var(--border-soft));
 }
 #bottomSheet .sheet-switch-stack {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 4px 2px 0;
+    gap: 4px;
+    padding: 2px 0 0;
 }
 #bottomSheet .sheet-switch-row {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     min-height: 48px;
     margin: 0;
-    padding: 0;
+    padding: 4px 0;
     cursor: pointer;
 }
 #bottomSheet .recurring-toggle-wrapper,
 #bottomSheet .shared-toggle-wrapper {
     margin-top: 0;
-    padding: 0;
+    padding: 4px 0;
 }
 #bottomSheet .toggle-label {
+    flex: 1;
+    min-width: 0;
     font-size: 15px;
     font-weight: 500;
     color: var(--ink);
 }
+#bottomSheet .sheet-freq-chip {
+    display: none;
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--macro-tint, #eef3fa);
+    color: var(--macro-accent, var(--ink));
+    font-size: 11px;
+    font-weight: 700;
+}
+#bottomSheet .sheet-switch-row:has(#recurringToggle:checked) .sheet-freq-chip {
+    display: inline-flex;
+}
 #bottomSheet .sheet-footer {
-    gap: 12px;
-    padding: 8px 4px calc(10px + env(safe-area-inset-bottom));
+    flex-shrink: 0;
+    gap: 10px;
+    margin-top: 0;
+    padding: 10px 2px calc(12px + env(safe-area-inset-bottom));
     background: var(--macro-wash, var(--panel));
+    box-shadow: 0 -1px 0 var(--macro-border, rgba(15, 23, 42, 0.06));
 }
 #bottomSheet .sheet-footer .btn-spesa,
 #bottomSheet .sheet-footer .btn-secondary {
-    min-height: 50px;
+    min-height: 48px;
     border-radius: 999px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 #bottomSheet .sheet-footer .btn-spesa {
     background: var(--macro-accent, var(--accent));
@@ -3183,6 +3275,10 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     border: none;
     background: #fff;
     border-radius: 16px;
+    margin-top: 8px;
+}
+#bottomSheet .shared-panel {
+    padding-top: 4px;
 }
 #bottomSheet ::selection {
     background: var(--macro-tint, #dbeafe);
