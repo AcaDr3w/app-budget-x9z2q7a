@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Grafico mese Entrate/Previste/Sostenute + linee KPI allineate
+
+### Completed Changes
+- **macro card**: rimossi i testi delle microcategorie sotto Casa/Cibo/Veicoli/Svago (e nascosta `.card-micro-list`).
+- **grafico**: titolo "Progresso spesa mese corrente"; 3 barre euro Entrate `#22c55e` / Spese Previste `#eab308` / Spese Sostenute `#ef4444` (stessi importi del hero).
+- **KPI mese**: linee sotto Entrate/Previste/Sostenute usano gli stessi 3 colori (niente più beige/blu).
+
+### Status: COMPLETATO in locale.
+
 ## [2026-09-15] - Categorie Impostazioni + tutte visibili nelle macro di Mese
 
 ### Completed Changes

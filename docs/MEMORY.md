@@ -45,7 +45,8 @@
 ## CATEGORIE (2026-09-15)
 - **Fonte di verità**: `userMacroCategories` con SOLO le 4 chiavi `casa` / `cibo` / `veicoli` / `svago_altro`. Alias legacy `casa_utenze` → `casa`, `spese_svago`/`svago` → `svago_altro` via `foldLegacyMacroKeys()` in `loadCategories`.
 - **`getCategoryMacroGroup`**: prima cerca in `userMacroCategories`, poi `CATEGORIES_MAP`. Mai usare solo la mappa statica (manca Bolletta Condominio e ignora le custom).
-- **Mese**: `#macroCats-<macro>` sotto ogni card Categorie Principali elenca TUTTE le microcategorie del gruppo (join ` · `). `renderMacroCards` non deve più fare `slice(0,6)` / `⋯`.
+- **Mese card**: NESSUN elenco di microcategorie sotto Casa/Cibo/Veicoli/Svago (decisione 2026-09-15). `.card-micro-list` nascosta.
+- **Grafico mese** (`renderMacroBudgetChart`): titolo "Progresso spesa mese corrente". 3 barre Entrate `#22c55e` / Spese Previste `#eab308` / Spese Sostenute `#ef4444` (importi euro, stessi del hero). Linee KPI `.line-entrate/.line-previste/.line-sostenute` = stessi colori. Non ripristinare il grafico per-macro Budget vs Sostenuto.
 - **Settings**: `openSettingsPopup('categorie')` richiama `renderCategorySettings`; tap nome → `editCategory`; delete filtra tutti i 4 gruppi.
 
 ## CONTENUTO TAB (non cancellare, 2026-09-15)

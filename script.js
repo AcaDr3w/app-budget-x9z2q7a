@@ -4863,10 +4863,7 @@ function renderMacroCards() {
             if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
         });
 
-        const namesEl = document.getElementById('macroCats-' + macro);
-        const namesText = cats.length ? cats.join(' · ') : 'Nessuna categoria';
-        if (namesEl) namesEl.textContent = namesText;
-        if (microList) microList.textContent = namesText;
+        if (microList) microList.textContent = '';
 
         // Aggiorna la barra di progresso e il badge %
         if (fill) {
@@ -4905,12 +4902,17 @@ function renderMacroCards() {
 // =====================================================================
 // RENDER MONTHLY BUDGET PROGRESS CHART (chart card single)
 // =====================================================================
+const MESE_CHART_COLORS = {
+    entrate: '#22c55e',
+    previste: '#eab308',
+    sostenute: '#ef4444'
+};
+
 async function renderMacroBudgetChart() {
     const canvas = document.getElementById('macroChartCanvas');
     const chartBox = document.getElementById('macroChartContainerBox');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    // Destroy existing chart if present
     if (window.macroChartInstance) { window.macroChartInstance.destroy(); window.macroChartInstance = null; }
     const month = document.getElementById('currentMonth').value;
     const pctEl = document.getElementById('macroChartTotalPct');
@@ -4921,34 +4923,29 @@ async function renderMacroBudgetChart() {
         return;
     }
 
-    // Aggrega speso/budget per le 4 macrocategorie (stessi dati delle card 2x2)
-    const MACRO_ORDER = ['casa', 'cibo', 'veicoli', 'svago_altro'];
-    const MACRO_LABELS = { casa: 'Casa', cibo: 'Cibo', veicoli: 'Veicoli', svago_altro: 'Svago e Altro' };
-    const plannedByMacro = {}, actualByMacro = {};
-    MACRO_ORDER.forEach(m => { plannedByMacro[m] = 0; actualByMacro[m] = 0; });
-    const catToMacro = new Map();
-    for (const [macro, cats] of Object.entries(userMacroCategories)) {
-        cats.forEach(c => catToMacro.set(c, macro));
-    }
-    let totalPlanned = 0, totalActual = 0;
-    currentData.expenses.forEach(e => {
-        const macro = catToMacro.get(e.category) || getCategoryMacroGroup(e.category);
-        if (plannedByMacro[macro] !== undefined) {
-            plannedByMacro[macro] += e.planned || 0;
-            actualByMacro[macro] += e.actual || 0;
-        }
-    });
-    MACRO_ORDER.forEach(m => { totalPlanned += plannedByMacro[m]; totalActual += actualByMacro[m]; });
-    const overallPct = totalPlanned > 0 ? Math.min(100, Math.round((totalActual / totalPlanned) * 100)) : 0;
-    if (pctEl) pctEl.textContent = overallPct + '%';
-    if (legendEl) legendEl.innerHTML =
-        '<span class="chart-legend-dot" style="background:#4db6a8;"></span><span class="chart-legend-label">Budget</span>' +
-        '<span class="chart-legend-dot" style="background:#f0a030;"></span><span class="chart-legend-label">Sostenuto</span>';
+    const totalEntrate = currentData.income.reduce((s, i) => s + (i.amount || 0), 0);
+    const forecasts = await getCategoryForecasts();
+    let totalPreviste = 0;
+    Object.values(forecasts || {}).forEach(v => { totalPreviste += v || 0; });
+    const totalSostenute = currentData.expenses.reduce((s, i) => s + (i.actual || 0), 0);
 
-    // Valori in %: Budget = 100 (baseline), Sostenuto = percentuale di budget
-    const labels = MACRO_ORDER.map(m => MACRO_LABELS[m]);
-    const budgetVals = MACRO_ORDER.map(m => plannedByMacro[m] > 0 ? 100 : 0);
-    const actualVals = MACRO_ORDER.map(m => plannedByMacro[m] > 0 ? Math.min(100, Math.round((actualByMacro[m] / plannedByMacro[m]) * 100)) : 0);
+    const labels = ['Entrate', 'Spese Previste', 'Spese Sostenute'];
+    const values = [totalEntrate, totalPreviste, totalSostenute];
+    const colors = [MESE_CHART_COLORS.entrate, MESE_CHART_COLORS.previste, MESE_CHART_COLORS.sostenute];
+    const peak = Math.max(0, ...values);
+    const maxVal = peak > 0 ? Math.max(peak * 1.15, 100) : 100;
+
+    if (pctEl) {
+        pctEl.textContent = totalPreviste > 0
+            ? Math.round((totalSostenute / totalPreviste) * 100) + '%'
+            : '';
+    }
+    if (legendEl) {
+        legendEl.innerHTML =
+            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.entrate};"></span><span class="chart-legend-label">Entrate</span>` +
+            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.previste};"></span><span class="chart-legend-label">Spese Previste</span>` +
+            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.sostenute};"></span><span class="chart-legend-label">Spese Sostenute</span>`;
+    }
 
     let chartRendered = false;
     try {
@@ -4957,24 +4954,13 @@ async function renderMacroBudgetChart() {
             type: 'bar',
             data: {
                 labels,
-                datasets: [
-                    {
-                        label: 'Budget',
-                        data: budgetVals,
-                        backgroundColor: '#4db6a8',
-                        borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 },
-                        borderSkipped: false,
-                        barThickness: 10
-                    },
-                    {
-                        label: 'Sostenuto',
-                        data: actualVals,
-                        backgroundColor: '#f0a030',
-                        borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 },
-                        borderSkipped: false,
-                        barThickness: 10
-                    }
-                ]
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                    borderSkipped: false,
+                    barThickness: 22
+                }]
             },
             options: {
                 responsive: true,
@@ -4985,7 +4971,21 @@ async function renderMacroBudgetChart() {
                 },
                 scales: {
                     x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxRotation: 0 } },
-                    y: { beginAtZero: true, suggestedMax: 100, grid: { color: 'rgba(238,238,238,0.7)' }, ticks: { stepSize: 50, font: { size: 10 }, color: '#9ca3af' } }
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: maxVal,
+                        grid: { color: 'rgba(238,238,238,0.7)' },
+                        ticks: {
+                            maxTicksLimit: 4,
+                            precision: 0,
+                            color: '#9ca3af',
+                            font: { size: 10 },
+                            callback: (v) => {
+                                const r = Math.round(v);
+                                return (r === 0 ? '0' : r.toLocaleString('it-IT')) + ' €';
+                            }
+                        }
+                    }
                 },
                 animation: { duration: 0 }
             }
@@ -5003,10 +5003,11 @@ async function renderMacroBudgetChart() {
     canvas.style.height = '120px';
     canvas.style.display = chartRendered ? '' : 'none';
     if (!chartRendered) {
+        const peak = Math.max(1, ...values);
         const fb = document.createElement('div');
         fb.className = 'chart-fallback-note';
         fb.innerHTML = labels.map((lbl, i) =>
-            `<div class="fb-row"><span class="fb-name">${lbl}</span><span class="fb-bar"><span class="fb-fill" style="width:${actualVals[i]}%;background:#f0a030;"></span></span><span class="fb-pct">${actualVals[i]}%</span></div>`
+            `<div class="fb-row"><span class="fb-name">${lbl}</span><span class="fb-bar"><span class="fb-fill" style="width:${Math.round(values[i] / peak * 100)}%;background:${colors[i]};"></span></span><span class="fb-pct">${fmtEPlain(values[i], 0)}</span></div>`
         ).join('');
         chartBox.appendChild(fb);
     }

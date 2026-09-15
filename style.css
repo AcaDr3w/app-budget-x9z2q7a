@@ -1587,7 +1587,7 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
 /* ===== CORREZIONE CARD MACROCATEGORIE BIANCHE ===== */
 .mobile-dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 8px; }
 .macro-card-white { background: #fff !important; border-radius: 16px; padding: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid var(--border-faint, #f1f5f9); display: flex; flex-direction: column; justify-content: space-between; min-height: auto; height: auto; }
-.macro-cat-names { display: block; margin-top: 6px; font-size: 10px; line-height: 1.35; color: #6B7280; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+.card-micro-list { display: none; }
 .macro-icon { font-size: 18px; }
 .macro-name { font-size: 11px; font-weight: 700; }
 .macro-pct { font-size: 9px; font-weight: 700; }
@@ -1694,9 +1694,12 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         justify-content: center;
     }
     .summary-col .col-line { height: 3px; border-radius: 2px; margin-top: 3px; width: 100%; display: block; }
-    .summary-col.col-entrate .col-line { background: #D9B98C; }
-    .summary-col.col-previste .col-line { background: #F0A030; }
-    .summary-col.col-sostenute .col-line { background: #4E8FD8; }
+    .summary-col.col-entrate .col-line,
+    .col-line.line-entrate { background: #22c55e; }
+    .summary-col.col-previste .col-line,
+    .col-line.line-previste { background: #eab308; }
+    .summary-col.col-sostenute .col-line,
+    .col-line.line-sostenute { background: #ef4444; }
     .col-label { font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; }
     .col-value { font-size: 16px; font-weight: 800; color: #1F2937; margin-top: 1px; }
 
@@ -1785,16 +1788,6 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     .fill-veicoli { background: #4E8FD8; }
     .fill-svago { background: #8B7CC8; }
     .macro-values { font-size: 10px; margin-top: 2px; color: #6B7280; }
-    .macro-cat-names {
-        display: block;
-        margin-top: 6px;
-        font-size: 10px;
-        line-height: 1.35;
-        color: #6B7280;
-        white-space: normal;
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
     .macro-card-white { min-height: auto; height: auto; }
     .macro-card-white.card-casa .macro-icon { color: #4DB6A8; }
     .macro-card-white.card-cibo .macro-icon { color: #F0A030; }

@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=1.6">
+    <link rel="stylesheet" href="style.css?v=1.7">
 </head>
 <body>
 
@@ -122,31 +122,31 @@
         <div class="summary-card-bottom">
             <div class="summary-col col-entrate clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["entrate"]'>
                 <span class="col-label">ENTRATE TOTALI</span>
-                <div class="col-line line-green"></div>
+                <div class="col-line line-entrate"></div>
                 <span class="col-value" id="heroEntrateTotal">0 €</span>
             </div>
             <div class="summary-col col-previste clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["previsto"]'>
                 <span class="col-label">SPESE PREVISTE</span>
-                <div class="col-line line-amber"></div>
+                <div class="col-line line-previste"></div>
                 <span class="col-value" id="heroSpesePreviste">0 €</span>
             </div>
             <div class="summary-col col-sostenute clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["sostenuto"]'>
                 <span class="col-label">SPESE SOSTENUTE</span>
-                <div class="col-line line-blue"></div>
+                <div class="col-line line-sostenute"></div>
                 <span class="col-value" id="heroSpeseSostenute">0 €</span>
             </div>
         </div>
     </div>
 
-    <!-- SEZIONE GRAFICO PROGRESSO SPESA VS BUDGET -->
+    <!-- SEZIONE GRAFICO PROGRESSO SPESA MESE CORRENTE -->
     <div class="chart-card-single" id="macroBudgetChartCard">
         <div class="chart-card-header">
-            <span class="chart-title">PROGRESSO SPESA VS BUDGET</span>
+            <span class="chart-title">PROGRESSO SPESA MESE CORRENTE</span>
             <span class="chart-total-pct" id="macroChartTotalPct">0%</span>
         </div>
         <div class="chart-legend" id="macroChartLegend"></div>
         <div class="chart-container-box" id="macroChartContainerBox">
-            <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa vs budget"></canvas>
+            <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa mese corrente"></canvas>
         </div>
     </div>
 
@@ -169,7 +169,6 @@
             </div>
             <div class="macro-card-row3">
                 <span class="macro-values" id="budgetLabel-casa">€0 / €0</span>
-                <span class="macro-cat-names" id="macroCats-casa"></span>
             </div>
         </div>
         <!-- Cibo -->
@@ -188,7 +187,6 @@
             </div>
             <div class="macro-card-row3">
                 <span class="macro-values" id="budgetLabel-cibo">€0 / €0</span>
-                <span class="macro-cat-names" id="macroCats-cibo"></span>
             </div>
         </div>
         <!-- Veicoli -->
@@ -207,7 +205,6 @@
             </div>
             <div class="macro-card-row3">
                 <span class="macro-values" id="budgetLabel-veicoli">€0 / €0</span>
-                <span class="macro-cat-names" id="macroCats-veicoli"></span>
             </div>
         </div>
         <!-- Svago e Altro -->
@@ -226,7 +223,6 @@
             </div>
             <div class="macro-card-row3">
                 <span class="macro-values" id="budgetLabel-svago_altro">€0 / €0</span>
-                <span class="macro-cat-names" id="macroCats-svago_altro"></span>
             </div>
         </div>
     </div>
@@ -1262,6 +1258,6 @@
         <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
     </div>
     <script src="js/supabase-adapter.js"></script>
-    <script src="script.js?v=1.7"></script>
+    <script src="script.js?v=1.8"></script>
 </body>
 </html>
