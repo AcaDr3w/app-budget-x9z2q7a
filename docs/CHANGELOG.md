@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Restyle bottomsheet macrocategorie (griglia + form)
+
+### Completed Changes
+- **tema**: `MACRO_THEME` ha `wash` per lo sfondo foglio; `applyMacroSheetTheme` / `clearMacroSheetTheme` settano `--macro-accent/tint/border/wash` e `data-macro`. Titoli da `MACRO_CARD_META` (Casa e Utenze / Cibo / Veicoli / Svago e Altro) al posto delle chiavi legacy.
+- **griglia 3 col**: card bianche semitrasparenti sulla wash, chip icona 40px, nome 2 righe (`line-clamp`), importo pill, barra progresso a tutta larghezza. Badge budget e ultime spese allineati. `#microCategoriesGrid` isolato dalla griglia 4-col di `.category-grid-mobile`.
+- **form spesa**: importo 40px + underline accento macro, toggle/input/chip tinti, Salva pieno `--macro-accent`, Annulla ghost, switch on = accento. Label "Dividi spesa" senza emoji. Scope solo `#bottomSheet` (income/future invariati).
+- **cache**: `style.css?v=1.8`, `script.js?v=1.9`, SW `bilancio-pwa-v6`.
+
+### Status: COMPLETATO in locale. Verifica 390×844: 4 macro con titoli MACRO_CARD_META, wash/accent corretti, 3 col (Casa 9 nomi), form 40px + Salva accento, back slider, close pulisce i token. Desktop 1024: `#bottomSheet` `display:none`; income/future invariati.
+
 ## [2026-09-15] - Grafico mese Entrate/Previste/Sostenute + linee KPI allineate
 
 ### Completed Changes

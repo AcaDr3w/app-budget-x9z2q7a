@@ -366,11 +366,39 @@ function getCategoryMacroGroup(catName) {
 
 // Tema cromatico per il bottom sheet delle macro-categorie
 const MACRO_THEME = {
-    casa: { accent: '#2a9d8f', tint: 'rgba(42,157,143,0.12)', border: 'rgba(42,157,143,0.30)' },
-    cibo: { accent: '#f39c12', tint: 'rgba(243,156,18,0.12)', border: 'rgba(243,156,18,0.30)' },
-    veicoli: { accent: '#7bc043', tint: 'rgba(123,192,67,0.12)', border: 'rgba(123,192,67,0.30)' },
-    svago_altro: { accent: '#6f42c1', tint: 'rgba(111,66,193,0.12)', border: 'rgba(111,66,193,0.30)' }
+    casa: { accent: '#2a9d8f', tint: 'rgba(42,157,143,0.14)', border: 'rgba(42,157,143,0.22)', wash: '#eef6f4' },
+    cibo: { accent: '#f39c12', tint: 'rgba(243,156,18,0.16)', border: 'rgba(243,156,18,0.24)', wash: '#faf4ea' },
+    veicoli: { accent: '#7bc043', tint: 'rgba(123,192,67,0.16)', border: 'rgba(123,192,67,0.24)', wash: '#f3f7ec' },
+    svago_altro: { accent: '#6f42c1', tint: 'rgba(111,66,193,0.14)', border: 'rgba(111,66,193,0.22)', wash: '#f4f0f8' }
 };
+
+function getMacroSheetTitle(macroGroup) {
+    const meta = typeof MACRO_CARD_META !== 'undefined' ? MACRO_CARD_META[macroGroup] : null;
+    return (meta && meta.title) || 'Categoria';
+}
+
+function applyMacroSheetTheme(sheet, macroGroup) {
+    if (!sheet) return;
+    const theme = MACRO_THEME[macroGroup];
+    sheet.classList.add('sheet-macro');
+    if (macroGroup) sheet.dataset.macro = macroGroup;
+    else delete sheet.dataset.macro;
+    if (!theme) return;
+    sheet.style.setProperty('--macro-accent', theme.accent);
+    sheet.style.setProperty('--macro-tint', theme.tint);
+    sheet.style.setProperty('--macro-border', theme.border);
+    sheet.style.setProperty('--macro-wash', theme.wash);
+}
+
+function clearMacroSheetTheme(sheet) {
+    if (!sheet) return;
+    sheet.classList.remove('sheet-macro');
+    delete sheet.dataset.macro;
+    sheet.style.removeProperty('--macro-accent');
+    sheet.style.removeProperty('--macro-tint');
+    sheet.style.removeProperty('--macro-border');
+    sheet.style.removeProperty('--macro-wash');
+}
 
 // Inizializzazione valori UI
 const dateNow = new Date();
@@ -1021,6 +1049,7 @@ function openTransactionSheet(categoryName, prefillAmount, prefillNote) {
     
 if (overlay && sheet && title) {
         title.textContent = categoryName;
+        applyMacroSheetTheme(sheet, getCategoryMacroGroup(categoryName));
         document.body.classList.add('sheet-open');
         document.body.style.overflow = 'hidden';
         overlay.classList.add('open');
@@ -1055,6 +1084,7 @@ function closeTransactionSheet() {
         sheet.classList.remove('open');
         sheet.style.transform = '';
         sheet.classList.remove('dragging');
+        clearMacroSheetTheme(sheet);
     }
     sheetSelectedCategory = null;
     sheetTransactionType = 'actual';
@@ -2948,13 +2978,8 @@ async function openBottomSheetFromMacro(macroGroup) {
     
     if (!overlay || !sheet) return;
     
-    // Applica il tema cromatico della macro al bottom sheet
+    applyMacroSheetTheme(sheet, macroGroup);
     const theme = MACRO_THEME[macroGroup];
-    if (theme) {
-        sheet.style.setProperty('--macro-accent', theme.accent);
-        sheet.style.setProperty('--macro-tint', theme.tint);
-        sheet.style.setProperty('--macro-border', theme.border);
-    }
     
     document.body.classList.add('sheet-open');
     document.body.style.overflow = 'hidden';
@@ -2977,14 +3002,9 @@ async function openBottomSheetFromMacro(macroGroup) {
     // Set title based on macro group
     const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle) {
-        const titles = { 
-            'casa_utenze': 'Casa e Utenze', 
-            'veicoli': 'Veicoli', 
-            'spese_svago': 'Spese e Svago' 
-        };
-        sheetTitle.textContent = titles[macroGroup] || 'Categoria';
+        sheetTitle.textContent = getMacroSheetTitle(macroGroup);
+        sheetTitle.style.color = theme ? theme.accent : '';
     }
-    if (sheetTitle && theme) sheetTitle.style.color = theme.accent;
 }
 
 async function getCategoryForecasts() {
@@ -3107,8 +3127,8 @@ function renderMicroCategoriesGrid(macroGroup) {
         card.className = 'bottom-sheet-cat-card';
         card.dataset.id = cat;
         card.innerHTML = `
-            <div class="cat-icon-wrap">
-                <i class="fas ${faIcon}"></i>
+            <div class="cat-icon-chip">
+                <i class="fas ${faIcon}" aria-hidden="true"></i>
             </div>
             <span class="cat-name">${cat}</span>
             <span class="cat-speso">${fmtEPlain(aVal, 0)}</span>
@@ -3168,12 +3188,7 @@ function slideBackToCategories() {
     // Update title back to macro
     const sheetTitle = document.getElementById('selected-category-title');
     if (sheetTitle && sheetCurrentMacroGroup) {
-        const titles = { 
-            'casa_utenze': 'Casa e Utenze', 
-            'veicoli': 'Veicoli', 
-            'spese_svago': 'Spese e Svago' 
-        };
-        sheetTitle.textContent = titles[sheetCurrentMacroGroup] || 'Categoria';
+        sheetTitle.textContent = getMacroSheetTitle(sheetCurrentMacroGroup);
     }
     
     const backTheme = sheetCurrentMacroGroup ? MACRO_THEME[sheetCurrentMacroGroup] : null;
