@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.5">
+    <link rel="stylesheet" href="style.css?v=2.6">
 </head>
 <body>
 
@@ -338,19 +338,18 @@
         </div>
 
         <div id="popup-rendiconto" class="popup-overlay" data-act-close="closeRendicontoPopup">
-            <div class="popup-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" data-act-stop="1">
-                <button class="popup-close" data-act-close="closeRendicontoPopup" aria-label="Chiudi popup">×</button>
+            <div class="popup-panel rendiconto-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" data-act-stop="1">
+                <button class="popup-close" data-act-close="closeRendicontoPopup" aria-label="Chiudi">×</button>
                 <div class="popup-header">
                     <div>
-                        <h3 id="popupTitle">Confronto rendiconto</h3>
-                        <p id="popupSubtitle">Mese corrente vs mese precedente</p>
+                        <h3 id="popupTitle">Dettaglio mese</h3>
+                        <p id="popupSubtitle">Tocca una riga per modificarla</p>
                     </div>
                 </div>
                 <div id="popupBars" class="popup-bars"></div>
                 <button id="btnNewIncome" class="btn-entrate popup-income-btn">➕ Nuova Entrata</button>
                 <div id="incomeListContainer" class="income-list"></div>
                 <div id="expenseListContainer" class="income-list"></div>
-                <div class="popup-note">Confronto rapido per categoria. Tocca la X per chiudere.</div>
             </div>
         </div>
 
@@ -1299,6 +1298,6 @@
         <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
     </div>
     <script src="js/supabase-adapter.js"></script>
-    <script src="script.js?v=2.2"></script>
+    <script src="script.js?v=2.3"></script>
 </body>
 </html>

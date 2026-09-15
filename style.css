@@ -529,6 +529,35 @@ justify-content: center;
 .popup-bar-previous { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: 0.85; transform: translateX(-50%); }
 .popup-bar-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; color: var(--muted-mid); }
 .popup-note { font-size: 12px; color: var(--muted); text-align: center; padding-top: 4px; }
+#popup-rendiconto .popup-panel {
+    border-radius: 20px;
+    padding: 16px 16px 14px;
+    gap: 12px;
+    max-height: min(88vh, 720px);
+}
+#popup-rendiconto .popup-close {
+    width: 44px;
+    height: 44px;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    background: var(--surface-muted);
+    font-size: 18px;
+}
+#popup-rendiconto .popup-header { padding-right: 48px; }
+#popup-rendiconto .income-row {
+    background: #fff;
+    border: 1px solid var(--border-faint);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+#popup-rendiconto .income-row-amount.is-planned { color: #ca8a04; }
+#popup-rendiconto .income-row-amount.is-actual { color: var(--sostenuto); }
+#popup-rendiconto .popup-bar-fill.is-planned { background: #eab308; }
+.tx-list-row { cursor: pointer; }
+.tx-list-amount.is-planned { color: #ca8a04; }
+.tx-list-amount.is-actual { color: #ef4444; }
 
 /* ===== ALERTS ===== */
 .annual-deadline-box { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); padding: 12px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 14px; }
@@ -1806,13 +1835,15 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         transform: none !important;
         background: #fff !important;
         border-top: 1px solid #E5E7EB !important;
-        display: flex !important;
-        justify-content: space-around !important;
+        display: grid !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        justify-content: stretch !important;
         align-items: center !important;
-        padding: 10px 0 calc(10px + env(safe-area-inset-bottom)) !important;
+        padding: 8px 4px calc(8px + env(safe-area-inset-bottom)) !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         min-height: 56px;
+        overflow: visible !important;
     }
     .bottom-nav .nav-icon-wrapper { padding: 6px 12px !important; }
 
@@ -1992,7 +2023,8 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         text-decoration: none !important;
         color: #9CA3AF !important;
         gap: 4px !important;
-        flex: 1;
+        flex: none;
+        width: 100%;
         min-width: 0;
         background: none !important;
         border: none !important;
@@ -2026,32 +2058,37 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     .bottom-nav .nav-item.active .nav-label { color: #3B82F6 !important; font-weight: 700 !important; }
     .bottom-nav .nav-item:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: -2px; border-radius: 12px !important; }
     .bottom-nav .nav-item.nav-item-add {
-        flex: 0 0 64px !important;
+        flex: none !important;
         position: relative;
-        top: -16px;
         z-index: 2;
         color: #fff !important;
+        align-self: center;
+        justify-self: center;
     }
     .bottom-nav .nav-item.nav-item-add .nav-quick-add {
         width: 56px;
         height: 56px;
         border-radius: 50%;
-        background: var(--accent);
+        background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
         color: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+        border: 3px solid #fff;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.32);
         pointer-events: none;
+        transform: translateY(-10px);
     }
     .bottom-nav .nav-item.nav-item-add i {
         color: #fff !important;
-        font-size: 22px !important;
+        font-size: 20px !important;
+        font-weight: 500 !important;
     }
     .bottom-nav .nav-item.nav-item-add:focus-visible {
-        outline: 2px solid var(--accent) !important;
-        outline-offset: 3px;
-        border-radius: 50% !important;
+        outline: none !important;
+    }
+    .bottom-nav .nav-item.nav-item-add:focus-visible .nav-quick-add {
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.28), 0 8px 20px rgba(37, 99, 235, 0.32);
     }
 
     /* ===== RESUMÉ CHIPS (3 etichette sotto il selettore mese) ===== */

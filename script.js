@@ -58,6 +58,18 @@ const TAB_TITLES = {
 // Responsive helper
 function isDesktop() { return window.innerWidth >= 768; }
 
+function isOpenPlanned(e) {
+    return !!e && (e.planned || 0) > 0 && (e.actual || 0) === 0 && e.settled !== true;
+}
+
+function openPlannedAmount(e) {
+    return isOpenPlanned(e) ? (e.planned || 0) : 0;
+}
+
+function sumOpenPlanned(expenses) {
+    return (expenses || []).reduce((s, e) => s + openPlannedAmount(e), 0);
+}
+
 // Dexie rimosso, usiamo l'adapter window.db in supabase-adapter.js
 
 // Device ID univoco (generato una sola volta per installazione)
@@ -1142,7 +1154,12 @@ function openExpenseFormForCategory(categoryName) {
     title.style.color = '';
     setSheetCategoryIcon(categoryName);
     const backBtn = document.getElementById('btn-back-to-categories');
-    if (backBtn) backBtn.style.display = 'flex';
+    if (backBtn) {
+        backBtn.style.display = 'flex';
+        backBtn.setAttribute('aria-label', 'Indietro');
+        const icon = backBtn.querySelector('i');
+        if (icon) icon.className = 'fas fa-arrow-left';
+    }
     const subheader = document.getElementById('macroSheetSubheader');
     if (subheader) subheader.style.display = 'none';
     const slider = document.querySelector('#bottomSheet .sheet-slider');
@@ -1209,7 +1226,7 @@ function editExpense(id) {
 
     editingExpenseId = id;
     sheetSelectedCategory = exp.category;
-    sheetTransactionType = exp.planned > 0 && exp.actual === 0 ? 'planned' : 'actual';
+    sheetTransactionType = isOpenPlanned(exp) ? 'planned' : 'actual';
 
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
@@ -1229,9 +1246,19 @@ function editExpense(id) {
 
     // Slide directly to input view, hide back button (category not changeable in edit)
     if (slider) slider.style.transform = 'translateX(-100%)';
-    if (backBtn) backBtn.style.display = 'none';
+    if (backBtn) {
+        backBtn.style.display = 'flex';
+        backBtn.setAttribute('aria-label', 'Chiudi');
+        const icon = backBtn.querySelector('i');
+        if (icon) icon.className = 'fas fa-times';
+    }
 
     if (sheetTitle) sheetTitle.textContent = exp.category;
+    setSheetCategoryIcon(exp.category);
+    applyMacroSheetTheme(sheet, getCategoryMacroGroup(exp.category));
+    sheetCurrentMacroGroup = getCategoryMacroGroup(exp.category);
+    const subheader = document.getElementById('macroSheetSubheader');
+    if (subheader) subheader.style.display = 'none';
 
     // Pre-fill amount
     const amount = exp.planned || exp.actual || 0;
@@ -1264,8 +1291,6 @@ function editExpense(id) {
     const shPanel = document.getElementById('sharedPanel');
     if (shToggle) shToggle.checked = false;
     if (shPanel) shPanel.classList.remove('active');
-
-    sheetCurrentMacroGroup = null;
 }
 
 // =====================================================================
@@ -3091,17 +3116,20 @@ async function openBottomSheetFromMacro(macroGroup) {
     }
 }
 
-async function getCategoryForecasts() {
+async function getCategoryForecasts(opts) {
     const f = {};
     currentData.expenses.forEach(e => {
-        if (e.planned > 0) f[e.category] = (f[e.category] || 0) + e.planned;
+        const amt = openPlannedAmount(e);
+        if (amt > 0) f[e.category] = (f[e.category] || 0) + amt;
     });
-    const prevMonth = getPreviousMonthStrings(document.getElementById('currentMonth').value, 1)[0];
-    if (prevMonth) {
-        const prev = await db.expenses.where('month').equals(prevMonth).toArray();
-        prev.forEach(e => {
-            if (!f[e.category] && e.actual > 0) f[e.category] = (f[e.category] || 0) + e.actual;
-        });
+    if (opts && opts.fallbackPrevActual) {
+        const prevMonth = getPreviousMonthStrings(document.getElementById('currentMonth').value, 1)[0];
+        if (prevMonth) {
+            const prev = await db.expenses.where('month').equals(prevMonth).toArray();
+            prev.forEach(e => {
+                if (!f[e.category] && e.actual > 0) f[e.category] = (f[e.category] || 0) + e.actual;
+            });
+        }
     }
     return f;
 }
@@ -3117,7 +3145,7 @@ async function renderMacroBudgetBadge(macroGroup) {
         if (catSet.has(e.category)) actual += e.actual;
     });
     
-    const forecasts = await getCategoryForecasts();
+    const forecasts = await getCategoryForecasts({ fallbackPrevActual: true });
     let previsti = 0;
     cats.forEach(c => { previsti += forecasts[c] || 0; });
     
@@ -3236,7 +3264,12 @@ function slideToInputView(categoryName) {
     
     // Show back button
     const backBtn = document.getElementById('btn-back-to-categories');
-    if (backBtn) backBtn.style.display = 'flex';
+    if (backBtn) {
+        backBtn.style.display = 'flex';
+        backBtn.setAttribute('aria-label', 'Indietro');
+        const icon = backBtn.querySelector('i');
+        if (icon) icon.className = 'fas fa-arrow-left';
+    }
 
     // Hide budget banner (only visible on category selection screen)
     const subheader = document.getElementById('macroSheetSubheader');
@@ -3305,7 +3338,10 @@ function setupMacroDashCards() {
 function setupBottomSheetBackBtn() {
     const backBtn = document.getElementById('btn-back-to-categories');
     if (backBtn) {
-        backBtn.addEventListener('click', slideBackToCategories);
+        backBtn.addEventListener('click', () => {
+            if (editingExpenseId) closeTransactionSheet();
+            else slideBackToCategories();
+        });
     }
 }
 
@@ -3402,39 +3438,19 @@ async function saveTransactionFromSheet() {
         if (originalIdx === -1) { editingExpenseId = null; return; }
 
         const originalExp = currentData.expenses[originalIdx];
-        const originalType = originalExp.planned > 0 && originalExp.actual === 0 ? 'planned' : 'actual';
+        const originalType = isOpenPlanned(originalExp) ? 'planned' : 'actual';
         const newType = sheetTransactionType;
         const editMonth = date.slice(0, 7);
 
-        if (originalType === newType) {
-            // CASO A: same type - update in place
-            originalExp.month = editMonth;
-            originalExp.date = date;
-            originalExp.category = sheetSelectedCategory;
-            originalExp.desc = note || 'Aggiunto da mobile';
-            originalExp.planned = newType === 'planned' ? amount : 0;
-            originalExp.actual = newType === 'actual' ? amount : 0;
-            currentData.expenses[originalIdx] = originalExp;
-            await db.expenses.put(originalExp);
-        } else {
-            // CASO B: type changed - keep original untouched, create new clone
-            if (originalType === 'planned' && newType === 'actual') {
-                originalExp.settled = true;
-                await db.expenses.put(originalExp);
-            }
-            const cloneExp = {
-                id: Date.now(),
-                month: editMonth,
-                date: date,
-                category: sheetSelectedCategory,
-                desc: note || 'Aggiunto da mobile',
-                planned: newType === 'planned' ? amount : 0,
-                actual: newType === 'actual' ? amount : 0,
-                sharedPercentage: 0
-            };
-            currentData.expenses.push(cloneExp);
-            await db.expenses.put(cloneExp);
-        }
+        originalExp.month = editMonth;
+        originalExp.date = date;
+        originalExp.category = sheetSelectedCategory;
+        originalExp.desc = note || 'Aggiunto da mobile';
+        originalExp.planned = newType === 'planned' ? amount : 0;
+        originalExp.actual = newType === 'actual' ? amount : 0;
+        originalExp.settled = newType === 'actual';
+        currentData.expenses[originalIdx] = originalExp;
+        await db.expenses.put(originalExp);
 
         editingExpenseId = null;
         closeTransactionSheet();
@@ -3475,8 +3491,8 @@ async function saveTransactionFromSheet() {
             month, date,
             category: sheetSelectedCategory,
             desc: note || 'Aggiunto da mobile',
-            planned: myPart,
-            actual: sheetTransactionType === 'actual' && mePaid > 0 ? Math.min(mePaid, myPart) : 0,
+            planned: sheetTransactionType === 'planned' ? myPart : 0,
+            actual: sheetTransactionType === 'actual' ? (mePaid > 0 ? Math.min(mePaid, myPart) : myPart) : 0,
             sharedPercentage: sharedPct,
             isShared: true,
             sharedPayer: mePaid > 0 ? 'me' : 'them',
@@ -4190,11 +4206,13 @@ function resetExpenseAdvancedForm() {
     resetSharedSplitState();
 }
 async function payExpense(id) {
-    const exp = currentData.expenses.find(i => i.id === id); if (!exp) return;
-    const val = prompt("Importo effettivo pagato (€):", exp.planned.toFixed(2));
-    if (val !== null) {
-        const p = parseFloat(val.replace(',','.')); if (!isNaN(p)) { exp.actual = p; exp.settled = true; await db.expenses.update(id, {actual: p, settled: true}); if (exp.debtId) await markDebtSettled(exp.debtId); updateUI(); }
-    }
+    const exp = currentData.expenses.find(i => i.id === id);
+    if (!exp) return;
+    editExpense(id);
+    sheetTransactionType = 'actual';
+    document.querySelectorAll('#bottomSheet .toggle-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === 'actual');
+    });
 }
 async function deleteEntry(type, id) {
     if (type === 'income') { currentData.income = currentData.income.filter(i => i.id !== id); await db.income.delete(id); }
@@ -4374,8 +4392,8 @@ function gaugeArcSVG(pct, color) {
 // =====================================================================
 async function updateUI() {
     let totalIncome = currentData.income.reduce((s,i) => s+i.amount,0);
-    let totalPlanned = currentData.expenses.reduce((s,i) => s+i.planned,0);
-    let totalActual = currentData.expenses.reduce((s,i) => s+i.actual,0);
+    let totalPlanned = sumOpenPlanned(currentData.expenses);
+    let totalActual = currentData.expenses.reduce((s,i) => s+(i.actual || 0),0);
 
     const sumEntrateEl = document.getElementById('sumEntrate');
     if (sumEntrateEl) sumEntrateEl.innerText = fmtE(totalIncome,0);
@@ -4388,13 +4406,8 @@ async function updateUI() {
     const heroSpeseEl = document.getElementById('heroSpeseSostenute');
     if (heroEntrateEl) heroEntrateEl.innerText = fmtE(totalIncome, 0);
     if (heroSpeseEl) heroSpeseEl.innerText = fmtE(totalActual, 0);
-    if (heroPrevisteEl) {
-        const forecasts = await getCategoryForecasts();
-        let forecastTotal = 0;
-        Object.values(forecasts).forEach(v => { forecastTotal += v; });
-        heroPrevisteEl.innerText = fmtE(forecastTotal, 0);
-    }
-    renderMacroCards();
+    if (heroPrevisteEl) heroPrevisteEl.innerText = fmtE(totalPlanned, 0);
+    await renderMacroCards();
     await renderMacroBudgetChart();
     await renderRecentTransactions();
     renderHeroInsight();
@@ -4406,7 +4419,7 @@ async function updateUI() {
 
     // Sommario categorie - la griglia desktop legge gli stessi dati
     let catSums = {}; userCategories.forEach(c => catSums[c] = {planned:0, actual:0});
-    currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
+    currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += openPlannedAmount(exp); catSums[exp.category].actual += (exp.actual || 0); } });
 
     // Griglia categorie con arco SVG (desktop)
     renderCategoryGridDesktop(catSums);
@@ -4461,7 +4474,7 @@ function renderEntriesList() {
         listContainer.innerHTML = '<div class="comp-hint" style="text-align:center;padding:14px 0;">Nessuna voce per questo mese. Inserisci la prima spesa o entrata.</div>';
     }
     filteredExp.forEach(exp => {
-        const isPending = exp.planned > 0 && exp.actual === 0;
+        const isPending = isOpenPlanned(exp);
         const isSettled = exp.settled === true;
         const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('/') : '–';
         const sharedTxt = exp.sharedPercentage > 0 ? `<span class="reg-shared-pill">${exp.sharedPercentage}%</span>` : '';
@@ -4520,7 +4533,7 @@ function renderCalendar() {
     const monthVal = document.getElementById('currentMonth').value; if (!monthVal) return;
     const range = getMonthRange(monthVal);
     const plannedDates = new Set();
-    currentData.expenses.forEach(e => { if (e.planned > 0) plannedDates.add(e.date); });
+    currentData.expenses.forEach(e => { if (isOpenPlanned(e)) plannedDates.add(e.date); });
     const deadlineDates = new Set();
     let monthWideDeadline = false;
     annualDeadlines.forEach(a => {
@@ -4627,9 +4640,12 @@ async function renderIncomeList(month) {
 async function renderExpenseList(type, month) {
     const container = document.getElementById('expenseListContainer');
     if (!container) return;
-    const all = (await db.expenses.toArray()).filter(e => (e.date || e.month).slice(0, 7) === month);
+    const currentMonth = document.getElementById('currentMonth').value;
+    const all = (month === currentMonth && currentData.expenses)
+        ? currentData.expenses.filter(e => (e.date || e.month || '').slice(0, 7) === month)
+        : (await db.expenses.toArray()).filter(e => (e.date || e.month).slice(0, 7) === month);
     const isSostenuto = type === 'sostenuto';
-    const expenses = all.filter(e => isSostenuto ? (e.actual || 0) > 0 : (e.planned || 0) > 0)
+    const expenses = all.filter(e => isSostenuto ? (e.actual || 0) > 0 : isOpenPlanned(e))
         .sort((a, b) => {
             const dateA = a.date || a.month + '-01';
             const dateB = b.date || b.month + '-01';
@@ -4651,7 +4667,7 @@ async function renderExpenseList(type, month) {
                 <span class="income-row-desc">${getCatIcon(exp.category)} ${exp.category}${isSettled ? '<span class="settled-badge">Saldata</span>' : ''} · ${exp.desc}</span>
                 <span class="income-row-date">${dateStr}</span>
             </div>
-            <span class="income-row-amount" style="color:${amountColor}">-${fmtEPlain(isSostenuto ? exp.actual : exp.planned)}</span>
+            <span class="income-row-amount ${isSostenuto ? 'is-actual' : 'is-planned'}" style="color:${amountColor}">-${fmtEPlain(isSostenuto ? exp.actual : exp.planned)}</span>
             <button class="income-row-del" data-id="${exp.id}" title="Elimina">🗑</button>
         `;
         row.querySelector('.income-row-del').addEventListener('click', async (ev) => {
@@ -4829,7 +4845,7 @@ function openIaNotesModal() {
         currentData.expenses.forEach(e => { totals.planned += e.planned; totals.actual += e.actual; });
         const catSums = {};
         userCategories.forEach(c => catSums[c] = { planned: 0, actual: 0 });
-        currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += exp.planned; catSums[exp.category].actual += exp.actual; } });
+        currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += openPlannedAmount(exp); catSums[exp.category].actual += (exp.actual || 0); } });
         renderDashboardCharts(totals.income, totals.planned, totals.actual, catSums);
     }
 }
@@ -4869,14 +4885,14 @@ async function runIaMonthAnalysis() {
     const expenses = await db.expenses.where('month').equals(currentMonth).toArray();
     const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
     const totalActual = expenses.reduce((s, e) => s + e.actual, 0);
-    const totalPlanned = expenses.reduce((s, e) => s + e.planned, 0);
+    const totalPlanned = sumOpenPlanned(expenses);
     const savings = totalIncome - totalActual;
     const catSums = {};
     expenses.forEach(e => { catSums[e.category] = (catSums[e.category] || 0) + e.actual; });
     const catLines = Object.entries(catSums)
         .sort((a, b) => b[1] - a[1])
         .map(([cat, val]) => `  - ${cat}: ${fmtEPlain(val)}`).join('\n');
-    const pendingCount = expenses.filter(e => e.planned > 0 && e.actual === 0).length;
+    const pendingCount = expenses.filter(isOpenPlanned).length;
 
     // Dati mese precedente per il confronto
     const prevMonth = getPreviousMonthStrings(currentMonth, 1)[0];
@@ -4886,7 +4902,7 @@ async function runIaMonthAnalysis() {
         const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
         prevIncomeTot = prevIncomes.reduce((s, i) => s + i.amount, 0);
         prevActualTot = prevExpenses.reduce((s, e) => s + e.actual, 0);
-        prevPlannedTot = prevExpenses.reduce((s, e) => s + e.planned, 0);
+        prevPlannedTot = sumOpenPlanned(prevExpenses);
     }
     const pctDiff = (base, cur) => base > 0 ? Math.round(((cur - base) / base) * 100) : null;
     const fmtDiff = (d) => d === null ? 'n/d' : (d >= 0 ? '+' : '') + d + '%';
@@ -4950,7 +4966,8 @@ const MACRO_CARD_META = {
     svago_altro: { title: 'Svago e Altro', icon: 'fas fa-shopping-cart' }
 };
 
-function renderMacroCards() {
+async function renderMacroCards() {
+    const forecastHints = await getCategoryForecasts({ fallbackPrevActual: true });
     for (const [macro, meta] of Object.entries(MACRO_CARD_META)) {
         const grid = document.getElementById('microGrid-' + macro);
         const fill = document.getElementById('progressFill-' + macro);
@@ -4961,8 +4978,11 @@ function renderMacroCards() {
         const catSet = new Set(cats);
         let planned = 0, actual = 0;
         currentData.expenses.forEach(e => {
-            if (catSet.has(e.category)) { planned += e.planned; actual += e.actual; }
+            if (catSet.has(e.category)) { planned += openPlannedAmount(e); actual += (e.actual || 0); }
         });
+        if (planned === 0) {
+            cats.forEach(c => { planned += forecastHints[c] || 0; });
+        }
 
         if (microList) microList.textContent = '';
 
@@ -5025,9 +5045,7 @@ async function renderMacroBudgetChart() {
     }
 
     const totalEntrate = currentData.income.reduce((s, i) => s + (i.amount || 0), 0);
-    const forecasts = await getCategoryForecasts();
-    let totalPreviste = 0;
-    Object.values(forecasts || {}).forEach(v => { totalPreviste += v || 0; });
+    const totalPreviste = sumOpenPlanned(currentData.expenses);
     const totalSostenute = currentData.expenses.reduce((s, i) => s + (i.actual || 0), 0);
 
     const labels = ['Entrate', 'Spese Previste', 'Spese Sostenute'];
@@ -5122,24 +5140,33 @@ async function renderRecentTransactions() {
     if (!listContainer) return;
     const month = document.getElementById('currentMonth').value;
     if (!month) { listContainer.innerHTML = '<div style="padding:12px;color:var(--muted)">Seleziona un mese</div>'; return; }
-    const data = await db.expenses.where('month').equals(month).toArray();
+    const data = (currentData.expenses || []).filter(e => e.month === month);
     if (data.length === 0) { listContainer.innerHTML = '<div style="padding:12px;color:var(--muted)">Nessuna transazione</div>'; return; }
     // Ordina per data decrescente
     data.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    listContainer.innerHTML = data.slice(0, 10).map(exp => {
+    listContainer.innerHTML = '';
+    data.slice(0, 10).forEach(exp => {
         const fd = exp.date ? exp.date.split('-').reverse().slice(0,2).join('.') : exp.month.slice(0,7).replace('-','.');
         const catIcon = getCatIcon(exp.category);
-        const isSettled = exp.settled === true;
-        const settledMark = isSettled ? '<span style="margin-left:2px;color:var(--success-text);font-size:10px;">✓</span>' : '';
-        return `<div class="tx-list-row">
+        const plannedOpen = isOpenPlanned(exp);
+        const amount = plannedOpen ? exp.planned : (exp.actual || 0);
+        const amountClass = plannedOpen ? 'is-planned' : 'is-actual';
+        const settledMark = exp.settled === true ? '<span style="margin-left:2px;color:var(--success-text);font-size:10px;">✓</span>' : '';
+        const row = document.createElement('div');
+        row.className = 'tx-list-row';
+        row.setAttribute('role', 'button');
+        row.tabIndex = 0;
+        row.innerHTML = `
             <span class="tx-list-icon">${catIcon}</span>
             <span class="tx-list-main">
                 <span class="tx-list-name">${exp.desc || 'spesa senza descrizione'}</span>
                 <span class="tx-list-meta">${fd} · ${exp.category}${settledMark}</span>
             </span>
-            <span class="tx-list-amount">−${fmtE(exp.actual || 0, 0)}</span>
-        </div>`;
-    }).join('');
+            <span class="tx-list-amount ${amountClass}">−${fmtE(amount, 0)}</span>
+        `;
+        row.addEventListener('click', () => editExpense(exp.id));
+        listContainer.appendChild(row);
+    });
 }
 
 // =====================================================================
@@ -5170,8 +5197,8 @@ async function renderHeroInsight() {
     const catActual = {};
     const catPlanned = {};
     currentData.expenses.forEach(e => {
-        catActual[e.category] = (catActual[e.category] || 0) + e.actual;
-        catPlanned[e.category] = (catPlanned[e.category] || 0) + e.planned;
+        catActual[e.category] = (catActual[e.category] || 0) + (e.actual || 0);
+        catPlanned[e.category] = (catPlanned[e.category] || 0) + openPlannedAmount(e);
     });
 
     let prevExpenses = [];
@@ -5343,9 +5370,12 @@ async function openRendicontoPopup(type) {
 }
 
 function closeRendicontoPopup(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    document.getElementById('popup-rendiconto').classList.remove('active');
+    if (event && event.preventDefault) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const popup = document.getElementById('popup-rendiconto');
+    if (popup) popup.classList.remove('active');
     document.body.classList.remove('popup-open');
 }
 
@@ -5360,13 +5390,18 @@ async function buildRendicontoRows(type, month, prevMonth) {
         return [{ label: 'Entrate', currentValue: currentTotal, previousValue: previousTotal, color: '#10b981' }];
     }
     if (type === 'previsto') {
-        const currentExpenses = await db.expenses.where('month').equals(month).toArray();
+        const currentMonthVal = document.getElementById('currentMonth').value;
+        const currentExpenses = (month === currentMonthVal && currentData.expenses)
+            ? currentData.expenses.filter(e => e.month === month)
+            : await db.expenses.where('month').equals(month).toArray();
         const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
         currentExpenses.forEach(item => {
-            if ((item.planned || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + item.planned;
+            const amt = openPlannedAmount(item);
+            if (amt > 0) currentMap[item.category] = (currentMap[item.category] || 0) + amt;
         });
         prevExpenses.forEach(item => {
-            if ((item.planned || 0) > 0) previousMap[item.category] = (previousMap[item.category] || 0) + item.planned;
+            const amt = openPlannedAmount(item);
+            if (amt > 0) previousMap[item.category] = (previousMap[item.category] || 0) + amt;
         });
         const rows = Object.keys(currentMap).map(key => ({
             label: key,
@@ -5376,7 +5411,10 @@ async function buildRendicontoRows(type, month, prevMonth) {
         })).filter(r => r.currentValue > 0 || r.previousValue > 0);
         return rows.sort((a, b) => b.currentValue - a.currentValue || b.previousValue - a.previousValue);
     }
-    const currentExpenses = await db.expenses.where('month').equals(month).toArray();
+    const currentMonthVal = document.getElementById('currentMonth').value;
+    const currentExpenses = (month === currentMonthVal && currentData.expenses)
+        ? currentData.expenses.filter(e => e.month === month)
+        : await db.expenses.where('month').equals(month).toArray();
     const prevExpenses = await db.expenses.where('month').equals(prevMonth).toArray();
     currentExpenses.forEach(item => {
         if ((item.actual || 0) > 0) currentMap[item.category] = (currentMap[item.category] || 0) + item.actual;

@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Plus centrato, popup mese, previste unificate
+
+### Completed Changes
+- **nav +**: bottom nav `grid` 5 colonne; cerchio 56px bordo bianco, ombra, `translateY(-10px)` solo sul FAB.
+- **popup rendiconto**: `closeRendicontoPopup` tollera `event` assente; panel restyle; tap riga → `editExpense` con X, icona e tema macro.
+- **previste**: `isOpenPlanned` unica fonte per hero/KPI/grafico/liste/save. Shared non mette più `planned` sulle sostenute. Conversione prevista→sostenuta in place. Ultime tx cliccabili (giallo/rosso).
+- **cache**: `style.css?v=2.6`, `script.js?v=2.3`, SW `bilancio-pwa-v12`.
+
+### Status: COMPLETATO. Verifica 390×844: + centrato; KPI Previste apre popup chiudibile; lista = solo aperte; salva/converti senza doppio conteggio.
+
 ## [2026-09-15] - Nav: drawer account + plus radiale
 
 ### Completed Changes

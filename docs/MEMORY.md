@@ -40,7 +40,7 @@
 - **HTML**: `.container` si chiude PRIMA di `</main>`; overlay/sheet restano fratelli di `<main>` dentro `#mainAppWrapper`.
 - **Tab Analisi/Investimenti/Previsioni/Impostazioni MAI orfani**: `#current-month-tab` NON si chiude dopo il blocco mobile Mese. I quattro tab (`#history-tab` ~583, `#future-tab` ~749, `#investimenti-tab` ~834, `#settings-tab` ~921) devono restare dentro `#mainAppWrapper` > `#appMain` > `.container`. Se escono dal wrapper, `overflow:hidden` su body/container li taglia → schermata bianca. NON è contenuto cancellato: è solo l'albero HTML.
 - **`anomalyTimer`**: dichiarato accanto a `searchQuery` (`let anomalyTimer = null`). `stopAnomalyCarousel()` lo legge; senza dichiarazione `switchTab` verso Investimenti/Previsioni/Impostazioni lancia ReferenceError. `stopAnomalyCarousel` è difensivo (`typeof` + try/catch in `switchTab`).
-- **PWA cache**: `CACHE_NAME = bilancio-pwa-v11`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.2`, `style.css?v=2.5`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
+- **PWA cache**: `CACHE_NAME = bilancio-pwa-v12`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.3`, `style.css?v=2.6`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
 
 ## CATEGORIE (2026-09-15)
 - **Fonte di verità**: `userMacroCategories` con SOLO le 4 chiavi `casa` / `cibo` / `veicoli` / `svago_altro`. Alias legacy `casa_utenze` → `casa`, `spese_svago`/`svago` → `svago_altro` via `foldLegacyMacroKeys()` in `loadCategories`.
@@ -48,7 +48,9 @@
 - **Mese card**: NESSUN elenco di microcategorie sotto Casa/Cibo/Veicoli/Svago (decisione 2026-09-15). `.card-micro-list` nascosta.
 - **Grafico mese** (`renderMacroBudgetChart`): titolo "Progresso spesa mese corrente". 3 barre Entrate `#22c55e` / Spese Previste `#eab308` / Spese Sostenute `#ef4444` (importi euro, stessi del hero). Linee KPI `.line-entrate/.line-previste/.line-sostenute` = stessi colori. Non ripristinare il grafico per-macro Budget vs Sostenuto.
 - **Settings**: tile nel cassetto `#accountDrawer` (avatar header). Popup in `#accountPopups` (fuori dal transform del drawer). `openSettingsPopup` / `closeSettingsPopup` cercano `#accountPopups .popup-overlay`. Non reintrodurre tab Impostazioni in nav.
-- **Plus radiale**: tap o hold+drag su `#navQuickAdd` apre arco 180° verso l’alto (macro → micro). Conferma → `openExpenseFormForCategory` (sheet già su `viewInput`, senza `openBottomSheetFromMacro`). Solo mobile.
+- **Plus radiale**: tap o hold+drag su `#navQuickAdd` apre arco 180° verso l’alto (macro → micro). Conferma → `openExpenseFormForCategory` (sheet già su `viewInput`, senza `openBottomSheetFromMacro`). Solo mobile. Nav 5 colonne uguali; il `+` è un cerchio 56px con bordo bianco e `translateY(-10px)` solo sul cerchio (niente `top` sul item).
+- **Prevista aperta**: `isOpenPlanned(e)` = `planned > 0 && actual === 0 && !settled`. Hero, `#sumPrevisto`, `months.totalPlanned`, grafico mese e lista rendiconto usano SOLO queste. `getCategoryForecasts({ fallbackPrevActual })` può hintare le card macro vuote col mese scorso, **non** entra nei totali. Save condiviso: `planned` solo se tipo prevista. Edit prevista→sostenuta **in place** (niente clone). `payExpense` apre il form. Ultime tx: giallo/rosso + tap → `editExpense`.
+- **`closeRendicontoPopup`**: `data-act-close` chiama la fn SENZA event → NON fare `event.preventDefault()` incondizionato (TypeError, X morta). Overlay e X chiudono.
 - **Bottomsheet form (2026-09-15)**: sezioni Data/Nota + Documenti (scontrino/galleria) + Altre opzioni (ricorrente mensile + dividi). Header icona categoria via `setSheetCategoryIcon`. Toggle Sostenuta/Prevista filled. Ricorrenza resta solo mensile (`saveRecurringClones`). IDs invariati. Non toccare income/future.
 
 ## CONTENUTO TAB (non cancellare, 2026-09-15)
