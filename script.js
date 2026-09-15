@@ -50,9 +50,9 @@ const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
 
 const TAB_TITLES = {
     'current-month-tab': 'Mese',
-    'history-tab': 'Storico',
+    'history-tab': 'Analisi',
     'investimenti-tab': 'Investimenti',
-    'future-tab': 'Futuro',
+    'future-tab': 'Previsioni',
     'settings-tab': 'Impostazioni'
 };
 
@@ -649,6 +649,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelectorAll('.top-nav-link').forEach(l => l.classList.remove('active'));
     const target = document.getElementById(tabId);
+    if (!target) return;
     target.classList.remove('hidden');
     target.classList.add('active');
     document.querySelectorAll('#settings-tab .popup-overlay.active').forEach(p => p.classList.remove('active'));
@@ -4415,9 +4416,16 @@ function handleSearch() {
 }
 function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory = null; searchQuery = ""; const s = document.getElementById('searchInput'); if(s) s.value = ""; updateUI(); }
 function switchFormTab(name) {
+    if (!name) return;
     const cap = name.charAt(0).toUpperCase() + name.slice(1);
     document.querySelectorAll('.layout-column.left-panel .form-tab').forEach(t => t.classList.toggle('active', t.dataset.formtab === name));
     document.querySelectorAll('.layout-column.left-panel .form-pane').forEach(p => p.classList.toggle('active', p.id === 'formPane' + cap));
+}
+function switchIaNotesTab(name) {
+    if (!name) return;
+    const cap = name.charAt(0).toUpperCase() + name.slice(1);
+    document.querySelectorAll('.ia-notes-tabs .form-tab').forEach(t => t.classList.toggle('active', t.dataset.iatab === name));
+    document.querySelectorAll('.ia-notes-pane').forEach(p => p.classList.toggle('active', p.id === 'iaPane' + cap));
 }
 function toggleSection(id, el) { document.getElementById(id).classList.toggle('show'); el.classList.toggle('active'); }
 
@@ -4699,21 +4707,6 @@ function closeSettingsPopup(event) {
     document.body.classList.remove('popup-open');
 }
 
-// Wiring tabs forms (pannello sinistro) + modal IA (desktop)
-(function () {
-    const wireTabs = (tabsSel, panesSel, key) => {
-        const tabs = document.querySelectorAll(tabsSel);
-        if (!tabs.length) return;
-        tabs.forEach(tab => tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const cap = tab.dataset[key].charAt(0).toUpperCase() + tab.dataset[key].slice(1);
-            document.querySelectorAll(panesSel).forEach(p => p.classList.toggle('active', p.id === key + cap));
-        }));
-    };
-    wireTabs('.layout-column.left-panel .form-tab', '.layout-column.left-panel .form-pane', 'formPane');
-    wireTabs('.ia-notes-tabs .form-tab', '.ia-notes-pane', 'iaPane');
-})();
 
 async function runIaMonthAnalysis() {
     const currentMonth = document.getElementById('currentMonth').value;

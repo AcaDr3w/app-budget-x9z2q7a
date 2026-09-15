@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Debug menu index.html: tab form/IA morti + HTML sbilanciato
+
+### Completed Changes
+- **bug**: IIFE `wireTabs` leggeva `dataset.formPane` / `dataset.iaPane` (`data-form-pane` / `data-ia-pane`) ma l'HTML aveva `data-formtab` / `data-iatab`. Click su Entrata/Spesa/Condivise e HUB IA/Note/Grafici → `TypeError` (`undefined.charAt`), tab visivamente selezionato ma pannello invariato. Tastiera (frecce `setupTablistA11y` → `next.click()`) stessa eccezione.
+- **fix**: tab form e IA allineati alla delegation `data-act` (`switchFormTab` / nuova `switchIaNotesTab`); IIFE `wireTabs` rimossa.
+- **a11y/copy**: `TAB_TITLES` allineato alle label nav (`Analisi`/`Previsioni` al posto di `Storico`/`Futuro`).
+- **harden**: `switchTab` ritorna se l'id tab non esiste.
+- **html**: chiuso esplicitamente `.container` prima di `</main>`; rimosso `</div>` extra in coda a `#bottomSheet` (parser: 1 unmatched close).
+- **verification**: probe browser su top-nav (5), bottom-nav (5), form tabs (3), IA tabs (3), settings tiles (6), condivise Amici/Gruppi, hub mese, hub previsioni, select periodo Analisi. 0 errori JS; 36 `data-act` risolti; HTML balance ok.
+
+### Status: COMPLETATO — menu di index.html verificati e tab interni riparati.
+
 ## [2026-08-21] - Fix TDZ regressione: receipt state prima dell'IIFE parse-time
 
 ### Completed Changes

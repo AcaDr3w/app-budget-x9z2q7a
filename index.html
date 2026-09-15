@@ -389,9 +389,9 @@
                 <button class="popup-close" data-act-close="closeIaNotesModal" aria-label="Chiudi">×</button>
                 <h3 id="iaNotesModalTitle">🤖 IA &amp; Note del Mese</h3>
                 <div class="form-tabs ia-notes-tabs" role="tablist" aria-label="Pannello IA e note">
-                    <button type="button" class="form-tab active" data-iatab="hub">🧠 HUB IA</button>
-                    <button type="button" class="form-tab" data-iatab="note">📝 Note</button>
-                    <button type="button" class="form-tab" data-iatab="charts">📈 Grafici</button>
+                    <button type="button" class="form-tab active" data-iatab="hub" data-act="switchIaNotesTab" data-args='["hub"]'>🧠 HUB IA</button>
+                    <button type="button" class="form-tab" data-iatab="note" data-act="switchIaNotesTab" data-args='["note"]'>📝 Note</button>
+                    <button type="button" class="form-tab" data-iatab="charts" data-act="switchIaNotesTab" data-args='["charts"]'>📈 Grafici</button>
                 </div>
                 <div class="ia-notes-body">
                     <div class="ia-notes-pane active" id="iaPaneHub">
@@ -455,9 +455,9 @@
                 <div class="card comp-card hide-mobile">
                     <div class="pane-title">➕ Nuova Voce</div>
                     <div class="form-tabs" role="tablist" aria-label="Form di inserimento">
-                        <button type="button" class="form-tab active" data-formtab="entrata">💰 Entrata</button>
-                        <button type="button" class="form-tab" data-formtab="spesa">💳 Spesa</button>
-                        <button type="button" class="form-tab" data-formtab="condivise">👥 Condivise</button>
+                        <button type="button" class="form-tab active" data-formtab="entrata" data-act="switchFormTab" data-args='["entrata"]'>💰 Entrata</button>
+                        <button type="button" class="form-tab" data-formtab="spesa" data-act="switchFormTab" data-args='["spesa"]'>💳 Spesa</button>
+                        <button type="button" class="form-tab" data-formtab="condivise" data-act="switchFormTab" data-args='["condivise"]'>👥 Condivise</button>
                     </div>
 
                     <div class="form-pane active" id="formPaneEntrata">
@@ -1096,6 +1096,8 @@
         </div>
     </div>
 
+    </div>
+
     </main>
 
     <!-- POPUP SPESE CONDIVISE -->
@@ -1246,7 +1248,6 @@
                 </div>
             </div>
         </div>
-    </div>
     </div>
 
     </div> <!-- END MAIN APP WRAPPER -->
