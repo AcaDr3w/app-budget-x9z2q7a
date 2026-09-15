@@ -279,6 +279,7 @@ let categoryIconMap = {};
 let selectedFilterDate = null;
 let selectedFilterCategory = null;
 let searchQuery = "";
+let anomalyTimer = null;
 
  // ===== BOTTOM SHEET SLIDER STATE =====
  let sheetCurrentMacroGroup = null; // Tracks which macro group opened the sheet
@@ -680,7 +681,9 @@ function switchTab(tabId) {
         try { renderInvestments(); }
         catch (e) { console.warn('[Investimenti] render fallito:', e); }
     }
-    if (tabId !== 'history-tab') stopAnomalyCarousel();
+    if (tabId !== 'history-tab') {
+        try { stopAnomalyCarousel(); } catch (e) { console.warn('[Analisi] stop carousel:', e); }
+    }
     const customPopup = document.getElementById('customRangePopup');
     if (customPopup) customPopup.classList.remove('active');
     window.scrollTo(0, 0);
@@ -6291,7 +6294,10 @@ function setupAnomalySwipe(box) {
 }
 
 function stopAnomalyCarousel() {
-    if (anomalyTimer) { clearInterval(anomalyTimer); anomalyTimer = null; }
+    if (typeof anomalyTimer !== 'undefined' && anomalyTimer) {
+        clearInterval(anomalyTimer);
+        anomalyTimer = null;
+    }
 }
 
 function getInsightPeriodKey() {

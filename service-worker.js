@@ -1,5 +1,5 @@
 // Service Worker - Dashboard Bilancio Personale PWA
-const CACHE_NAME = 'bilancio-pwa-v2';
+const CACHE_NAME = 'bilancio-pwa-v3';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== location.origin) return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-store' })
       .then(response => {
         // Clona e salva in cache se è una risposta valida
         if (response && response.status === 200 && response.type === 'basic') {

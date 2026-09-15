@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-09-15] - Ripristino Analisi / Investimenti / Previsioni / Impostazioni
+
+### Completed Changes
+- **causa 1 (HTML)**: `#current-month-tab` veniva chiuso troppo presto (dopo il blocco mobile Mese). I quattro tab restavano fuori da `#mainAppWrapper`; `overflow:hidden` li ritagliava → schermate vuote. Il markup originale era ancora nel file (KPI/anomalie/risparmi, hero investimenti, chart/sim/scadenze, tile settings). Richiusura corretta: wrapper KPI residui in `.month-head`; i quattro tab tornano figli di `.container` dentro `#appMain`.
+- **causa 2 (JS)**: `stopAnomalyCarousel()` leggeva `anomalyTimer` mai dichiarato → `ReferenceError` in `switchTab` uscendo da Mese/Analisi. Dichiarato `let anomalyTimer = null`; stop wrappato in try/catch; check `typeof`.
+- **causa 3 (PWA)**: Service Worker `bilancio-pwa-v2` + HTTP cache servivano `script.js` vecchio (`transferSize: 0`) anche dopo il fix su disco. Cache `v3`, fetch `{ cache: 'no-store' }`, `script.js?v=1.6`.
+- **verifica browser**: dopo reset SW, i quattro tab hanno altezza 544px, `inWrapper=true`; click nav Analisi (KPI+anomalie+risparmi), Investimenti (hero+CTA), Previsioni (chart+slider+hub), Impostazioni (6 tile) + popup Categorie. 0 errori JS.
+
+### Status: COMPLETATO in locale — push GitHub Pages NON fatto (serve richiesta esplicita).
+
 ## [2026-09-15] - Debug menu index.html: tab form/IA morti + HTML sbilanciato
 
 ### Completed Changes
