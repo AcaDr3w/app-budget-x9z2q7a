@@ -1,0 +1,1002 @@
+# Changelog Archiviato - 2026-08
+
+## [2026-08-21] - Fix TDZ regressione: receipt state prima dell'IIFE parse-time
+
+### Completed Changes
+- **bug critico** (introdotto da 7be2480): `setupReceiptNoteActions()` era chiamato dall'IIFE `setupBottomSheetEvents` a **parse-time** e invocava `startReceiptPolling()` che leggeva `receiptPollTimer` ÔÇö `let` dichiarato DOPO l'IIFE ÔåÆ **ReferenceError TDZ a parse-time** ÔåÆ l'esecuzione top-level di script.js si interrompeva ÔåÆ tutte le `let/const` successive (`MACRO_CARD_META`, `freeModelsCache`, i listener DOMContentLoaded dopo riga ~3277) MAI inizializzate ÔåÆ errori a cascata "Cannot access X before initialization" da `renderMacroCards`/`fetchFreeModels`, macrocard non renderizzate/cliccabili, binding mancanti.
+- **fix**: le 6 dichiarazioni `let receipt*` spostate PRIMA dell'IIFE `setupBottomSheetEvents` (riga ~3245); `startReceiptPolling()` + listener `visibilitychange` spostati da parse-time a un blocco `document.addEventListener('DOMContentLoaded', ...)` (pattern del resto del file). Regola MEMORY: mai chiamare init che legge variabili `let/const` a parse-time ÔÇö le dichiarazioni devono stare prima di qualsiasi IIFE.
+- `MACRO_CARD_META`/`freeModelsCache` NON erano fuori posto (gi├á dichiarati prima delle rispettive funzioni) ÔÇö erano sintomo dell'abort, non causa.
+
+### Status: COMPLETATO - node --check OK; push 4f91f2b. PENDING: migration `receipt_jobs` (db push --password) per il flusso scontrino.
+
+## [2026-08-21] - Scontrino ASINCRONO: job background + notifica conferma (sostituisce la vision sincrona)
+
+### Completed Changes
+- **architettura**: la vision sincrona nello sheet (`analyzeReceipt`) ├¿ RIMOSSA. Nuovo flusso: attach foto ÔåÆ `startReceiptJob` (downscale ÔåÆ upload storage privato `receipts/<uid>/<jobId>.jpg` ÔåÆ riga `receipt_jobs` `pending` ÔåÆ invocazione fire-and-forget dell'edge `process-receipt`) ÔåÆ l'utente compila e salva normalmente (il job viene linkato con `expense_id` a salvataggio) ÔåÆ quando l'IA risponde: barra fixed `.receipt-confirm-bar` ("­ƒº¥ Importo scontrino: X Ôé¼ ┬À [Conferma spesa] [Ô£ò]") + `new Notification` se il permesso push ├¿ attivo ÔåÆ tap Conferma ÔåÆ `editExpense(Number(job.expense_id))` con importo/negozio precompilati ÔåÆ job + foto ELIMINATI.
+- **edge `process-receipt`** (nuova): auth JWT (pattern chat-openrouter) ÔåÆ job `processing` ÔåÆ download foto da storage come utente ÔåÆ OpenRouter vision con `VISION_MODELS` sincronizzata con chat-openrouter + prompt totale blindato (solo riga TOTALE in fondo, temperature 0.2, timeout 45s) ÔåÆ job `done` `{importo, negozio, data_scontrino, categoria_suggerita}` o `failed` `{error}`.
+- **migration `20260821_receipt_jobs.sql`**: tabella `receipt_jobs` (id TEXT PK, user_id, expense_id, status pending|processing|done|failed, importo, negozio, data_scontrino, categoria_suggerita, error, created_at, updated_at) + RLS user_id + bucket storage `receipts` (privato) con policy `storage.foldername(name)[1] = auth.uid()::text` su insert/select/update/delete.
+- **adapter**: `db.receiptJobs` (`SupabaseTable('receipt_jobs','id')`) + allowlist 11 colonne.
+- **polling client** (10s da `setupReceiptNoteActions`, resume su `visibilitychange`): dedupe notifiche in memoria + `eb_receipt_ignored_<id>` per l'Ô£ò; self-healing job `processing` >2min ÔåÆ ri-invocazione; banner "Riprova" per i `failed`.
+- **cleanup**: `clearReceiptPreview` elimina job orfani (senza `expense_id`) + foto; `confirmReceiptJob` elimina job + foto alla conferma. La guardia >500Ôé¼ non serve pi├╣ (importo visibile nel banner prima della conferma esplicita).
+- **css**: `.receipt-confirm-bar` (fixed bottom 78px+safe-area, z-index 10050 ÔÇö sopra bottomsheet 10000, sotto popup 10500, radius 14, `--shadow-card-hover`), `.receipt-confirm-msg` (13px wrap), `.receipt-confirm-btn` (pill `--accent`, 44px), `.receipt-confirm-dismiss` (44px).
+
+### Status: COMPLETATO (deploy edge OK) - **PENDING: migration `receipt_jobs` NON applicata** ÔÇö `supabase db push` richiede la password del DB (non disponibile in sessione): eseguire `supabase db push --password <pw>` o dal Dashboard. node --check OK.
+
+## [2026-08-21] - Foto scontrino con Vision IA (bottom sheet spesa)
+
+### Completed Changes
+- **feature**: i pulsanti ­ƒôÀ `#btnNoteCamera` e ­ƒôÄ `#btnNoteAttach` del bottom sheet (erano no-op da index.html:1056) ora aprono rispettivamente `#receiptCamInput` (`capture="environment"`) e `#receiptAttachInput` (galleria, entrambi `accept="image/*"` hidden).
+- **pipeline**: `handleReceiptFile(file)` ÔåÆ guardie (tipo immagine, Ôëñ10MB) ÔåÆ `downscaleReceiptImage()` (Image+canvas, lato lungo max 1280px, JPEG 0.75 Ôëê 200-400KB base64) ÔåÆ `analyzeReceipt(dataUri)` chiama `chat-openrouter` con flag `vision: true` e user message `content: [text, image_url]` ÔåÆ `parseAIJson` ÔåÆ importo nel `#amountInput` (formato virgola, es. "12,50"), negozio in `#sheetNote` (se vuota), data in `#sheetDate` (se valida), categoria in `sheetSelectedCategory` + titolo (se in `userCategories`).
+- **foto MAI persistita** (decisione utente): preview + `URL.revokeObjectURL` eliminati appena l'IA risponde (`finally { clearReceiptPreview() }`), e in `closeTransactionSheet()`/`slideToInputView()`. Guardia anti-concorrenza `receiptPending` (bottoni ignorati durante l'analisi).
+- **edge function `chat-openrouter`**: nuovo flag `vision` nel body ÔåÆ candidate SOLO `VISION_MODELS` (`google/gemini-2.5-flash-exp:free`, `google/gemini-2.0-flash-exp:free`) ÔÇö i fallback non-vision (llama/qwen) fallirebbero sull'immagine. `messages` passano gi├á invariati (i `content` array con `image_url` funzionano senza altro).
+- **css**: `.receipt-preview` (flex, radius 12, `--shadow-card`, `--surface-muted`, bordo `--muted-faint`), `.receipt-preview-img` (64├ù64, cover, radius 10), `.receipt-preview-status` (13px, wrap anywhere), `.receipt-preview-clear` (44├ù44 pill, `--danger`, hover `--border-soft`), durate 0.15s/0.3s.
+
+### Status: COMPLETATO - node --check OK; deno non disponibile localmente (edge function verificata a vista).
+
+## [2026-08-19] - Fix proporzioni card Anomalie di Spesa (Analisi mobile)
+
+### Completed Changes
+- **layout**: sparkline anomalie ora `flex:1 1 0` + `width:100%` + `min-height:36px` (rimosso cap `clamp(44px,10vh,84px)`) ÔåÆ il grafico riempie l'intera altezza del `.anomaly-window` (misurato: 202px su window 243px a 414├ù896; 63px a 360├ù640; floor 36px a 320├ù568 senza clipping). `align-self:stretch` per larghezza piena.
+- **layout**: sezione centrale 50/50 ÔåÆ **55/45**: `.anomaly-carousel` `flex:1.2 1 0`, `.savings-card` `flex:1 1 0` (il grafico ├¿ il cuore visivo della pagina).
+- **layout**: gap slide carousel 4ÔåÆ3px (protezione schermi corti).
+- **layout**: dots carosello NON pi├╣ stirati ÔÇö causa: `button{min-height:44px}` globale (style.css:175) applicato a `.anomaly-dot` (era fuori dall'exception list). Aggiunto `button.anomaly-dot` alla lista `min-height:auto` (riga 177) + `.anomaly-dots{align-items:center}` + `.anomaly-dot{max-height:6px}` ÔåÆ pillole orizzontali compatte (6├ù6, attivo 16├ù6 viola, invariato).
+- **layout**: KPI compact ÔÇö `.kpi-card` rimosso `min-height:44px` (non ├¿ touch target), `.trend-value` 12ÔåÆ11px, line-height label/value/delta 1.25ÔåÆ1.2 (type floor 10px rispettato: label e delta restano 10px).
+- **layout**: banner IA compact ÔÇö `.ai-insight-text` 12ÔåÆ11px, `.ai-insight-icon` 15ÔåÆ13px; `min-height:44px` MANTENUTO (├¿ `role=button`, touch target obbligatorio).
+- **verification**: audit headless CDP a 320/360/375/414px: nessun CUT/TRUNC nuovi (solo false positive noti: marquee, Ôå╗ ::before, sheet-slider); slideContentH Ôëñ window su tutte le larghezze (52Ôëñ58 a 320; 235Ôëñ243 a 414); dots 6px ovunque. Misure: `verify-anomaly.mjs` (Temp) con `renderAnomalyCarousel` fake-data.
+
+### Status: COMPLETATO - 0 regressioni audit; braces CSS 924/924; node --check OK.
+
+## [2026-08-19] - Mobile layout audit: truncation fixes + headless viewport verification (320-414px)
+
+### Completed Changes
+- **verification**: audit headless Chrome (CDP) con stub Supabase locale (sessione fake) a 4 viewport (320/360/375/414) ├ù 5 tab. Misure DOM: zero scroll orizzontale (`scrollWidth==clientWidth` ovunque), zero elementi tagliati fuori viewport. Evidenza: `docs/audit/before|after/` (PNG + report console). Server/stub/harness = fuori repo (Temp), riproducibile.
+- **layout**: `.trend-label` e `.trend-delta` (KPI Analisi) ora avvolgono su 2 righe (`-webkit-line-clamp:2` + `overflow-wrap:anywhere`) invece di `nowrap`+ellipsis ÔÇö "Scostamento Budget" (77/119ÔåÆ77/77) e "Nessuna crescita" (77/78ÔåÆ77/77) non pi├╣ troncati a 320px.
+- **layout**: `.card-progress-label`, `.hero-mini-label`, `.savings-sub`, `#mese-action-hub .hub-text` idem (wrap 2 righe) ÔÇö "Condividi Budget" a 320px non pi├╣ ellipsizzato.
+- **layout**: `.invest-hero-stat` `min-width:0`; `.invest-hero-value` `white-space:normal` + `overflow-wrap:anywhere` + `max-width:100%` (valori lunghi non sforano la riga 3-stat).
+- **layout**: `.header h1` `min-width:0` (safety flex), `.trend-value`/`.hero-mini-value` `max-width:100%` (fallback ellipsis).
+- **code**: `title` tooltip su `.anomaly-cat` in `renderAnomalyCarousel()` (slide + empty state).
+- **non-touch**: marquee AI, hit-area `Ôå╗` (`::before`), `.sheet-slider` = false positive intenzionali (documentato in MEMORY.md).
+
+### Status: COMPLETATO - 0 truncation residue verificabili; `scrollWidth==clientWidth` su 4├ù5 griglia; node --check OK. Bounded: 1 build batch, 1 verify round (baseline+after).
+
+## [2026-08-19] - Normalize sweep: type floor + radii/motion/shadow scales + full hex tokenization
+
+### Completed Changes
+- **typeset**: 6 violazioni floor frazionali (8.5/9.5px) -> 10px: `.anomaly-header`, `.savings-header`, `.savings-target-label`, `.future-milestone .fm-label/.fm-delta`, `.dl-micro-meta`. 0 font-size <10px.
+- **layout**: radius scale 8/10/12-16/20/999 (16 regole): input/select/textarea/search/btn-clear-filters/notes 9->10, `.calendar-day` + compact 7->10, btn-action/cat-del-btn/income-row-del/dl-type-btn/split-pill/condivise-tab/form-tab/badge-progress 6->8, `.sim-growth-input` 6px !important -> 8px senza !important.
+- **motion**: durate normalizzate a {0.15, 0.3, 0.5}s (0.18->0.15; 0.25/0.35/0.4->0.3; 10 sostituzioni).
+- **colorize**: 92 sostituzioni hex->token case-insensitive (2 batch). Nuovi token: `--danger-border/bg-soft/strong/deep`, `--ia-bg-soft/surface/surface-2/faint/muted/strong/deep/indigo`, `--accent-soft/border`, `--pending`, `--toggle-on`, `--warning-bg/border`, `--shadow-float/knob/popup`. Inclusi: Google-blue nav `#1A73E8`->`--accent`, flat-report `!important` (#ff9800/#e53935 -> --previsto/--sostenuto), ledger `#22c55e`->`--entrate`, `#ffffff`->`--panel`. Hex letterali 148->72 (solo :root defs, macro palette pinnata, var() fallback, progress #10b981); token refs 474->592.
+- **layout (G)**: `.macro-group-header` border-left 4px colorato -> background `--border-faint` (craft floor); rimossi 3 inline `border-left-color` in index.html.
+- **code**: `.btn-ghost-del` (.lg 16px) estratto dai template JS (deleteSavingsGoal/deleteInvestMovement) ÔÇö stile inline rimosso.
+
+### Status: COMPLETATO - 0 font-size <10px; hex 148->72; token refs 592; detector full-parse 0 findings; node --check OK; 0 U+FFFD; CSS/HTML parse OK. Bounded: 1 build batch + 1 verify round.
+
+## [2026-08-19] - Polish: keyboard delegation + labels + hit-area stragglers + token drift
+
+### Completed Changes
+- **a11y**: delegated `keydown` in `setupInlineActions()` ÔÇö Enter/Space su `[role="button"][tabindex]` ÔåÆ `el.click()` (7 div prima senza tastiera: hero pill, 3 summary-box, 3 dash-card; guard nativo button/input/select/textarea/a). Rimossi i 4 `onkeydown` inline ridondanti (hero-mini-pill ├ù3, ai-insight-card) ÔÇö residue inline 16ÔåÆ12.
+- **a11y**: 26 `aria-label` aggiunti (input senza etichetta programmatica: search, toggle desktop+mobile, slider simulazione, sheet invest/entrate/spese, input nascosti currentMonth/emoji/import file, ecc.).
+- **adapt**: `.ai-insight-refresh` (36px) e `.dl-micro-btn` (32px) nel blocco shared `::before{inset:-5px}` (hit-area 44/42); `.toggle-switch` label 26ÔåÆ44px (track visivo centrato con `top/bottom:9px`); `.calendar-day span` `opacity:0.6` ÔåÆ `color:var(--muted)` (contrasto ÔëÑ4.5).
+- **colorize**: token `--previsto-bg: #ffedd5`; `.calendar-day.has-deadline` ÔåÆ `var(--previsto-bg)`/`var(--previsto)`; delete buttons e "Obiettivo raggiunto" nei template JS ÔåÆ `var(--danger)`/`var(--success-text)`. Palette grafici e MACRO_COLOR restano dati JS (documentato).
+- **document**: MEMORY.md (pin keyboard delegation + guard nativo), DESIGN.md (exemption set aggiornato: calendar-day 40px documentato, toggle 44px, ai-insight-refresh/dl-micro-btn), CHANGELOG.
+
+### Status: COMPLETATO - 4 inline onkeydown rimossi (residuo non-click: 12); 26 aria-label; detector full-parse 0 findings; node --check OK; 0 U+FFFD; CSS/HTML parse OK. Bounded: 1 build batch, 1 verify round, nessun loop.
+
+## [2026-08-19] - Audit round 4: colorize token sweep + CSP onclick delegation + hit-area + detector full-parse
+
+### Completed Changes
+- **adapt**: `.row-chevron` (36x36) + `::before` -> position:relative; consolidato blocco shared `::before{inset:-5px}` per `.income-row-del, .cat-del-btn, .btn-back-sheet, .ripetizione-delete, .row-chevron` (hit-area 44-46 effettivi).
+- **colorize**: 24 token colore in `:root` (surface/border/muted/ink/danger-bg/success/accent-dark ecc.); sweep 366 sostituzioni proprieta-aware (color/background/border/outline ecc.) -> `var(--x)`; hex letterali 535->148 (restano :root defs + fallback `var(--x,#hex)` + rgba/shadow/gradient). 0 U+FFFD, 0 doppio var().
+- **harden/CSP (onclick -> delegation)**: 128 handler inline (113 index.html + 15 script.js) rimossi -> attributi `data-act`/`data-act-close`/`data-act-stop` + `data-args` JSON/`data-el`/`data-var`. Delegated click listener in `setupInlineActions()` (script.js). Speciali: `data-ai-refresh` (stopPropagation + generateInsightCard) e `data-import-trigger` (file input click). Verifica: 0 onclick restanti, 58 nomi azione risolti (2 in supabase-adapter.js), node --check OK.
+- **tooling**: `npm i htmlparser2 css-select css-tree domutils` -> detector impeccable ora gira in FULL-PARSE (prima regex fallback DEGRADED). Exit 0.
+
+### Status: COMPLETATO - 0 onclick in entrambi i file; detector full-parse 0 findings; 0 U+FFFD; node --check OK. Residuo: 16 handler inline NON-click (oninput/onchange/onsubmit/onkeyup/onkeydown/onfocus/onblur) documentati in MEMORY.md.
+
+## [2026-08-19] - Audit round 3 fixes: typeset floor 10px + btn-del hit-area + analisi queries + DESIGN.md
+
+### Ô£à Completed Changes
+- **typeset**: 8px/9px eliminati (`.calendar-day span` 8ÔåÆ10, `.trend-label` 8ÔåÆ10, `.ai-insight-date`, `.trend-delta`, `.savings-sub`, `.invest-hero-label`, `.settled-badge`, `#calendarGridCompact .calendar-day-header`, `.item-vals .val-p`, `.reg-shared-pill` 9ÔåÆ10).
+- **adapt**: `.btn-del` ÔåÆ 34├ù34 visuale + `::before{inset:-5px}` = 44├ù44 hit-area (pattern `.popup-close`); padding 0 4px rimosso, flex centratura.
+- **optimize**: `renderAnalisiMobile` ÔÇö due query indicizzate `where('month').anyOf(periodMonths|baseMonths)` al posto del full scan `toArray()` + filtro; rimossi `allExp`/`baseSet` morti.
+- **document**: `DESIGN.md` creato alla root (modo, mondo light-pastel, token AA, type floor, motion, invarianti performance, debiti noti).
+
+### ÔÜÖ Status: COMPLETATO ÔÇö `node --check` OK; detector 0 findings; 0 U+FFFD (script.js/style.css/index.html/DESIGN.md); floor 10px verificato (0 match 8-9px in style.css). **Harden/CSP (113 onclick) DIFFERITO**: refactor ad alto rischio, zero beneficio immediato (nessun CSP attivo), richiede verifica browser.
+
+## [2026-08-19] - Optimize round 2: Chart.js lazy + zero DB writes su resize/search
+
+### Ô£à Completed Changes
+- **Chart.js lazy-load**: rimosso `<script src="chart.js" defer>` dal `<head>` (era ~200KB parse per ogni sessione). Nuova `ensureChartJs()` (promise-inject UMD 4.4.1, pattern identico a `ensureHtml2Pdf`). `renderDashboardCharts`, `renderGlobalHistory`, `renderTradingChart`, `renderFutureChart` ora async con `await ensureChartJs()`; `renderFutureChart` ├¿ ora async (awaited da `updateFutureDashboard`).
+- **Chart animation disattivata**: `animation: {duration: 0}` su tutti e 5 i grafici (budget, category, historyBar, trading, future) ÔÇö 2s di intro jank per apertura tab Analisi eliminati.
+- **Resize senza scritture DB**: handler `window resize` (250ms debounce) ora chiama solo `renderCalendar()` ÔÇö prima `updateUI()` faceva `db.months.put` + `updateGlobalVersion` (write + version bump + autosync) a ogni resize.
+- **Ricerca mobile (popup)**: `filterSearchResults()` ÔåÆ shim 150ms + `runSearchFilter()`. Dataset IndexedDB caricato una sola volta per periodo (`searchDatasetCache` keyed `current:<mese>`/`all`/`custom:<mese>`), poi filtro in-memory; cache azzerata in `openSearchPopup`. Prima: `db.expenses.toArray()` + `db.income.toArray()` a ogni tasto con periodo "all"/"custom".
+- **`renderCalendar` O(giorni)**: Sets precomputati `plannedDates`/`deadlineDates` + flag `monthWideDeadline`/`recurringDeadline` al posto di `.some()` per giorno (O(giorni├ùspese+scadenze) ÔåÆ O(giorni+spese+scadenze)); rimosso `dayNum` morto.
+- **`updateGlobalVersion()`**: rimosso `console.log` per chiamata (invocata a ogni updateUI).
+
+### ÔÜÖ Status: COMPLETATO ÔÇö `node --check script.js` OK; detector: 0 findings; 0 U+FFFD in script.js/index.html. Residui documentati in MEMORY.md (filtri updateUI, monolith 325KB, FA blocking, Supabase sync pinned).
+
+## [2026-08-18] - Fix regression: Supabase CDN sync
+- Rimosso `defer` dal tag `@supabase/supabase-js@2` (index.html:14): `supabase-adapter.js:4` chiama `window.supabase.createClient()` a top-level (parse time) e con defer il bundle girava dopo il parsing ÔåÆ `Uncaught TypeError: Cannot read properties of undefined (reading 'createClient')`. Ripristinato caricamento sincrono. Chart.js/Google restano defer (usati solo post-DOMContentLoaded).
+
+## [2026-08-18] - Audit round 2: adapt + harden tablist + colorize + polish
+
+### Ô£à Completed Changes
+- **adapt**: `.popup-close` hit-area 44├ù44px via `::before` (`inset:-6px`) ÔÇö visuale invariata 32px, area tocco estesa (WCAG 2.5.8 / Apple 44px).
+- **harden**: `setupTablistA11y()` in script.js ÔÇö `role="tab"` su tutti i button dei `[role="tablist"]`, `aria-selected` sincronizzato con la classe `.active` (click + apertura), navigazione frecce ÔåÉ/ÔåÆ/Ôåæ/Ôåô + Home/End con attivazione automatica. `role="tablist"` + `aria-label="Spese condivise"` aggiunti alle `.condivise-tabs` (mancanti).
+- **colorize**: `theme-color` `#1e293b` ÔåÆ `#ffffff` (header e bottom-nav mobili sono bianchi).
+- **polish**: `<title>` da "­ƒôè EcoBilancio Digitale" ÔåÆ "Bilancio Pro" (allineato al brand, niente emoji nel titolo).
+
+### ÔÜÖ Status: COMPLETATO ÔÇö `node --check` OK; detector: solo flat-type-hierarchy (eccezione documentata).
+
+## [2026-08-18] - Audit impeccabile: harden + animate + colorize + optimize + layout + typeset + polish
+
+### Ô£à Completed Changes
+- **harden (a11y)**:
+  - `setupModalAccessibility()` in script.js: Esc chiude popup/sheet attivi (click sul `.popup-close` o sull'overlay), focus trap Tab/Shift+Tab nello scope del popup/sheet, focus spostato sul primo focusable all'apertura e ripristinato alla chiusura (MutationObserver su classi, flag `data-a11yFocused` ripulito su tutti i contenitori).
+  - Auth modal: input con `<label>` reali + `autocomplete` + `aria-required`; modal con `role=dialog aria-modal aria-labelledby`; stili inline ÔåÆ classi `.auth-*` in CSS.
+  - `role="button"` senza `tabindex` su 6 elementi (hero-mini-pill ├ù3, summary-box ├ù3) ÔåÆ `tabindex="0"` + handler Enter/Space.
+  - `aria-label="Chiudi popup"` sui pulsanti "├ù" mancanti (search/IA mese/IA storico/archive/custom range/invest add/invest asset/condivise).
+  - Interattivi annidati risolti: `#monthSelectorPill` da `div[role=button]` a `<button>` reale; frecce ÔÇ╣ ÔÇ║ spostate fuori nel nuovo `.month-selector-group`; CSS: `border:none; font-family:inherit` sul pill.
+  - `<noscript>` banner con fallback visibile se JS disabilitato.
+- **animate**: blocco `@media (prefers-reduced-motion: reduce)` in style.css ÔÇö marquee `.ai-insight-track` fermo (statico), transizioni annullate solo per movimento spaziale (anomaly-track, sheet/overlay/popup, sheet-slider, dragging). Niente kill globale: hover/feedback conservati.
+- **colorize**: `.box-sostenuto` da `rgba(231,76,60,.96)` ÔåÆ `rgba(185,28,28,.96)` (#b91c1c, bianco Ôëê5.9:1, era Ôëê3.6:1 ÔÇö WCAG AA 4.5:1).
+- **optimize**: `defer` su supabase-js e chart.js; html2pdf rimosso dal `<head>` ÔåÆ `ensureHtml2Pdf()` lazy load in `exportPDF()` (script iniettato on-demand).
+- **layout**: stili inline estratti in classi CSS ÔÇö `.btn-violet` (gradient condivise/invest/PDF), `.record-card-{violet,gold,red}`, `.invest-type-grid`, `.danger-zone-box/.danger-zone-text/.danger-title/.btn-danger-full`, `.ia-future-card`, `.ia-modal-title`, `.popup-panel > h3` (margine unico direct-child), `.noscript-banner`, `.auth-*`.
+- **typeset**: h1 desktop nella `.top-nav-brand` (`.top-nav-brand h1`), scala corretta: `.pane-hint` 10ÔåÆ11px, `.popup-legend`/`.popup-note` 11ÔåÆ12px.
+
+### ÔÜÖ Status: COMPLETATO ÔÇö verifica `node --check script.js` OK; detector: solo warning pre-esistenti (side-tab/layout-transition) + flat-type-hierarchy (dashboard densa, eccezione documentata). Rilanciare `$impeccable audit` per nuovo punteggio.
+
+## [2026-08-18] - Refactoring layout Previsioni: 100vh + sheet 3 modalit├á + categoria
+
+### Ô£à Completed Changes
+- **Height budget mobile 100vh**: `.future-chart-card` = `flex:1 1 36%; min-height:140px; max-height:40vh` (mai schiacciato), header 42px / sim card compatta (padding 8px 10px) / milestone 44px / hub pill 44px, tutti `flex-shrink:0`. Zero scroll confermato.
+- **Asse Y max 4 livelli**: `maxTicksLimit:4` nei ticks di `renderFutureChart` (con `precision:0` esistente ÔåÆ es. 0 / 500 / 1.000 Ôé¼).
+- **Card simulatore compact**: chip valore centrato ÔåÆ slider sottile ÔåÆ riga unica `­ƒôê [input %] /anno ... Ôå╗` (Reset spostato dal chip in basso; input % inline `40px`).
+- **Action Hub = pillole**: `border-radius:999px`, min-height 44px, nowrap; override `#futureActionHub` nella media query 768 corretto (padding 4px).
+- **Sheet Pianificatore**: segmented control 3 modalit├á `[­ƒôà Giorno Singolo] [­ƒôå Intero Mese] [­ƒöü Ricorrente]` (nowrap/ellipsis, 44px); `Intero Mese` = input `type=month` con `day:''`; campi Titolo Spesa + riga Importo Ôé¼ + **Categoria** (`select` da `userCategories` + 'Varie', emoji via `getCatIcon`).
+- **Mini-calendario RIMOSSO ovunque**: `renderDeadlineCal` + `dlCalMonth/Grid/Recurring-{d,s}` + CSS `.deadline-cal-grid` + init riga 349 + 6 call nei render (add/delete/toggle/updateFutureDashboard/renderAnnualDeadlines/openFutureSheet). `renderCalendar` (tab Mese) intatto ÔÇö usa classi proprie.
+- **Lista micro-card**: `.dl-micro-card` (icona 32px, titolo ellipsis, meta "quando ┬À categoria", importo, azioni `Ô£ô` pagata/`Ôå®` annulla + `Ô£ò` elimina); `.dl-list-scroll` max-height 30vh scroll interno alla sheet. Desktop usa le stesse micro-card in `#annualDeadlinesList`.
+- **Migration `20260818_deadline_category.sql`**: `ALTER TABLE annual_deadlines ADD COLUMN IF NOT EXISTS "category" TEXT;` + allowlist adapter (`'category'`).
+- Verifica: `node --check` OK, brace CSS 877/877, grep zero residui (`dlCal*`, `renderDeadlineCal`, `deadline-cal-grid`, `futureInvestGrowthValM`).
+
+### ÔÜÖ Status: COMPLETATO (migration `20260818_deadline_category.sql` da applicare manualmente su Supabase, insieme a `20260818_recurring_deadlines.sql`)
+
+## [2026-08-18] - Fix 4 bug visivi/funzionali pagina Previsioni
+
+### Ô£à Completed Changes
+- **Slider Simulatore riparato**: niente pi├╣ thumb bloccato a sinistra ÔÇö nuovo blocco unico `.future-sim-card` con `.sim-range` custom cross-browser (`appearance:none`, track 6px `#e2e8f0`, thumb 22px `#3b82f6` con bordo bianco + `::-webkit-slider-thumb`/`::-moz-range-*`), `width:100%`. Range ÔêÆ500..+500, `step=10`, valore centrato sopra lo slider con Reset Ôå╗ accanto; aggiornamento real-time chart+milestone invariato (`oninput`).
+- **Blocco Simulazione & Investimenti unificato**: slider + chip valore + Ôå╗ + riga "­ƒôê Crescita investimenti %/anno" in UN solo card (mobile e desktop); eliminata la riga separata `.future-sim-meta`. Id `futureSimRow` resta solo sul blocco mobile (desktop senza id ÔåÆ niente duplicati, `toggleFutureSimRow` corretto).
+- **Asse Y Chart.js pulito**: `suggestedMin:0`, `suggestedMax:max(1000, maxVal*1.15)`, `ticks.precision:0` (niente tick frazionari duplicati tipo "1 Ôé¼"/"1 Ôé¼") + callback intero `toLocaleString('it-IT') + ' Ôé¼'` con guardia `r===0` (mai "-0 Ôé¼"). Rimosso `fmtCompactE` (inutilizzato).
+- **Milestone a 0Ôé¼**: `delta === 0` ÔåÆ testo `ÔÇö` al posto di "0 Ôé¼" ridondante; `.fm-value`/`.fm-delta` con `white-space:nowrap; line-height:1.25; overflow:hidden; text-overflow:ellipsis` ÔåÆ niente sovrapposizione/schiacciamento.
+- Verifica: `node --check` OK, brace-check CSS 866/866, grep zero residui (`future-sim-row`, `future-sim-meta`, `btnSimResetM`, `fmtCompactE`, `simulatedExpense`).
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-18] - Refactoring completo pagina Previsioni ÔåÆ dashboard proiezione finanziaria
+
+### Ô£à Completed Changes
+- **Dashboard zero-scroll mobile**: header "Previsioni" + sottotitolo base, grafico Chart.js centrale (flex:1, unico elemento flessibile), simulatore bipolare ÔêÆ500/+500 Ôé¼/mese, 4 badge traguardi (6M/1A/5A/10A), Action Hub (ÔÜí Simula toggle riga / ­ƒùô´©Å Scadenze sheet / ­ƒñû IA Futura sheet). Desktop: stessa dashboard in card normali.
+- **Motore proiezione** (`getProjectionBase`/`buildProjectionSeries`/`buildInvestSeries`): patrimonio personale = media risparmio mensile storica (`db.months`) + aggiustamenti scadenze; linea INVESTIMENTI separata (mai sommata) = valore attuale asset (`calcInvestStats`) con crescita composta mensile configurabile (default 4%/anno, input dedicato).
+- **Spese ricorrenti a durata limitata**: `annual_deadlines` estesa con `recurring` + `endMonth` (migration `20260818_recurring_deadlines.sql` + allowlist adapter). Rata gi├á attiva ÔåÆ scalino positivo dopo la fine (risparmio liberato); rata futura ÔåÆ sottratta da start a end; one-off ÔåÆ sottratta una sola volta nel mese. Pagate (`isPaid`) escluse.
+- **Pianificatore Scadenze** (sostituisce vecchio form+lista): toggle "­ƒôà Giorno singolo / ­ƒöü Ricorrente mensile" (date / start+end month), mini-calendario mensile con evidenza one-off e banda ­ƒöü ricorrenti, lista con Pagato/Elimina. Desktop = card, mobile = bottom sheet esistente (swipe-to-close). Ogni modifica ÔåÆ `updateFutureDashboard()` ÔåÆ grafico aggiornato istantaneo.
+- **Simulatore What-If**: slider bipolare con chip colorato (+verde / ÔêÆrosso) e Reset; aggiornamento istantaneo chart+milestone (riga simulata verde/rossa, milestone con delta vs base). Tasso crescita investimenti sincronizzato desktop/mobile.
+- **Analisi IA Futura**: prompt condiviso `buildFutureIAPrompt()` (risparmio medio, simulazione attiva, spese programmate per mese nei prossimi 12 mesi incluse rate ricorrenti, proiezioni 6m/1a/5a/10a) ÔåÆ `callAIEndpoint`. Desktop card + sheet mobile.
+- **`renderCalendar`/`checkAnnualAlertForCurrentMonth`** aggiornati per evidenziare scadenze ricorrenti attive nel mese.
+- **Legacy rimosso**: `renderFutureProjections`, `renderFutureProjectionsPreview`, `renderAnnualDeadlinesInSheet`, `loadAnnualDeadlines_db`, `addAnnualDeadline`, vecchi id (`simulatedExpense*`, `futureProjectionsGrid/List`, `futureAvgBox*`, `annDeadline*`), CSS `.proj-card`/`.proj-*`.
+- Verifica: `node --check` OK (script.js, supabase-adapter.js), brace-check CSS OK.
+
+### ÔÜÖ Status: COMPLETATO (migration `20260818_recurring_deadlines.sql` da applicare manualmente su Supabase)
+
+## [2026-08-18] - Fix sync Investimenti: RLS attiva senza policy sulle tabelle nuove ÔåÆ migration 20260818_investments_rls.sql
+
+### Ô£à Completed Changes
+- **Root cause "non salva/sincronizza" menu Investimenti**: le tabelle `investments`, `investment_movements`, `savings_goals`, `settings` esistono (migration applicate, colonne verificate via API) ma l'RLS era abilitata **senza policy** ÔåÆ ogni INSERT/UPDATE DENIED ÔåÆ `put` fallisce ÔåÆ dati solo in outbox locale. Verificato con GET anonimo: `months`/`expenses` (RLS+policy) e le 4 nuove danno tutte `[]`, ma le legacy funzionano in app ÔåÆ le nuove non hanno policy.
+- **Migration `20260818_investments_rls.sql`**: `ENABLE ROW LEVEL SECURITY` + policy `FOR ALL USING (user_id::text = auth.uid()::text) WITH CHECK (...)` sulle 4 tabelle + `NOTIFY pgrst, 'reload schema'` (cast `::text` obbligatorio: user_id TEXT vs auth.uid() UUID).
+- **Da applicare manualmente** sul progetto Supabase `bkviudppelulwufzhrat` (SQL Editor o `supabase db push`). Dopo il reload l'app fa `flushOutbox()` automaticamente (evento auth) ÔåÆ l'outbox accumulato viene sincronizzato.
+
+### ÔÜÖ Status: COMPLETATO (migration da applicare manualmente)
+
+## [2026-08-18] - Fix menu Investimenti: capitale iniziale, sync Drive, salvadanai, delete asset/movimenti
+
+### Ô£à Completed Changes
+- **`calcInvestStats` riformulata**: `currentValue` ora include `initialCapital` (prima ignorato ÔåÆ asset da 5000Ôé¼ mostrava Valore 0); `totalInvested = initial + deposit ÔêÆ withdrawal` (prima i prelievi non erano sottratti); `totalProfits = profit ÔêÆ expense` (prima le spese non riducevano il profitto netto); ROI = profitti netti / capitale investito.
+- **Hero "Ôé¼ Ôé¼"**: `fmtEPlain(x,0)` include gi├á " Ôé¼" ÔåÆ rimossi i suffissi doppi su `investTotalValue` e `investMonthlyCashflow`.
+- **Sync Drive mancante**: `updateGlobalVersion()` aggiunto in `saveNewInvestment`, `editInvestInitialCapital`, `saveInvestMovement` (prima il counter versione non saliva ÔåÆ backup GDrive mai triggerato dai cambi investimenti, nonostante il backup includa `investments`/`investmentMovements`).
+- **Salvadanai riparati**: PK reale ├¿ `name` (nessuna colonna `id`): select deposito ora usa `g.name`, `deleteSavingsGoal` passa il nome (encodeURIComponent per safety), `depositToSavingsGoal` fa `get(name)`/`update(name)` ÔÇö prima tutto usava `g.id` undefined ÔåÆ deposito sempre "Salvadanaio non trovato", delete mai funzionante.
+- **Convenzione UI**: `prompt()` ÔåÆ `showPromptDialog` in `editInvestInitialCapital`; `alert()`/`confirm()` ÔåÆ `showToast`/`showConfirmDialog` nei salvadanai.
+- **`genId()`** (Date.now*1000 + random) al posto di `Date.now()` per asset e movimenti ÔåÆ niente collisioni upsert.
+- **Delete asset/movimento**: `deleteInvestAsset(id)` (conferma, delete cascata movimenti via `where().equals().primaryKeys()` + `bulkDelete`, chiude popup) e `deleteInvestMovement(id)`; UI: bottone "­ƒùæ´©Å Elimina Asset" nel popup dettaglio + icona ­ƒùæ´©Å per riga movimento.
+- Verifica: `node --check` OK su script.js.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-18] - Fix Spese Previste: dedupe debtId reale, outbox filtrata per mese, cloni ricorrenti fuori dal mese corrente
+
+### Ô£à Completed Changes
+- **Root cause crescita badge "Spese Previste" a ogni apertura**: `syncSharedDebts` deduplicava su `debtId`, ma la colonna NON esisteva in `expenses` (n├® in migration n├® in allowlist adapter ÔåÆ stripped in scrittura). Ogni run (startup + `online`) ricreava N spese "Da saldare a X" con `planned>0`.
+- **Migration `20260818_expenses_debtId.sql`**: `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS "debtId" TEXT` + `NOTIFY pgrst, 'reload schema'`.
+- **Adapter**: `debtId` aggiunto alla allowlist `expenses`; `_mergeOutbox(rows, filter)` ora supporta un filtro; `where().equals().toArray()` e `anyOf().toArray()` filtrano le righe outbox sul campo originale (anche nel ramo offline senza user) ÔåÆ le spese di altri mesi in outbox non inquinano pi├╣ `currentData` del mese corrente.
+- **`syncSharedDebts`**: cleanup one-shot dei duplicati legacy del mese corrente (`!debtId && desc startsWith 'Da saldare a' && planned>0 && !actual && !settled`) ÔåÆ delete cloud + filtro su `currentData.expenses` + purge outbox (esposto `window.writeOutbox`); i debiti aperti vengono poi ricreati UNA volta con `debtId` persistente. Ora anche `payExpense` ritrova `debtId` dopo reload e salda il debito.
+- **`saveRecurringClones`**: `currentData.expenses.push(clone)` solo se `clone.month === mese visualizzato` (i cloni partono da m+1 ÔåÆ mai pi├╣ mesi futuri conteggiati nel badge dopo salvataggio ricorrente).
+- Verifica: `node --check` OK su script.js e supabase-adapter.js.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Analisi v6: KPI griglia 3x1 fissa, sezione centrale 50/50 (anomalie compatte + card Risparmi&Investimenti), rimossa barra Fisse/Variabili
+
+### Ô£à Completed Changes
+- **KPI 3x1 fissi**: `.kpi-swipe` da row scroll-snap ÔåÆ **`display:grid; grid-template-columns:repeat(3,1fr); gap:8px`** (rimosse scrollbar/overflow). `.kpi-card` padding `6px 8px`, `min-height:44px`, flex column centrata; font ridotti: label 8px, value 12px, delta 9px con ellipsis ÔåÆ 3 KPI leggibili insieme su mobile senza scroll.
+- **Barra Fisse/Variabili RIMOSSA**: eliminati HTML `#fixedVarBar`, CSS `.fixedvar-*` e le scritture JS (branch empty + main). `isFixed()` resta SOLO per l'esclusione delle anomalie.
+- **Sezione centrale 50/50**: `.anomaly-carousel` e nuova `.savings-card` entrambi `flex:1 1 0; min-height:0` ÔåÆ met├á altezza ciascuno, impilati, zero scroll. Sparkline compatta `clamp(44px, 10vh, 84px)`.
+- **Card Sintesi Risparmi & Investimenti** `#savingsCard` (header "Risparmi & Investimenti"): metrica 1 `#savRateValue` "X% del reddito" (accantonato nel periodo = ╬ú `investmentMovements` type=deposit con `date` nel periodSet / ╬ú `db.income` nel periodSet); metrica 2 `#savCashflowValue` cashflow netto = entrate ÔêÆ uscite del periodo (verde/rosso, `fmtEPlain` include gi├á " Ôé¼"); micro-bar `#savTargetBar` vs target = `localStorage['eb_savings_target_pct']` default **20** ÔåÆ fill `min(100, tasso/target*100)`, classe `on-target` (#10b981) se tassoÔëÑtarget, altrimenti ambra #f59e0b; label `#savTargetLabel` "Target 20% ┬À In linea / Sotto target / Nessun accantonamento"; empty ÔåÆ "ÔÇô".
+- **TODO**: target non configurabile da UI ÔÇö impostabile in futuro da Investimenti/Impostazioni come % OPPURE cifra fissa (vedi MEMORY).
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Analisi v5: carousel anomalie a slide orizzontale + area flex-grow (spec finale)
+
+### Ô£à Completed Changes
+- **`.anomaly-carousel`**: `flex: 0 1 auto; max-height: 220px` ÔåÆ **`flex: 1 1 auto; min-height: 0`** ÔÇö occupa tutto lo spazio verticale rimanente (spec: flex-grow:1, cuore della pagina). Rimosso `justify-content: space-between` da `#history-tab.active`.
+- **Carousel ÔåÆ scorrimento orizzontale**: fade/translateY sostituito da `.anomaly-track` (flex row, `transition: transform 0.5s cubic-bezier`, `translateX(-idx*100%)` via `moveAnomalyTo(box, i)`, classe `.dragging` per drag senza transition). Slide = `flex: 0 0 100%; height: 100%` (niente pi├╣ absolute/opacity). Dots + autoplay 3.5s invariati; `goAnomalySlide(i)` ora delega a `moveAnomalyTo`.
+- **Swipe touch** `setupAnomalySwipe(box)` (Pointer Events, bind post-render con guard `dataset.swipeBound`, `touch-action: pan-y` sul window): drag orizzontale traduce il track, |╬öx|>50 ÔåÆ slide successiva/precedente, altrimenti snap back; timer restart dopo il gesto.
+- **Sparkline**: `height: 64px` ÔåÆ `clamp(64px, 18vh, 140px)` (scala con l'area flessibile).
+- Desktop ÔëÑ768 e logica KPI/IA/fisse invariate.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Analisi: layout stretto no-overflow (carousel max 220px, sparkline 64px, gap 8, space-between)
+
+### Ô£à Completed Changes
+- **`#history-tab.active`**: `justify-content: space-between !important`, `gap: 10px ÔåÆ 8px`, `padding: 8px 12px ÔåÆ 12px`, `min-height: 0` (height gi├á `100%` del `.container` = `calc(100dvh - header 60px - nav 71px)`) ÔåÆ zero overflow verticale, nav sempre in viewport.
+- **Carousel anomalie**: `flex: 1 1 35%` ÔåÆ **`flex: 0 1 auto; max-height: 220px`** ÔÇö altezza = contenuto (mai >220px), niente spazio bianco. Compattato: header `8px 12px 0`, slide `2px 16px 0`, dots `6px 0 8px`. **Sparkline SVG `34px ÔåÆ 64px`** (range richiesto 60-80).
+- **KPI**: `.kpi-card` `flex: 0 0 78% ÔåÆ 75%` (snap-align:start invariato) ÔåÆ scrollabilit├á evidente.
+- **Label scostamento**: `vs Budget` ÔåÆ **`vs Previsto`** (script.js:5310/5313, rosso/verde invariati).
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Analisi: marquee vero, KPI swipeable + Scostamento Budget, carousel 35% con dots, fisse per keyword
+
+### Ô£à Completed Changes
+- **Banner IA**: fix marquee "tagliato" ÔÇö struttura 3 livelli: `.ai-insight-marquee` (overflow:hidden, flex:1) > `.ai-insight-track` (inline-flex, `width:max-content`, `aiMarquee` 14s linear infinite, `will-change:transform`) > 2 span identici. `translateX(-50%)` ora sul track (= met├á del contenuto) ÔåÆ loop seamless. Icona Ôå╗: 44ÔåÆ36px, font 13px.
+- **KPI ÔåÆ swipeable row**: `.trend-mini-grid` (2├ù1) ÔåÆ `.kpi-swipe` (flex, `overflow-x:auto`, `scroll-snap-type:x mandatory`, scrollbar nascosta) con 3 `.kpi-card` (`flex:0 0 78%`, snap-start): Media Uscite, Top Crescita, **Scostamento Budget** (`#budgetDiffValue` + `#budgetDiffDelta`: ╬útotalActualÔêÆ╬útotalPlanned dai record `db.months` del periodo; valore `+85 Ôé¼`, delta `Ôû▓ +8% vs Budget` rosso / `Ôû╝ -5% vs Budget` verde / `= In linea` grigio).
+- **Top Crescita**: MAI "in calo" ÔÇö solo categoria con delta positivo >1%; altrimenti `ÔÇö` + "Nessuna crescita" (flat).
+- **Carousel anomalie riprogettato**: `flex:1 1 35%` (~35% altezza) + flex column; `.anomaly-header` (titolo, flex-shrink:0) + `.anomaly-window` (flex:1, 1 slide visibile, fade 0.6s) + `.anomaly-dots` (3 button 6px, attivo `#7c3aed` 16px). Rimosso `.anomaly-label` assoluto (risolve sovrapposizione etichette). Nuova `goAnomalySlide(i)`: tap dot ÔåÆ stop timer, salto, restart 3.5s.
+- **Barra Fisse/Variabili realistica**: `isFixed(e)` = `isRecurring || recurringGroupId || /(mutuo|affitto|bollett|tass|luce|gas|acqua|telefon|internet|canone|assicuraz)/i.test(category)` ÔÇö regex case-insensitive (resiste a rinomine). Usata anche per esclusione anomalie.
+- No-scroll: `#history-tab.active` gi├á flex column overflow:hidden; KPI/header/barra flex-shrink:0, carousel basis 35% con shrink ÔåÆ tutto in una schermata. Desktop ÔëÑ768 intatto.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Tab Analisi: IA JSON+persistenza, banner marquee, sparkline smussate, carousel anomalie + barra Fisse/Variabili
+
+### Ô£à Completed Changes
+- **IA**: `callAIEndpoint` accetta 4┬░ param `systemPrompt` (messages `[system, user]`); nuovo `invokeAI(prompt, systemPrompt)` restituisce `data.content`. `generateInsightCard(force=false)` ÔåÆ system prompt: rispondere SEMPRE in italiano + SOLO JSON con chiavi `analisi_completa` / `riassunto_telegrafico`; `parseAIJson` (strip fence, primo `{}`, fallback prima frase Ôëñ120 char). **Persistenza** localStorage `eb_analisi_ai_<periodKey>` (`{analisi_completa, riassunto_telegrafico, ts}`); periodKey = `analysisPeriod_├áncora` o `custom_<da>_<a>`. Cambio range ÔåÆ key diversa ÔåÆ nessuna chiamata; tap banner ÔåÆ popup con `analisi_completa` dalla cache (nessuna nuova chiamata); `Ôå╗` ÔåÆ `generateInsightCard(true)`.
+- **Banner**: `.ai-insight-card` ora `div role=button` con `.ai-insight-marquee` (2 span duplicati, `@keyframes aiMarquee` translateX(-50%) 14s infinito, pausa su `:active`) + `.ai-insight-meta` con `#aiInsightDate` ("Aggiornato il GG/MM") e bottone Ôå╗ 44px (`stopPropagation`).
+- **Sparkline smussate**: polyline ÔåÆ `<path>` con curve B├®zier (catmull-rom, divisore 5 Ôëê tension 0.4), `vector-effect="non-scaling-stroke"`, fill chiuso a base.
+- **Sezione inferiore riscritta**: RIMOSSA `#sparklineList` (lista verticale). **Componente A** `#anomalyCarousel` (`flex-grow:1`, fade 600ms, auto 3.5s, timer `anomalyTimer` stoppato fuori dal tab in `switchTab`): top 3 categorie (escluse fisse) per |delta%| vs **periodo precedente di pari lunghezza** (`getBaselineCalendarMonths`); slide = nome + `Ôû▓ +X%`/`Ôû╝ -X%` + sparkline smussata; placeholder "Nessuna anomalia rilevata". **Componente B** `#fixedVarBar` (bottom, flex-shrink:0): barra bicolore Fisse `#ef4444` vs Variabili `#10b981` + label "Fisse X% ┬À Variabili Y%". **Fisse = spese con `isRecurring || recurringGroupId`** (scelta utente, niente whitelist categorie).
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Fix met├á inferiore tab Analisi: sparkline SVG visibili + layout pieno + trend coerente
+
+### Ô£à Completed Changes
+- **Sparklines canvas ÔåÆ SVG inline** (`sparklineSVG(values, total)`): il canvas misurava `getBoundingClientRect().width` a render-time (fragile, linea invisibile/sliver 10px). Ora `<svg viewBox="0 0 100 40" preserveAspectRatio="none">` con `<polyline vector-effect="non-scaling-stroke">` (stroke uniforme a ogni scala) + `<polygon>` fill `fill-opacity="0.12"`; dati reali del periodo, fallback linea grigia piatta se zeri. Colori: `#ef4444` totale>0, `#10b981` totale=0. Righe generate via template `innerHTML` (`sparkline-name` 34% + svg flex:1).
+- **Layout list**: `.sparkline-list` `flex-grow:1; flex-direction:column; justify-content:flex-start; gap:1rem`; `.sparkline-row` `justify-content:space-between; align-items:center; padding:1.5rem 1rem` ÔåÆ card pi├╣ alte, spazio vuoto in fondo quasi annullato.
+- **Trend card "Top Categoria in Crescita"**: rimosso il branch `'in calo'` verde (controsenso) ÔåÆ percentuale SEMPRE con segno: `Ôû▓ +X%` rosso se cresce, `Ôû╝ -X%` verde se cala, `ÔÇö` senza dati. Segno `+`/`-` aggiunto anche a "Media Uscite Mensili".
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-14] - Tab Analisi mobile: refactor single-screen nativo (periodi, trend, sparklines)
+
+### Ô£à Completed Changes
+- **Rimossi** su mobile: `.analisi-top-actions` (icone ­ƒñû/­ƒôï), `#recordsHubContainer` (3 record-card), `#chartsCard` (Chart.js bar/line) ÔåÆ `display:none !important` nel blocco Ôëñ767 (desktop ÔëÑ768 INTATTO: tabella, chart, records hub, IA card storica).
+- **Row 1**: `.analisi-header-row` = titolo + `<select id="analysisPeriod">` pill (3m/6m/year/custom, min-height 44px, default 6m).
+- **Row 2**: `.ai-insight-card` (button full-width, min-height 44, clamp 3 righe) ÔåÆ tap = `onAiInsightCardTap()` = apre `#iaModal` (esistente) + `generateInsightCard()` on-demand (prompt compatto sul range, `callAIEndpoint(prompt,'aiInsightText','')`, guard `aiInsightPending`). Nessuna chiamata IA automatica all'apertura tab.
+- **Row 3**: `.trend-mini-grid` 2├ù1 ÔåÆ "Media Uscite Mensili" (delta prima/ultima met├á finestra: Ôû▓rosso/Ôû╝verde/ÔåÆstabile) + "Top Categoria in Crescita" (delta % per categoria).
+- **Row 4**: `#sparklineList` `flex:1; min-height:0; overflow-y:auto` ÔåÆ top 4 categorie per totale, righe `.sparkline-row` nome 34% + `<canvas>` 40px, **canvas 2D puro** `drawSparkline` (DPR-aware, NO Chart.js).
+- **Periodi**: `filterMonthsByPeriod(months)` ├áncora = `#currentMonth` (fallback ultimo mese DB); `year` = anno del mese-├áncora; `custom` = `#customRangePopup` (2 `<input type="month">` Da/A, body-lock `popup-open`, revert periodo se chiuso senza applicare).
+- **switchTab**: branch `<768` ÔåÆ `renderAnalisiMobile()`; `>=768` ÔåÆ path originale (`renderGlobalHistory`+`renderTradingChart`+`initChartToggle`). Chiusura `#customRangePopup` in `switchTab`.
+- **Filtri**: spese conteggiate da `db.expenses` (actual>0) nel range, solo mesi con dati.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Elenco amici: saldo parziale bidirezionale con storico + layout compatto
+
+### Ô£à Completed Changes
+- **`settleFriendBalance` riscritto**: non marca pi├╣ tutto come saldato ÔÇö ora chiede l'**importo** (`showPromptDialog`, direzione-aware: "Ti deve X Ôé¼ ÔÇö quanto ti salda?" vs "Devi X Ôé¼ ÔÇö quanto paghi?", default = saldo completo, validazione 0 < importo Ôëñ |net|, decimali con virgola).
+- **`settleParticipantPortion(personId, records, amount)`** (nuova): consuma l'importo sui record pendenti dal pi├╣ vecchio; se l'importo chiude un record ÔåÆ `settled=true`; se ├¿ parziale ÔåÆ riduce `share` (debito) o `paid` (credito) del record originale e crea un **nuovo record saldato** (`share=taken` / `paid=taken`) ÔåÆ il ledger mostra lo **storico** (Ô£à Saldata |importo| + ÔÅ│ Da saldare |resto|) e i totali restano corretti (i saldati sono esclusi dai net).
+- **Sync `shared_debts` nel saldo**: riduce `amount` delle righe legate all'amico (`user_id`, creditor o debtor) per gli expense_id coinvolti; `status='settled'` a 0 ÔåÆ l'app dell'amico vede il debito ridotto.
+- **Layout compatto** (style.css): `.friend-row/.group-card` padding `6px 10px` gap 8 radius 12; avatar 36 (32 nei member-row); chevron 36; badge padding `2px 8px`; `.btn-settle` `5px 12px` (min-height 44); liste gap 6; `.ledger-row` `8px 10px` radius 10; `.detail-section` gap 4; `.debt-row`/`.member-row` `6px 10px`; `.detail-avatar-large` 40 separato.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Fix "Per conto diGiovanni" (flex) + debiti invisibili (RLS recursion + merge outbox nelle letture)
+
+### Ô£à Completed Changes
+- **CAUSA RADICE debiti invisibili (console)**: `infinite recursion detected in policy for relation "group_members"` ÔåÆ `groups_select` e `group_members_select` si interrogavano a vicenda; ogni INSERT su `shared_expenses`/`shared_expense_participants` (che valuta `shared_expenses_select`, che interroga group_members) entrava in loop ÔåÆ put fallito ÔåÆ outbox + toast rosso, dati mai visibili (l'adapter legge solo cloud).
+- **Migration `005_fix_rls_recursion_group_members.sql`** (DA ESEGUIRE su Supabase): funzione `SECURITY DEFINER is_group_member(gid)` (bypassa RLS ÔåÆ spezza il ciclo) + `groups_select`/`group_members_select` riscritte per usarla; REVOKE PUBLIC + GRANT authenticated.
+- **Adapter (`js/supabase-adapter.js`)**: letture ora fanno **merge con l'outbox** ÔÇö `_mergeOutbox()` applicato a `toArray()`, `get()`, `where().equals()/anyOf()`, `orderBy()` (con `_pk()` per months/categories). I dati pending (put falliti/offline) compaiono SUBITO nell'elenco Amici/Gruppi, nel ledger e nel mese, e sopravvivono al reload (outbox = localStorage). Stesso pattern gi├á usato in `loadPeopleGroups`.
+- **Spazio label preset**: `.preset-card` `display: flex` ÔåÆ `block` (il flex elimina gli spazi tra testo e `<b>`) ÔåÆ "Per conto di Giovanni", "Giovanni ha pagatoÔÇª" corretti.
+
+### ÔÜÖ Status: COMPLETATO ÔÇö `005` va eseguita su Supabase (SQL Editor)
+
+## [2026-08-13] - Fix popup sotto navbar (z-index) + debiti amici invertiti
+
+### Ô£à Completed Changes
+- **Popup coperto dalla navbar**: `.popup-overlay` `z-index: 2000 ÔåÆ 10500` (sopra `.bottom-nav` 9999!important e `.bottom-sheet` 10000!important). Vale per tutti i popup (Spese Condivise, Settings, Ricerca, Rendiconto, Invest, IA, Archive).
+- **Badge debiti tab Amici INVERTITI**: `renderFriendsTab` mostrava `net > 0 ÔåÆ "Ti deve"` ma `net = paid ÔêÆ share` (>0 = l'amico ha pagato pi├╣ della quota = LUI creditore ÔåÆ "Devi"). Ora: `net>0 ÔåÆ classe negative + "Devi X"`, `net<0 ÔåÆ positive + "Ti deve X"` (allineato a `showGroupDetail` che era gi├á corretto: "In credito di" per net>0).
+- **Dettaglio amico (`showFriendDetail`)**: stessa inversione su header (`"Le devi X"` per net>0, `"Ti deve X"` per net<0, classi saldo-negative/positive scambiate) e sul **ledger** (`diff = paid ÔêÆ share`: `diff<0` l'amico ti deve ÔåÆ verde "+", `diff>0` devi tu ÔåÆ rosso "ÔêÆ").
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Fix: sheet non scrollabile dopo toggle "Dividi Spesa" (scroll container annidato)
+
+### Ô£à Completed Changes
+- **REGREssIONE (029828c)**: `.shared-panel.active` era diventato uno scroll container (`overflow-y: auto` + `overscroll-behavior: contain`) ÔåÆ ogni swipe sul pannello espanso veniva inghiottito dallo scroll interno (poco contenuto) e bloccato dal `contain` ÔåÆ il bottomsheet NON scrollava pi├╣ ("non mi fa scendere").
+- **FIX**: `.shared-panel.active` `max-height: 430px ÔåÆ 2000px` (mai clip) e RIMOSSI `overflow-y: auto`/`overscroll-behavior: contain`/`scrollbar-width` ÔåÆ il pannello non ├¿ pi├╣ scroll container; lo scroll lo fa `.sheet-body` (unico contenitore). Stesso per `.form-advanced .shared-panel.active` (desktop, `380px ÔåÆ 2000px`).
+- Regola per il futuro: MAI `overscroll-behavior: contain` su contenitori annidati dentro `.sheet-body` (blocca la catena di scroll).
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Fix debiti amici/gruppi (p4 perso) + refactor "Dividi Spesa": via il selettore pagatore ridondante
+
+### Ô£à Completed Changes
+- **BUG FIX ÔÇö debiti mai mostrati in p4**: il gate di salvataggio era `otherPart > 0`; col preset p4 ("amico ha pagato per te", me=100%) `myPart = totale` ÔåÆ `otherPart = 0` ÔåÆ `saveSharedSplitsV2` mai chiamata ÔåÆ nessun record partecipante ÔåÆ elenco Amici/Gruppi vuoto. Ora: `splitRes.records.some(r => r.personId !== meId)` in `saveTransactionFromSheet` e `addExpense` (record non-me presente ÔåÆ salva sempre).
+- **BUG FIX ÔÇö self-debt in pushSharedDebts (p3/p4)**: scrittura `creditor = me, debtor = me` (debito verso s├® stessi materializzato nelle mie Spese Previste). Riscritto: `payerRec` (chi ha `paidAmount>0`) ÔåÆ `creditor = payer's uid`, `debtor = p.user_id` (gruppo: user_id membro); skip se `uid === payerUid` (self) o se manca uid.
+- **Migration `004_shared_debts_any_side.sql`** (DA ESEGUIRE su Supabase): policy INSERT rilassata `creditor_user_id = uid OR debtor_user_id = uid` ÔåÆ il creatore (debtor in p3/p4) pu├▓ materializzare la riga con creditore = amico ÔåÆ sync cross-account "Da saldare a X" funziona anche per i preset col pagatore amico.
+- **Refactor ridondanza "chi ha pagato"**: RIMOSSI `#sharedPayerSelect`/`#sharedPayerSelectDesktop` (righe HTML), funzioni `renderSharedPayer`/`bindSharedPayer`, CSS `.shared-payer-row`. Il pagatore ├¿ espresso dai preset (p1/p2 = Tu, p3/p4 = primo non-me); in **modalit├á avanzata** nuova `.payer-chip-row` (chips "­ƒæñ Tu" + partecipanti attivi, attiva evidenziata) renderizzata da `renderSplitEditor` ÔåÆ click setta `payerId` + `preset='custom'`.
+- **Layout pannello riordinato**: 1) Aggiungi persona/gruppo (select + Ô×ò), 2) preset grid, 3) ÔÜÖ´©Å Personalizza, 4) [avanzato] toggle %/Ôé¼ + payer chips + righe + badge.
+- **Badge riepilogo**: modalit├á preset ÔåÆ "Paga [X] ┬À N partecipanti" (era "Rimanente 0,00 Ôé¼ ┬À Paga X" ridondante); avanzato ÔåÆ invariato (remainder + errore somma).
+- **Scroll panel**: `.shared-panel.active` da `overflow: clip` ÔåÆ `overflow-y: auto` (contenuto >430px veniva tagliato senza poter scrollare).
+- CSS: `.payer-chip-row`, `.payer-chip-label`, `.payer-chip(.active)`.
+
+### ÔÜÖ Status: COMPLETATO ÔÇö `004` va eseguita su Supabase (SQL Editor)
+
+## [2026-08-13] - Dividi Spesa: preset rapidi Splitwise + partecipanti con checkbox + modalit├á avanzata con auto-fix
+
+### Ô£à Completed Changes
+- **Preset rapidi (4 card)** sostituiscono le pills metodo (`split-pill` rimosse dal pannello): `.preset-grid` 2├ù2 con `­ƒƒó Hai pagato tu, dividi equamente` (default), `­ƒöÁ Per conto di [X]` (payer=me, 100% ripartito equamente tra i non-me attivi), `­ƒƒí [X] ha pagato, dividi equamente` (payer=primo non-me), `­ƒö┤ [X] ha pagato per te` (me=100%). `applyPreset(preset, forceActive)` mappa su `payerId`+`method`+`value`; `derivePreset()` ri-sincronizza la card attiva su qualsiasi cambio (payer select, avanzato).
+- **Controparte = tutti i non-me attivi** (multiselezione): checkbox per riga `.participant-check` (spuntate di default); deselezionare = escluso dallo split; **il pagatore non pu├▓ essere escluso** (toast); in p2/p4 la deselection non pu├▓ svuotare la controparte (toast) e i valori % vengono **ri-distribuiti** (`applyPreset(preset, false)` preserva gli `active`).
+- **Gruppo intero**: select `g_` imposta `sharedSplitState.groupMeta = { label, memberIds }` ÔåÆ label preset "per conto del gruppo"; multiselezione membri via checkbox. `groupMeta` azzerato su add persona singola/rimozione totale.
+- **Modalit├á avanzata**: bottone `ÔÜÖ´©Å Personalizza quote (% / Ôé¼)` (label Ôçä "ÔåÉ Torna ai preset") ÔåÆ toggle segmentato `% | Ôé¼` (`.adv-method-btn`), input per riga; **auto-fix** `autoFixSplitValues(state, total)` su blur e pre-salvataggio (mobile `saveTransactionFromSheet` + desktop `addExpense`): l'ULTIMA riga viene adattata a `target ÔêÆ somma(altri)` (clamp ÔëÑ0) ÔåÆ mai pi├╣ blocco somma-zero; errore solo se il fix darebbe negativo.
+- **`computeSharedSplits`** ora filtra i soli partecipanti `active`; micro-quota live per riga (`.participant-share` = quota calcolata, es. "25,00 Ôé¼"); tag "paga" sul pagatore (`.participant-payer-tag`).
+- **`renderSplitEditor` v2**: righe con checkbox+avatar+nome+tag+quota/input+Ô£ò; focus=select() e blur=auto-fix sugli input avanzati; badge `.shared-remainder` sempre presente ("Rimanente: 0,00 Ôé¼ ┬À Paga X").
+- **CSS**: `.preset-grid`, `.preset-card(.active/.disabled)`, `.btn-advanced`, `.adv-method-toggle/.adv-method-btn`, `.participant-check` (24px accent blu), `.participant-row.excluded` (opacity .5), `.participant-payer-tag`.
+- `resetSharedSplitState` esteso (`preset:'p1', advanced:false, groupMeta:null`); rimosso codice morto pills dal reset sheet.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Debug: fix liste/debiti condivisi (noUserId junction), gruppi fantasma, focus-select split, tasto + blu
+
+### Ô£à Completed Changes
+- **ROOT CAUSE bug liste/debiti non aggiornati**: l'adapter filtrava `.eq('user_id', uid)` e scriveva `user_id` su TUTTE le tabelle, ma `shared_expenses` (usa `created_by`) e `shared_expense_participants` (junction, nessuna colonna `user_id`) ÔåÆ ogni read PostgREST 400 ÔåÆ `[]`; ogni write ÔåÆ outbox. **Fix**: `noUserId: true` su `sharedExpenses` e `sharedExpenseParticipants` (isolamento via RLS gi├á presente nelle migrazioni). Ora spese condivise, partecipanti, debiti e "Salda" funzionano.
+- **Gruppi "a volte no"**: `loadPeopleGroups` ora fa **merge cloud + outbox** (dedupe per id, copia cloud preferita) per `people`/`groups`/`groupMembers` ÔåÆ gruppi/persone creati offline (put fallito) non spariscono pi├╣ alla riapertura del popup. Esposti `window.readOutbox`/`window.flushOutbox`.
+- **`openCondivisePopup`**: dopo `loadPeopleGroups` prerender **entrambe** le tab con `await Promise.all([renderFriendsTab(), renderGroupsTab()])` ÔåÆ niente race al primo switch.
+- **`renderGroupsTab`**: try/catch per-gruppo + complessivo ÔåÆ un errore non blocca pi├╣ l'innerHTML (empty state "ÔÜá´©Å Errore caricamento gruppi").
+- **Focus-select split** (bug #3): `.participant-value` (%, Ôé¼, quota) in `renderSplitEditor` + `#expActual`/`#expPlanned` desktop ÔåÆ `focus` = `select()` con `requestAnimationFrame` (sovrascrittura immediata del numero).
+- **Tasto + blu** (bug #4): nuova classe `.btn-plus-solid` (blu `#3b82f6`, bianco, 44x44, radius 12) applicata a `#btnNewPerson` (mobile) e `#btnNewPersonDesktop`.
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Fix rendering liste (Amici/Gruppi) + refactoring Vista Dettaglio Gruppo
+
+### Ô£à Completed Changes
+- **Fix bug lista Amici**: `renderFriendsTab` NON deriva pi├╣ la lista da `calculateBalances()` (che mostrava solo chi aveva spese condivise ÔåÆ lista vuota dopo la creazione di un amico senza spese). Ora elenca **tutte le persone** (escluso me) con saldo calcolato da `sharedExpenseParticipants` (paidÔêÆshare, skip settled, arrotondato al centesimo); chi non ha voci ÔåÆ badge `In pari (0,00 Ôé¼)`; email sotto il nome (`friend-sub`); empty state solo se non ci sono amici.
+- **Fix card Gruppi**: rimossa **accordion** ÔåÆ la card apre la **Vista Dettaglio Gruppo** (`showGroupDetail`); card = `[icona] [nome] ["N partecipanti"] [badge saldo personale colorato ­ƒƒ® In credito di X / ­ƒƒÑ In debito di X / Ô¼£ In pari] [copia-link] [chevron >]`. Dopo `createGroup` ÔåÆ apre subito il dettaglio del nuovo gruppo.
+- **Rimozione codice morto**: `settleMyGroupShare` (ÔåÆ sostituita da `settleGroupExpenseShare`), accordion JS/CSS (`.group-acc-body`, `.group-acc-actions`, `.btn-acc-action`, `.group-card-header`, chevron rotation), `.group-total`, `.group-pos`, `.debts-summary`.
+- **`showGroupDetail` refactoring completo**:
+  1. Header: titolo + **Creatore** ("Creato da te"/"Creato da X", via `created_by` ÔåÆ `people.user_id`) + N partecipanti; box invito con copia.
+  2. **Aggiungi partecipante**: input con `datalist` (persone NON membri, autocompletamento) + bottone solido `.btn-add-solid` SOTTO l'input, full-width (pattern mobile-first, addio bottone trasparente `btn-small` affiancato); Enter = aggiungi.
+  3. Sezione **­ƒæÑ Partecipanti**: per ogni membro `[avatar] [nome] [ruolo Admin/Membro] [saldo individuale nel gruppo]` (Admin = `user_id === created_by`).
+  4. Sezione **­ƒôî Riepilogo Debiti**: box `getSimplifiedDebts` ("X deve Y Ôé¼ a Z", meÔåÆ"Tu") + empty "Ô£¿ Nessun debito in sospeso".
+  5. Sezione **­ƒº¥ Spese del Gruppo**: ledger (data/desc/metodo/totale) + bottone **`Salda quota`** per ogni spesa con MIA quota pendente (NUOVO `settleGroupExpenseShare`: confirm ÔåÆ `settled=true` sulle mie righe ÔåÆ re-render dettaglio); spese saldate ÔåÆ dimmed `Ô£à Saldata`.
+- **CSS**: `.detail-section-title`/`.detail-section`, `.member-row`, `.member-role`, `.member-balance` (+`.bal-positive/negative/neutral`), `.ledger-settle-btn` (solido blu, min-height 44px), `.ledger-settled`, `.friend-sub`, `.group-add-member` ÔåÆ colonna (input + bottone full-width).
+
+### ÔÜÖ Status: COMPLETATO
+
+## [2026-08-13] - Spese Condivise: sync debiti multi-account + redesign modal (Amici/Gruppi)
+
+### Ô£à Completed Changes
+- **migrations/003_shared_debts.sql (NUOVO)**: tabella `shared_debts` (creditor/debtor user_id, importo, expense_id, status open/settled) + RLS (SELECT/UPDATE creditor O debtor, INSERT solo creditor) + `NOTIFY pgrst`. **Da eseguire su Supabase.**
+- **js/supabase-adapter.js**: flag `noUserId` per tabelle senza colonna `user_id` (isolamento via RLS) + nuova tabella `shared_debts` in `DB_ACCESSOR`/allowlist/`window.db.sharedDebts`.
+- **Sync AÔåÆB** (`pushSharedDebts` in `saveSharedExpenseV2`): per ogni partecipante non-pagatore con quota >0 e `user_id` noto (persona collegata o membro di gruppo con invito accettato) ÔåÆ riga `shared_debts`.
+- **Sync BÔåÆA** (`syncSharedDebts` in `startupCloudCompare` + `initApp` + listener `online`): B materializza i debiti `open` come **Spese Previste del mese corrente** `"Da saldare a [Nome A]"` (dedupe su `debtId`, categoria fallback 'Spese Condivise'); A marca `settled` i partecipanti quando B salda.
+- **Salda (B)**: `payExpense` aggiornato ÔåÆ transizione plannedÔåÆactual + `markDebtSettled` (RLS debtor permette update).
+- **Modal redesign**: tabs ÔåÆ segmented control `[­ƒæñ Amici | ­ƒæÑ Gruppi]` (`.condivise-segmented`, pattern `.split-segment`); popup `max-height 85vh` + `#condiviseBody` scrollabile; form add con bottone solido `.btn-add-solid` (+ stack Ôëñ360px); friend rows compatte con **badge stato** (­ƒƒ® Ti deve X / ­ƒƒÑ Devi X / Ô¼£ In pari) + chevron 44px; gruppi ÔåÆ **accordion** (header: icona, nome, membri, posizione "Sei in credito di X"/"Devi X"/"In pari", badge Totale Speso, copia-link; corpo espanso: matrice "­ƒôî X deve Y Ôé¼ a Z" con meÔåÆ"Tu" + azioni `+ Aggiungi Spesa` e `Salda mia quota` (NUOVO `settleMyGroupShare`)); empty state compatto; label `getSimplifiedDebts` ÔåÆ "deve ... a ..." anche in `showGroupDetail`.
+- CSS morti rimossi (`.friend-status`, `.friend-balance`, `.group-balance`, `.group-card-main/.actions`).
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; braces 0; grep residui pulito.
+- **Da eseguire su Supabase**: `migrations/003_shared_debts.sql` (dopo 001/001b/002).
+- Limitazione: amici senza `user_id` collegato ÔåÆ niente sync cross-account (resta gestione locale/Salda manuale). Categoria derivata 'Spese Condivise' non compare nelle macro-card (liste e totali OK).
+
+---
+
+## [2026-08-13] - Refactoring UX "Dividi Spesa" + banner budget solo su schermata categorie
+
+### Ô£à Completed Changes
+- **Banner budget**: `#macroSheetSubheader` ora nascosto in `slideToInputView` e ripristinato in `slideBackToCategories` (era fuori dallo slider ÔåÆ restava visibile anche nell'inserimento spesa).
+- **Payer unico**: rimosso campo "ha pagato Ôé¼" per ogni riga ÔåÆ selettore sottile in alto `Pagato da: [Tu Ôû¥]` (`#sharedPayerSelect`/`#sharedPayerSelectDesktop`); `sharedSplitState.payerId` (null = me); `computeSharedSplits` assegna `paid_amount = totale` solo al pagatore; reset a "Tu" se il pagatore viene rimosso.
+- **Segmented Control 3 opzioni**: `.split-segment` (bg neutro + pill attive) con `­ƒñØ Equamente | Ôé¼ Importi | % Perc.`; metodo "Quote" (shares) rimosso dalla UI (branch resta in compute per dati legacy).
+- **Lista partecipanti compatta**: chips rimosse ÔåÆ righe sottili `[avatar iniziali] [nome] [quota] [Ô£ò 44x44]` (`participant-avatar` colore deterministico, `participant-remove` touch target ÔëÑ44px); modalit├á Equamente ÔåÆ importo calcolato grigio read-only; Ôé¼/% ÔåÆ input editabili.
+- **Micro-badge** `.shared-remainder`: verde `.ok` ("Divido in N parti uguali" / "Rimanente: 0,00 Ôé¼ ┬À Saldo pagato da X") o rosso `.warn` con errore di validazione; sostituisce `.shared-preview` ("a tuo carico").
+- **Layout**: `.shared-panel` max-height 480ÔåÆ430px, gap 8ÔåÆ6px, touch target 44px (skill mobile-first); `.split-pill` base ripristinata (le pill "Tipo voce" desktop `data-exp-type` usano ancora `.split-method-pills`).
+- Salvataggi (`saveTransactionFromSheet`/`addExpense`) invariati: gi├á leggono `meRec.paidAmount` dal nuovo compute.
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; braces CSS 0; grep pulito (`shared-chip`, `participant-paid`, `shared-preview`, `data-method="shares"`, `renderSharedParticipants` = 0 residui nel codice).
+- Nessuna migration necessaria (semantica paid solo nel compute).
+
+---
+
+## [2026-08-13] - FASE 2 Spese Condivise V2: payer multiplo + split avanzati (% / Ôé¼ / Quote)
+
+### Ô£à Completed Changes
+- **migrations/002_shared_expenses_v2_phase2.sql (NUOVO)**: `ALTER TABLE shared_expense_participants ADD COLUMN IF NOT EXISTS settled BOOLEAN DEFAULT false` + indice `(person_id, settled)` + `NOTIFY pgrst, 'reload schema';`. Fix bug pre-esistente: `settled` era usato da `settleFriendBalance` ma mai creato (migration 001 n├® allowlist adapter).
+- **js/supabase-adapter.js**: allowlist `shared_expense_participants` aggiornata con `settled`.
+- **index.html**: `#sharedPanel` (mobile) e `#sharedPanelDesktop` riscritti ÔÇö rimosso payer-row (`#payerThemLbl`, pills pagatore), metodo ora 4 pills: Parti Uguali / % / Ôé¼ / Quote (`data-method` equal/percentage/exact/shares); nuovi contenitori chips `#sharedParticipants` / `#sharedParticipantsDesktop`.
+- **script.js**:
+  - Nuovo stato globale `sharedSplitState = { participants: [], method: 'equal', groupId: null }` (partecipante = `{ personId, name, paid, value }`).
+  - `computeSharedSplits(state, total)`: split equal/%/Ôé¼/quote; errori validazione (percentuali sommano 100, Ôé¼ sommano totale, quote positive, paid copre il totale); se nessuno indica chi ha pagato ÔåÆ paga tutto "Io" (fallback primo partecipante); rounding con aggiustamento sull'ultimo record.
+  - `saveSharedExpenseV2` ora scrive `split_method` reale + `split_value` per record + `settled: false`.
+  - `saveSharedSplitsV2` sostituisce `saveSharedSplits`/`saveSharedSplitsLegacy`/`updateSplitFields` (rimossi).
+  - UI: `populateSharedPersonSelect(selEl)` (nuova firma), `addSharedParticipant` (opzione "me", gruppi `g_` ÔåÆ membri, persona singola), chips rimovibili, editor righe per partecipante (share + ha pagato Ôé¼) con preview live.
+  - `saveTransactionFromSheet` e `addExpense` riscritti: usano `sharedSplitState` + `computeSharedSplits` + `saveSharedSplitsV2`; errore ÔåÆ toast + abort salvataggio.
+  - Saldi: `calculateBalances` / `calculateGroupBalances` / `showFriendDetail` escludono righe `settled`.
+  - `resetExpenseAdvancedForm` / `closeTransactionSheet` resettano `sharedSplitState` (rimosso codice payer-pill morto).
+- **style.css**: nuove classi `.shared-participants`, `.shared-chip`, `.shared-chip-x`, `.participant-row`, `.participant-name`, `.participant-share`, `.participant-value`, `.participant-paid`, `.shared-preview-error`; max-height panel attivo 340ÔåÆ480px; rimosse `.shared-payer-row`/`.payer-pill` morte.
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; braces CSS 0; zero residui (grep `updateSplitFields|saveSharedSplits(|payer-pill|sharedPctInput|sharedFixedInput|sharedPctDesktop|sharedFixedDesktop|payerThemLbl|updatePayerLabel|populateSharedPersonSelectDesktop`).
+- **Da eseguire su Supabase**: `migrations/002_shared_expenses_v2_phase2.sql` DOPO 001/001b.
+
+---
+
+## [2026-08-12] - Fix migration 001 Shared Expenses V2: tipi FK dinamici + quoting camelCase + cast auth.uid()
+
+### ­ƒöº Situazione
+- Errore Supabase SQL Editor: `42804: foreign key constraint "shared_expenses_expense_id_fkey" cannot be implemented ÔÇö Key columns "expense_id" and "id" are of incompatible types: bigint and text`.
+- Causa: DB reale ha `expenses.id` = TEXT (la migration `20260811_schema_completo.sql` usa `ADD COLUMN IF NOT EXISTS` ÔåÆ non converte colonne pre-esistenti), mentre `001_shared_expenses_v2.sql` hardcodava `expense_id BIGINT`.
+- Tipi confermati dal DB: `expenses.id` TEXT, `people.id` BIGINT, `group_members.user_id` TEXT.
+
+### Ô£à Completed Changes
+- **migrations/001_shared_expenses_v2.sql**:
+  - `CREATE TABLE` di `shared_expenses`/`shared_expense_participants` spostate in blocco `DO $$ ... EXECUTE format()` che legge i tipi reali di `expenses.id`/`people.id` da `information_schema.columns` (fallback text/bigint).
+  - Quoting camelCase: `"personId"` (ALTER DROP NOT NULL), `"groupId"` ovunque (function + policies).
+  - Cast `auth.uid()::text` e `colonna::text` nelle policies/function (confronti con colonne TEXT).
+  - Aggiunto `NOTIFY pgrst, 'reload schema';` finale (mancava, regola progetto).
+- **migrations/001b_fix_fk_types.sql (NUOVO)**: patch self-contained per stati parziali ÔÇö DROP IF EXISTS tabelle/funzione v2 + ricreazione completa corretta.
+
+### ÔÜÖ Status: COMPLETATO (in attesa di esecuzione SQL)
+- **Ordine di esecuzione**: se la 001 originale ├¿ fallita ÔåÆ eseguire `001b_fix_fk_types.sql` (ripulisce e ricrea tutto). Altrimenti la 001 corretta ├¿ idempotente.
+
+---
+
+## [2026-08-12] - Bottom Sheet Macro-Categorie ridisegnato: altezza dinamica, tema cromatico per macro, badge budget + ultime spese
+
+### Ô£à Completed Changes
+- **Altezza dinamica**: `.bottom-sheet` da `height:85dvh` fissa ÔåÆ `height:auto; max-height:85vh; overflow-y:auto` (fine del vuoto in basso; il form spesa ora scrolla l'intero sheet). `.bottom-sheet-grid` `max-height: 60vh` ÔåÆ `46vh`.
+- **Tema cromatico per macro** (nuovo const `MACRO_THEME` in script.js): CSS vars `--macro-accent/--macro-tint/--macro-border` settate su `#bottomSheet` in `openBottomSheetFromMacro`. Casa/Utenze ottanio `#2a9d8f`, Veicoli verde `#7bc043`, Spese e Svago viola `#6f42c1`.
+- **Micro-card unificate**: rimosso `card.style.background = getCategoryCardBg(cat)` (colori casuali hash) ÔåÆ sfondo `--macro-tint` + bordo `--macro-border` neutri; colore tematico solo su icona, importo e barra progresso (stati warn `#f59e0b`/over `#ef4444` invariati, normal = accent macro).
+- **Importo speso nelle micro-card**: nuovo `.cat-speso` sotto il nome (`fmtEPlain(aVal,0)` es. "14 Ôé¼").
+- **Badge budget header**: nuovo `#macroSheetSubheader` + `.macro-budget-badge` ("Speso: X su Y disponibili" + mini progress bar accent, over/warn semantiche).
+- **Ultime spese**: nuovo `#macroSheetRecent` + `renderMacroRecentSpese(macroGroup)` ÔÇö top 5 movimenti della macro (actual>0 altrimenti planned), sort data desc, righe con icona FA, categoria, desc, data gg/mm, importo accent; blocco nascosto se vuoto.
+- **Titolo sheet**: colorato con accent macro in apertura, reset in `slideToInputView`/`closeTransactionSheet`, ripristino in `slideBackToCategories`.
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; braces CSS 710/710; `getCategoryCardBg` resta (usata da `.reg-dot`).
+
+---
+
+## [2026-08-11] - Refactoring Responsive UI fluida: badge stacked sopra titolo (zero sovrapposizioni), griglia auto-fit con celle fluide clamp, hub flessibile flex:1 1 0
+
+### Ô£à Completed Changes (SOLO mobile, blocco Ôëñ767)
+- **Badge/titolo separati semanticamente**: nuovo `.card-header` (`flex column; align-items:center; gap:4px`) con badge sopra e titolo centrato sotto ÔåÆ **mai pi├╣ sovrapposizioni** (badge prima era `position:absolute`; ora statico). `card-title` `margin:0` (gap dal header), ellipsis anti-troncamento invariato.
+- **Griglia micro-celle adattiva (wrap)**: `.card-micro-grid` = `grid-template-columns: repeat(auto-fit, minmax(min(56px, 100%), 1fr))` + `grid-template-rows: repeat(2, minmax(0, 1fr))` ÔåÆ wrap automatico sulle card larghe (Svago full-width), 2 colonne su quelle strette (Casa/Veicoli), mai overflow (il `min(56px,100%)` evita l'esplosione del 60px fisso a 320px). RIMOSSE classi runtime `cols-2`/`cols-3` (JS sempre `card-micro-grid`).
+- **Celle fluide quadrate**: `.micro-cell`/`.micro-more` = `clamp(32px, 10vw, 42px)` + `aspect-ratio:1/1`; icone `clamp(13px,4vw,16px)`, `Ôï»` `clamp(14px,4.5vw,18px)`. Niente pi├╣ 42px fissi.
+- **Hub flessibile**: `#mese-action-hub button`/`#futureActionHub button` ÔåÆ `flex: 1 1 0` esplicito (crescita/restrizione equa, gap clamp invariato).
+- **Fallback overflow**: `html { overflow-x: hidden !important; }` nel blocco mobile (body gi├á `overflow:hidden`).
+- **Contenitori gi├á fluidi** (verificato, nessuna modifica): hero card e dash-card `width:100%`/grid `1fr`, padding/gap `clamp()`/%; KPI 3-colonne e insight fade invariati.
+- **Typo check**: "Casa e Utenze" corretto ovunque (index:145, script:246/2049/2154/3566) ÔÇö nessun "Casa e Utile" nel codice.
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; div 293/293; braces CSS 690/690; zero residui `cols-2`/`cols-3` nel codice (solo docs).
+
+---
+
+## [2026-08-11] - FIX overflow micro-categorie + card macro ristrutturate: solo icone FA in celle quadrate, titolo centrato, badge assoluto, glass quasi invisibile
+
+### Ô£à Completed Changes (SOLO mobile, blocco Ôëñ767)
+- **BUG FIXED ÔÇö overflow a lista verticale**: celle prima `micro-emoji`+`micro-name` (testo nowrap su minmax 60px) spingevano la griglia fuori dal glass. Ora **SOLO icone**: `<i class="fas fa-...">` vettoriali (FontAwesome 6.5.0 gi├á caricato), **nessun testo** nel render.
+- **Map FA**: `FA_ICON_MAP` (20 categorie predefinite ÔåÆ icone FA: basket-shopping, droplet, building, fire, bolt, trash, phone, pump-soap, house-chimney, gas-pump, motorcycle, screwdriver-wrench, file-invoice-dollar, shirt, paw, book-open, champagne-glasses, briefcase-medical, box) + `MACRO_FA` fallback per macro (`fa-house`/`fa-car`/`fa-cart-shopping`) + helper `faIconFor(cat,macro)` (custom ÔåÆ `fa-tag`). Dati reali da `userMacroCategories` (categoriaIconMap emoji resta per lista voci/registri, NON usata qui).
+- **Cella quadrata**: `.micro-cell` = `width/height 42px; aspect-ratio:1/1; flex center;` bg `rgba(255,255,255,0.5)` + bordo 0.8, icona 16px `color:inherit`. `.micro-more` = stesso quadrato, `Ôï»` solo (testo "+N altre" RIMOSSO).
+- **Layout card**: titolo `card-title` CENTRATO (`text-align:center; width:100%; margin:0 0 12px`) + **badge assoluto** `top:12px; right:10px` (.dash-card `position:relative; overflow:hidden`); `card-body` flex row space-between (icona `flex:0 0 25%` + glass) `overflow:hidden; min-width:0`; `.dash-card > * {min-width:0; max-width:100%}`.
+- **Glass quasi invisibile**: `rgba(255,255,255,0.15)` + `border rgba(255,255,255,0.2)` + radius 12px + padding 6px (rimosso blur(12px) e 0.5/bordo 0.8 invasivi).
+- **Griglia rigida**: `.card-micro-grid` + classi runtime `cols-2{repeat(2,1fr)}` / `cols-3{repeat(3,1fr)}` (`gap:6px; justify-items:center; align-content:center`); scelta in `renderMacroCards`: conteggio Ôëñ4 ÔåÆ 2 colonne, 5/6 ÔåÆ 3. `micro-empty` invariato (Ô£Å´©Å Aggiungi categorie).
+- **Padding compatti**: `.dash-card` `clamp(8px,2vh,10px) 10px`, gap interni ridotti, icona macro clamp 26-34px, progress footer full-width invariato (fill #10b981/warn #f59e0b/over #ef4444).
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; div 290/290; braces CSS 691/691; zero residui `micro-name`/`micro-emoji`/`card-title-row`/`more-text` (solo `card-title`).
+
+---
+
+## [2026-08-11] - LIGHT PASTEL THEME mobile: palette pastello, hero card panna con KPI 3-colonne, insight con fade, macro-card 2 colonne (icona+glass), rimossi banner gialli
+
+### Ô£à Completed Changes (SOLO mobile, blocco Ôëñ767)
+- **Palette "Light Pastel"**: `body` mobile = gradiente `linear-gradient(135deg,#E0F2F1,#FFF3E0,#E8F5E9)` (+ `background-attachment:fixed`); testo scuro su sfondi chiari ovunque; niente testo bianco tranne badge LIFESTYLES.
+- **Hero card `#mobile-hero-card`**: da gradiente scuro a **panna semitrasparente** `rgba(255,255,255,0.6)` + bordo `rgba(255,255,255,0.7)`, testo scuro (#111827/#1F2937), shadow morbida. **KPI = griglia 3 colonne uguali** (`grid-template-columns:repeat(3,1fr); gap:8px`): Entrate Totali / **Spese Previste (NUOVO id `heroSpesePreviste`, onclick ÔåÆ `openRendicontoPopup('previsto')`)** / Spese Sostenute. Pillole interne (`hero-month-pill`, `hero-insight-pill`, `hero-mini-pill`) ÔåÆ `rgba(255,255,255,0.8)` + bordo leggero + testo scuro; focus-visible outline scuro.
+- **AI Daily Insight**: stessa logica locale rotante (`setInterval` 4s, tap = prossimo + pausa 6s) ma **transizione fade-in-out** (`transition:opacity 0.25s ease` + `heroInsightFadeT` in `showHeroInsight`: opacity 0 ÔåÆ 250ms ÔåÆ cambio testo + opacity 1; `clearTimeout` anti-race con il tap).
+- **Macro-card ristrutturate (layout a 2 colonne rigide)**:
+  - `card-body` wrapper (`flex row; align-items:center; gap:12px; flex:1; min-width:0`): **icona macro a sinistra `flex:0 0 25%`** (pi├╣ grande, clamp 28-42px), **glass a destra `flex:1; min-width:0`** (`rgba(255,255,255,0.5)` + `border:1px solid rgba(255,255,255,0.8)`).
+  - Micro-grid ÔåÆ `repeat(auto-fit, minmax(60px,1fr)); gap:6px`; `.micro-cell` = `rgba(255,255,255,0.5)` + bordo bianco, emoji nativa + nome scuro con ellipsis; `.micro-more`/`.micro-empty` testo scuro.
+  - **Colori**: Casa `#B2DFDB` + testo/icona `#004D40` + badge `#80CBC4`; Veicoli `#C8E6C9` + `#1B5E20` + badge `#A5D6A7`; Spese e Svago (full width) `#E1BEE7` + `#4A148C` + badge **`#4A148C` con testo bianco**.
+  - Progress bar full-width fuori dal flex: track `rgba(0,0,0,0.12)`, fill `#10b981`, warn `#f59e0b`, over `#ef4444`, label scura.
+- **Rimossi banner gialli "uscite pianificate"**: pill oro `#upcoming-payments-pill` (HTML/CSS/JS: `renderUpcomingPayments` + call in `updateUI`) e `#deadlineAlert` `.deadline-alert` (JS blocco "ÔÅ│ N uscite pianificate in attesa di saldo" + CSS + regola desktop riga 2990). `#annualMonthAlert` blu (scadenze annuali) INVARIATO.
+- `updateUI` ora scrive anche `heroSpesePreviste` (stessa riga degli altri hero id).
+
+### ÔÜÖ Status: COMPLETATO + PUSHATO (`git push origin main`)
+- `node --check` OK; braces CSS 692/692; 293 div HTML bilanciati; id unici senza duplicati; zero residui `upcoming`/`deadlineAlert` nel codice (solo docs).
+
+---
+
+## [2026-08-11] - Mobile tab Mese v2: hero card "Riepilogo" (insight rotante + mini-pill), card con badge/icona grande, pill pagamenti oro, overlay blur 10px
+
+### Ô£à Completed Changes (SOLO mobile, blocco Ôëñ767)
+- **Hero card `#mobile-hero-card`** (`.hide-desktop`, primo figlio del tab, `flex-shrink:0`): gradiente blu/antracite `#0F172AÔåÆ#1E293B`, radius 24px, tutto `clamp()`. Contiene: titolo "Riepilogo" + **pill mese cliccabile** (`heroMonthPill`/`heroMonthDisplay` ÔåÆ apre il picker, binding aggiunto in `setupMonthNavigation`; `updateMonthDisplay` scrive anche il hero), **AI Insight rotante** (`heroInsightPill` glass `rgba(255,255,255,.12)`+`blur(12px)`, testo che ruota ogni 4s tra le 5 regole locali, tap = prossimo + pausa 6s, stop su `document.hidden`), **2 mini-pill** "Entrate Totali" (`heroEntrateTotal`) e "Spese Sostenute" (`heroSpeseSostenute`) con onclick ÔåÆ `openRendicontoPopup('entrate'|'sostenuto')`.
+- **`.month-head` nascosto su mobile** (`display:none !important` nel blocco Ôëñ767): le 3 box KPI sostituite dal hero (Previste visibile nelle barre budget). DESKTOP invariato (month-head + `sum*` restano attivi, `updateUI` scrive entrambi i set di id).
+- **Carousel standalone RIMOSSO** (HTML/CSS/JS: `ai-insight-carousel`, `aiInsightTrack/Dots`, `renderAIInsightSlides`, loop/dots) ÔåÆ sostituito da `renderHeroInsight()` (stesse 5 regole locali, slide ora stringhe `icona+testo` in un'unica pill).
+- **Macro-card**: badge a pillola top-right statici (Gestione/Flotta/Lifestyles) + titolo a sinistra + **icona grande** (`.card-hero-icon` clamp 24-36px, allineata a sinistra sotto il titolo) + nuovi gradienti: Casa `#0E4B56ÔåÆ#1B6B78`, Veicoli `#2E8B57ÔåÆ#4CAF50`, Svago `#3B1E7BÔåÆ#5E2B97`. Glass aggiornato a spec: `rgba(255,255,255,0.15)` + `blur(12px)`, radius 16px. Micro-grid 2├ù3 + progress invariati (dati reali da `renderMacroCards`).
+- **Pill "Prossimi Pagamenti"** `#upcoming-payments-pill` (oro `#E5B83B`, radius 99px, tra griglia e hub, `flex-shrink:0`): `N = spese in sospeso (planned>0, actual==0) + scadenze annuali non pagate del mese` (`annualDeadlines.filter(d => d.month===mese && !d.isPaid)` ÔÇö stessa fonte di `checkAnnualAlertForCurrentMonth`); nascosta se N=0 (`renderUpcomingPayments`).
+- **Action hub**: label "­ƒöì Ricerca Spese" e "­ƒæÑ Condividi Budget" (data-action invariati).
+- **Overlay sheet Ôëñ767**: `rgba(0,0,0,0.35)` + `blur(10px)`.
+- Fix minori: etichette hub Mese/Future riallineate (erano state cross-applicate in una sessione precedente).
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; braces CSS 689/689; 227 id unici (0 duplicati); zero residui `ai-insight`/`carousel` nel codice (solo docs). **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Mobile tab Mese: macro-card glassmorphism (2x3 + progress), AI Daily Insight carousel locale, IA "vera" nel popup mese + confronto col mese precedente
+
+### Ô£à Completed Changes (SOLO mobile, blocco Ôëñ767)
+- **Macro-card ridisegnate** (`#current-month-tab`): titolo con icona inline, **sub-container glass** `.card-glass` (`rgba(255,255,255,.12)` + `backdrop-filter:blur(10px)` + bordo 18%) al centro, **progress bar** in fondo. Griglia `.card-micro-grid` tassativa **2 righe ├ù 3 colonne senza scroll**: Ôëñ6 micro-categorie ÔåÆ tutte; >6 ÔåÆ prime 5 + badge 6┬░ slot `Ôï» +N altre` (dashed); 0 ÔåÆ "Ô£Å´©Å Aggiungi categorie". `renderMacroCards()` legge `userMacroCategories` + `categoryIconMap` (emoji, fallback ­ƒôî), calcola speso/budget per macro da `currentData.expenses`, fill con stati colore (`fill-warn` ÔëÑ80%, `fill-over` sforato), label `Budget {Macro}: speso / previsto` (fmtEPlain 0 dec). Click card O badge ÔåÆ stesso bottom sheet (delegation 2149-2154 invariata, il badge sta dentro la card).
+- **AI Daily Insight = carousel locale** (`#ai-insight-carousel`, tra grid e action hub, `display:none` ÔëÑ768): pillole swipeable (`scroll-snap-type:x mandatory`, snap 86%), dots indicatori, **auto-avanzamento 4s** (`startAIInsightLoop` ÔåÆ scrollTo smooth; pausa su pointerdown, resume 6s dopo lo scroll; stop quando tab nascosto). `renderAIInsightSlides()` ÔÇö 100% matematica locale, zero API: 1) ­ƒÄë miglioramento categoria vs mese precedente, 2) ­ƒôà media giornaliera macro pi├╣ attiva, 3) ­ƒÜÇ/ÔÜá´©Å proiezione lineare risparmio a fine mese (ritmo attuale ├ù giorni restanti), 4) ­ƒöÑ superamento budget macro, 5) onboarding se nessun dato. Hook in `updateUI()` (riga 3027-3028, dopo i KPI). `MACRO_CARD_META` = alias titoli/icone delle 3 macro.
+- **I.A. "vera" al clic**: label pill azione ÔåÆ "­ƒñû Assistente I.A." (apre sempre `#iaMonthPopup` esistente con `runIaMonthAnalysis` ÔåÆ `callAIEndpoint`/OpenRouter). `runIaMonthAnalysis` estesa: il prompt ora include **blocco "Dati mese precedente"** (entrate/spese previste+sostenute via `getPreviousMonthStrings(month,1)[0]`) con **variazioni %** (`pctDiff`, `fmtDiff` +n%/-n%/n/d) e richiesta esplicita di confronto (resoconto max 6 righe).
+- **Overlay bottom sheet blur (solo Ôëñ767)**: `.sheet-overlay.open` = `rgba(0,0,0,0.3)` + `backdrop-filter:blur(8px)` (regola desktop globale invariata).
+- **Micro-polish**: `.dash-card` `justify-content:space-evenly` + padding clamp ridotti; hover `translateY(-1px)` + `:focus-visible` outline bianco sulle card (a11y, `role="button" tabindex="0"`).
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; div HTML 284/284; braces CSS 684/684; 222 id unici (0 duplicati); 25 occorrenze `sheet-open`/`popup-open` invariati. **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Fix: scroll touch bloccato nei popup (body.popup-open separato da sheet-open)
+
+### Ô£à Completed Changes
+- **Bug preesistente risolto**: `body.sheet-open{touch-action:none !important}` (necessario per il drag del bottom sheet) veniva applicato anche a TUTTI i popup/modal ÔåÆ scroll touch impossibile dentro i popup su mobile (liste categorie/Ripetizioni dei nuovi popup Impostazioni sarebbero state inutilizzabili).
+- **Nuova classe `body.popup-open`** (style.css, accanto a `sheet-open`): lock solo `overflow:hidden` + `height` (niente `touch-action:none`/`overscroll-behavior`/`-webkit-overflow-scrolling:none`). Braces 653ÔåÆ654.
+- **9 coppie open/close convertite a `popup-open`** in script.js: condivise (1352/1359), search (3281/3296), IA mese (3386/3394), IA note modal (3404/3420), settings popup (3430/3435), rendiconto (3565/3572), invest add (3872/3878), invest asset (3929/3936).
+- **`sheet-open` resta SOLO sui bottom sheet reali** (drag richiede touch-action:none): transaction (677/703), edit expense (765ÔåÆ703 via `closeTransactionSheet`), income (823/838), macro sheet (2008ÔåÆ703), future (4331/4345).
+- **`switchTab` (481)** ora rimuove entrambe le classi (`remove('sheet-open','popup-open')`).
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK; 25 occorrenze riclassificate (9 popup pairs `popup-open`, 6 sheet `sheet-open`, 1 switchTab dual-clear); braces CSS 654/654. **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring layout mobile: zero-scroll di pagina, proporzionalit├á clamp(), Impostazioni a popup
+
+### Ô£à Completed Changes
+- **Zero-page-scroll system (Ôëñ767px)**: `html{height:100%}` + `body{height:100dvh;overflow:hidden}` ÔåÆ la pagina non scrolla MAI; `.container` = `height:calc(100dvh - var(--header-h,60px))` + `padding-bottom: var(--nav-h-mobile)` (71px+safe-area) ÔåÆ i tab ereditano `height:100%`. Scroll SOLO dentro i menu interni (`flex:1; overflow-y:auto`). Nuove variabili in `:root`: `--header-h:60px`, `--nav-h-mobile:calc(71px + env(safe-area-inset-bottom))`; rimossa `--nav-h:130px` (morta).
+- **Fissate 3 formule di altezza incoerenti**: Mese usava `100dvh-76` (senza safe-area ÔåÆ banda vuota sopra la nav, contenuto sotto il notch), Analisi/Future/Invest usavano `100dvh-60-60-safe` (~12px di contenuto sotto la nav) ÔåÆ tutte ora `height:100%` derivata dal container. `#settings-tab` allineato (height 100% + overflow-y auto interno).
+- **Proporzionalit├á `clamp()`**: `.mobile-dashboard-container{grid-template-rows:repeat(2,minmax(0,1fr))}` + `.dash-card{min-height:0;height:100%}` ÔåÆ le 3 card macro riempiono SEMPRE lo spazio (zero scroll forzato, zero buchi su schermi grandi); paddings/icone/titoli `clamp(vh/vw)`. Idem: pill mese, KPI summary, action hub Mese/Future, bottom-nav (label `clamp` + `white-space:nowrap` + ellipsis per evitare wrap che alza la nav), proj-card, hero investimenti.
+- **Popup robusti**: `.popup-body` ÔåÆ `flex:1; min-height:0; max-height:none` (prima `max-height:65vh` fisso poteva sbordare il panel su schermi piccoli); idem `.ia-notes-body` (62vh) e `#condiviseBody` (55vh inline rimosso); `.popup-bars` flessibile.
+- **Impostazioni = pulsanti ÔåÆ popup (mobile E desktop)**: griglia `.settings-tile` (6 card: Categorie, App & Notifiche, Backup, Cloud, Ripetizioni, Zona Pericolo) con icona+titolo+descrizione+freccia e hover/active/focus-visible; contenuti spostati in 6 popup `#settingsPopup-*` dentro il tab con **id interni invariati** (zero duplicazione logica JS). Nuove `openSettingsPopup(name)`/`closeSettingsPopup(event)`; `switchTab` chiude i popup settings (overlay `.active` dentro tab nascosto riapparirebbe aperto). Rimossi `.settings-col-left/right`.
+- **Cleanup**: eliminato blocco legacy `@media (max-width:768px)` "MOBILE-ONLY DASHBOARD" (`.dash-card` 35px/50px/200px in conflitto col blocco 767, `.category-grid-mobile display:none !important` duplicata) ÔåÆ header mobile pulito nel blocco 767; rimosso `@media (max-width:400px)` (fuso nei clamp), `.summary-pct`, `body{padding-bottom:100px}`, `.container{padding-bottom:130px}`, `#nav-btn-add` (CSS+JS), `scrollToAddExpense` (morto).
+- **Nota (decisione utente)**: griglia micro-categorie mobile confermata NASCOSTA ÔÇö regola esplicita `display:none !important` nel nuovo blocco (vince sull'inline di `renderCategoryGrid`); il menu del tab Mese restano le 3 card macro.
+
+### ÔÜÖ Status: COMPLETATO
+- `node --check` OK, braces CSS 653/653, stack HTML bilanciato, 210 id unici (zero duplicati). **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring radicale desktop Tab Mese: pill centrata, card ad arco SVG, split completo, cleanup legacy
+
+### Ô£à Completed Changes
+- **Bug "sidebar verticale" risolto**: non esisteva una sidebar ÔÇö gli artefatti sotto la navbar erano la vecchia barra `.header` (mai nascosta ÔëÑ768) e la nav mobile `.bottom-nav` (nessuna regola CSS base ÔåÆ renderizzata come striscia di link su desktop). Ora: `.header { display:none }` ÔëÑ768, `.bottom-nav { display:none }` base (compare solo Ôëñ767), rimossi CSS morti `.navigation-tabs/.tab-button/.add-button/.nav-spacer`.
+- **Pill mese VERA centrale**: `.month-head` ristrutturato con 2 `.kpi-cluster` (`display:contents`) ÔÇö sinistra `[Entrate][Previste]`, destra `[Sostenute]`, pill `flex:1` al centro esatto. **Risparmio rimosso** (`#summaryRisparmio` + `#sumRisparmio`/`#sumRisparmioPct` + CSS `.box-risparmio`/`.summary-pct` + write in `updateUI`). Mobile: ordine identico (pill ÔåÆ 3 box) via `display:contents` + pill 100%.
+- **Tab Mese = griglia CSS ÔëÑ1200px**: `#current-month-tab.active` = grid `260px | 1fr | 320px`, righe `auto auto 1fr` ÔåÆ alert row1 (1/-1), `.month-head` row2 **solo colonna centrale**, `.main-layout` row3 (griglia interna 3 colonne). `body{overflow:hidden}` + `.container{height:calc(100dvh-56px)}` + altri tab a scroll interno. Fallback impilato 768-1199 intatto.
+- **Card ad arco a mezza luna SVG** (Chart.js eliminato dalla griglia, ~20 gauge risparmiati per render): `gaugeArcSVG()` path `M 10 50 A 40 40 0 0 1 90 50` stroke 9, progress `stroke-dasharray = pct/100┬À125.66`, `linecap:butt` (niente finto punto a 0%), colori stato verdi/ambra/rossi; icona nel cavo dell'arco (top 56%, 18px, nessuna collisione: band interna y=14.5 vs icona yÔëê17-38); sotto: nome + **Speso / Budget** in una riga (`412,00 Ôé¼ / 500,00 Ôé¼`), **budget rosso + badge "ÔÜá Sforato di X"** quando si sfora; carta vuota ÔåÆ arco grigio + "ÔÇö / ÔÇö". `renderCategoryGridDesktop` riscritta (template string, onclick ÔåÆ `filterByCategory`).
+- **Registro ridisegnato**: righe compatte con pallino colore categoria (`.reg-dot` via `getCategoryCardBg`), nome+badge Ô£ô Saldata+pill `%` condivisa, sottotitolo `fd ┬À nota`, Stima/Da pagare impilati, `ÔÅ│ Da pagare` ambra (`.val-pending`), azioni Paga/­ƒùæ su colonna destra; guardia `exp.date` (legacy senza data ÔåÆ "ÔÇô"); sort ISO sulla stringa data (niente NaN); stato vuoto con hint. Righe entrate con dot verde + data.
+- **IA & Note spostato**: pulsante rimosso dal month-head ÔåÆ card compatta in **fondo colonna destra** (`.ia-quick-card` + `.ia-quick-trigger`) che apre `#iaNotesModal` esistente.
+- **Striscia risparmio rimossa**: `#overviewTableFoot` (markup + write `updateUI` + `.flat-footer-*` + `.savings-badge` + `.row-savings`/`#overviewTableFoot` mobile dead rules). Risparmio resta in Analisi/db.
+- **Form desktop ÔÇö parity completa col bottom sheet mobile**:
+  - **Entrata**: + campo **Data** (`#incDate`, default oggi, registrato in `inc.date`), controllo importo con toast.
+  - **Spesa**: `<details class="form-advanced">` con **Tipo voce** (pills Prevista teal/Sostenuta rossa, accentua Stima/Pagato) e **pannello Spesa Condivisa completo**: `#sharedToggleDesktop`, `#sharedPersonDesktop` (persone + gruppi `g_`, `populateSharedPersonSelectDesktop`), pills pagatore (`#payerThemLblDesktop`), metodo equal/%/Ôé¼ (`#sharedDetailFieldsDesktop`, `updateSplitFieldsDesktop`/`updateSharedPreviewDesktop`), `+` nuova persona (`#btnNewPersonDesktop`). `addExpense` ricalcola quote come la sheet (`saveSharedSplits(exp.id, otherPart, payer, selVal)`) + salva `isShared/sharedPayer/sharedPersonId/sharedGroupId`; quota % legacy applicata solo senza persona; `resetExpenseAdvancedForm()` al salvataggio.
+  - **Bugfix invio dati**: `expDate` vuota ÔåÆ default oggi (prima: righe senza data, sort/registro rotti); catch di `addExpense` ora rollback `currentData.expenses`; `addIncome` validata.
+- **Cleanup legacy JS**: rimossi `renderImportCheckboxList` (e le 3 chiamate) + `copyFromPreviousMonth` + sezione "COPIA DAL MESE PRECEDENTE" + CSS `.import-checkbox-list`, `.navigation-tabs` mobile, `.add-button`/`.tab-button` (media 968).
+- **Fix HTML pre-esistente**: bottom sheet aveva UN div non chiuso (`div` opens 257/closes 256, presente anche in HEAD) ÔåÆ aggiunto `</div>` finale, ora bilanciato.
+- **Mobile NON TOCCATO**: tutte le modifiche dentro media ÔëÑ768/ÔëÑ1200 o classi `hide-mobile`; ordine mobile (pillÔåÆalertÔåÆdashÔåÆsummaryÔåÆgrid) invariato.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK, braces CSS 643/643, HTML bilanciato (stack check), zero id duplicati (206), cross-ref getElementById audit: residui tutti pre-esistenti con null-guard. **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring visivo completo desktop Tab Mese: viewport-first zero-scroll
+
+### Ô£à Completed Changes
+- **Top navbar orizzontale (desktop ÔëÑ768)**: nuovo `<nav class="top-nav hide-mobile">` con brand "Bilancio Pro" + 5 link (`data-tab` Mese/Analisi/Investimenti/Previsioni/Impostazioni). `switchTab` sincronizza `.top-nav-link.active` (aggiunta regola). Mobile invariato (bottom-nav).
+- **Header Mese compatto** `.month-head`: pill mese + KPI (4 box) + pulsante `­ƒñû IA & Note` ÔåÆ apre la nuova modal.
+- **Layout 3 pannelli ÔëÑ1200px zero-scroll**: `#current-month-tab.active` = `height: calc(100dvh - 56px)`, flex column, overflow hidden; `.main-layout` = grid `270px | 1fr | minmax(360px,400px)`; i 3 pannelli scrollano internamente (`overflow-y:auto`, scrollbar sottile). Fallback impilato 768-1199px.
+- **Colonna sinistra**: calendario compatto `#calendarGridCompact` (L M M G V S D, tile 30px, span M/YY nascosto, click ÔåÆ filtra registro) + forms a tab **Entrata | Spesa | Condivise** (`.form-tabs`/`.form-pane`, wiring IIFE scoped); campi ultra-compatti (padding 8px, label 10px).
+- **Rimosso "Pianificazione Ciclo"**: `#importSectionCard`/`#importSection` eliminati dall'HTML (JS `renderImportCheckboxList`/`copyFromPreviousMonth` restano, no-op sicuri con null-guard).
+- **Griglia microcategorie ridisegnata**: card pi├╣ dense (`minmax(148px,1fr)`, gap 10px, padding 12px) con **icona della categoria centrata DENTRO l'arco** (`.cat-grid-gauge-icon` absolute nel wrap 140├ù70), `%` sotto l'icona, nome 1 riga, chips prev/att 11px, diff micro-badge. Stessa config gauge Chart.js (nessun tooltip).
+- **Registro Spese**: card `#entriesCard` nel pannello destro con righe moderne (`.item-row` card-like, hover lift, tinta sfondo, radius 10px), toolbar ricerca + CSV/PDF in testa; `scrollToRegistry()` scrolla il pannello invece di `scrollIntoView` pagina.
+- **Modal IA & Note (desktop)**: `#iaNotesModal` (pattern popup, 640px, `z-index:2500`) con tab **HUB IA | Note | Grafici**. HUB IA + textarea `userNotes`/`iaNotes` spostati qui dal pannello; **mini-chart** (`#budgetChart`/`#categoryChart` ÔåÆ `.ia-mini-chart` 130px) con ricreazione al open: estratta `renderDashboardCharts()` da `updateUI` (chiamata solo con modal aperto ÔÇö canvas hidden = size 0 per Chart.js).
+- **CSS cleanup**: rimossi `.charts-wrapper`, `.calendar-details`, `.cat-grid-icon` (dead), div duplicato `#currentMonth` (bug: duplicato inserito durante restyle, rimosso). Net balance div edit = 0.
+- **Mobile NON TOCCATO**: tutte le nuove sezioni `hide-mobile`; feature mobile (bottom sheet, action hub, dash) intatte.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK (script.js + adapter), braces CSS 649/649, zero id duplicati (203), cross-ref onclick/getElementById verificato (missing residui = pre-esistenti/by-design, documentati in MEMORY). **Nessun commit/push.**
+
+---
+
+## [2026-08-11] - Refactoring totale Tab Mese (desktop): navigazione mese, HUB IA, layout
+
+### Ô£à Completed Changes
+- **BUG FIX ÔÇö mese non cambiabile**: la pillola `#monthSelectorPill` non aveva alcun handler e `#currentMonth` era `display:none` ÔåÆ tab Mese bloccato sul mese corrente. Ora: pill cliccabile (`showPicker()` con fallback `click()`), tastiera (Enter/Space), frecce **ÔÇ╣ ÔÇ║** (`#btnPrevMonth`/`#btnNextMonth`, classe `hide-mobile`) con `shiftMonth(┬▒1)` ÔåÆ `loadMonthData()` + `updateMonthDisplay()`. Nuova `setupMonthNavigation()` chiamata nel DOMContentLoaded esistente.
+- **HUB IA restyled**: rimosso markup inline-styled ÔåÆ `.hub-ia-card` (card gradient, h2 con bordo `--ia-color`), hint, `.btn-ia` in evidenza, select Motore/Modello in `<details class="hub-ia-advanced">` collassato (zero JS), `.hub-ia-error-box` con classe CSS (JS usa `style.display` inline ÔåÆ compatibile). ID invariati (`ai-engine-select`, `openrouter-model-select`, `btn-analisi-strategica`, `hub-ia-error-box`).
+- **Colonna sinistra riordinata**: Registra Spesa ÔåÆ Nuova Entrata ÔåÆ Spese Condivise ÔåÆ Pianificazione Ciclo (collassabile, ultima). Sticky desktop (`top:118px`, `max-height`, overflow-y auto, scrollbar sottile). Fix typo "carato" ÔåÆ "carico".
+- **KPI strip 4┬¬ cella**: `#summaryRisparmio` (desktop-only `hide-mobile`) con importo + `#sumRisparmioPct` (+% / vuoto se nessuna entrata); `updateUI` aggiorna; summary-grid desktop ora `display:grid; repeat(4,1fr)`.
+- **Voci del Periodo**: calendario in `<details class="calendar-details">` collassato di default (ricerca+registro+CSV/PDF sempre visibili).
+- **CSS cleanup**: rimossi blocchi orfani `.flat-list-container/.flat-row/.flat-left/.flat-right/.flat-icon/.flat-title-group/.flat-title/.flat-subtitle/.flat-actual/.flat-margin` (zero consumer; `.flat-footer-*` conservati per la strip risparmio); `.card` ÔåÆ `border-radius: var(--radius-card)`; `:focus-visible` globale per button/input/select/textarea; `.month-arrow` 28px; `.box-risparmio` gradient blu-indaco; `summary-pct`.
+- **Mobile NON TOCCATO** (tutte le aggiunte con `hide-mobile`, le card modificate sono `hide-mobile`).
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK, braces CSS 572/572, zero id duplicati, tutti i nuovi id presenti. **Nessun commit/push**.
+
+---
+
+## [2026-08-11] - Refactor desktop Tab Mese: griglia categorie con gauge a semicerchio
+
+### Ô£à Completed Changes
+- **index.html**: rimossi `#viewToggleBtn` + `#macroTabsContainer` (le 3 macrocategorie desktop Casa/Auto/Svago; su mobile i macro-tab erano gi├á `display:none`, il toggle era un bottone morto). `#rendicontoCard` ÔåÆ titolo "­ƒôè Categorie & Budget", `#overviewTableBody` sostituito con `#categoryGridDesktop`; `#overviewTableFoot` (risparmio netto) conservato.
+- **script.js**: eliminati `setupViewToggle` (+ chiamata in `initApp`), stato `currentViewMode`/`activeMacroGroup` e tutti i branch `=== 'tabs'` (codice morto). Nuova `renderCategoryGridDesktop(catSums)` chiamata da `updateUI`: card per OGNI categoria (anche a zero) con bg pastello, icona, **gauge semicerchio** Chart.js (`doughnut`, `rotation:-Math.PI`, `circumference:Math.PI`, `cutout:'72%'`, `animation:false`, `events:[]`), % centrale, valori Prev/Sost, badge diff (green/red), stati ok/warning/over/empty; click ÔåÆ `filterByCategory(cat)` + stato `.selected` (`aria-pressed`).
+- **style.css**: rimossi blocchi orfani `.view-toggle-btn`, `.macro-tabs-wrapper`, `.macro-tab` e reference in media query mobile. Nuovi token `:root` `--radius-card`, `--shadow-card`, `--shadow-card-hover`. `.category-grid-desktop` (`repeat(auto-fill, minmax(230px,1fr))`, gap 16px), `.cat-grid-card` (button 18px radius, hover lift -3px, active scale, `:focus-visible` outline accent, `.selected` ring) ÔÇö solo desktop (card gi├á `hide-mobile`). Canvas gauge 168├ù84 fisso (zero CLS), `clamp()` sulla %.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK, braces CSS 553/553, zero reference residue a view-toggle/macro-tab/overviewTableBody. **Nessun commit/push** (richiesto dall'utente).
+
+---
+
+## [2026-08-11] - Bottom sheet swipe-to-close completo + rimozione legacy_version
+
+### Ô£à Completed Changes
+- **Rimossa cartella `legacy_version/`** (importate tutte le funzionalit├á, ROADMAP 7/7 fasi complete; nessun riferimento nel codice attivo).
+- **script.js**: `setupSwipeToClose` (solo `#bottomSheet`, selettore header errato `.sheet-header`, solo touch) sostituita con `setupSheetSwipe(sheetId, closeFn)` generica:
+  - Wiring su TUTTI e 3 i sheet: `#bottomSheet`ÔåÆ`closeTransactionSheet`, `#incomeBottomSheet`ÔåÆ`closeIncomeSheet`, `#futureBottomSheet`ÔåÆ`closeFutureSheet`.
+  - Pointer Events (touch + mouse) + `setPointerCapture` ÔåÆ drag fluido anche da desktop.
+  - Selettore corretto `.bottom-sheet-header` scoped al singolo sheet.
+  - Clamp delta ÔëÑ 0, `translate3d` per GPU, `e.preventDefault()` durante il move.
+  - **Chiusura fluida**: release oltre soglia (min 120px / 35% altezza) ÔåÆ si toglie `.dragging` + `.open` e si libera la transform inline nello stesso frame: la transizione CSS (0.35s) scivola da delta a 100%; sotto soglia ÔåÆ snap-back animato.
+- **script.js**: `closeFutureSheet` ora pulisce anche `transform` inline e classe `.dragging` (uniforme a `closeTransactionSheet`/`closeIncomeSheet`).
+- **style.css**: `.bottom-sheet-header` con `touch-action: none` (draggabile su touch, specificity 0,2,0 > `.bottom-sheet *`); `.bottom-sheet.dragging` con `will-change: transform`.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK.
+
+---
+
+## [2026-08-11] - ROADMAP ripristino legacy + Fase 1: Spese Ricorrenti
+
+### Ô£à Completed Changes
+- **docs/ROADMAP.md** (nuovo): piano 7 fasi per riportare le feature mancanti da `legacy_version/` (audit comparativo 11-08-2026), con riferimenti riga al codice sorgente legacy e checkbox di stato.
+- **Fase 1 ÔÇö Spese Ricorrenti (COMPLETATA)**:
+  - **index.html**: toggle "Ripeti ogni mese" + input mese-fine nel bottom sheet mobile (`recurringToggle`/`recurringUntil`) e nel form desktop (`recurringToggleDesktop`/`recurringUntilDesktop`).
+  - **script.js**: `setupRecurringToggle()` (animazione show/hide per mobile+desktop, init nel DOMContentLoaded), `saveRecurringClones()` (cloni mensili con `recurringGroupId`/`recurringEndMonth`, cap 240 mesi, giorno clampato all'ultimo del mese); integrati in `saveTransactionFromSheet` e `addExpense` (incl. reset toggle dopo il salvataggio); `closeTransactionSheet` resetta il toggle mobile.
+  - **style.css**: blocco CSS ricorrenza riportato dal legacy (`.recurring-toggle-wrapper`, `.toggle-switch`/`.toggle-slider`, `.recurring-until-container(.active)`, `.recurring-until-input`, `.recurring-hint`).
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK.
+- Nota: le spese ricorrenti create restano gestibili (visibili/edit) solo tramite dati `recurringGroupId` in DB; il popup "Ripetizioni" di gestione ├¿ la Fase 2 della roadmap.
+
+---
+
+## [2026-08-11] - Fase 2 ROADMAP: Gestione Ripetizioni (Impostazioni)
+
+### Ô£à Completed Changes
+- **index.html**: card inline "­ƒöü Ripetizioni" in `settings-col-right` (pattern attuale, non popup come nel legacy) con sezione collapsible `#ripetizioniSection` e container `#ripetizioniList`.
+- **script.js**: `renderRipetizioni()` (raggruppa spese con `recurringGroupId`/`isRecurring`, mostra nome/importo/durata, bottone ­ƒùæ´©Å) e `deleteRecurringGroup()` (rimuove solo spese future o del mese corrente non saldate); init in `initApp()`.
+- **style.css**: blocco `.ripetizione-*`/`.ripetizioni-empty` (7 regole) riportato dal legacy.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK.
+
+---
+
+## [2026-08-11] - Fallback dinamico modelli :free (client + Edge Function)
+
+### Ô£à Completed Changes
+- **script.js**: `fetchFreeModels()` (fetch `https://openrouter.ai/api/v1/models`, filtro `id.endsWith(':free')`, cache in variabile, timeout 10s, fallback silenzioso); `populateFreeModelSelect()` (dropdown = "­ƒÄ▓ Casuale (Free)" + modelli attivi, mantiene la selezione se ancora valida, chiamato in `initApp`); `resolveAIModel()` (valore `random` ÔåÆ scelto a caso dalla lista attiva; se lista vuota passa `random` al server).
+- **supabase/functions/chat-openrouter/index.ts**: `FALLBACK_MODELS` (gemini-2.5-flash-exp, gemini-2.0-flash-exp, llama-3.3-70b, qwen-2.5-coder); loop sui candidati `[modello client] + fallback` (dedup, shuffle se `random`), timeout 30s per tentativo (`AbortSignal.timeout`); stop immediato su 401/403 (problema chiave); 502 solo dopo esaurimento di tutti i candidati.
+- **index.html**: opzione statica `<option value="random">­ƒÄ▓ Casuale (Free)</option>`.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK.
+- **Deploy manuale necessario**: `supabase functions deploy chat-openrouter`.
+
+---
+
+## [2026-08-11] - Surfacing errori Edge Function + hardening chat-openrouter
+
+### ­ƒöº Situazione
+- Clic su "Analisi Strategica Mese": `Errore: Edge Function returned a non-2xx status code` ÔÇö il client non mostrava il motivo reale (401 JWT / 500 OpenRouter).
+- Sonda read-only: funzione deployata, check JWT attivo (401 "Non autenticato" senza token). Restava da distinguere 401 da 500 e rendere visibili i dettagli.
+
+### Ô£à Completed Changes
+- **script.js**: nuovo helper `extractFunctionError(err)` ÔÇö estrae `err.context` (Response del `FunctionsHttpError`) e compone `Status <code>: <body>`; usato nei catch di `callAIEndpoint` e `runFinancialAnalysisIA` (errore reale ora visibile nell'error box).
+- **supabase/functions/chat-openrouter/index.ts**: guardia `OPENROUTER_API_KEY` assente ÔåÆ 500 con messaggio esplicito; `req.json()` malformato ÔåÆ 400; `messages` vuoto ÔåÆ 400; errore OpenRouter ÔåÆ 502 con body (primi 500 caratteri) invece di 500 generico; lettura chiave estratta prima del fetch.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK.
+- **Deploy manuale necessario**: `supabase functions deploy chat-openrouter` + verifica `supabase secrets list`.
+
+---
+
+## [2026-08-11] - Fix "Cannot read properties of undefined (reading 'invoke')"
+
+### ­ƒöº Situazione
+- Clic su "Analisi Strategica Mese": `Errore: Cannot read properties of undefined (reading 'invoke')`.
+- **Causa**: `window.supabase` ├¿ il namespace UMD del bundle CDN (espone `createClient`, per cui l'auth funziona) ma NON `.functions`; l'istanza client con `.functions` ├¿ `window.supabaseClient` (js/supabase-adapter.js:4-5). Il fix precedente era parziale: `supabase.functions` ÔåÆ `window.supabase.functions`, ancora namespace.
+
+### Ô£à Completed Changes
+- **script.js**: `window.supabase.functions.invoke` ÔåÆ `window.supabaseClient.functions.invoke` in `callAIEndpoint` (riga ~2517) e `runFinancialAnalysisIA` (riga ~2584).
+
+---
+
+## [2026-08-11] - Edge Function chat-openrouter: JWT auth + lock modelli free
+
+### ­ƒöº Situazione
+- La chiave OpenRouter era gestita **lato client**: `runFinancialAnalysisIA()` faceva fetch diretto a `openrouter.ai` con la key dell'input (esposta) ÔÇö buco di sicurezza; inoltre la funzione non verificava l'autenticazione (chiunque con la chiave anon poteva chiamarla e bruciare la quota).
+
+### Ô£à Completed Changes
+- **supabase/functions/chat-openrouter/index.ts**: check JWT obbligatorio (`supabase.auth.getUser`, 401 se assente/invalido); validazione server-side di `model` (solo `openrouter/free` o regex `:free$`, default `openrouter/free`); la chiave resta in `Deno.env.get('OPENROUTER_API_KEY')`.
+- **script.js**: `runFinancialAnalysisIA()` ora usa `window.supabase.functions.invoke('chat-openrouter', { body: { model, ... } })` (mai pi├╣ fetch diretto n├® key client); `callAIEndpoint` passa il modello selezionato (`openrouter-model-select`).
+- **index.html**: rimosso input "OPENROUTER API KEY" (morto/convenzione errata).
+- **Deploy manuale necessario**: `supabase functions deploy chat-openrouter` + `supabase secrets set OPENROUTER_API_KEY=...` (il push GitHub non deploya le Edge Function).
+
+---
+
+## [2026-08-11] - Pulizia repo per GitHub Pages
+
+### Ô£à Completed Changes
+- **`db_usages.txt`**: rimosso dal repo (`git rm`) ÔÇö artifact di debug mai referenziato, inutile pubblicamente su Pages.
+- **`index.html`**: rimossa `<script src=".../dexie.js">` (dipendenza morta dall'adapter Supabase, ~120 KB scaricati inutilmente ad ogni load).
+
+---
+
+## [2026-08-11] - Schema completo Supabase + Outbox antifragile
+
+### ­ƒöº Situazione
+- Dopo l'esecuzione della migrazione `20260810_full_sync.sql`, nuovi 400: `Could not find the 'totalActual' column of 'months' in the schema cache` e `Could not find the 'deviceId' column of 'sync_state'`.
+- **Causa**: `CREATE TABLE IF NOT EXISTS` salta le tabelle gi├á esistenti senza aggiungere le colonne mancanti; + cache schema PostgREST non ricaricata.
+- Tutti i dati sparivano al refresh: i put fallivano silenziosamente e non esisteva memoria locale di recupero.
+
+### Ô£à Completed Changes
+- **supabase/migrations/20260811_schema_completo.sql (NUOVO, da eseguire)**: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` per OGNI colonna inviata dal frontend su TUTTE le tabelle (months, income, expenses, categories, annual_deadlines, savings_goals, settings, sync_state) con nomi quoted camelCase + tipi corretti; DO-block per PK mancanti (`months.month_id`, `id` su income/expenses/annual_deadlines); `NOTIFY pgrst, 'reload schema';` in fondo.
+- **js/supabase-adapter.js**: **Outbox su localStorage** (`eb_outbox_<tabella>`) ÔÇö put/update/bulkPut in caso di errore accodano la voce (nessun dato perso), toast "ÔÜá´©Å Salvataggio offline"; flush automatico all'autenticazione e su evento `online` (`flushOutbox()`); nuovi metodi interni `_upsert`/`_update` che restituiscono l'errore; rimosso no-op `mapped.name = mapped.name` in `_mapIn`.
+- **script.js**: rimosso `currentData.expenses.pop()` (rollback) in `addExpense` ÔÇö con l'outbox il dato va preservato in memoria.
+- **service-worker.js**: `CACHE_NAME` ÔåÆ `bilancio-pwa-v2` (invalida cache JS sul nuovo deploy).
+
+### ­ƒÄ» Status: COMPLETATO (in attesa di esecuzione SQL)
+- `node --check` OK.
+- **DOPO aver eseguito lo SQL**: hard refresh (Ctrl+F5) ÔåÆ se banner "Database vuoto": ­ƒôÑ Carica Backup (.json) ÔåÆ verificare Network 200/201.
+
+---
+
+## [2026-08-10] - Fix Sync Supabase (colonna iaNotes mancante + tabelle settings/savingsGoals/syncState su DB)
+
+### ­ƒöº Situazione
+- Dati non salvati su Supabase: `POST 400 PGRST204 "Could not find the 'iaNotes' column of 'months' in the schema cache"` ÔåÆ salvataggio mesi falliva; `GET 406` da `.single()` su righe inesistenti.
+- `settings`, `savingsGoals`, `syncState` erano su localStorage (`LocalMockTable`) ÔåÆ mai sincronizzati tra dispositivi.
+
+### Ô£à Completed Changes
+- **supabase/migrations/20260810_full_sync.sql (NUOVO)**: `ALTER TABLE months ADD COLUMN IF NOT EXISTS "iaNotes" TEXT;` + `CREATE TABLE IF NOT EXISTS` per `settings (key,value,user_id)`, `savings_goals (name PK, targetAmount, importo_accumulato, createdAt, user_id)`, `sync_state (id PK, counter, deviceId, lastUpdated, user_id)` ÔÇö da eseguire nell'SQL Editor (idempotente, nota RLS inclusa).
+- **js/supabase-adapter.js**:
+  - `_allowedColumns()`: allowlist colonne per tabella in `_mapIn()` ÔÇö i campi sconosciuti vengono scartati prima dell'upsert ÔåÆ mai pi├╣ PGRST204, il salvataggio non si rompe su campi opzionali.
+  - `.single()` ÔåÆ `.maybeSingle()` in `get()` ÔåÆ via il 406 su mesi/righe inesistenti (GET 200 + null).
+  - `put/update/bulkPut`: `console.warn` contestuale (non bloccanti).
+  - Rimosso `LocalMockTable`; nuovo `SettingTable` (normalizza record legacy `name/id` ÔåÆ `key`).
+  - `window.db`: `savingsGoals ÔåÆ SupabaseTable('savings_goals','name')`, `settings ÔåÆ SettingTable('settings','key')`, `syncState ÔåÆ SupabaseTable('sync_state','id')`.
+
+### ­ƒÄ» Status: COMPLETATO (in attesa di esecuzione SQL)
+- `node --check` OK su adapter e script.js.
+- **DOPO aver eseguito lo SQL nell'editor Supabase**: refresh ÔåÆ i dati devono persistere e sincronizzarsi tra dispositivi.
+
+---
+
+### ­ƒöº Situazione
+- Dopo il push precedente, pagina ancora bianca: `Uncaught SyntaxError: Identifier 'supabase' has already been declared (at supabase-adapter.js:1:1)`.
+- **Causa verificata**: il bundle UMD di `@supabase/supabase-js@2` (v2.112.2, `dist/umd/supabase.js` servito da jsdelivr) dichiara `var supabase` a livello globale (`var supabase=(function(e){...})({...})`). La riga 4 dell'adapter (`const supabase = window.supabase.createClient(...)`) entrava in conflitto ÔåÆ SyntaxError ÔåÆ `window.db` mai creato ÔåÆ `initApp()` mai chiamato ÔåÆ pagina bianca.
+- Inoltre su GitHub erano stati pushati file non essenziali (`.codegraph/`).
+
+### Ô£à Completed Changes
+- **js/supabase-adapter.js**: istanza client rinominata `supabase` ÔåÆ `supabaseClient` (riga 4 + `window.supabaseClient`), aggiornati tutti i riferimenti interni (`supabaseClient.from` ├ù12, `supabaseClient.auth` ├ù3).
+- **script.js:2514**: `supabase.functions.invoke` ÔåÆ `window.supabase.functions.invoke` (esplicito; il `var supabase` globale del bundle CDN resta disponibile).
+- **.gitignore (NUOVO)**: `.codegraph/`, `.opencode/`, `supabase/.temp/`, `*.log`, `.DS_Store`.
+- **Git**: `git rm -r --cached .codegraph/` (file locali intatti) ÔÇö repo pulita con solo file essenziali.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK su script.js, supabase-adapter.js, ui-dialogs.js.
+- Repository contiene ora solo file essenziali per GH Pages (index.html, js/, script.js, style.css, asset, docs).
+
+---
+
+### ­ƒöº Situazione
+- GitHub Pages serviva pagina bianca: 404 `js/supabase-adapter.js`, `TypeError` a `script.js:321`, 404 `favicon.ico`.
+- **Causa 404**: il branch remoto `main` (quello servito da Pages) conteneva `index.html` che referenzia `js/supabase-adapter.js` ma la cartella `js/` non era mai stata committata (push parziale/selectivo della migrazione Supabase). Il commit completo esisteva localmente su `master` (821405b) ma non era su `main` (alberi con storia diversa).
+- **Causa crash**: righe 321-322 di script.js eseguivano `getElementById('iaProviderSelect').value`/`geminiApiKeyInput` senza guardia ÔÇö elementi non presenti in index.html (l'IA hub usa `ai-engine-select`, `openrouter-model-select`, `openrouter-key-input`) ÔåÆ TypeError ÔåÆ script.js si fermava ÔåÆ app mai inizializzata.
+
+### Ô£à Completed Changes
+- **script.js**: guardie null-safe su righe 321-324 (convenzione "controlli difensivi" di MEMORY.md) per `iaProviderSelect` e `geminiApiKeyInput`.
+- **index.html**: aggiunto `<link rel="icon" href="icon-512.png" type="image/png">` (elimina 404 favicon.ico).
+- **Git**: force-push del commit completo locale su `origin/main` (branch rinominato da `master` a `main`).
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check script.js` OK.
+- Deploy Pages ora contiene `js/supabase-adapter.js` + `js/ui-dialogs.js` + `supabase/functions/`.
+
+---
+
+### ­ƒöº Situazione
+- Il worktree di `script.js` era stato corrotto (blocco Previsioni mobile perso, `const defaultCategories = {` cancellato ÔåÆ SyntaxError, blocco Google Drive OAuth rimosso ÔåÆ ReferenceError `gapiLoaded` a runtime, `showAlertDialog` usato ma mai definito).
+- `git checkout -- script.js` ha ripristinato la versione staged (2849 righe, sintassi valida, Drive OAuth + sync intatti).
+
+### Ô£à Completed Changes
+
+**script.js (base: versione staged ripristinata + ricostruzione):**
+- **Ricostruita sezione BOTTOM SHEET PREVISIONI (MOBILE)**: `openFutureSheet(action)` (azioni `simula`/`scadenze`/`ia`), `closeFutureSheet()`, `renderFutureProjectionsPreview(container, simAmount)`, `renderAnnualDeadlinesInSheet()`, `runFuturePredictionIASheet()` (chiama `callAIEndpoint` con responseBoxId `iaFutureResponseSheet`), `setupFutureSwipeToClose()` (swipe-down > 80px chiude).
+- `renderFutureProjections()` estesa: popola anche `#futureProjectionsGrid` (griglia 2├ù3 `.proj-card`) e `#futureAvgBoxMobile`; gestito empty-state anche mobile.
+- `resetFutureSimulation()` resetta anche `#simulatedExpenseMobile`.
+- Binding DOMContentLoaded: click su bottoni `[data-action]` di `#futureActionHub`, click su `#futureSheetOverlay` ÔåÆ chiudi, `stopPropagation` sul sheet, swipe-to-close.
+
+### ­ƒÄ» Status: COMPLETATO
+- `node --check` OK (3037 righe).
+- Tutti gli ID HTML referenziati esistono (i nuovi sono iniettati a runtime da `openFutureSheet`).
+- Funzioni Drive (`gapiLoaded`, `gisLoaded`, `syncToDrive`, `handleAuthClick`, `startupCloudCompare`, `processSilentRestore`, `debouncedAutoSync`) ripristinate dalla versione staged.
+
+### ÔÜá´©Å Da notare
+- `showAlertDialog` (13 usi in una vecchia versione corrotta) NON ├¿ stato ripreso: la base staged usa `alert()` coerente e funzionante.
+- Gap pre-esistenti (non introdotti da questa sessione): UI obiettivi risparmio (`savingsGoalsList`, `sgName`, `sgAmount`, `depositSavingsSelect`) assente in index.html; sezione IA hub rimossa dalla UI ma `toggleIaProviderFields` ha guardia null-safe.
+
+---
+
+## [2026-08-11] Investimenti tab polish
+- Restyled Investimenti tab: hero stat card, asset grid (mobile scroll) + desktop list, type buttons, movements rows, premium purple active nav state.
+- Restored `.popup-body`/`.btn-small` utilities.
+- Verified id/function cross-references and JS syntax.
+
+## [2026-08-11] Fase 4 - Spese Condivise
+- Pannello Dividi Spesa nel bottom sheet mobile: toggle, persona/gruppo, payer pills, split pills (equal/%/fixed), preview importo.
+- Popup Spese Condivise: tab Saldi (debiti/crediti, salda), tab Gruppi (crea, membri, cassa comune), detail ledger dark per persona/gruppo.
+- Logica quota propria in saveTransactionFromSheet (planned/actual per payer) + saveSharedSplits.
+- settleBalance: credito sottrae actual, debito converte planned->actual.
+- Migrazione SQL + adapter Supabase + backup estesi.
+
+## [2026-08-11] Fase 5 - Rendiconto esteso + Modifica spesa
+- Nuova Entrata mobile (income bottom sheet, swipe-to-close, btn nel popup rendiconto).
+- Liste entrate/spese nel popup rendiconto con delete; righe cliccabili -> modifica.
+- editExpense + saveTransactionFromSheet edit mode (update in-place o clone con settled).
+- Badge "Saldata" su expenses (settled) da edit type-change e settleBalance.
+- FIX: bottom sheet mobile spese non si apriva (id sbagliato sheetCategoryTitle).
+
+## [2026-08-11] Fase 6 - Popup mobile: Ricerca, IA Mese, Action Hub
+- Action hub mese mobile (#mese-action-hub, 3 pulsanti Ricerca/IA/Condividi) al posto di condivise-entry-btn; "Condividi" riusa openCondivisePopup.
+- Popup Ricerca (searchPopup): input + periodo (corrente/tutti/mese specifico) + risultati spese/entrate con icona categoria e % condivisa.
+- Popup IA Mese (iaMonthPopup): runIaMonthAnalysis costruisce il prompt dai dati del mese (categorie, risparmio, budget) e riusa callAIEndpoint esistente; salva l'esito nelle note IA (months.iaNotes via saveNotes).
+- FIX: tab Saldi/Gruppi popup Spese Condivise non commutable (mancava onclick su switchCondiviseTab).
+- CSS: #mese-action-hub + bottoni (pills flessibili); rimossa classe orfana .condivise-entry-btn.
+
+## [2026-08-11] Fase 7 - Rifiniture Impostazioni (Emoji picker categorie)
+- HTML: emojiPickerBtn + emojiInput (input nascosto) nel grid-inputs categorie impostazioni, prima di newCatName.
+- JS: IIFE setupEmojiPicker (tap -> focus input nascosto con tastiera emoji nativa; input -> ultimo codepoint -> testo bottone; blur -> reset style); saveCategory usa chosenEmoji in entrambi i branch (edit: chosenEmoji || icona esistente || MACRO_ICON; nuovo: emoji scelta se != placeholder); editCategory prefill bottone con getCatIcon(cat).
+- CSS: .emoji-picker-btn (cerchio 40px) + :active + .emoji-input-hidden (clip tecnica). Braces bilanciate.
+
+## [2026-08-12] - Fix: contenitori glass micro-categorie (Casa/Veicoli/Spese) tagliati
+
+### Completed Changes
+- .card-glass: padding 6px -> 8px 6px (respiro verticale), overflow hidden -> visible (stop taglio icone)
+- .card-micro-grid: height 100% -> auto (contenuto definisce l'altezza)
+- .micro-cell / .micro-more / .micro-empty: height 100% -> auto
+- .micro-cell i / .micro-more / .micro-empty: added flex-shrink: 0 (icone mai compresse)
+- .card-body: overflow hidden -> visible (rimosso clip genitore)
+
+### Status: COMPLETATO
+- braces CSS 710/710 OK
+
+## [2026-08-12] - Bottomsheet Mese: container micro-categorie compatti + badge previsione proattiva
+
+### Completed Changes
+- style.css: .bottom-sheet-grid max-height none (niente scroll interno, gap 10px); .bottom-sheet-cat-card padding 10px 6px; .cat-icon-wrap 1.3rem -> 9 container fissi senza scroll
+- script.js: nuova getCategoryForecasts() -> per categoria: planned mese corrente se >0, altrimenti actual mese precedente (db query month prev)
+- renderMacroBudgetBadge async: label 'Speso X su Y previsti'; barra rossa solo se previsti>0 e actual>previsti; previsti=0 -> barra neutra
+- heroSpesePreviste (updateUI): previsione globale (stessa regola su tutte le categorie)
+
+### Status: COMPLETATO
+- node --check OK; braces CSS 710/710
+
+## [2026-08-12] - Refactoring modal inserimento spesa: input importo compatto (niente spin) + azioni nota
+
+### Completed Changes
+- **Spin rotante ELIMINATO**: rimosse 2 ruote (#integerWheel/#decimalWheel), input hidden, initNativeWheels, syncWheelToInput, syncInputToWheel, vars ruota (selectedInteger/selectedDecimal/WHEEL_ITEM_HEIGHT/isScrollingProgrammatically/handlers) e tutti i CSS .wheel-*
+- **Nuovo campo importo**: input type=text inputmode=decimal (tastierino numerico decimale su mobile) + simbolo ´┐¢ fisso a destra; getSheetAmount() con parsing virgola->punto
+- **Note actions**: 2 pulsanti icona sotto la nota (fa-camera #btnNoteCamera, fa-paperclip #btnNoteAttach) con handler placeholder vuoti (.note-action-btn)
+- **Compatto**: .sheet-amount-display height 150px -> auto (anche modal Entrata alleggerito); gap sheet-body 20->12, sheet-inputs 12->8, footer 20->10, header 15->8, recurring 12->8, shared-panel 10->8
+- **Live preview Dividi Spesa**: refresh updateSplitFields su input importo quando il panel e' attivo
+
+### Status: COMPLETATO
+- node --check OK; braces CSS 704/704; zero residui wheel nel codice
+
+## [2026-08-12] - Bottom sheet spese: header/footer fissi, solo area centrale scrollabile + spacing rifinito
+
+### Completed Changes
+- .bottom-sheet overflow-y auto -> hidden (header e footer mai sotto scroll); #viewCategories overflow-y auto (sicurezza)
+- .sheet-body: padding 16px, rimosso padding-bottom 85px (footer ora fisso fuori dallo scroll)
+- .sheet-footer: gap 12px, margin-top 12px, width 100%, padding-bottom calc(16px + env(safe-area-inset-bottom))
+- .macro-budget-badge (pill verde): padding 8px 12px, gap 8px (piu compatta)
+- .sheet-input: padding 12px 16px, border-radius 12px
+- .sheet-note-actions: margin-top 4px
+- .recurring-toggle-wrapper e .shared-toggle-wrapper: gap 12px, margin-top 8px
+- .sheet-amount-display: padding 4px 0 0 (centratura importo)
+
+### Status: COMPLETATO
+- braces CSS 705/705 OK
+
+## [2026-08-12] - Card macro: container micro-categorie totalmente trasparente
+
+### Completed Changes
+- .card-glass (blocco mobile): background rgba(255,255,255,0.15) -> transparent; border -> none. Le icone micro riposano direttamente sul colore della dash-card (Casa/Veicoli/Spese)
+
+### Status: COMPLETATO
+- braces CSS 705/705 OK
+
+## [2026-08-12] - FASE 1: Refactoring Spese Condivise - nuovo modello dati, dashboard Amici/Gruppi e inviti
+
+### Completed Changes
+- Migration SQL (migrations/001_shared_expenses_v2.sql): nuove tabelle shared_expenses, shared_expense_participants, group_invites; colonne user_id/email su people, invite_token/created_by su groups, user_id/member_name su group_members; funzione RPC join_group_with_token(token, member_name); RLS policies.
+- supabase-adapter.js: aggiunti sharedExpenses, sharedExpenseParticipants, groupInvites a DB_ACCESSOR/window.db; aggiornate _allowedColumns.
+- script.js: helper genId, avatar (iniziali + colore deterministico), ensureCurrentUserPerson, createPerson, createGroup, generateInviteToken, getGroupInviteLink, copyInviteLink, joinGroupByToken (RPC), calculateBalances, calculateGroupBalances, getSimplifiedDebts, saveSharedExpenseV2, migrateSharedExpensesV2, handleJoinGroupFromUrl.
+- Dashboard popup: tab Amici/Gruppi con avatar, saldi colorati (verde/rosso/grigio), bottone Salda, detail persona/gruppo con ledger e saldi semplificati.
+- saveSharedSplits scrive anche sul nuovo schema V2 per popolare la dashboard.
+- Stili CSS nuovi per friend-row, group-card, avatar, ledger chiaro, saldi.
+
+### Note
+- Payer multiplo e metodi avanzati di split rimandati alla Fase 2.
+- Lo script SQL va eseguito manualmente nell'SQL Editor di Supabase.
+
+### Status: COMPLETATO
+- node --check OK; braces CSS 735/735 OK
+
+## [2026-08-19] - Audit a11y index.html round 3
+### Completed Changes
+- Nav `href="#"` -> `<button type="button">` (top-nav brand+links, bottom-nav 5 item); `<h1>` dentro `<a>` -> `<span class="brand-title">`; reset button CSS (background/border/font) + focus-visible. Rimossi argomenti morti `document.getElementById('tab-btn-*')` (id inesistenti) e parametro `buttonEl` da `switchTab`.
+- 8 popup senza semantica dialog -> `role="dialog" aria-modal="true" aria-labelledby=<h3 id>`: searchPopup, iaMonthPopup, iaModal, archiveModal, customRangePopup, investAddPopup, investAssetPopup, popup-spese-condivise.
+- 23 icone FontAwesome decorative -> `aria-hidden="true"` (tutte).
+- 6 canvas Chart.js -> `role="img"` + `aria-label` descrittivo.
+- 16 label associate con `for` (ia-engine, openrouter-model, userNotes, iaNotes, incDate/Desc/Amount, expDate/Category/Desc/Planned/Actual/Shared, customRangeFrom/To, pushNotifToggle).
+- Stili inline estratti: `.recovery-alert-sub`, `.popup-body-stack` (+`.popup-gap-sm/lg`), `.btn-danger-outline` (delete asset, mantiene stile outline); 4 `.popup-body` flex-column ripuliti.
+### Notes
+- NO defer su supabase CDN (regressione documentata, NON ripristinare).
+- Focus trap/Esc/restore gia' esistenti: `setupModalAccessibility()` (script.js).
+- Encoding: NON usare Get-Content/Set-Content PS 5.1 su index.html (UTF-8 senza BOM, corrompe i non-ASCII). Verifica: 0 U+FFFD, div 319/319, node --check OK.
+
+## [2026-08-19] - Audit 13/20 -> fix batch (impeccable: optimize+colorize+harden+adapt+typeset)
+### Completed Changes
+- **optimize**: `renderEntriesList()` estratta da `updateUI()` (script.js); `handleSearch()` debounced 150ms e aggiorna SOLO la lista (prima: updateUI intero + scrittura IndexedDB `db.months.put`+`updateGlobalVersion()` per OGNI keystroke). `clearAllFilters` resta updateUI.
+- **colorize (contrasto AA 1.4.3)**: token scuriti: `--accent #3b82f6->#2563eb`, `--entrate #2ecc71->#15803d`, `--previsto #f97316->#c2410c`, `--sostenuto #ef4444->#dc2626`, `--ia-color #8b5cf6->#7c3aed`. Sweep letterali: testo `#ef4444/#059669/#10b981/#3b82f6/#f97316/#d97706` scurito (testo su bianco >=4.5:1), bg button `#3b82f6/#ef4444/#059669/#0ea5e9/#ea4335` scuriti, gradienti violetto `#8b5cf6,#6366f1 -> #7c3aed,#4f46e5`, `.btn-pay #d97706->#b45309`, popup-bar-fill, btn-danger-outline.
+- **harden**: manifest.json unificato (name "Bilancio Pro", theme/background #ffffff coerenti con meta); icone SVG data-URI senza emoji (mark geometrico polyline chart on-brand, prima emoji non percent-encoded); `<link apple-touch-icon href=icon-512.png>`.
+- **adapt**: `button { min-height: 44px }` globale + esenzioni per controlli icona/dimensione fissa (`month-arrow, popup-close, sim-reset, btn-back-sheet, btn-plus-solid, ripetizione-delete, btn-del, income-row-del, cat-del-btn, .cat-tag button`); landmark `<main id="appMain">` (da bottom-nav a settings-tab; popup/sheet sovrapposti fuori main).
+- **typeset**: floor 10px eliminato (26 occorrenze `font-size:10px -> 11px`, `11.5px -> 12px`).
+### Notes
+- CSP inline-onclick (113 handler): NON convertiti (rischio alto, batch singolo); follow-up dedicato.
+- Width-transition su progress-fill: pattern accettato (P3). Side-tab border: identita' categorie (P3).
+- Verifica: node --check OK, div 319/319, <main> 1/1, 0 U+FFFD, detector invariato (nessun nuovo finding).

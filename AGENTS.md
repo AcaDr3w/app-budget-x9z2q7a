@@ -21,3 +21,6 @@ BEFORE reading project code or making changes, you MUST perform Step 0:
 ## 3. Code & Memory Rules
 - Use CodeGraph MCP to locate symbols before reading full source files.
 - Read `docs/MEMORY.md` on startup. Update `MEMORY.md` and `CHANGELOG.md` upon completion.
+- **In caso di dubbi su dettagli storici**: consultare lo storico archiviato in
+  `docs/archive/` (`memory_archive.md`, `changelog_YYYY-MM.md`) prima di dedurre
+  o chiedere. Mai cancellare l'archivio.

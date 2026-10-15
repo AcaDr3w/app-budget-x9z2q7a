@@ -1506,8 +1506,31 @@ async function ensureCurrentUserPerson() {
     return p;
 }
 function parseAmountInput(raw) {
-    const val = parseFloat(String(raw || '').trim().replace(',', '.'));
+    let s = String(raw || '').trim().replace(/\s/g, '');
+    if (!s) return 0;
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if (hasComma && hasDot) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+        else s = s.replace(/,/g, '');
+    } else if (hasComma) {
+        s = s.replace(',', '.');
+    } else if (hasDot) {
+        const parts = s.split('.');
+        if (parts.length > 2) s = parts.join('');
+        else if (parts[1] && parts[1].length === 3) s = parts[0] + parts[1];
+    }
+    const val = parseFloat(s);
     return isFinite(val) && val >= 0 ? val : 0;
+}
+
+async function getSetting(key, fallback) {
+    try {
+        const row = await db.settings.get(key);
+        return (row && row.value != null && row.value !== '') ? row.value : fallback;
+    } catch (e) {
+        return fallback;
+    }
 }
 
 // =====================================================================
@@ -2451,8 +2474,8 @@ function setupSharedPanelDesktop() {
 }
 
 function getDesktopSharedTotal() {
-    const a = parseFloat(document.getElementById('expActual').value) || 0;
-    const p = parseFloat(document.getElementById('expPlanned').value) || 0;
+    const a = parseAmountInput(document.getElementById('expActual')?.value);
+    const p = parseAmountInput(document.getElementById('expPlanned')?.value);
     return a || p;
 }
 
@@ -2466,9 +2489,9 @@ function setExpenseTypePill(el) {
 }
 
 function getSheetAmount() {
-    const raw = (document.getElementById('amountInput')?.value || '').trim().replace(',', '.');
-    const val = parseFloat(raw);
-    return isFinite(val) && val > 0 ? val : 0;
+    const raw = document.getElementById('amountInput')?.value || '';
+    const out = parseAmountInput(raw);
+    return out > 0 ? out : 0;
 }
 
 async function saveSharedSplitsV2(expenseId, totalAmount, state) {
@@ -4107,8 +4130,8 @@ async function addExpense() {
     const date = document.getElementById('expDate').value || new Date().toISOString().slice(0, 10);
     const cat = document.getElementById('expenseCategory').value;
     const desc = document.getElementById('expDesc').value.trim() || "Spesa";
-    let planned = parseFloat(document.getElementById('expPlanned').value) || 0;
-    let actual = parseFloat(document.getElementById('expActual').value) || 0;
+    let planned = parseAmountInput(document.getElementById('expPlanned')?.value);
+    let actual = parseAmountInput(document.getElementById('expActual')?.value);
     let shared = parseFloat(document.getElementById('expShared').value) || 0;
     if (planned === 0 && actual === 0) { showToast('Inserisci Stima o Pagato', true); return; }
 
@@ -4506,6 +4529,7 @@ function renderEntriesList() {
     });
 }
 
+let chartB = null, chartC = null;
 async function renderDashboardCharts(totalIncome, totalPlanned, totalActual, catSums) {
     await ensureChartJs();
     const budgetCnv = document.getElementById('budgetChart');
@@ -4842,7 +4866,8 @@ function openIaNotesModal() {
     if (currentMonth) {
         const totals = { income: 0, planned: 0, actual: 0 };
         currentData.income.forEach(i => { totals.income += i.amount; });
-        currentData.expenses.forEach(e => { totals.planned += e.planned; totals.actual += e.actual; });
+        currentData.expenses.forEach(e => { totals.actual += (e.actual || 0); });
+        totals.planned = sumOpenPlanned(currentData.expenses);
         const catSums = {};
         userCategories.forEach(c => catSums[c] = { planned: 0, actual: 0 });
         currentData.expenses.forEach(exp => { if (catSums[exp.category]) { catSums[exp.category].planned += openPlannedAmount(exp); catSums[exp.category].actual += (exp.actual || 0); } });

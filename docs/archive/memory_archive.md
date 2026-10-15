@@ -1,0 +1,300 @@
+# Memory Archive — sessioni/storico dettagliato (pruning 2026-10-15)
+
+Voci complete spostate da MEMORY.md durante il pruning. Per dettagli non essenziali consultare qui.
+
+## 🔧 FIX LAYOUT PREVISIONI — 100vh + sheet 3 modalità + categoria (2026-08-18)
+- **Grafico = 35-40% vh, MAI schiacciato**: `.future-chart-card` mobile = `flex:1 1 36%; min-height:140px; max-height:40vh` (min-height salva il canvas su schermi corti); unico elemento flessibile del dashboard, tutto il resto `flex-shrink:0`.
+- **Asse Y**: `maxTicksLimit:4` + `precision:0` (griglia max 3-4 righe). NON aggiungere `stepSize` fisso (rompe il ridimensionamento con valori grandi).
+- **Card simulatore**: struttura fissa mobile = `.sim-value-row` (chip centrato SOLO) → `.sim-range` → `.sim-growth-row` (`📈 <input .sim-growth-input 40px> %/anno` + `.sim-growth-spacer` + `.sim-reset` ↻ 32px). MAI rimettere il Reset accanto al chip (decisione utente: "% Investimenti + Reset ↻" stessa riga SOTTO lo slider). `futureInvestGrowthM` resta un `<input type=number>` inline.
+- **Action Hub = pillole**: `#futureActionHub button` `border-radius:999px`, `min-height:44px`, `white-space:nowrap`; la media query ~1684 (inner 768) sovrascrive padding/gap — allineare lì (mai duplicare regole mobili fuori blocco).
+- **Mini-calendario scadenze RIMOSSO** (decisione utente): `renderDeadlineCal` ELIMINATO, non riaggiungere `dlCalMonth/Grid/Recurring-*`. `renderCalendar` (tab Mese) usa classi proprie (`#calendarGrid*`, `.calendar-day`) — NON toccare.
+- **3 modalità scadenza** (`plannerFormHTML`): `single` (date → `month=YYYY-MM`,`day=N`) / `month` (input `type=month` → `day:''` = intero mese) / `recurring` (start+end → `recurring:true`,`month=start`,`endMonth=end`). Campo `category` = select da `userCategories` + 'Varie' (`categoryOptionsHTML()`), default 'Varie'; richiede colonna `category` (migration `20260818_deadline_category.sql` + allowlist adapter).
+- **Lista micro-card** `.dl-micro-card`: icona 32px (🔁 se recurring, altrimenti emoji categoria), titolo ellipsis, meta "quando · categoria", importo `var(--previsto)`, azioni `✓`/`↩` (toggle `isPaid`) + `✕` (del). Desktop (`#annualDeadlinesList`) e sheet (`#dlList-s` in `.dl-list-scroll` max-height 30vh scroll interno) usano le STESSE card.
+## 🔧 FIX UI PREVISIONI — slider, asse Y, milestone (2026-08-18)
+- **Range slider**: MAI `input[type=range]` nativo dentro flex `flex:1;min-width:0` con solo `accent-color` (su WebKit/Android la traccia collassa e il thumb resta bloccato a sinistra). Usare classe `.sim-range` custom: `-webkit-appearance:none`, `display:block;width:100%`, `::-webkit-slider-runnable-track` (6px, `border-radius:999px`), `::-webkit-slider-thumb` (22px, `margin-top:-8px` = (track 6 - thumb 22)/2) + controparti `::-moz-*`. Id `futureSimRow` SOLO sul blocco mobile (desktop senza id — id duplicati rompono `toggleFutureSimRow`).
+- **Asse Y tick duplicati/frazionari** (`renderFutureChart`): `precision: 0` nei ticks + `suggestedMin: 0` + `suggestedMax: Math.max(1000, maxVal*1.15)`; callback `(v) => { const r = Math.round(v); return (r === 0 ? '0' : r.toLocaleString('it-IT')) + ' €'; }` — `Math.round(-0.4) === -0` → SEMPRE guardia `r === 0` prima di usare `toLocaleString` (altrimenti "-0 €").
+- **Milestone**: `delta === 0` → render `—` (mai doppio "0 €"); `.fm-value`/`.fm-delta` sempre `white-space:nowrap; line-height:1.25; overflow:hidden; text-overflow:ellipsis` (schede compatte).
+- **Blocco simulatore**: struttura fissa = `.future-sim-card` (column, gap 8, padding 10/12) > `.sim-value-row` (chip centrato + `.sim-reset` ↻ 44px) > `.sim-range` > `.sim-growth-row` (input 56px). Stesso markup desktop/mobile con suffisso id `M`.
+## 🐛 FIX MENU INVESTIMENTI — capitale, sync Drive, salvadanai, delete (2026-08-18)
+- **`calcInvestStats(asset, movements)`**: `currentValue = initialCapital + Σdeposit − Σwithdrawal + Σprofit − Σexpense`; `totalInvested = initialCapital + Σdeposit − Σwithdrawal`; `totalProfits = Σprofit − Σexpense`; `roi = totalProfits/totalInvested*100`. MAI ignorare `initialCapital` nel valore attuale.
+- **`fmtEPlain(n,0)` include già " €"** — NON concatenare `+ ' €'` (doppio € negli hero invest).
+- **Ogni mutazione dati DEVE chiamare `updateGlobalVersion()`** (→ counter + `debouncedAutoSync` → backup GDrive). Mancava in `saveNewInvestment`/`editInvestInitialCapital`/`saveInvestMovement` — fixato. Se si aggiunge una scrittura su `db.*`, chiamarla sempre.
+- **`savings_goals` ha PK `name`, NESSUNA colonna `id`**: select deposito, `get`, `update`, `delete` usano SEMPRE `g.name` (mai `g.id`). `deleteSavingsGoal` accetta il nome (encodeURIComponent nell'onclick, decode in funzione).
+- **ID univoci**: `genId()` = `Date.now()*1000 + random` (mai `Date.now()` nudo → collisioni upsert nello stesso ms).
+- **`prompt()`/`alert()`/`confirm()` vietati** → `showPromptDialog`/`showToast`/`showConfirmDialog` (ui-dialogs.js).
+- **Delete cascata movimenti**: `db.investmentMovements.where('investmentId').equals(id).primaryKeys()` → `bulkDelete(ids)` (implementati nell'adapter).
+- **RLS investimenti è DISATTIVATA** (migration commentata) — isolamento via filtro `user_id` dell'adapter. Se i dati non sincronizzano: verificare che `supabase/migrations/20260811_investments.sql` sia applicato e che `eb_outbox_investments`/`eb_outbox_investment_movements` in localStorage siano vuoti.
+## 🐛 FIX SPESE PREVISTE — dedupe debtId + outbox filtrata (2026-08-18)
+- **`debtId` DEVE esistere in `expenses`** (migration `20260818_expenses_debtId.sql` + allowlist adapter): `syncSharedDebts` deduplica su di esso — senza colonna, ogni apertura pagina ricreava le spese "Da saldare a X" → badge Spese Previste in crescita.
+- **`_mergeOutbox(rows, filter)`**: le letture filtrate (`where().equals/anyOf`) passano un filtro sul campo originale — l'outbox NON è più mergeato intero: spese di altri mesi (es. cloni ricorrenti salvati offline) non finiscono più in `currentData` del mese corrente.
+- **Cloni ricorrenti**: `saveRecurringClones` pusha in `currentData.expenses` SOLO se `clone.month === mese visualizzato` (partono da m+1 → mai). Il mese corrente è coperto dall'exp originale.
+- **Cleanup legacy**: a primo sync, spese `!debtId && desc startsWith 'Da saldare a' && planned>0 && !actual && !settled` del mese corrente → delete cloud + purge outbox (`window.writeOutbox` esposto) → ricreate una sola volta con debtId. `payExpense` ora ritrova `debtId` anche dopo reload.
+- **`window.writeOutbox`** esposto da supabase-adapter.js (accanto a `readOutbox`/`flushOutbox`) per purge selettivo dell'outbox.
+## 🤖 IA ANALISI — JSON + persistenza localStorage (2026-08-14)
+- **`invokeAI(prompt, systemPrompt)`** (script.js ~5824): chiama `chat-openrouter` con messages `[system?, user]`, ritorna `data.content`. `callAIEndpoint` è ora un wrapper (4° param opzionale `systemPrompt`).
+- **`generateInsightCard(force)`**: system = "rispondi SEMPRE in italiano, SOLO JSON con `analisi_completa` + `riassunto_telegrafico`". `parseAIJson` (fence strip → primo `{}` → fallback prima frase ≤120 char). **Cache**: `localStorage['eb_analisi_ai_' + periodKey]` = `{analisi_completa, riassunto_telegrafico, ts}`; `periodKey` = `analysisPeriod_àncora` o `custom_<da>_<a>`. Tap banner → cache (nessuna chiamata); `↻` (`#aiInsightRefresh`, stopPropagation) → force=true. Banner reset a placeholder se la key cambia.
+- **Banner**: `.ai-insight-card` = **div role=button** (MAI button annidati) con `.ai-insight-marquee` (2 span duplicati, `aiMarquee` 14s translateX(-50%), pausa su `:active`) + `.ai-insight-meta` (`#aiInsightDate` "Aggiornato il GG/MM" + ↻ 44px).
+- **Sparkline = SVG `<path>` smussato**: catmull-rom → Bézier con divisore 5 (~tension 0.4), `vector-effect="non-scaling-stroke"`, fill chiuso alla base. MAI polyline dritte né canvas.
+- **Anomalie (Componente A)**: `#anomalyCarousel` flex-grow, fade 0.6s, auto 3.5s (`anomalyTimer` globale, `stopAnomalyCarousel()` su switchTab fuori dal tab). Top 3 per |delta%| **vs periodo precedente di pari lunghezza** (`getPeriodCalendarMonths`/`getBaselineCalendarMonths`). **Fisse = SOLO `isRecurring || recurringGroupId`** (niente whitelist) — usata anche per `#fixedVarBar` (Componente B, bicolore #ef4444/#10b981, bottom flex-shrink:0).
+- Regola: MAI chiamate IA automatiche su render/switchTab — solo su tap o ↻.
+## 📱 TAB ANALISI mobile — SINGLE-SCREEN NATIVO v2 (2026-08-14)
+- **Layout mobile (≤767)**: `.analisi-header-row` (titolo + `#analysisPeriod` select pill) → `.ai-insight-card` (tap = `onAiInsightCardTap`: apre `#iaModal` + `generateInsightCard()` on-demand via `callAIEndpoint(prompt,'aiInsightText','')`, guard `aiInsightPending`) → `.trend-mini-grid` 2×1 (`#trendAvg*`: delta prima/ultima metà, `#trendTopCat*`: cat con delta% max) → `#sparklineList` `flex:1;min-height:0;overflow-y:auto` con righe `.sparkline-row` (nome 34% + canvas 40px).
+- **Sparklines = SVG inline** (`sparklineSVG(values,total)`): `viewBox="0 0 100 40"` + `preserveAspectRatio="none"` + `<polyline vector-effect="non-scaling-stroke">` (stroke 2 uniforme a ogni scala) + `<polygon>` fill-opacity 0.12; righe via template innerHTML. MAI canvas 2D per mini-grafici (misura rect a render-time → invisibile) né Chart.js (istanze pesanti). Colori #ef4444 totale>0 / #10b981 =0 / grigio #cbd5e1 senza dati.
+- **`.sparkline-list`**: `flex-grow:1; flex-direction:column; justify-content:flex-start; gap:1rem`; `.sparkline-row`: `justify-content:space-between; align-items:center; padding:1.5rem 1rem` (riempie l'altezza senza scroll).
+- **Trend card**: percentuali SEMPRE con segno (`▲ +X%` rosso / `▼ -X%` verde / `→ stabile` grigio) — MAI testo "in calo" su card "in Crescita".
+- **Periodi**: globals `analysisPeriod='6m'`/`customRange`/`aiInsightPending`; `filterMonthsByPeriod(months)` àncora = `#currentMonth.value` (fallback ultimo mese DB); `3m/6m` = ultimi N mesi calendario, `year` = anno del mese-àncora, `custom` = range popup. Spese conteggiate da `db.expenses` (actual>0), non `db.months`.
+- **`#customRangePopup`**: 2 `<input type="month">` Da/A; body-lock `popup-open`; chiusura senza apply → revert del periodo precedente (`sel.dataset.prevPeriod`). Chiusura forzata anche in `switchTab`.
+- **`switchTab` branch history**: `<768` → `renderAnalisiMobile()` SOLO (mai `renderGlobalHistory`/`renderTradingChart`/`initChartToggle` su mobile: Chart.js su canvas display:none = dimensione 0). Desktop invariato.
+- **Rimossi da mobile**: `.analisi-top-actions`, `#recordsHubContainer`, `#chartsCard` (display:none!important ≤767, restano ≥768). `openArchiveModal` ora senza trigger UI (funzione mantenuta).
+- **Colori trend**: `trend-up`=#ef4444 (peggioramento), `trend-down`=#10b981, `trend-flat`=#94a3b8; frecce ▲/▼.
+## 🐛 DEBUG: noUserId sulle junction + gruppi offline + focus-select + btn + blu (2026-08-13)
+- **`shared_expenses` e `shared_expense_participants` NON hanno colonna `user_id`** (`shared_expenses` usa `created_by`, participants è junction) → **devono avere `noUserId: true`** nel costruttore `SupabaseTable` (isolamento via RLS delle migrazioni). SENZA il flag: ogni read → 400 "column user_id does not exist" → `[]`; ogni write → outbox → liste/debiti/spese MAI aggiornati. Stessa regola per `shared_debts` (già noUserId).
+- **`loadPeopleGroups` = merge cloud + outbox** (dedupe per id, cloud preferita) per `people`/`groups`/`groupMembers` — via `window.readOutbox` (esposto dall'adapter insieme a `window.flushOutbox`). Mai più gruppi/persone "spariti" dopo creazione offline.
+- **`openCondivisePopup`** prerender entrambe le tab: `await Promise.all([renderFriendsTab(), renderGroupsTab()])` dopo `loadPeopleGroups`.
+- **`renderGroupsTab`**: try/catch per-gruppo + complessivo (empty state su errore; un gruppo rotto non blocca la lista).
+- **Focus = select()** (rAF) su `.participant-value` (split %, €, quota) e su `#expActual`/`#expPlanned` desktop — pattern da replicare su ogni input numerico (come `#amountInput`).
+- **Tasto + persona = `.btn-plus-solid`** (blu #3b82f6, 44x44) — `#btnNewPerson` (mobile) + `#btnNewPersonDesktop`; mai `.btn-small`/trasparente nei form condivise.
+## 🔧 LISTE + VISTA DETTAGLIO GRUPPO (2026-08-13)
+- **Lista Amici = TUTTE le persone** (escluso me via `getSharedMeId()`), NON i risultati di `calculateBalances()`: il saldo è calcolato da `sharedExpenseParticipants` (`netByPerson[person_id] += paid_amount - share_amount`, skip `settled`, arrotondato `*100/100`). Chi non ha voci → `In pari (0,00 €)`. `people.push` in `createPerson` → `renderFriendsTab()` mostra subito l'amico nuovo (niente più empty state fantasma).
+- **Gruppi: card = click → `showGroupDetail(gid)`** (niente accordion). Card: `[group-avatar] [nome] ["N partecipanti"] [friend-badge positive/negative/neutral: "In credito di X"/"In debito di X"/"In pari"] [btn-copy-link] [row-chevron >]`. `createGroup` → `renderGroupsTab()` poi `showGroupDetail(g.id)`.
+- **`showGroupDetail`**: header = avatar, nome, "Creato da te/X" (`created_by` → `people.user_id`, me → "te") + N partecipanti, box invito+copia, form add = `<input list="groupAddPersonList">` (datalist persone NON membri) + `.btn-add-solid` SOTTO full-width (Enter = aggiungi, match case-insensitive sul nome; `addPersonToGroup` invariata). Sezioni: 👥 Partecipanti (`.member-row`: avatar 36, nome, `.member-role` Admin/Membro = `user_id === created_by`, `.member-balance` bal-positive/negative/neutral), 📌 Riepilogo Debiti (`.debts-section` con `.debt-row`), 🧾 Spese del Gruppo (`.ledger-row` + **`.ledger-settle-btn` "Salda quota"** per spese con MIA quota pendente → `settleGroupExpenseShare(seId)` → re-render `showGroupDetail(gid)`; saldate → riga `.ledger-settled` dimmed + `✅ Saldata`).
+- **Bottone add = SEMPRE `.btn-add-solid`** (mai `btn-small`/trasparente) nei form condivise; `.group-add-member` è colonna (input + bottone width 100%).
+- Rimossi: `settleMyGroupShare`, `.group-acc-body/.group-card-header/.btn-acc-action/.group-total/.group-pos/.debts-summary`.
+## 🔄 SPESE CONDIVISE — sync debiti multi-account + modal redesign (2026-08-13)
+- **`shared_debts`** (migration 003, RLS creditor/debtor, NO colonna `user_id`): ponte cross-account A↔B. `db.sharedDebts` = `SupabaseTable('shared_debts','id', noUserId=true)` — il flag **`noUserId`** fa saltare i filtri `.eq('user_id', uid)` nel adapter (l'isolamento è via RLS).
+- **A-side**: `pushSharedDebts(sharedExpenseId, groupId, records)` chiamato in coda a `saveSharedExpenseV2`; scrive solo debiti verso persone con `user_id` noto (person.user_id oppure membro gruppo via `groupMembers.user_id`). `debt.expense_id` = **sharedExpenseId** (NON expenses.id).
+- **B-side**: `syncSharedDebts()` in `startupCloudCompare`+`initApp`+`online` → materializza in `expenses` locali (month corrente, `desc: "Da saldare a X"`, `debtId` per dedupe, category fallback 'Spese Condivise') e, lato creditor, segna `settled` i partecipanti quando il debitore salda.
+- **Salda B**: `payExpense` → `exp.actual=amount; settled=true` + `markDebtSettled(debtId)` (usa `db.sharedDebts.update` — RLS debtor permette; MAI `put` lato debtor: l'upsert fallirebbe sul WITH CHECK insert creditor).
+- **Modal**: tabs = `.condivise-segmented`; popup `max-height:85vh` + `#condiviseBody` `flex:1; overflow-y:auto`; bottone add `.btn-add-solid` (stack ≤360px); amici = righe con `.friend-badge` (positive/negative/neutral) + `.row-chevron` 44px; gruppi = accordion `.group-card.open` (header + `.group-acc-body` con `.debt-row` "X deve Y € a Z", me→"Tu", azioni `btn-acc-action[data-action=add|settle]`); `settleMyGroupShare(groupId)` salda le MIE righe del gruppo.
+- `getSimplifiedDebts(balances)` → txs `{from,to,amount}`; label resa con "deve ... a ..." sia nel tab sia in `showGroupDetail`.
+## 🎨 BOTTOM SHEET MACRO-CATEGORIE v2 — altezza dinamica + tema macro + badge budget + ultime spese (2026-08-12)
+- **`.bottom-sheet` (STYLE.CSS 1504)**: `height:auto; max-height:85vh; overflow-y:auto` (niente più 85dvh fissa → niente vuoto in basso). GLOBALE per scelta utente: anche la view input spesa scrolla l'intero sheet. `.bottom-sheet-grid` `max-height:46vh` (era 60vh).
+- **Tema per macro**: const `MACRO_THEME` (script.js, dopo CATEGORIES_MAP) → `casa_utenze` ottanio `#2a9d8f`, `veicoli` verde `#7bc043`, `spese_svago` viola `#6f42c1`; ognuno con accent/tint/border. `openBottomSheetFromMacro` setta `--macro-accent/--macro-tint/--macro-border` su `#bottomSheet` + colore titolo accent.
+- **Micro-card UNIFORMI**: MAI più `getCategoryCardBg(cat)` (colori hash casuali) nel sheet — bg `var(--macro-tint)` + bordo `var(--macro-border)`; accent solo su `.cat-icon-wrap`, `.cat-speso` (importo speso `fmtEPlain(aVal,0)` sotto il nome) e barra progresso (normal=accent, warn `#f59e0b` >70%, over `#ef4444` ≥100%).
+- **Badge budget**: `#macroSheetSubheader` + `.macro-budget-badge` ("Speso: X su Y disponibili" + mini progress bar), render in `renderMacroBudgetBadge(macroGroup)`.
+- **Ultime spese**: `#macroSheetRecent` + `renderMacroRecentSpese(macroGroup)` (top 5 per data desc, actual>0 altrimenti planned, righe `.macro-recent-*`, blocco nascosto se vuoto).
+- **Reset titolo**: colore accent in apertura; `''` in `slideToInputView`/`closeTransactionSheet`; ripristinato in `slideBackToCategories`.
+- **Regola**: `fmtEPlain(n, 0)` già include " €" — NON aggiungere suffisso € nei template.
+## 🎨 LIGHT PASTEL mobile — STATO ATTUALE: badge stacked, griglia auto-fit fluida (2026-08-11)
+- **Card macro**: `.card-header` = `flex column; align-items:center; gap:4px` → **badge sopra, titolo centrato sotto** (MAI più position:absolute sul badge — sovrapposizioni risolte). `.card-title` `margin:0`, ellipsis nowrap. Corpo: `card-body` flex row space-between (icona `flex:0 0 25%` + glass). Padding card `clamp(8px,2vh,10px) 10px`.
+- **Griglia micro-celle**: `.card-micro-grid` = `repeat(auto-fit, minmax(min(56px, 100%), 1fr))` + 2 righe max → wrap automatico (Svago full-width), 2 col sulle mezze card, **niente classi cols-2/cols-3** (rimosse). `min(56px,100%)` = difesa anti-esplosione a 320px (un 60px fisso rompeva).
+- **Celle**: quadrate `clamp(32px,10vw,42px)` + `aspect-ratio:1/1`, solo icone FA (`faIconFor` → `FA_ICON_MAP`/`MACRO_FA`/`fa-tag`), MAI testo nelle celle (regola assoluta: il nome ha causato il bug overflow a lista). `.micro-more` = solo `⋯`.
+- **Hub Mese/Future**: bottoni `flex:1 1 0` + `gap: clamp(6px,1.8vw,8px)`.
+- **Fallback**: `html{overflow-x:hidden !important}` nel blocco 767.
+- **Colori invariati**: Casa `#B2DFDB`/`#004D40`/badge `#80CBC4`; Veicoli `#C8E6C9`/`#1B5E20`/`#A5D6A7`; Svago `#E1BEE7`/`#4A148C`/badge `#4A148C`+bianco. Body gradiente `#E0F2F1→#FFF3E0→#E8F5E9` + `background-attachment:fixed`; hero panna `rgba(255,255,255,0.6)`; KPI `repeat(3,1fr)` (`heroEntrateTotal`/`heroSpesePreviste`/`heroSpeseSostenute`); insight fade 250ms (`heroInsightFadeT`).
+- **Banner gialli RIMOSSI** (pill oro + deadlineAlert); `annualMonthAlert` blu INVARIATO; `.month-head` nascosto ≤767; label corretta "Casa e Utenze" (nessun typo).
+## 🎨 LIGHT PASTEL mobile — FIX v2: micro-categorie SOLO icone FA quadrate + card ristrutturate (2026-08-11, SOSTITUITO da badge stacked + auto-fit qui sopra)
+- **Celle micro = solo icone FontAwesome, MAI testo**: `renderMacroCards` genera `<i class="fas fa-...">`; la cella è QUADRATA rigida (`width/height:42px; aspect-ratio:1/1; flex center`, bg `rgba(255,255,255,0.5)`). Testo label + `+N altre` RIMOSSI (solo `⋯` nel more-cell). Se rivedi la griglia: MAI reintrodurre nomi testuali nelle celle (causa del bug overflow a lista).
+- **Icone**: `FA_ICON_MAP` (20 default by name) + `MACRO_FA` fallback + `faIconFor(cat,macro)` → `fa-tag` per custom. `categoryIconMap` emoji RESTA per lista voci/registri/`getCatIcon` — non toccare.
+- **Griglia rigida**: `.card-micro-grid.cols-2{repeat(2,1fr)}` / `.cols-3{repeat(3,1fr)}`, `gap:6px; justify-items:center; align-content:center`; classe scelta in `renderMacroCards` (≤4 → 2 col, 5/6 → 3 col). `.card-glass` QUASI INVISIBILE: `rgba(255,255,255,0.15)` + bordo 0.2 + radius 12 + padding 6 (niente blur).
+- **Layout card macro**: `.dash-card{position:relative; overflow:hidden}`; titolo `h3.card-title` CENTRATO (`margin:0 0 12px`); badge ASSOLUTO `top:12px; right:10px`; `card-body` flex row `space-between; overflow:hidden` = icona `flex:0 0 25%` + glass; `.dash-card > *{min-width:0;max-width:100%}`. Padding card: `clamp(8px,2vh,10px) 10px`.
+- **Colori card invariati**: Casa `#B2DFDB`/`#004D40`/badge `#80CBC4`; Veicoli `#C8E6C9`/`#1B5E20`/badge `#A5D6A7`; Svago `#E1BEE7`/`#4A148C`/badge `#4A148C`+bianco. Fill progress `#10b981`/warn `#f59e0b`/over `#ef4444`, track `rgba(0,0,0,0.12)`.
+- **Body ≤767**: gradiente `135deg #E0F2F1→#FFF3E0→#E8F5E9` + `background-attachment:fixed`; hero card panna `rgba(255,255,255,0.6)`, KPI griglia `repeat(3,1fr)` (`heroEntrateTotal`/`heroSpesePreviste`/`heroSpeseSostenute`), insight fade 250ms (`heroInsightFadeT`), pill `rgba(255,255,255,0.8)`.
+- **Banner gialli RIMOSSI** (pill oro + deadlineAlert): `annualMonthAlert` (scadenze annuali, blu) INVARIATO. `.month-head` resta nascosto ≤767.
+## 🎨 LIGHT PASTEL THEME mobile — hero panna KPI 3-colonne + macro-card 2 colonne (2026-08-11, SOSTITUITO dal FIX v2 qui sopra)
+- **Palette ≤767**: `body` mobile = gradiente `linear-gradient(135deg,#E0F2F1,#FFF3E0,#E8F5E9)` + `background-attachment:fixed`; testo scuro ovunque su pastello; niente testo bianco tranne il badge LIFESTYLES (`#4A148C` su `#E1BEE7`). Desktop col `--bg` invariato.
+- **`#mobile-hero-card`**: panna `rgba(255,255,255,0.6)` + bordo `rgba(255,255,255,0.7)`, testo `#111827/#1F2937`. KPI = **griglia `repeat(3,1fr); gap:8px`**: `heroEntrateTotal` / `heroSpesePreviste` (+`openRendicontoPopup('previsto')`) / `heroSpeseSostenute` — `updateUI` scrive tutti e 3. Pillole interne (`hero-month-pill`/`hero-insight-pill`/`hero-mini-pill`): `rgba(255,255,255,0.8)` + bordo leggero + testo scuro.
+- **Insight rotante**: invariato (`renderHeroInsight` regole locali, interval 4s, tap next + pausa 6s) + **fade-in-out** via `showHeroInsight` (opacity 0 → 250ms → testo + opacity 1, `heroInsightFadeT` con clearTimeout anti-race); CSS `transition:opacity 0.25s ease`.
+- **Macro-card 2 colonne rigide**: `.card-body{flex row; align-items:center; gap:12px; flex:1; min-width:0}` = icona sx `flex:0 0 25%` (clamp 28-42px) + glass dx `flex:1; min-width:0` (`rgba(255,255,255,0.5)` + bordo `rgba(255,255,255,0.8)`). Micro-grid `repeat(auto-fit,minmax(60px,1fr)); gap:6px`, `.micro-cell` glass bianco, nome scuro ellipsis. Footer = progress full-width fuori dal flex. **Colori**: Casa `#B2DFDB`/`#004D40`/badge `#80CBC4`; Veicoli `#C8E6C9`/`#1B5E20`/badge `#A5D6A7`; Svago `#E1BEE7`/`#4A148C`/badge `#4A148C`+testo bianco. Fill progress: `#10b981`/warn `#f59e0b`/over `#ef4444`, track `rgba(0,0,0,0.12)`.
+- **Banner gialli RIMOSSI** (nessun residuo nel codice): pill oro `#upcoming-payments-pill` (`renderUpcomingPayments` eliminata) e `#deadlineAlert`/`.deadline-alert` (blocco alerte uscite pianificate + CSS + regola desktop). `#annualMonthAlert` (scadenze annuali, blu) INVARIATO.
+- **`.month-head` resta NASCOSTO ≤767** (hero sostituisce le KPI box; desktop invariato, `updateUI` scrive entrambi i set `sum*` + `hero*`).
+- **Overlay sheet ≤767**: `rgba(0,0,0,0.35)` + `blur(10px)`.
+## 📱 Mobile tab Mese v2 — HERO card + badge card + pill pagamenti (2026-08-11, SOSTITUITO dal tema LIGHT PASTEL: dark hero → panna, pill oro rimossa, macro-card ristrutturate)
+- **`#mobile-hero-card`** (solo ≤767, `.hide-desktop`, primo figlio del tab, `flex-shrink:0`): gradiente `#0F172A→#1E293B`, radius 24px. Titolo "Riepilogo" + `heroMonthPill` (mese cliccabile → picker; `setupMonthNavigation` bindato, `updateMonthDisplay` scrive `heroMonthDisplay`) + `heroInsightPill` (glass `rgba(255,255,255,.12)` blur 12px, **rotazione 4s** tra le 5 regole locali di `renderHeroInsight`, tap = next + pausa 6s, stop su hidden) + 2 mini-pill `heroEntrateTotal`/`heroSpeseSostenute` (onclick `openRendicontoPopup('entrate'|'sostenuto')`).
+- **`.month-head` NASCOSTO ≤767** (le box KPI mobili rimpiazzate dal hero; su desktop il month-head + `sumEntrate/sumPrevisto/sumSostenuto` restano attivi e `updateUI` scrive ENTRAMBI i set). NON ripristinare il month-head mobile.
+- **Carousel standalone RIMOSSO** (`renderAIInsightSlides`/`aiInsightTrack/Dots`/loop non esistono più): oggi c'è `renderHeroInsight()` + `showHeroInsight`/`nextHeroInsight`/`startHeroInsightLoop`/`stopHeroInsightLoop`/`scheduleHeroInsightResume` (globals `heroInsight*`). Se serve il vecchio carousel, rifare da zero.
+- **Macro-card v2 (sostituite)**: badge pill top-right statici Gestione/Flotta/Lifestyles, titolo sx, `.card-hero-icon` grande (clamp 24-36px) sx sotto il titolo; gradienti: Casa `#0E4B56→#1B6B78`, Veicoli `#2E8B57→#4CAF50`, Svago `#3B1E7B→#5E2B97`. `.card-glass` = `rgba(255,255,255,0.15)` + `blur(12px)` + radius 16px.
+- **`#upcoming-payments-pill`** (oro `#E5B83B`, tra griglia e hub, `flex-shrink:0`): `renderUpcomingPayments()` = spese in sospeso + scadenze annuali non pagate del mese (`annualDeadlines`); `display:none` se N=0. **RIMOSSA nel tema Light Pastel.**
+- **Overlay sheet ≤767**: `rgba(0,0,0,0.35)` + `backdrop-filter:blur(10px)`.
+## 📱 Mobile tab Mese v1 — Macro-card glass 2x3 + AI Insight carousel (2026-08-11, SOSTITUITO da v2: hero card)
+- **`.dash-card`**: titolo+icona inline, `.card-glass` (`rgba(255,255,255,.12)`+blur(10px), `flex:1; min-height:0`), `.card-progress` in fondo. `.card-micro-grid` = **SEMPRE 2×3 celle senza scroll**: ≤6 cat → tutte; >6 → prime 5 + badge `⋯ +N altre`; 0 → `micro-empty`. Regola da rispettare: MAI scroll interno alle card (zero-scroll invariato).
+- **`renderMacroCards()`**: da `userMacroCategories[macro]` + `categoryIconMap` (emoji fallback 📌), totals da `currentData.expenses` via `catSet`; fill `.fill-warn` (≥80%)/`.fill-over` (sforato); label `Budget {title}: speso / previsto`. `MACRO_CARD_META` = alias titoli. Hook: `updateUI()` DOPO i 3 KPI (riga ~3027). Click card/badge → `openBottomSheetFromMacro` (delegation invariata).
+- **AI Daily Insight (`#ai-insight-carousel`, solo ≤767, `display:none` ≥768)**: carousel `scroll-snap-type:x mandatory` (pill 86%), dots, auto 4s, pausa su pointerdown + resume 6s (`startAIInsightLoop`/`stopAIInsightLoop`/`scheduleAIInsightResume`, flag `aiInsightWired` per eventi una sola volta, stop su `document.hidden`). `renderAIInsightSlides()` = **solo matematica locale** (5 regole: miglioramento cat vs mese prec. / media giornaliera macro / proiezione lineare fine mese / sforo budget / onboarding). Chiamata in `updateUI` (fire-and-forget, è async per il prev month via `getPreviousMonthStrings(month,1)[0]`).
+- **I.A. vera = popup `#iaMonthPopup`** (pulsante pill "Assistente I.A."): `runIaMonthAnalysis` include ora blocco "Dati mese precedente" + variazioni % (`pctDiff`/`fmtDiff`), resoconto max 6 righe richiesto nel prompt → `callAIEndpoint` (OpenRouter).
+- **Overlay bottom sheet mobile**: `.sheet-overlay.open` ≤767 = `rgba(0,0,0,0.3)` + `backdrop-filter:blur(8px)` (desktop invariato).
+## 🔧 Bug Fixes & Soluzioni Recenti
+- **2026-08-11**: Cartella `legacy_version/` RIMOSSA (tutte le feature importate, ROADMAP 7/7 completata) — nessuna reference nel codice attivo; i doc storici (ROADMAP/CHANGELOG/migrations) la citano solo a scopo storico.
+- **2026-08-11**: Swipe-to-close bottom sheet riscritto — `setupSheetSwipe(sheetId, closeFn)` generica (Pointer Events touch+mouse, `setPointerCapture`, `translate3d`, clamp delta≥0); wiring su `#bottomSheet`/`#incomeBottomSheet`/`#futureBottomSheet`; chiusura fluida via transizione CSS (si rimuove `.dragging`+`.open` e si libera la transform inline nello stesso frame → anima da delta a 100%). `closeFutureSheet` pulisce ora `transform`/`.dragging`. CSS: `.bottom-sheet-header { touch-action: none }` + `will-change: transform` su `.dragging`.
+  - **Regola**: i selettori dei drag target devono essere SCOPED al singolo sheet (`sheet.querySelector(...)`), mai query globali (prima prendeva l'handle del primo sheet nel DOM).
+- **2026-08-11**: ROADMAP ripristino feature da `legacy_version/` in `docs/ROADMAP.md` — 7 fasi con riferimenti riga al codice legacy; Fase 1 (Spese Ricorrenti: toggle mobile+desktop, `saveRecurringClones`, `setupRecurringToggle`) e Fase 2 (Gestione Ripetizioni: `renderRipetizioni`, `deleteRecurringGroup`, card inline in Impostazioni) COMPLETATE. **Ogni sessione deve leggere ROADMAP.md** per sapere cosa manca e cosa è già stato riportato.
+- **2026-08-11**: Fallback dinamico modelli `:free` — client: `fetchFreeModels()` da `/api/v1/models` + dropdown dinamico (`populateFreeModelSelect`, opzione `🎲 Casuale (Free)` value `random`); server: `FALLBACK_MODELS` + loop candidati dedup con timeout 30s, stop su 401/403, 502 solo a esaurimento
+  - **Regola**: il modello `:free` può sparire/diventare a pagamento → mai hardcodare UN solo modello; lista attiva dal client + fallback array nel server
+- **2026-08-11**: Surfacing errori invoke — helper `extractFunctionError(err)` in script.js (legge `err.context` di `FunctionsHttpError` → `Status <code>: <body>`); Edge Function chat-openrouter: guardia secret mancante → 500 esplicito, JSON malformato → 400, errori OpenRouter → 502 con dettaglio
+- **2026-08-11**: Fix `reading 'invoke'` — `window.supabase` (namespace UMD CDN) non ha `.functions`; usare sempre `window.supabaseClient.functions.invoke` (istanza creata in supabase-adapter.js)
+  - **Regola**: `.functions` esiste solo sull'istanza `createClient()` (→ `window.supabaseClient`), mai sul namespace `window.supabase`
+- **2026-08-11**: Edge Function `chat-openrouter` — JWT auth obbligatorio + whitelist modelli free (`openrouter/free` o regex `:free$`); rimosso fetch diretto a OpenRouter da `runFinancialAnalysisIA` (chiave mai lato client); rimosso input API key da index.html
+  - **Regola**: mai fare fetch a OpenRouter DAL BROWSER; la key vive solo in `Deno.env` dell'Edge Function; deploy manuale via CLI (`supabase functions deploy chat-openrouter`)
+- **2026-08-11**: Pulizia repo per GH Pages — rimossi `db_usages.txt` (artifact debug) e script CDN `dexie.js` da index.html (dipendenza morta dall'adapter Supabase)
+- **2026-08-11**: Fix 400 schema cache PostgREST (`months.totalActual`, `sync_state.deviceId`)
+  - **Causa**: `CREATE TABLE IF NOT EXISTS` non aggiunge colonne a tabelle esistenti; la cache schema di PostgREST non viene ricaricata
+  - **Fix**: `supabase/migrations/20260811_schema_completo.sql` — `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` per OGNI colonna di OGNI tabella (quoted camelCase) + DO-block PK mancanti + `NOTIFY pgrst, 'reload schema';`
+  - **Adapter**: Outbox localStorage (`eb_outbox_<tabella>`): put/update/bulkPut falliti → accodati e ritentati al login/`online` (`flushOutbox()`); `_upsert`/`_update` restituiscono l'errore; rimosso rollback `pop()` in `addExpense` (i dati non vanno MAI scartati dalla memoria)
+  - **Regola**: ogni migrazione Supabase deve sempre usare `ADD COLUMN IF NOT EXISTS` (mai solo `CREATE TABLE IF NOT EXISTS`) e terminare con `NOTIFY pgrst, 'reload schema';`
+- **2026-08-10**: Fix sync dati su Supabase (PGRST204 su `iaNotes`)
+  - Migrazione: `supabase/migrations/20260810_full_sync.sql` — `ALTER TABLE months ADD COLUMN "iaNotes" TEXT` + tabelle `settings`, `savings_goals`, `sync_state` (prima erano localStorage-only via `LocalMockTable`, ora SupabaseTable)
+  - Adapter: allowlist colonne per tabella (`_allowedColumns`) → strip campi ignoti prima dell'upsert; `.maybeSingle()` al posto di `.single()` (via 406); `SettingTable` normalizza record legacy `name/id` → `key`
+  - **Regola**: ogni campo JS scritto su Supabase deve esistere come colonna (case-sensitive, quoted in SQL) — usare l'allowlist come unica fonte di verità
+- **2026-08-10**: Fix SyntaxError "Identifier 'supabase' has already been declared"
+  - **Causa**: il bundle UMD di `@supabase/supabase-js@2` (jsdelivr) dichiara `var supabase` globale → il `const supabase` in supabase-adapter.js era un conflitto
+  - **Fix**: istanza rinominata `supabaseClient` in tutto supabase-adapter.js; `script.js:2514` usa `window.supabase.functions.invoke`
+  - **Regola**: NON dichiarare mai variabili globali con nomi dei namespace dei bundle CDN (supabase, Chart, etc.)
+  - **Pulizia repo**: creato `.gitignore` (`.codegraph/`, `.opencode/`, `supabase/.temp/`, `*.log`, `.DS_Store`), rimosso `.codegraph/` dall'indice con `git rm -r --cached`
+- **2026-08-10**: Fix pagina bianca su GitHub Pages
+  - Causa: `main` remoto senza cartella `js/` (push parziale migrazione Supabase) → 404 `js/supabase-adapter.js`
+  - Causa crash: righe 321-322 `script.js` senza guardia null su `iaProviderSelect`/`geminiApiKeyInput` (elementi assenti: IA hub usa `ai-engine-select`)
+  - Fix: guardie null-safe + `<link rel="icon" href="icon-512.png">` + force-push `master` → `main`
+  - **Regola deploy**: ogni push deve includere anche le cartelle/file NUOVI (`git add -A`, mai file selettivi), altrimenti Pages rompe la reference
+- **2026-07-25**: Fix visibilità form spese nel bottom sheet (Slide Destra)
+  - Rimosso `overflow: hidden` da `.sheet-slider` che tagliava `#viewInput`.
+  - Aggiunto `overflow-x: hidden` su `.bottom-sheet`.
+- **2026-07-12**: Fix errore "Cannot access 'categoryToEdit' before initialization"
+  - Spostato `let categoryToEdit = null;` dalla sezione CATEGORIE (riga 429) alla sezione variabili globali (riga 262)
+  - Rimossa dichiarazione duplicata
+  - Evita Temporal Dead Zone in `saveCategory()` async
+- **2026-07-11**: Fix errore "Cannot access 'TAB_TITLES' before initialization"
+  - Spostato `TAB_TITLES` dalla sezione NAVIGAZIONE TABS (riga ~331) all'inizio file (riga 50)
+  - Rimosso duplicato di dichiarazione
+  - Separata funzione `updateActivePageSubtitle` da `switchTab`
+- **2026-07-11**: Fix errore "Cannot read properties of null (reading 'value')" in toggleIaProviderFields
+  - **Problema**: Funzione chiamata da initApp() tentava di leggere `.value` da elementi inesistenti
+  - **Elementi mancanti**: `iaProviderSelect`, `aiModelGroup`, `geminiKeyGroup`, `openRouterKeyGroup`, `iaProviderBadge`, `iaStatusHint`, `ollamaModelSelect`
+  - **Soluzione**: Aggiunto controllo `if (!providerEl) return;` all'inizio della funzione
+## 📐 Layout Mobile: Tab Analisi (Zero-Scroll)
+- `#history-tab.active`: `height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom))` (header 60px + navbar ~60px)
+- `position: relative` con `overflow: hidden` — blocca scroll pagina
+- `.analisi-top-actions`: `position: absolute; top: 8px; right: 12px; z-index: 5` — icone fluttuanti in alto a destra
+## 🃏 Records Hub: Griglia 3 Colonne
+- `.records-hub-scroll`: `display: grid; grid-template-columns: repeat(3, 1fr)` invece di flex orizzontale
+- Label card: `font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px`
+- Value card: `font-size: 12px; font-weight: 700`
+- Padding card: `6px 4px`
+## 📱 Tab Previsioni — Zero-Scroll Mobile Dashboard (2026-07-24)
+### Viewport
+- `.future-mobile-dashboard`: `height: calc(100dvh - 60px - 60px - env(safe-area-inset-bottom))`
+- `display: flex; flex-direction: column; overflow: hidden`
+- Stesso pattern di `#history-tab`
+### Header Compatto
+- `.future-header-compact h2`: font-size 15px
+- `#futureAvgBoxMobile`: font-size 10px, colore #64748b
+### Griglia 2×3 Proiezioni
+- `#futureProjectionsGrid`: `display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex: 1; min-height: 0`
+- `.proj-card`: flex column centered, border-left 4px colored, border-radius 16px
+- Label: 11px uppercase, Value: 18px bold
+### Action Hub (3 bottoni)
+- `#futureActionHub`: `display: flex; gap: 8px; flex-shrink: 0`
+- 3 bottoni con `data-action`: `simula`, `scadenze`, `ia`
+### Bottom Sheet Previsioni
+- `#futureSheetOverlay` + `#futureBottomSheet` (pattern identico al bottom sheet spese)
+- `#futureSheetBody` con contenuto iniettato via JS
+- `openFutureSheet(action)`: popola body in base a action, apre sheet
+- `closeFutureSheet()`: chiude e resetta
+- `renderFutureProjectionsPreview()`: proiezioni dentro il sheet
+- `renderAnnualDeadlinesInSheet()`: scadenziario dentro il sheet
+### JS Refactor
+- `renderFutureProjections()` ora popola sia `#futureProjectionsList` (desktop) che `#futureProjectionsGrid` (mobile)
+- `resetFutureSimulation()` ora resetta anche `#simulatedExpenseMobile`
+- `openFutureSheet('ia')` chiama `callAIEndpoint` con responseBoxId `iaFutureResponseSheet`
+- Swipe-to-close su `#futureBottomSheet`
+## 🚫 Body Scroll Lock & Scroll Chaining Fix (2026-07-24)
+### CSS body.sheet-open (rafforzato)
+```css
+overflow: hidden !important;
+height: 100dvh !important;
+height: -webkit-fill-available !important;
+width: 100% !important;
+touch-action: none !important;
+overscroll-behavior: none !important;
+-webkit-overflow-scrolling: none !important;
+```
+### Bottom Sheet structure (flex + height)
+- `.bottom-sheet`: `height: 85dvh; max-height: 85dvh; display: flex; flex-direction: column; overflow: hidden`
+- `.drag-handle-wrapper`, `.bottom-sheet-header`: `flex-shrink: 0`
+- `.sheet-slider`: `flex: 1; min-height: 0; overflow: hidden`
+- `#viewInput`: `display: flex; flex-direction: column; min-height: 0` — fa da flex column per body + footer
+- `.sheet-body`: `flex: 1; min-height: 0; overflow-y: auto !important` — scroll contenuto, footer sempre visibile
+- `.sheet-view`: `overscroll-behavior-y: contain; min-height: 0` (NO overflow-y, gestito da .sheet-body)
+- `#futureSheetBody`: identico a .sheet-body
+### Touch-action riabilitato dentro il sheet
+- `.bottom-sheet * { touch-action: auto }` — permette scroll/input dentro il foglio
+- Drag handle mantiene `touch-action: none !important`
+### Popup modali con body lock
+- `openIaModal/closeIaModal` → `classList.add/remove('sheet-open')`
+- `openArchiveModal/closeArchiveModal` → `classList.add/remove('sheet-open')`
+- `openRendicontoPopup/closeRendicontoPopup` → `classList.add/remove('sheet-open')`
+- `style.overflow` inline rimosso (ridondante, gestito da CSS)
+## ✅ Completed Tasks
+- **2026-08-08**: Recovery sezione Previsioni mobile dopo corruzione worktree — ripristinata base staged (Drive OAuth + sync intatti), ricostruito bottom sheet Previsioni (`openFutureSheet`/`closeFutureSheet`/`renderFutureProjectionsPreview`/`renderAnnualDeadlinesInSheet`/`setupFutureSwipeToClose`), `renderFutureProjections` estesa a mobile, binding action hub. `node --check` OK (3037 righe).
+- **2026-07-25**: Ruota importo estesa a 4 cifre (0-9999) — loop, padStart, validazione, CSS width
+- **2026-07-25**: Layout cleanup — toggle text flex-centered, uniform `gap: 20px` in sheet-body
+- **2026-07-24**: Body scroll lock robusto per bottom sheet e popup modali
+- **2026-07-24**: Tab Previsioni mobile zero-scroll — griglia 2×3, action hub, 3 bottom sheet
+- **2026-07-23**: Fix scroll tab Analisi — altezza viewport corretta (header 60px + nav 60px)
+- **2026-07-23**: Records hub convertito da carosello orizzontale a griglia 3 colonne
+- **2026-07-23**: Icone IA/Archivio posizionate absolute in alto a destra
+- **2026-07-22**: DEFAULT_CATEGORIES sostituito con `defaultCategories` (oggetto con macro)
+- **2026-07-22**: Nuova UI gerarchica impostazioni con 3 blocchi macro e form con select macro
+- **2026-07-22**: Migrazione automatica categorie flat → strutturate con campo `macro` in DB
+- **2026-07-22**: Bottom Sheet griglia dinamica colorata — lettura da localStorage, card con icone FA, empty-state
+- **2026-07-22**: Bottom Sheet UX — drag handle wrapper, overscroll-behavior, z-index 10000, padding-bottom bottone
+- **2026-07-22**: Back button flexbox fix + progress bar colorata sulle tessere categoria
+---
+## 2026-08-11 — Investimenti tab: CSS restyled & verifica integrazione
+- Ported invest CSS (mobile dashboard, hero card, asset cards, type buttons, movements, nav active state) from `legacy_version/style.css` into `style.css` (appended; override-ordre wins on mobile due to later rules + `!important` on `.invest-mobile-dashboard` over `.hide-desktop`).
+- Added `.popup-body` + `.btn-small` utilities missing from current CSS.
+- Verified all 19 invest DOM ids exist in `index.html`; all 10 JS functions present; `node --check script.js` passes.
+- `.hide-desktop` (L524) keeps mobile dashboard hidden on desktop; popups use existing `.popup-panel` base.
+## 2026-08-11 — Fase 4 ROADMAP: Spese Condivise COMPLETATA
+- Migration `supabase/migrations/20260811_shared_expenses.sql`: tabelle people, groups, group_members, shared_expense_splits + ALTER expenses (isShared, sharedPayer). NOTIFY pgrst.
+- Adapter (`js/supabase-adapter.js`): 4 nuove tabelle in DB_ACCESSOR/_allowedColumns/window.db; expenses +2 colonne. NOTA: `groups` e` una keyword SQL quotata - il client Supabase la quota automaticamente.
+- HTML: entry card Mese (desktop `#condiviseCard` + mobile `.condivise-entry-btn`), shared panel nel bottom sheet (dopo recurring), popup `popup-spese-condivise` (tabs Saldi/Gruppi + detail view dark).
+- JS: data layer (people/groups/groupMembers), split calc in `saveTransactionFromSheet` (wheel amount via `getWheelSheetAmount`), reset in `closeTransactionSheet`, popup/ledger/settle port da legacy con window.db al posto di Dexie (`where().equals()` -> toArray+filter).
+- Backup: 4 tabelle aggiunte a export/import.
+- CSS: classi .shared-*/.condivise-*/.saldo-*/.gruppo-*/.ledger-* + pills; ledger in tema dark (#0f172a).
+- Desktop: `addExpense` gia` supportava % condivisa (identico a legacy) - nessuna modifica.
+## 2026-08-11 — Fase 5 ROADMAP: Rendiconto esteso + Modifica spesa COMPLETATA
+- Migration `20260811_expenses_settled.sql`: colonna expenses.settled (badge "Saldata"). Adapter aggiornato.
+- HTML: btnNewIncome + incomeListContainer + expenseListContainer nel popup rendiconto; incomeBottomSheet con amount-input nativo + swipe-to-close.
+- **BUG FIX preesistente**: openTransactionSheet usava id inesistente `sheetCategoryTitle` -> bottom sheet mobile mai aperto. Corretto a `selected-category-title`.
+- JS: editExpense (prefill wheel via syncInputToWheel/syncWheelToInput, slider->input view), branch edit in saveTransactionFromSheet (CASO A in-place / CASO B clone + settled=true), editingExpenseId reset in closeTransactionSheet, renderIncomeList/renderExpenseList/getIncomesForMonth, eventi income sheet + swipe.
+- entriesList: righe cliccabili -> editExpense (skip button), settled-badge. settleBalance branch debito: exp.settled=true.
+- openRendicontoPopup: liste per tipo (entrate -> btn+lista entrate; altro -> lista spese) + body sheet-open.
+- CSS: .income-*, .settled-badge, .popup-income-btn, .amount-input, .income-sheet-body.
+## 2026-08-11 - Fase 6 ROADMAP: Popup mobile (Ricerca, IA Mese, Action Hub) COMPLETATA
+- HTML: #mese-action-hub (hide-desktop, 3 bottoni data-action search/ia/condivise) nel tab Mese al posto del vecchio .condivise-entry-btn; #searchPopup (searchPopupInput, searchPeriodSelect, searchCustomMonth, searchResultsList); #iaMonthPopup (btnIaMonthAnalysis, iaMonthResponse) dopo popup-rendiconto.
+- JS: openSearchPopup/closeSearchPopup/toggleSearchCustomMonth/filterSearchResults (periodo current = currentData + getIncomesForMonth, all = toArray, custom = where('month').equals); openIaMonthPopup/closeIaMonthPopup/runIaMonthAnalysis -> riusa callAIEndpoint(prompt, 'iaMonthResponse', 'btnIaMonthAnalysis') gia presente (L4050) e saveNotes() verso months.iaNotes; wiring hub via IIFE addEventListener su #mese-action-hub.
+- FIX: tab popup Spese Condivise ora hanno onclick switchCondiviseTab('saldi'|'gruppi') (prima bloccati su Saldi).
+- CSS: #mese-action-hub + #mese-action-hub button (flex pills var(--panel)); rimosso blocco orfano .condivise-entry-btn (bilanciamento braces verificato, 534/534).
+- Verifica: node --check OK; tutti gli id/function cross-referenziati presenti.
+## 2026-08-11 - Fase 7 ROADMAP: Emoji picker categorie COMPLETATA
+- HTML: `#emojiPickerBtn` (placeholder emoji ) + `#emojiInput` nascosto nel grid-inputs della sezione categorie impostazioni (prima di `#newCatName`).
+- JS: `setupEmojiPicker` IIFE (click -> posizione fixed/opacity 0/focus per tastiera emoji nativa; input -> `[...val].pop()` -> testo bottone; blur -> reset). `saveCategory`: `chosenEmoji = document.getElementById('emojiPickerBtn')?.textContent`; branch edit `chosenEmoji || categoryIconMap[name] || MACRO_ICON[macro] || placeholder`, branch nuovo `chosenEmoji && chosenEmoji !== placeholder ? chosenEmoji : MACRO_ICON[macro] || placeholder`. `editCategory`: `pickerBtn.textContent = getCatIcon(cat)`.
+- CSS: `.emoji-picker-btn` (40px cerchio, bordo #cbd5e1, bg #f8fafc, font 20px), `:active` #e2e8f0, `.emoji-input-hidden` (clip rect 0, opacity 0).
+- Verifica: node --check OK, cross-ref id/class OK, braces 0/-.
+- ROADMAP completo: tutte le 7 fasi [x].
+## ? AUDIT A11Y ROUND 3 (2026-08-19)
+- **NAV = BUTTON, MAI `<a href="#">`**: top-nav (brand+link) e bottom-nav sono `<button type="button">` con reset CSS (`background:none;border:none;font-family:inherit;cursor:pointer`) + `:focus-visible`. Brand = `.brand-title` span (MAI `<h1>` dentro `<a>`). `switchTab(tabId)` NON ha piu' il 2o param (gli id `tab-btn-*` non esistono). `role="tab"` NON va messo su queste nav (tablist a11y e' solo per `.form-tabs`/`.condivise-tabs`).
+- **POPUP**: TUTTI i 16 `.popup-overlay` hanno `role="dialog" aria-modal="true"` + `aria-labelledby` sull'`<h3>` con id (8 aggiunti: searchPopup, iaMonthPopup, iaModal, archiveModal, customRangePopup, investAddPopup, investAssetPopup, popup-spese-condivise). Escape/focus trap/restore gia' coperti da `setupModalAccessibility()`.
+- **ICONE**: tutte le `<i class="fas ...">` decorative DEVONO avere `aria-hidden="true"` (oggi 23/23).
+- **CANVAS**: Chart.js canvas con `role="img"` + `aria-label` (6/6: budgetChart, categoryChart, historyBarChart, annualTradingChart, futureChartCanvas(D)).
+- **LABEL**: usare sempre `<label for>` + id (18 associate; toggle-switch/preset-card con wrap OK senza for).
+- **CLASSI DA STILE INLINE** (riusare): `.popup-body-stack` (flex column gap 10, +`.popup-gap-sm` 8 / `.popup-gap-lg` 12), `.btn-danger-outline` (delete asset, outline rosso), `.recovery-alert-sub`. NON re-inlineare.
+- **ENCODING INDEX.HTML = UTF-8 NO BOM**: NON usare PowerShell 5.1 `Get-Content`+`Set-Content`/`Out-File` su di esso (decodifica ANSI -> corrompe a/emoji in U+FFFD). Usare Edit tool o leggere/scrivere via `[IO.File]::ReadAllBytes`+`[Text.Encoding]::UTF8`.
+## ?? PERFORMANCE - updateUI vs renderEntriesList (2026-08-19)
+- **`renderEntriesList()`** (script.js) = lista voci SOLA (filtri search/data/categoria). `updateUI()` la chiama per il refresh pieno. **MAI chiamare updateUI da `handleSearch`** (faceva `db.months.put`+`updateGlobalVersion` per keystroke). `handleSearch` = debounce 150ms + `renderEntriesList()`.
+- **Touch target**: `button { min-height:44px }` globale; esenzioni fisse (popup-close 32px visuale + ::before, sim-reset 32px, month-arrow, btn-del ecc.) - non togliere l'esenzione.
+- **`<main id="appMain">`** avvolge container+tabs (da bottom-nav a settings-tab). Popup condivise/bottom-sheet FUORI dal main (overlay).
+## 🚀 PERFORMANCE ROUND 2 (2026-08-19)
+- **Chart.js = LAZY**: rimosso dal `<head>` (era `defer`, ~200KB parse per tutti). `ensureChartJs()` inietta `chart.umd.min.js` al primo grafico; i 4 renderer (`renderDashboardCharts`, `renderGlobalHistory`, `renderTradingChart`, `renderFutureChart`) sono async e fanno `await ensureChartJs()` prima di `new Chart`. `renderFutureChart` è ora async (chiamato con `await` da `updateFutureDashboard`). Caller fire-and-forget OK (chart appare al primo uso).
+- **Chart animation = 0**: TUTTI e 5 i grafici `animation:{duration:0}` (2 grafici Analisi = 2s di animazione per apertura tab). Ricreati wholesale a ogni render — l'animazione è solo jank.
+- **Resize = SOLO visuale**: `window resize` chiama `renderCalendar()` (250ms debounce), MAI `updateUI()` (prima: `db.months.put` + `updateGlobalVersion` + autosync ad ogni resize!). Chart.js si auto-ridimensiona (responsive).
+- **Ricerca mobile cache + debounce**: `filterSearchResults()` = shim 150ms → `runSearchFilter()`. Dataset caricato UNA volta per periodo (`searchDatasetCache` key `current:<mese>`/`all`/`custom:<mese>`), poi filtro in-memory. Cache azzerata in `openSearchPopup`. MAI `toArray()` per keystroke.
+- **`renderCalendar` O(giorni)**: Sets precomputati `plannedDates`/`deadlineDates` + flag `monthWideDeadline`/`recurringDeadline` (prima `.some()` per giorno = O(giorni×spese+scadenze)).
+- **`updateGlobalVersion()` senza console.log** (chiamata a ogni updateUI).
+- **Residuo documentato**: `filterByDate`/`filterByCategory`/`clearAllFilters` chiamano `updateUI()` (→ version bump + autosync se GDrive attivo). Accettato: azione singola con intento utente, costo irrisorio. NON cambiare senza motivo.
+- **Fuori scope**: `script.js` 325KB monolith (nessun bundler — split = rischio alto), Font Awesome full CSS resta blocking (scelta utente), Supabase CDN sync (pinned sopra).
+## ✍️ AUDIT ROUND 3 FIXES (2026-08-19)
+- **Floor tipografico 10px**: eliminati TUTTI gli 8-9px (era: `.calendar-day span` 8px, `.trend-label` 8px; 9px su `.ai-insight-date`, `.trend-delta`, `.savings-sub`, `.invest-hero-label`, `.settled-badge`, `#calendarGridCompact .calendar-day-header`, `.item-vals .val-p`, `.reg-shared-pill`). Regola: MAI sotto 10px; 11px+ per label interattive. Chart.js font (9-10px in options) sono fuori (canvas).
+- **`.btn-del` hit-area 44px**: `min-width/min-height:34px` + `::before{inset:-5px}` (44×44 effettivi, visuale 34px). NUOVA regola: gli esenti da `min-height:44px` DEVONO avere hit-area `::before` o misura ≥44.
+- **`renderAnalisiMobile` senza full scan**: `db.expenses.where('month').anyOf(periodMonths)` + `anyOf(baseMonths)` al posto di `toArray()` + filtro in-memory (adapter supporta `anyOf(arr)` con merge outbox). Rimosso `allExp`/`baseSet` morti.
+- **DESIGN.md creato** (root progetto): cattura del mondo light-pastel, token AA, type floor, motion, invarianti performance, debiti noti. Da aggiornare quando il mondo cambia.
+- **Harden/CSP DEFFERITO di nuovo**: 113 onclick inline (statici + template dinamici). Refactor = rischio alto, serve verifica browser, zero beneficio oggi (nessun CSP attivo). Serve pass dedicato con browser.
