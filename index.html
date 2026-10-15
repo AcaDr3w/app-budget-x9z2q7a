@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.7">
+    <link rel="stylesheet" href="style.css?v=2.9">
 </head>
 <body>
 
@@ -1048,21 +1048,28 @@
 
     <!-- POPUP SPESE CONDIVISE -->
     <div id="popup-spese-condivise" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="condivisePopupTitle" data-act-close="closeCondivisePopup">
-        <div class="popup-panel" data-act-stop="1">
+        <div class="popup-panel condivise-panel" data-act-stop="1">
             <button class="popup-close" data-act-close="closeCondivisePopup" aria-label="Chiudi popup">×</button>
-            <h3 class="condivise-title" id="condivisePopupTitle">👥 Spese Condivise</h3>
+            <h3 class="condivise-title" id="condivisePopupTitle"><i class="fas fa-user-friends" aria-hidden="true"></i> Spese Condivise</h3>
             <div class="condivise-tabs condivise-segmented" role="tablist" aria-label="Spese condivise">
-                <button class="condivise-tab active" data-tab="amici" data-act="switchCondiviseTab" data-args='["amici"]'>👤 Amici</button>
-                <button class="condivise-tab" data-tab="gruppi" data-act="switchCondiviseTab" data-args='["gruppi"]'>👥 Gruppi</button>
+                <button class="condivise-tab active" data-tab="amici" data-act="switchCondiviseTab" data-args='["amici"]'><i class="fas fa-user" aria-hidden="true"></i> Amici</button>
+                <button class="condivise-tab" data-tab="gruppi" data-act="switchCondiviseTab" data-args='["gruppi"]'><i class="fas fa-users" aria-hidden="true"></i> Gruppi</button>
+            </div>
+            <div class="condivise-hero" id="condiviseHero">
+                <span class="condivise-hero-label">Il tuo saldo</span>
+                <span class="condivise-hero-amount saldo-neutral" id="condiviseHeroAmount">In pari</span>
             </div>
             <div class="popup-body" id="condiviseBody">
                 <div id="condiviseTabAmici" class="condivise-tab-content active"></div>
                 <div id="condiviseTabGruppi" class="condivise-tab-content"></div>
             </div>
             <div class="condivise-detail-view" id="condiviseDetailView" style="display:none;">
-                <button class="btn-back-sheet" id="btnBackCondiviseDetail">←</button>
+                <div class="condivise-detail-toolbar">
+                    <button type="button" class="btn-back-sheet" id="btnBackCondiviseDetail" aria-label="Indietro"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                </div>
                 <div class="condivise-detail-header" id="condiviseDetailHeader"></div>
                 <div class="condivise-detail-ledger" id="condiviseDetailLedger"></div>
+                <div class="condivise-settle-footer" id="condiviseSettleFooter" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -1225,6 +1232,7 @@
         <button type="button" id="receiptConfirmDismiss" class="receipt-confirm-dismiss" aria-label="Ignora" title="Ignora">✕</button>
     </div>
     <script src="js/supabase-adapter.js"></script>
-    <script src="script.js?v=2.4"></script>
+    <script src="js/ui-dialogs.js"></script>
+    <script src="script.js?v=2.6"></script>
 </body>
 </html>

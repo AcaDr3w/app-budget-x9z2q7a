@@ -1506,7 +1506,7 @@ async function ensureCurrentUserPerson() {
     return p;
 }
 function parseAmountInput(raw) {
-    let s = String(raw || '').trim().replace(/\s/g, '');
+    let s = String(raw || '').trim().replace(/\s/g, '').replace(/€/g, '');
     if (!s) return 0;
     const hasComma = s.includes(',');
     const hasDot = s.includes('.');
@@ -1533,6 +1533,43 @@ async function getSetting(key, fallback) {
     }
 }
 
+function sameId(a, b) {
+    if (a == null || b == null || a === '' || b === '') return false;
+    return String(a) === String(b);
+}
+function findPersonById(id) {
+    return people.find(p => sameId(p.id, id)) || null;
+}
+function findGroupById(id) {
+    return groups.find(g => sameId(g.id, id)) || null;
+}
+function roundMoney(v) {
+    return Math.round((Number(v) || 0) * 100) / 100;
+}
+function unpaidGap(rec) {
+    return roundMoney((Number(rec.share_amount) || 0) - (Number(rec.paid_amount) || 0));
+}
+async function loadParticipantsForPerson(personId) {
+    const all = await db.sharedExpenseParticipants.toArray();
+    return all.filter(pr => sameId(pr.person_id, personId));
+}
+function netTheyOweMe(meId, friendId, participants) {
+    const byExp = new Map();
+    for (const pr of participants) {
+        if (pr.settled) continue;
+        const eid = String(pr.shared_expense_id);
+        if (!byExp.has(eid)) byExp.set(eid, []);
+        byExp.get(eid).push(pr);
+    }
+    let theyOweMe = 0;
+    for (const parts of byExp.values()) {
+        const mine = meId != null && parts.find(p => sameId(p.person_id, meId));
+        const theirs = parts.find(p => sameId(p.person_id, friendId));
+        if (!mine || !theirs) continue;
+        theyOweMe += unpaidGap(theirs);
+    }
+    return roundMoney(theyOweMe);
+}
 // =====================================================================
 // SPESE CONDIVISE - Data Layer
 // =====================================================================
@@ -1686,22 +1723,25 @@ async function joinGroupByToken(token) {
 
 function getGroupMembersWithPeople(groupId) {
     return groupMembers
-        .filter(m => m.groupId === groupId)
+        .filter(m => sameId(m.groupId, groupId) || sameId(m.group_id, groupId))
         .map(m => {
-            const p = people.find(pp => pp.id === m.personId) || people.find(pp => pp.user_id === m.user_id);
+            const pid = m.personId != null ? m.personId : m.person_id;
+            const p = findPersonById(pid) || people.find(pp => sameId(pp.user_id, m.user_id));
             return {
                 ...m,
+                personId: pid,
                 person: p || { name: m.member_name || 'Sconosciuto' }
             };
         });
 }
 
 async function loadSharedExpenseParticipants(sharedExpenseId) {
-    return db.sharedExpenseParticipants.where('shared_expense_id').equals(sharedExpenseId).toArray();
+    const all = await db.sharedExpenseParticipants.toArray();
+    return all.filter(p => sameId(p.shared_expense_id, sharedExpenseId));
 }
 
 async function loadSharedExpensesForPerson(personId) {
-    const participants = await db.sharedExpenseParticipants.where('person_id').equals(personId).toArray();
+    const participants = await loadParticipantsForPerson(personId);
     const ids = [...new Set(participants.map(p => p.shared_expense_id))];
     const out = [];
     for (const id of ids) {
@@ -1717,44 +1757,46 @@ async function calculateBalances() {
     const map = {};
     for (const part of participants) {
         if (part.settled) continue;
-        if (!map[part.person_id]) {
-            const p = people.find(pp => pp.id === part.person_id);
-            map[part.person_id] = {
-                id: part.person_id,
+        const pidKey = String(part.person_id);
+        if (!map[pidKey]) {
+            const p = findPersonById(part.person_id);
+            map[pidKey] = {
+                id: p ? p.id : part.person_id,
                 name: p ? p.name : (part.participant_name || 'Sconosciuto'),
                 user_id: p ? p.user_id : null,
                 paid: 0,
                 share: 0
             };
         }
-        map[part.person_id].paid += part.paid_amount || 0;
-        map[part.person_id].share += part.share_amount || 0;
+        map[pidKey].paid += Number(part.paid_amount) || 0;
+        map[pidKey].share += Number(part.share_amount) || 0;
     }
     const result = Object.values(map).map(p => ({ ...p, net: p.paid - p.share })).sort((a, b) => b.net - a.net);
     return { me, list: result };
 }
 
 async function calculateGroupBalances(groupId) {
-    const shared = (await db.sharedExpenses.toArray()).filter(se => se.group_id === groupId);
+    const shared = (await db.sharedExpenses.toArray()).filter(se => sameId(se.group_id, groupId));
+    const sharedIds = new Set(shared.map(se => String(se.id)));
+    const allParts = await db.sharedExpenseParticipants.toArray();
     const map = {};
-    for (const se of shared) {
-        const parts = await loadSharedExpenseParticipants(se.id);
-        for (const part of parts) {
-            if (part.settled) continue;
-            if (!map[part.person_id]) {
-                const p = people.find(pp => pp.id === part.person_id);
-                map[part.person_id] = {
-                    id: part.person_id,
-                    name: p ? p.name : (part.participant_name || 'Sconosciuto'),
-                    paid: 0,
-                    share: 0
-                };
-            }
-            map[part.person_id].paid += part.paid_amount || 0;
-            map[part.person_id].share += part.share_amount || 0;
+    for (const part of allParts) {
+        if (part.settled) continue;
+        if (!sharedIds.has(String(part.shared_expense_id))) continue;
+        const pidKey = String(part.person_id);
+        if (!map[pidKey]) {
+            const p = findPersonById(part.person_id);
+            map[pidKey] = {
+                id: p ? p.id : part.person_id,
+                name: p ? p.name : (part.participant_name || 'Sconosciuto'),
+                paid: 0,
+                share: 0
+            };
         }
+        map[pidKey].paid += Number(part.paid_amount) || 0;
+        map[pidKey].share += Number(part.share_amount) || 0;
     }
-    return Object.values(map).map(p => ({ ...p, net: p.paid - p.share })).sort((a, b) => b.net - a.net);
+    return Object.values(map).map(p => ({ ...p, net: roundMoney(p.paid - p.share) })).sort((a, b) => b.net - a.net);
 }
 
 function getSimplifiedDebts(balances) {
@@ -1931,7 +1973,7 @@ async function markDebtSettled(debtId) {
 }
 
 async function copyInviteLink(groupId) {
-    const g = groups.find(gg => gg.id === groupId);
+    const g = findGroupById(groupId);
     if (!g || !g.invite_token) return;
     const link = getGroupInviteLink(g);
     try {
@@ -2504,71 +2546,135 @@ async function saveSharedSplitsV2(expenseId, totalAmount, state) {
 // =====================================================================
 // SPESE CONDIVISE - Popup Saldi & Gruppi
 // =====================================================================
+let condiviseLastTab = 'amici';
+let condiviseDetailCtx = null;
+
+function setCondiviseListVisible(visible) {
+    const tabs = document.querySelector('#popup-spese-condivise .condivise-tabs');
+    const hero = document.getElementById('condiviseHero');
+    const body = document.getElementById('condiviseBody');
+    const detail = document.getElementById('condiviseDetailView');
+    const footer = document.getElementById('condiviseSettleFooter');
+    if (tabs) tabs.style.display = visible ? 'flex' : 'none';
+    if (hero) hero.style.display = visible ? 'flex' : 'none';
+    if (body) body.style.display = visible ? 'flex' : 'none';
+    if (detail) detail.style.display = visible ? 'none' : 'flex';
+    if (visible) {
+        condiviseDetailCtx = null;
+        if (footer) { footer.style.display = 'none'; footer.innerHTML = ''; }
+    }
+}
+
+async function updateCondiviseHero() {
+    const el = document.getElementById('condiviseHeroAmount');
+    if (!el) return;
+    const meId = getSharedMeId();
+    const participants = await db.sharedExpenseParticipants.toArray();
+    let net = 0;
+    for (const p of people) {
+        if (sameId(p.id, meId)) continue;
+        net += netTheyOweMe(meId, p.id, participants);
+    }
+    net = roundMoney(net);
+    el.classList.remove('saldo-positive', 'saldo-negative', 'saldo-neutral');
+    if (net > 0.001) {
+        el.classList.add('saldo-positive');
+        el.textContent = 'Ti devono ' + fmtEPlain(net);
+    } else if (net < -0.001) {
+        el.classList.add('saldo-negative');
+        el.textContent = 'Devi ' + fmtEPlain(Math.abs(net));
+    } else {
+        el.classList.add('saldo-neutral');
+        el.textContent = 'In pari';
+    }
+}
+
+function bindSettleFooter({ hint, amount, onConfirm }) {
+    const footer = document.getElementById('condiviseSettleFooter');
+    if (!footer) return;
+    if (!(amount > 0.001)) {
+        footer.style.display = 'none';
+        footer.innerHTML = '';
+        return;
+    }
+    const preset = amount.toFixed(2).replace('.', ',');
+    footer.style.display = 'block';
+    footer.innerHTML = `
+        <p class="condivise-settle-hint">${hint}</p>
+        <div class="condivise-settle-row">
+            <input type="text" id="condiviseSettleAmount" class="sheet-input" inputmode="decimal" enterkeyhint="done" value="${preset}" aria-label="Importo da saldare">
+            <button type="button" class="btn-settle-large" id="condiviseSettleConfirm">Salda</button>
+        </div>
+    `;
+    const input = document.getElementById('condiviseSettleAmount');
+    const btn = document.getElementById('condiviseSettleConfirm');
+    const go = () => onConfirm(input ? input.value : '');
+    btn.addEventListener('click', go);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+}
+
 async function openCondivisePopup() {
     await loadPeopleGroups();
     const popup = document.getElementById('popup-spese-condivise');
     if (!popup) return;
     popup.classList.add('active');
     document.body.classList.add('popup-open');
-    switchCondiviseTab('amici');
-    await Promise.all([renderFriendsTab(), renderGroupsTab()]);
+    setCondiviseListVisible(true);
+    switchCondiviseTab(condiviseLastTab || 'amici');
+    const backBtn = document.getElementById('btnBackCondiviseDetail');
+    if (backBtn) backBtn.onclick = backToCondiviseSummary;
 }
 
 function closeCondivisePopup(event) {
     if (event && event.target !== event.currentTarget) return;
     const popup = document.getElementById('popup-spese-condivise');
     if (popup) { popup.classList.remove('active'); document.body.classList.remove('popup-open'); }
+    setCondiviseListVisible(true);
 }
 
 function switchCondiviseTab(tab) {
-    document.querySelectorAll('.condivise-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    document.querySelectorAll('.condivise-tab-content').forEach(c => c.classList.toggle('active', c.id === 'condiviseTab' + tab.charAt(0).toUpperCase() + tab.slice(1)));
-    if (tab === 'amici') renderFriendsTab();
+    condiviseLastTab = tab === 'gruppi' ? 'gruppi' : 'amici';
+    document.querySelectorAll('.condivise-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === condiviseLastTab));
+    document.querySelectorAll('.condivise-tab-content').forEach(c => c.classList.toggle('active', c.id === 'condiviseTab' + condiviseLastTab.charAt(0).toUpperCase() + condiviseLastTab.slice(1)));
+    if (condiviseLastTab === 'amici') renderFriendsTab();
     else renderGroupsTab();
 }
 
 async function renderFriendsTab() {
     const container = document.getElementById('condiviseTabAmici');
     if (!container) return;
+    await updateCondiviseHero();
     const meId = getSharedMeId();
     const participants = await db.sharedExpenseParticipants.toArray();
-    const netByPerson = {};
-    for (const pr of participants) {
-        if (pr.settled) continue;
-        const pid = Number(pr.person_id);
-        const paid = Number(pr.paid_amount) || 0;
-        const share = Number(pr.share_amount) || 0;
-        netByPerson[pid] = Math.round(((netByPerson[pid] || 0) + paid - share) * 100) / 100;
-    }
-    const friends = people.filter(p => p.id !== meId);
+    const friends = people.filter(p => !sameId(p.id, meId));
 
     let html = `
         <div class="condivise-search-add">
-            <input type="text" id="newPersonQuickInput" class="sheet-input" placeholder="Nome o email...">
-            <button class="btn-add-solid" id="btnQuickAddPerson">+ Aggiungi</button>
+            <input type="text" id="newPersonQuickInput" class="sheet-input" placeholder="Nome o email..." autocomplete="off">
+            <button type="button" class="btn-add-solid" id="btnQuickAddPerson">+ Aggiungi</button>
         </div>
     `;
 
     if (friends.length === 0) {
-        html += '<div class="condivise-empty">🎉 Nessun amico ancora. Aggiungine uno per iniziare.</div>';
+        html += '<div class="condivise-empty">Nessun amico ancora. Aggiungine uno per iniziare.</div>';
     } else {
         html += '<div class="condivise-list">';
         for (const p of friends) {
-            const color = getAvatarColor(p.name);
-            const initials = getInitials(p.name);
-            const net = netByPerson[p.id] || 0;
-            const badgeClass = net > 0.001 ? 'negative' : (net < -0.001 ? 'positive' : 'neutral');
-            const badgeText = net > 0.001 ? 'Devi ' + fmtE(net) : (net < -0.001 ? 'Ti deve ' + fmtE(Math.abs(net)) : 'In pari (0,00 €)');
+            const theyOweMe = netTheyOweMe(meId, p.id, participants);
+            const badgeClass = theyOweMe > 0.001 ? 'positive' : (theyOweMe < -0.001 ? 'negative' : 'neutral');
+            const badgeText = theyOweMe > 0.001 ? 'Ti deve' : (theyOweMe < -0.001 ? 'Devi' : 'In pari');
+            const amountCls = theyOweMe > 0.001 ? 'saldo-positive' : (theyOweMe < -0.001 ? 'saldo-negative' : 'saldo-neutral');
+            const amountText = Math.abs(theyOweMe) > 0.001 ? fmtEPlain(Math.abs(theyOweMe)) : '';
             html += `
-                <div class="friend-row" data-pid="${p.id}">
-                    <div class="friend-avatar" style="background:${color}">${initials}</div>
+                <div class="friend-row" data-pid="${p.id}" role="button" tabindex="0">
+                    <div class="friend-avatar" style="background:${getAvatarColor(p.name)}">${getInitials(p.name)}</div>
                     <div class="friend-info">
                         <span class="friend-name">${p.name}</span>
                         ${p.email ? `<span class="friend-sub">${p.email}</span>` : ''}
                         <span class="friend-badge ${badgeClass}">${badgeText}</span>
                     </div>
-                    ${Math.abs(net) > 0.001 ? `<button class="btn-settle" data-pid="${p.id}">Salda</button>` : ''}
-                    <span class="row-chevron"><i class="fas fa-chevron-right"></i></span>
+                    <span class="friend-amount ${amountCls}">${amountText}</span>
+                    <span class="row-chevron"><i class="fas fa-chevron-right" aria-hidden="true"></i></span>
                 </div>
             `;
         }
@@ -2577,18 +2683,9 @@ async function renderFriendsTab() {
     container.innerHTML = html;
 
     container.querySelectorAll('.friend-row').forEach(row => {
-        row.addEventListener('click', async (e) => {
-            if (e.target.closest('.btn-settle')) return;
-            const pid = parseInt(row.dataset.pid);
-            await showFriendDetail(pid);
-        });
-    });
-    container.querySelectorAll('.btn-settle').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const pid = parseInt(btn.dataset.pid);
-            await settleFriendBalance(pid);
-        });
+        const open = () => showFriendDetail(row.dataset.pid);
+        row.addEventListener('click', open);
+        row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });
     const quickAddBtn = document.getElementById('btnQuickAddPerson');
     const quickAddInput = document.getElementById('newPersonQuickInput');
@@ -2601,23 +2698,24 @@ async function renderFriendsTab() {
             quickAddInput.value = '';
             renderFriendsTab();
         });
-        quickAddInput.addEventListener('keydown', async (e) => { if (e.key === 'Enter') quickAddBtn.click(); });
+        quickAddInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAddBtn.click(); });
     }
 }
 
 async function renderGroupsTab() {
     const container = document.getElementById('condiviseTabGruppi');
     if (!container) return;
+    await updateCondiviseHero();
 
     let html = `
         <div class="condivise-search-add">
-            <input type="text" id="newGroupQuickInput" class="sheet-input" placeholder="Nome gruppo...">
-            <button class="btn-add-solid" id="btnQuickAddGroup">+ Crea</button>
+            <input type="text" id="newGroupQuickInput" class="sheet-input" placeholder="Nome gruppo..." autocomplete="off">
+            <button type="button" class="btn-add-solid" id="btnQuickAddGroup">+ Crea</button>
         </div>
     `;
 
     if (groups.length === 0) {
-        html += '<div class="condivise-empty">📂 Nessun gruppo ancora. Creane uno per spese condivise.</div>';
+        html += '<div class="condivise-empty">Nessun gruppo ancora. Creane uno per spese condivise.</div>';
     } else {
         html += '<div class="condivise-list">';
         const meId = getSharedMeId();
@@ -2625,20 +2723,23 @@ async function renderGroupsTab() {
             try {
                 const members = getGroupMembersWithPeople(g.id);
                 const balances = await calculateGroupBalances(g.id);
-                const meB = balances.find(b => b.id === meId);
+                const meB = balances.find(b => sameId(b.id, meId));
                 const myNet = meB ? meB.net : 0;
                 const badgeClass = myNet > 0.001 ? 'positive' : (myNet < -0.001 ? 'negative' : 'neutral');
-                const badgeText = myNet > 0.001 ? 'In credito di ' + fmtE(myNet) : (myNet < -0.001 ? 'In debito di ' + fmtE(Math.abs(myNet)) : 'In pari');
+                const badgeText = myNet > 0.001 ? 'In credito' : (myNet < -0.001 ? 'In debito' : 'In pari');
+                const amountCls = myNet > 0.001 ? 'saldo-positive' : (myNet < -0.001 ? 'saldo-negative' : 'saldo-neutral');
+                const amountText = Math.abs(myNet) > 0.001 ? fmtEPlain(Math.abs(myNet)) : '';
                 html += `
-                    <div class="group-card" data-gid="${g.id}">
-                        <div class="group-avatar"><i class="fas fa-users"></i></div>
+                    <div class="group-card" data-gid="${g.id}" role="button" tabindex="0">
+                        <div class="group-avatar"><i class="fas fa-users" aria-hidden="true"></i></div>
                         <div class="group-info">
                             <span class="group-name">${g.name}</span>
                             <span class="group-members">${members.length} partecipanti</span>
                             <span class="friend-badge ${badgeClass}">${badgeText}</span>
                         </div>
-                        <button class="btn-copy-link" data-gid="${g.id}" title="Copia link invito"><i class="fas fa-link"></i></button>
-                        <span class="row-chevron"><i class="fas fa-chevron-right"></i></span>
+                        <span class="friend-amount ${amountCls}">${amountText}</span>
+                        <button type="button" class="btn-copy-link" data-gid="${g.id}" title="Copia link invito" aria-label="Copia link invito"><i class="fas fa-link" aria-hidden="true"></i></button>
+                        <span class="row-chevron"><i class="fas fa-chevron-right" aria-hidden="true"></i></span>
                     </div>
                 `;
             } catch (err) {
@@ -2651,21 +2752,24 @@ async function renderGroupsTab() {
         container.innerHTML = html;
     } catch (err) {
         console.warn('[Gruppi] errore rendering lista:', err);
-        container.innerHTML = '<div class="condivise-empty">⚠️ Errore caricamento gruppi</div>';
+        container.innerHTML = '<div class="condivise-empty">Errore caricamento gruppi</div>';
     }
 
     container.querySelectorAll('.group-card').forEach(card => {
-        card.addEventListener('click', async (e) => {
+        const open = () => showGroupDetail(card.dataset.gid);
+        card.addEventListener('click', (e) => {
             if (e.target.closest('.btn-copy-link')) return;
-            const gid = parseInt(card.dataset.gid);
-            await showGroupDetail(gid);
+            open();
+        });
+        card.addEventListener('keydown', (e) => {
+            if (e.target.closest('.btn-copy-link')) return;
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
         });
     });
     container.querySelectorAll('.btn-copy-link').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const gid = parseInt(btn.dataset.gid);
-            await copyInviteLink(gid);
+            await copyInviteLink(btn.dataset.gid);
         });
     });
 
@@ -2677,104 +2781,119 @@ async function renderGroupsTab() {
             if (name) {
                 const g = await createGroup(name);
                 quickAddInput.value = '';
-                renderGroupsTab();
+                await renderGroupsTab();
                 if (g) await showGroupDetail(g.id);
             }
         });
-        quickAddInput.addEventListener('keydown', async (e) => { if (e.key === 'Enter') quickAddBtn.click(); });
+        quickAddInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAddBtn.click(); });
     }
 }
 
 async function settleGroupExpenseShare(sharedExpenseId) {
     const meId = getSharedMeId();
     if (!meId) return;
-    const parts = (await loadSharedExpenseParticipants(sharedExpenseId)).filter(x => x.person_id === meId && !x.settled);
+    const parts = (await loadSharedExpenseParticipants(sharedExpenseId)).filter(x => sameId(x.person_id, meId) && !x.settled);
     if (!parts.length) { showToast('Nessuna quota da saldare', true); return; }
-    const ok = await showConfirmDialog(
-        'Salda la tua quota?',
-        parts.length + ' voce/i verranno marcate come saldate.'
-    );
+    let debt = 0;
+    for (const p of parts) debt += unpaidGap(p);
+    debt = roundMoney(debt);
+    if (debt <= 0.001) { showToast('Niente da saldare', true); return; }
+    const ok = typeof window.showConfirmDialog === 'function'
+        ? await showConfirmDialog({ title: 'Salda la tua quota?', message: 'Confermi il saldo di ' + fmtEPlain(debt) + ' su questa spesa?', okLabel: 'Salda', cancelLabel: 'Annulla' })
+        : window.confirm('Salda la tua quota di ' + fmtEPlain(debt) + '?');
     if (!ok) return;
-    for (const part of parts) {
-        part.settled = true;
-        await db.sharedExpenseParticipants.put(part);
-    }
-    showToast('✅ Quota saldata', false);
+    await settleParticipantPortion(meId, parts, debt);
+    await loadPeopleGroups();
+    showToast('Quota saldata', false);
     const se = await db.sharedExpenses.get(sharedExpenseId);
-    if (se && se.group_id) showGroupDetail(se.group_id); else renderGroupsTab();
+    if (se && se.group_id) await showGroupDetail(se.group_id);
+    else await renderGroupsTab();
 }
 
-// ===== LEDGER - VISTA DETTAGLIO PERSONA / GRUPPO =====
+async function settleMyGroupShare(groupId, amountRaw) {
+    const meId = getSharedMeId();
+    if (!meId) { showToast('Profilo non trovato', true); return; }
+    const shared = (await db.sharedExpenses.toArray()).filter(se => sameId(se.group_id, groupId));
+    const all = await db.sharedExpenseParticipants.toArray();
+    const sharedIds = new Set(shared.map(se => String(se.id)));
+    const pending = all.filter(p => !p.settled && sameId(p.person_id, meId) && sharedIds.has(String(p.shared_expense_id)));
+    if (!pending.length) { showToast('Nessuna quota da saldare', true); return; }
+    let debt = 0;
+    for (const p of pending) debt += unpaidGap(p);
+    debt = roundMoney(debt);
+    if (debt <= 0.001) { showToast('Niente da saldare', true); return; }
+    const amount = roundMoney(parseAmountInput(amountRaw));
+    if (amount <= 0) { showToast('Importo non valido', true); return; }
+    if (amount > debt + 0.001) { showToast('Importo maggiore della quota (' + fmtEPlain(debt) + ')', true); return; }
+    await settleParticipantPortion(meId, pending, amount);
+    await loadPeopleGroups();
+    showToast(debt - amount < 0.001 ? 'Quota di gruppo saldata' : 'Saldati ' + fmtEPlain(amount), false);
+    await showGroupDetail(groupId);
+}
+
 function backToCondiviseSummary() {
-    document.getElementById('condiviseDetailView').style.display = 'none';
-    document.querySelector('.condivise-tabs').style.display = 'flex';
-    document.getElementById('condiviseBody').style.display = 'flex';
-    document.querySelectorAll('.condivise-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'amici'));
-    document.querySelectorAll('.condivise-tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('condiviseTabAmici').classList.add('active');
-    renderFriendsTab();
+    setCondiviseListVisible(true);
+    switchCondiviseTab(condiviseLastTab || 'amici');
 }
 
 async function addPersonToGroup(groupId, personId) {
-    if (groupMembers.some(m => m.groupId === groupId && m.personId === personId)) {
+    if (groupMembers.some(m => (sameId(m.groupId, groupId) || sameId(m.group_id, groupId)) && (sameId(m.personId, personId) || sameId(m.person_id, personId)))) {
         showToast('Persona già nel gruppo', true);
         return;
     }
-    const p = people.find(pp => pp.id === personId);
+    const p = findPersonById(personId);
     const member = { id: genId(), groupId, personId, member_name: p ? p.name : null };
     await db.groupMembers.put(member);
     groupMembers.push(member);
-    showToast('🙌 Persona aggiunta al gruppo', false);
-    showGroupDetail(groupId);
+    showToast('Persona aggiunta al gruppo', false);
+    await showGroupDetail(groupId);
 }
 
 async function showFriendDetail(personId) {
-    let p = people.find(pp => pp.id === personId);
-    const participants = await db.sharedExpenseParticipants.where('person_id').equals(personId).toArray();
-    participants.sort((a, b) => b.created_at - a.created_at);
+    let p = findPersonById(personId);
+    const all = await db.sharedExpenseParticipants.toArray();
+    const participants = all.filter(pr => sameId(pr.person_id, personId));
+    participants.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
     if (!p && participants.length) {
         p = { id: personId, name: participants[0].participant_name || 'Sconosciuto' };
     }
     if (!p) return;
-    let paid = 0, share = 0;
-    for (const part of participants) {
-        if (part.settled) continue;
-        paid += part.paid_amount; share += part.share_amount;
-    }
-    const net = paid - share;
+    const meId = getSharedMeId();
+    const theyOweMe = netTheyOweMe(meId, p.id, all);
+    condiviseDetailCtx = { type: 'friend', id: p.id };
+    setCondiviseListVisible(false);
 
-    document.querySelector('.condivise-tabs').style.display = 'none';
-    document.getElementById('condiviseBody').style.display = 'none';
-    const detailView = document.getElementById('condiviseDetailView');
-    detailView.style.display = 'flex';
-
-    const color = getAvatarColor(p.name);
-    const statusClass = net > 0.001 ? 'saldo-negative' : (net < -0.001 ? 'saldo-positive' : 'saldo-neutral');
+    const statusClass = theyOweMe > 0.001 ? 'saldo-positive' : (theyOweMe < -0.001 ? 'saldo-negative' : 'saldo-neutral');
+    const balanceText = theyOweMe > 0.001
+        ? 'Ti deve ' + fmtEPlain(theyOweMe)
+        : (theyOweMe < -0.001 ? 'Devi ' + fmtEPlain(Math.abs(theyOweMe)) : 'In pari');
     document.getElementById('condiviseDetailHeader').innerHTML = `
-        <div class="detail-avatar-large" style="background:${color}">${getInitials(p.name)}</div>
+        <div class="detail-avatar-large" style="background:${getAvatarColor(p.name)}">${getInitials(p.name)}</div>
         <div class="detail-header-name">${p.name}</div>
-        <div class="detail-header-balance ${statusClass}">
-            ${net > 0.001 ? 'Le devi ' + fmtE(net) : (net < -0.001 ? 'Ti deve ' + fmtE(Math.abs(net)) : 'In pari')}
-        </div>
-        ${Math.abs(net) > 0.001 ? `<button class="btn-settle-large" data-pid="${p.id}">Salda debito</button>` : ''}
+        <div class="detail-header-balance ${statusClass}">${balanceText}</div>
     `;
 
     let html = '<div class="ledger-list">';
+    if (!participants.length) {
+        html += '<div class="condivise-empty">Nessuna spesa condivisa con questa persona.</div>';
+    }
     for (const part of participants) {
         const se = await db.sharedExpenses.get(part.shared_expense_id);
         const exp = se ? await db.expenses.get(se.expense_id) : null;
-        const dateStr = exp ? (exp.date || '').split('-').reverse().slice(0,2).join('/') : '';
+        const dateStr = exp ? (exp.date || '').split('-').reverse().slice(0, 2).join('/') : '';
         const desc = exp ? exp.desc : 'Spesa eliminata';
-        const diff = part.paid_amount - part.share_amount;
+        const gap = unpaidGap(part);
+        const lineCls = gap > 0.001 ? 'saldo-positive' : (gap < -0.001 ? 'saldo-negative' : '');
+        const sign = gap > 0.001 ? '+' : (gap < -0.001 ? '-' : '');
         html += `
             <div class="ledger-row ${part.settled ? 'ledger-settled' : ''}">
                 <div class="ledger-row-left">
                     <span class="ledger-date">${dateStr}</span>
                     <span class="ledger-desc">${desc}</span>
-                    <span class="ledger-type">${part.settled ? '✅ Saldata' : '⏳ Da saldare'}</span>
+                    <span class="ledger-type">${part.settled ? 'Saldata' : 'Da saldare'}</span>
                 </div>
                 <div class="ledger-row-right">
-                    <span class="ledger-amount ${diff < 0 ? 'saldo-positive' : (diff > 0 ? 'saldo-negative' : '')}">${diff < 0 ? '+' : (diff > 0 ? '-' : '')}${fmtE(Math.abs(diff))}</span>
+                    <span class="ledger-amount ${lineCls}">${sign}${fmtEPlain(Math.abs(gap))}</span>
                 </div>
             </div>
         `;
@@ -2782,58 +2901,69 @@ async function showFriendDetail(personId) {
     html += '</div>';
     document.getElementById('condiviseDetailLedger').innerHTML = html;
 
-    detailView.querySelector('.btn-settle-large')?.addEventListener('click', () => settleFriendBalance(personId));
-    const backBtn = document.getElementById('btnBackCondiviseDetail');
-    if (backBtn) backBtn.onclick = backToCondiviseSummary;
+    const abs = Math.abs(theyOweMe);
+    bindSettleFooter({
+        hint: theyOweMe > 0.001
+            ? 'Quanto ti salda ' + p.name + '?'
+            : (theyOweMe < -0.001 ? 'Quanto paghi a ' + p.name + '?' : ''),
+        amount: abs,
+        onConfirm: (val) => settleFriendBalance(p.id, val)
+    });
 }
 
 async function showGroupDetail(groupId) {
-    const g = groups.find(gg => gg.id === groupId);
+    const g = findGroupById(groupId);
     if (!g) return;
-    const members = getGroupMembersWithPeople(groupId);
-    const balances = await calculateGroupBalances(groupId);
-    const debts = getSimplifiedDebts(balances);
+    const members = getGroupMembersWithPeople(g.id);
+    const balances = await calculateGroupBalances(g.id);
+    const debts = getSimplifiedDebts(balances.map(b => ({ ...b })));
     const meId = getSharedMeId();
+    const meB = balances.find(b => sameId(b.id, meId));
+    const myNet = meB ? meB.net : 0;
+    const myDebt = myNet < -0.001 ? Math.abs(myNet) : 0;
+    condiviseDetailCtx = { type: 'group', id: g.id };
+    condiviseLastTab = 'gruppi';
+    setCondiviseListVisible(false);
 
-    document.querySelector('.condivise-tabs').style.display = 'none';
-    document.getElementById('condiviseBody').style.display = 'none';
-    const detailView = document.getElementById('condiviseDetailView');
-    detailView.style.display = 'flex';
-
-    const nonMembers = people.filter(p => !members.some(m => m.personId === p.id) && p.id !== meId);
+    const nonMembers = people.filter(p => !members.some(m => sameId(m.personId, p.id)) && !sameId(p.id, meId));
     const link = getGroupInviteLink(g);
     const creator = g.created_by
-        ? (g.created_by === window.supabaseUser?.id ? 'te' : (people.find(p => p.user_id === g.created_by)?.name || 'qualcuno'))
+        ? (g.created_by === window.supabaseUser?.id ? 'te' : (people.find(p => sameId(p.user_id, g.created_by))?.name || 'qualcuno'))
         : null;
+    const statusClass = myNet > 0.001 ? 'saldo-positive' : (myNet < -0.001 ? 'saldo-negative' : 'saldo-neutral');
+    const balanceText = myNet > 0.001
+        ? 'In credito di ' + fmtEPlain(myNet)
+        : (myNet < -0.001 ? 'In debito di ' + fmtEPlain(Math.abs(myNet)) : 'In pari');
 
     document.getElementById('condiviseDetailHeader').innerHTML = `
-        <div class="detail-avatar-large" style="background:#8b5cf6"><i class="fas fa-users"></i></div>
+        <div class="detail-avatar-large group-avatar"><i class="fas fa-users" aria-hidden="true"></i></div>
         <div class="detail-header-name">${g.name}</div>
+        <div class="detail-header-balance ${statusClass}">${balanceText}</div>
         <div class="detail-header-members">${creator ? 'Creato da ' + creator + ' · ' : ''}${members.length} partecipanti</div>
         <div class="group-invite-box">
             <input type="text" id="groupInviteLink" class="sheet-input" value="${link}" readonly>
-            <button class="btn-copy-link" data-gid="${g.id}" title="Copia link invito"><i class="fas fa-copy"></i></button>
+            <button type="button" class="btn-copy-link" data-gid="${g.id}" title="Copia link invito" aria-label="Copia link invito"><i class="fas fa-copy" aria-hidden="true"></i></button>
         </div>
         <div class="group-add-member">
             <input type="text" id="groupAddPersonInput" class="sheet-input" list="groupAddPersonList" placeholder="Aggiungi persona esistente..." autocomplete="off">
             <datalist id="groupAddPersonList">
                 ${nonMembers.map(p => `<option value="${p.name}">`).join('')}
             </datalist>
-            <button id="btnGroupAddPerson" class="btn-add-solid">+ Aggiungi al Gruppo</button>
+            <button type="button" id="btnGroupAddPerson" class="btn-add-solid">+ Aggiungi al gruppo</button>
         </div>
     `;
 
-    detailView.querySelector('.btn-copy-link')?.addEventListener('click', () => copyInviteLink(g.id));
+    document.getElementById('condiviseDetailHeader').querySelector('.btn-copy-link')?.addEventListener('click', () => copyInviteLink(g.id));
     const addBtn = document.getElementById('btnGroupAddPerson');
     const addInput = document.getElementById('groupAddPersonInput');
     if (addBtn && addInput) {
         const addByName = async () => {
             const name = addInput.value.trim();
             if (!name) { showToast('Scrivi il nome di una persona', true); return; }
-            const person = people.find(p => p.name.toLowerCase() === name.toLowerCase());
+            const person = people.find(p => (p.name || '').toLowerCase() === name.toLowerCase());
             if (!person) { showToast('Nessuna persona con questo nome. Aggiungila dalla scheda Amici', true); return; }
-            if (members.some(m => m.personId === person.id)) { showToast('Persona già nel gruppo', true); return; }
-            await addPersonToGroup(groupId, person.id);
+            if (members.some(m => sameId(m.personId, person.id))) { showToast('Persona già nel gruppo', true); return; }
+            await addPersonToGroup(g.id, person.id);
             addInput.value = '';
         };
         addBtn.addEventListener('click', addByName);
@@ -2842,17 +2972,17 @@ async function showGroupDetail(groupId) {
 
     let html = '';
 
-    html += '<div class="detail-section-title">👥 Partecipanti</div>';
+    html += '<div class="detail-section-title">Partecipanti</div>';
     if (members.length) {
         html += '<div class="detail-section">';
         const balanceById = {};
-        for (const b of balances) balanceById[b.id] = b.net;
+        for (const b of balances) balanceById[String(b.id)] = b.net;
         for (const m of members) {
-            const isAdmin = g.created_by && m.user_id === g.created_by;
-            const isMe = m.personId === meId;
+            const isAdmin = g.created_by && sameId(m.user_id, g.created_by);
+            const isMe = sameId(m.personId, meId);
             const name = m.person ? (isMe ? 'Tu' : m.person.name) : '?';
-            const mb = balanceById[m.personId] || 0;
-            const balText = mb > 0.001 ? 'In credito di ' + fmtE(mb) : (mb < -0.001 ? 'In debito di ' + fmtE(Math.abs(mb)) : 'In pari');
+            const mb = balanceById[String(m.personId)] || 0;
+            const balText = mb > 0.001 ? 'In credito ' + fmtEPlain(mb) : (mb < -0.001 ? 'In debito ' + fmtEPlain(Math.abs(mb)) : 'In pari');
             html += `
                 <div class="member-row">
                     <div class="friend-avatar" style="background:${getAvatarColor(name)}">${getInitials(name)}</div>
@@ -2866,92 +2996,85 @@ async function showGroupDetail(groupId) {
         }
         html += '</div>';
     } else {
-        html += '<div class="condivise-empty">👥 Nessun membro ancora. Invita qualcuno con il link.</div>';
+        html += '<div class="condivise-empty">Nessun membro ancora. Invita qualcuno con il link.</div>';
     }
 
-    html += '<div class="detail-section-title">📌 Riepilogo Debiti</div>';
+    html += '<div class="detail-section-title">Chi deve a chi</div>';
     if (debts.length) {
         html += '<div class="detail-section debts-section">';
         for (const tx of debts) {
-            const fromName = tx.from.id === meId ? 'Tu' : tx.from.name;
-            const toName = tx.to.id === meId ? 'Tu' : tx.to.name;
+            const fromName = sameId(tx.from.id, meId) ? 'Tu' : tx.from.name;
+            const toName = sameId(tx.to.id, meId) ? 'Tu' : tx.to.name;
             html += `
                 <div class="debt-row">
-                    <span>${fromName} deve ${fmtE(tx.amount)} a ${toName}</span>
+                    <span>${fromName} deve ${fmtEPlain(tx.amount)} a ${toName}</span>
                 </div>
             `;
         }
         html += '</div>';
     } else {
-        html += '<div class="condivise-empty">✨ Nessun debito in sospeso</div>';
+        html += '<div class="condivise-empty">Nessun debito in sospeso</div>';
     }
 
-    html += '<div class="detail-section-title">🧾 Spese del Gruppo</div>';
-    const shared = (await db.sharedExpenses.toArray()).filter(se => se.group_id === groupId).sort((a, b) => b.created_at - a.created_at);
+    html += '<div class="detail-section-title">Spese del gruppo</div>';
+    const shared = (await db.sharedExpenses.toArray()).filter(se => sameId(se.group_id, g.id)).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    const allParts = await db.sharedExpenseParticipants.toArray();
     if (shared.length) {
         html += '<div class="detail-section">';
         for (const se of shared) {
             const exp = await db.expenses.get(se.expense_id);
-            const dateStr = exp ? (exp.date || '').split('-').reverse().slice(0,2).join('/') : '';
-            const myParts = (await loadSharedExpenseParticipants(se.id)).filter(x => x.person_id === meId);
-            const pending = myParts.some(x => !x.settled);
+            const dateStr = exp ? (exp.date || '').split('-').reverse().slice(0, 2).join('/') : '';
+            const myParts = allParts.filter(x => sameId(x.shared_expense_id, se.id) && sameId(x.person_id, meId));
+            const pending = myParts.some(x => !x.settled && unpaidGap(x) > 0.001);
             html += `
                 <div class="ledger-row ${pending ? '' : 'ledger-settled'}">
                     <div class="ledger-row-left">
                         <span class="ledger-date">${dateStr}</span>
                         <span class="ledger-desc">${exp ? exp.desc : 'Spesa'}</span>
-                        <span class="ledger-type">${se.split_method} · ${fmtE(se.total_amount)}</span>
+                        <span class="ledger-type">${se.split_method} · ${fmtEPlain(se.total_amount)}</span>
                     </div>
-                    ${pending ? `<button class="ledger-settle-btn" data-seid="${se.id}">Salda quota</button>` : '<span class="ledger-settled">✅ Saldata</span>'}
+                    ${pending ? `<button type="button" class="ledger-settle-btn" data-seid="${se.id}">Salda quota</button>` : '<span class="ledger-settled">Saldata</span>'}
                 </div>
             `;
         }
         html += '</div>';
     } else {
-        html += '<div class="condivise-empty">🧾 Nessuna spesa in questo gruppo</div>';
+        html += '<div class="condivise-empty">Nessuna spesa in questo gruppo</div>';
     }
     document.getElementById('condiviseDetailLedger').innerHTML = html;
 
-    detailView.querySelectorAll('.ledger-settle-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const seid = parseInt(btn.dataset.seid);
-            await settleGroupExpenseShare(seid);
-        });
+    document.getElementById('condiviseDetailLedger').querySelectorAll('.ledger-settle-btn').forEach(btn => {
+        btn.addEventListener('click', () => settleGroupExpenseShare(btn.dataset.seid));
     });
 
-    const backBtn = document.getElementById('btnBackCondiviseDetail');
-    if (backBtn) backBtn.onclick = backToCondiviseSummary;
+    bindSettleFooter({
+        hint: myDebt > 0.001 ? 'Salda la tua quota nel gruppo' : '',
+        amount: myDebt,
+        onConfirm: (val) => settleMyGroupShare(g.id, val)
+    });
 }
 
-async function settleFriendBalance(personId) {
-    const person = people.find(p => p.id === personId);
-    if (!person) return;
-    const participants = await db.sharedExpenseParticipants.where('person_id').equals(personId).toArray();
-    const pending = participants.filter(p => !p.settled);
-    if (!pending.length) { showToast('Nessun debito da saldare', true); return; }
-    let paid = 0, share = 0;
-    for (const p of pending) { paid += Number(p.paid_amount) || 0; share += Number(p.share_amount) || 0; }
-    const net = Math.round((paid - share) * 100) / 100;
-    const abs = Math.abs(net);
-    if (abs < 0.001) { showToast('Nessun debito da saldare', true); return; }
-    const owesMe = net < 0;
-    const val = await showPromptDialog({
-        title: owesMe ? 'Saldi con ' + person.name : 'Paghi ' + person.name,
-        message: owesMe
-            ? 'Ti deve ' + fmtE(abs) + ' €. Quanto ti salda?'
-            : 'Devi ' + fmtE(abs) + ' € a ' + person.name + '. Quanto vuoi pagare?',
-        defaultValue: fmtEPlain(abs),
-        placeholder: 'Importo in €',
-        okLabel: 'Salda'
-    });
-    if (val == null) return;
-    const amount = Math.round((parseFloat(String(val).replace(',', '.')) || 0) * 100) / 100;
+async function settleFriendBalance(personId, amountRaw) {
+    const person = findPersonById(personId);
+    if (!person) { showToast('Persona non trovata', true); return; }
+    if (amountRaw == null || String(amountRaw).trim() === '') { showToast('Inserisci un importo', true); return; }
+    const meId = getSharedMeId();
+    const all = await db.sharedExpenseParticipants.toArray();
+    const theyOweMe = netTheyOweMe(meId, person.id, all);
+    const abs = Math.abs(theyOweMe);
+    if (abs < 0.001) { showToast('Niente da saldare', true); return; }
+    let pending = all.filter(p => !p.settled && sameId(p.person_id, person.id) && all.some(m =>
+        !m.settled && sameId(m.shared_expense_id, p.shared_expense_id) && sameId(m.person_id, meId)
+    ));
+    if (!pending.length) pending = all.filter(p => !p.settled && sameId(p.person_id, person.id));
+    if (!pending.length) { showToast('Niente da saldare', true); return; }
+    const amount = roundMoney(parseAmountInput(amountRaw));
     if (amount <= 0) { showToast('Importo non valido', true); return; }
-    if (amount > abs + 0.001) { showToast('Importo maggiore del debito (' + fmtE(abs) + ' €)', true); return; }
-    await settleParticipantPortion(personId, pending, amount);
-    const full = abs - amount < 0.001;
-    showToast(full ? '✅ Conto saldato con ' + person.name : '✅ Saldati ' + fmtE(amount) + ' €', false);
-    renderFriendsTab();
+    if (amount > abs + 0.001) { showToast('Importo maggiore del saldo (' + fmtEPlain(abs) + ')', true); return; }
+    await settleParticipantPortion(person.id, pending, amount);
+    await loadPeopleGroups();
+    showToast(abs - amount < 0.001 ? 'Conto saldato con ' + person.name : 'Saldati ' + fmtEPlain(amount), false);
+    await showFriendDetail(person.id);
 }
 
 async function settleParticipantPortion(personId, pendingRecords, amount) {
@@ -3000,7 +3123,7 @@ async function settleParticipantPortion(personId, pendingRecords, amount) {
             });
         }
     }
-    const friend = people.find(pp => pp.id === personId);
+    const friend = findPersonById(personId);
     const friendUid = friend ? friend.user_id : null;
     if (friendUid && affectedExpenseIds.size) {
         try {

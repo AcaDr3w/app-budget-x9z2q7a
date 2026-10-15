@@ -4334,7 +4334,7 @@ cursor: pointer;
 }
 .condivise-tab {
     flex: 1;
-    min-height: 40px;
+    min-height: 44px;
     font-size: 13px;
     font-weight: 700;
     text-align: center;
@@ -4370,14 +4370,14 @@ cursor: pointer;
 
 /* ===== LEDGER - Detail View (dark) ===== */
 .condivise-detail-view {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 8px;
-    padding: 8px 16px;
-    max-height: 55vh;
-    background: var(--ink);
+    padding: 0;
+    max-height: none;
+    background: #fff;
     border-radius: 16px;
-    overflow-y: auto;
+    overflow: hidden;
 }
 .condivise-detail-view .btn-back-sheet {
     align-self: flex-start;
@@ -4917,32 +4917,82 @@ cursor: pointer;
 /* =====================================================================
    SHARED EXPENSES V2 - Dashboard styles
    ===================================================================== */
+#popup-spese-condivise .popup-panel.condivise-panel {
+    width: min(500px, 100%);
+    max-height: min(90dvh, 720px);
+    overflow: hidden;
+    overflow-x: hidden;
+    padding: 16px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+}
+#popup-spese-condivise .popup-close {
+    width: 44px;
+    height: 44px;
+    top: 8px;
+    right: 8px;
+}
 .condivise-title {
-    margin: 0 0 12px;
-    font-size: 20px;
+    margin: 0 44px 4px 0;
+    font-size: 18px;
     font-weight: 700;
     color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.condivise-title i { color: var(--accent); }
+.condivise-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-soft);
+    flex-shrink: 0;
+}
+.condivise-hero-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+}
+.condivise-hero-amount {
+    font-size: 16px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    overflow-wrap: anywhere;
 }
 #condiviseBody {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
 .condivise-search-add {
     display: flex;
+    flex-wrap: nowrap;
     gap: 8px;
     align-items: center;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 .condivise-search-add .sheet-input {
-    flex: 1;
+    flex: 1 1 0%;
     min-width: 0;
+    width: auto;
+    min-height: 44px;
 }
 .btn-add-solid {
     flex-shrink: 0;
+    width: auto;
+    margin-top: 0;
     min-height: 44px;
     padding: 0 18px;
     font-size: 13px;
@@ -4969,11 +5019,13 @@ cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
+    min-height: 52px;
+    padding: 8px 10px;
     border-radius: 12px;
     background: var(--surface-muted);
     border: 1px solid var(--border-soft);
     cursor: pointer;
+    overflow: hidden;
     transition: background 0.15s, transform 0.1s;
 }
 .friend-row:active,
@@ -5052,10 +5104,21 @@ cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.friend-amount {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    max-width: 34%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .row-chevron {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5077,6 +5140,8 @@ cursor: pointer;
     font-weight: 700;
     cursor: pointer;
     flex-shrink: 0;
+    width: auto;
+    margin-top: 0;
     transition: background 0.15s, transform 0.1s;
 }
 .btn-settle {
@@ -5090,14 +5155,15 @@ cursor: pointer;
     margin-top: 10px;
 }
 .btn-copy-link {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 16px;
     background: var(--accent-bg);
-    color: var(--ia-indigo);
+    color: var(--accent);
 }
 .btn-settle:active,
 .btn-settle-large:active,
@@ -5167,6 +5233,8 @@ cursor: pointer;
 .member-balance.bal-neutral { color: var(--muted); }
 .ledger-settle-btn {
     flex-shrink: 0;
+    width: auto;
+    margin-top: 0;
     min-height: 44px;
     padding: 0 14px;
     border: none;
@@ -5207,16 +5275,32 @@ cursor: pointer;
 
 /* Detail view (light theme) */
 .condivise-detail-view {
-    display: flex;
+    display: none;
     flex-direction: column;
-    gap: 12px;
-    padding: 8px 4px;
-    max-height: 60vh;
-    overflow-y: auto;
+    gap: 10px;
+    padding: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     background: #fff;
     color: var(--ink);
     border-radius: 16px;
+}
+.condivise-detail-toolbar {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+#popup-spese-condivise .condivise-detail-view .btn-back-sheet {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-soft);
+    color: var(--ink);
 }
 .condivise-detail-header {
     text-align: center;
@@ -5255,10 +5339,17 @@ cursor: pointer;
     margin-top: 8px;
     width: 100%;
 }
-.group-invite-box .sheet-input,
-.group-add-member .sheet-input {
-    flex: 1;
+.group-invite-box .sheet-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 0;
     font-size: 13px;
+    min-height: 44px;
+}
+.group-add-member .sheet-input {
+    width: 100%;
+    font-size: 13px;
+    min-height: 44px;
 }
 .group-add-member {
     flex-direction: column;
@@ -5275,6 +5366,42 @@ cursor: pointer;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.condivise-settle-footer {
+    flex-shrink: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+    background: #fff;
+}
+.condivise-settle-hint {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.condivise-settle-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    align-items: stretch;
+}
+.condivise-settle-row .sheet-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 0;
+    min-height: 44px;
+}
+.condivise-settle-row .btn-settle-large {
+    margin-top: 0;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 18px;
+    flex-shrink: 0;
 }
 .ledger-list {
     display: flex;
@@ -5313,7 +5440,8 @@ cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
+    max-width: 100%;
+    min-width: 0;
 }
 .ledger-type {
     font-size: 11px;
@@ -5339,23 +5467,13 @@ cursor: pointer;
 }
 
 @media (max-width: 767px) {
-    .condivise-detail-view {
-        max-height: 65vh;
+    #popup-spese-condivise .popup-panel.condivise-panel {
+        width: 100%;
+        max-height: min(92dvh, 760px);
     }
     .ledger-desc {
-        max-width: 160px;
-    }
-}
-
-@media (max-width: 360px) {
-    .condivise-search-add {
-        flex-wrap: wrap;
-    }
-    .condivise-search-add .sheet-input {
-        flex: 1 1 100%;
-    }
-    .btn-add-solid {
-        flex: 1 1 100%;
+        max-width: none;
+        width: 100%;
     }
 }
 

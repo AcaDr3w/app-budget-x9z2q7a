@@ -1,5 +1,22 @@
 # Project Core Memory
 
+## SPESE CONDIVISE POPUP (2026-10-15)
+
+**Stato**: popup `#popup-spese-condivise` ridisegnato (resta popup, non bottomsheet). Salda nel footer del dettaglio, non in lista.
+
+**Cause dei bug screenshot**:
+- `js/ui-dialogs.js` non era in `index.html` → `showPromptDialog`/`showConfirmDialog` ReferenceError (Salda e confirm elimina).
+- `button { width: 100% }` globale gonfiava `.btn-add-solid` / `.btn-settle` a tutta riga: quadrato vuoto accanto ad Aggiungi, Salda overlay sulla riga sotto, scrollbar orizzontale.
+- Net lista usava `Number(person_id)` + `p.id ===` → mismatch stringa/number dal cloud, tutti "In pari".
+- `@media 360px` wrappava input+bottone al 100% (peggiorava il width 100%).
+- `getSimplifiedDebts` mutava i net dei membri (cloni ora).
+
+**Contratto saldo**: `netTheyOweMe` solo su spese dove ci sono io e l'amico. Hero = somma di quei net. Badge lista: Ti deve / Devi / In pari + importo, niente Salda in riga. Dettaglio: ledger + footer sticky con `parseAmountInput`. Gruppi: stesso pattern; footer Salda quota solo se io devo; bottone spesa solo se `unpaidGap(me) > 0`.
+
+**ID**: `sameId` / `findPersonById` / `findGroupById` su match people/gruppi/partecipanti. Dopo Salda: `loadPeopleGroups` + re-render dettaglio.
+
+**Cache**: `style.css?v=2.9`, `script.js?v=2.6`, SW `bilancio-pwa-v14`. Script: `js/ui-dialogs.js` prima di `script.js`.
+
 ## 🔍 AUDIT DEBUG FUNZIONI (2026-10-15, COMPLETATO)
 
 **Stato**: audit statico + runtime chiuso. Run 1: `chartB` dichiarato. Run verifica post-fix (locale 8765, `script.js?v=2.4`): id unici, parser IT, insight pill, `getSetting` definita, IA usa previste aperte.
@@ -22,7 +39,7 @@
 - Id ancora assenti di proposito (UI tolta): `iaProviderSelect`, `futureCalMonthM`, `depositSavingsSelect`. Restano null-guarded.
 - `data-act` 63 distinti tutti risolvibili (2 in supabase-adapter.js: `handleLogin`/`handleSignup`). `genId` duplicata ma identica → innocuo.
 
-**PWA cache**: `CACHE_NAME = bilancio-pwa-v13`; `script.js?v=2.4`, `style.css?v=2.7`.
+**PWA cache**: `CACHE_NAME = bilancio-pwa-v14`; `script.js?v=2.6`, `style.css?v=2.9`.
 
 ## 🧹 CONFIG LOCALI STRUMENTI: SOLO SKILLS + MCP (2026-10-15)
 - **Politica repo**: gli strumenti usano la config GLOBALE (`~/.config/opencode/opencode.jsonc`, `~/.pi/agent/`). Localmente si tengono SOLO skills e MCP. Niente model/provider/lsp/permission/plugin in locale.
@@ -73,7 +90,7 @@
 - **HTML**: `.container` si chiude PRIMA di `</main>`; overlay/sheet restano fratelli di `<main>` dentro `#mainAppWrapper`.
 - **Tab Analisi/Investimenti/Previsioni/Impostazioni MAI orfani**: `#current-month-tab` NON si chiude dopo il blocco mobile Mese. I quattro tab (`#history-tab` ~583, `#future-tab` ~749, `#investimenti-tab` ~834, `#settings-tab` ~921) devono restare dentro `#mainAppWrapper` > `#appMain` > `.container`. Se escono dal wrapper, `overflow:hidden` su body/container li taglia → schermata bianca. NON è contenuto cancellato: è solo l'albero HTML.
 - **`anomalyTimer`**: dichiarato accanto a `searchQuery` (`let anomalyTimer = null`). `stopAnomalyCarousel()` lo legge; senza dichiarazione `switchTab` verso Investimenti/Previsioni/Impostazioni lancia ReferenceError. `stopAnomalyCarousel` è difensivo (`typeof` + try/catch in `switchTab`).
-- **PWA cache**: `CACHE_NAME = bilancio-pwa-v13`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.4`, `style.css?v=2.7`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
+- **PWA cache**: `CACHE_NAME = bilancio-pwa-v14`; fetch same-origin con `{ cache: 'no-store' }`. `script.js?v=2.6`, `style.css?v=2.9`. Dopo un fix JS/CSS, bumpare `?v=` E `CACHE_NAME` altrimenti il SW/HTTP cache serve i file vecchi.
 
 ## CATEGORIE (2026-09-15)
 - **Fonte di verità**: `userMacroCategories` con SOLO le 4 chiavi `casa` / `cibo` / `veicoli` / `svago_altro`. Alias legacy `casa_utenze` → `casa`, `spese_svago`/`svago` → `svago_altro` via `foldLegacyMacroKeys()` in `loadCategories`.

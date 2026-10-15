@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-10-15] - Ecosistema spese condivise: popup, saldi, Salda
+
+### Completed Changes
+- **dialog**: incluso `js/ui-dialogs.js`; Salda non usa più prompt overlay — form nel footer del dettaglio.
+- **layout**: riga Aggiungi/Crea senza wrap; override `width:auto` su bottoni condivise (causa: `button{width:100%}`); overflow-x hidden; hit 44px; hero "Il tuo saldo".
+- **saldi**: `sameId` su person/group id; net io-vs-amico; lista senza Salda; dopo settle resta sul dettaglio.
+- **gruppi**: stesso list/detail; Salda quota sticky solo se in debito; `getSimplifiedDebts` su cloni.
+- **cache**: `style.css?v=2.9`, `script.js?v=2.6`, SW `bilancio-pwa-v14`.
+
+### Status: COMPLETATO. Verifica locale 360/390/1280: niente overflow riga Aggiungi, Salda parziale 30→20, dialogs caricati.
+
 ## [2026-10-15] - Audit debug: id duplicati, parser importi, insight, getSetting
 
 ### Completed Changes
