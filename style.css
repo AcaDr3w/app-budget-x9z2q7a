@@ -5681,3 +5681,379 @@ cursor: pointer;
 }
 .btn-danger-outline:hover { background: var(--danger-bg); }
 .btn-danger-outline:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
+
+/* ===== DESKTOP ≥768: stessa UI mobile, allargata (non tocca ≤767) =====
+   Sblocca il lock overflow@1200, un solo albero visivo, rail inserimento a destra. */
+@media (min-width: 768px) {
+    html, body {
+        height: auto !important;
+        overflow: auto !important;
+        overflow-x: hidden !important;
+    }
+    body { padding-bottom: 24px !important; }
+    .container {
+        height: auto !important;
+        overflow: visible !important;
+        max-width: 1440px;
+        margin: 0 auto;
+    }
+    .tab-content.active {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    #sheetOverlay, #bottomSheet { display: none !important; }
+
+    /* --- MESE: dashboard | rail form+registro --- */
+    #current-month-tab .month-head { display: none !important; }
+
+    #current-month-tab.active {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 400px) !important;
+        grid-template-rows: auto !important;
+        gap: 20px !important;
+        height: auto !important;
+        overflow: visible !important;
+        align-items: start;
+    }
+    #current-month-tab .mese-primary {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    #current-month-tab .main-layout {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px;
+        width: 100%;
+        min-width: 0;
+        min-height: 0;
+        position: sticky;
+        top: 72px;
+        max-height: calc(100dvh - 88px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+    #current-month-tab .layout-column {
+        width: 100%;
+        max-width: none !important;
+        max-height: none !important;
+        flex: none !important;
+        position: static !important;
+        overflow: visible !important;
+    }
+    #current-month-tab .chart-card-single { max-height: none; }
+    #current-month-tab .chart-container-box {
+        height: 260px !important;
+        max-height: 260px !important;
+    }
+    #current-month-tab .summary-card-bottom {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 8px;
+    }
+    #current-month-tab .summary-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        min-height: 52px;
+        padding: 10px 8px;
+    }
+    #current-month-tab .col-label { font-size: 11px; }
+    #current-month-tab .col-value { font-size: 18px; font-weight: 800; }
+    #current-month-tab .mobile-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+    #current-month-tab .macro-card-white {
+        min-height: 88px;
+        padding: 14px;
+    }
+    #mese-action-hub { padding: 4px 0 8px; gap: 10px; }
+    #mese-action-hub button { min-height: 52px; }
+
+    /* --- ANALISI: KPI / carousel / savings visibili, grafici+tabella sotto --- */
+    #history-tab.active {
+        display: flex !important;
+        flex-direction: column;
+        gap: 16px;
+        padding: 4px 0 24px;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    #history-tab .analisi-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    #history-tab .analisi-title {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    #history-tab .analisi-period-select {
+        min-height: 44px;
+        border: none;
+        background: #fff;
+        border-radius: 999px;
+        padding: 0 16px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: var(--shadow-float);
+        cursor: pointer;
+    }
+    #history-tab .ai-insight-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 48px;
+        border: none;
+        background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(237,233,254,0.92));
+        border-radius: 16px;
+        padding: 10px 14px;
+        text-align: left;
+        cursor: pointer;
+        box-shadow: var(--shadow-float);
+        margin: 0;
+        font-family: inherit;
+    }
+    #history-tab .kpi-swipe {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+    #history-tab .kpi-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 14px 16px;
+        box-shadow: var(--shadow-float);
+        min-width: 0;
+    }
+    #history-tab .trend-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    #history-tab .trend-value {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--ink-soft);
+        margin-top: 4px;
+    }
+    #history-tab .anomaly-carousel,
+    #history-tab .savings-card {
+        display: block;
+        background: #fff;
+        border-radius: 16px;
+        padding: 14px 16px;
+        box-shadow: var(--shadow-float);
+        min-height: 0;
+        overflow: visible;
+    }
+    #history-tab .savings-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* --- PREVISIONI --- */
+    .future-mobile-dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 4px 0 24px;
+        height: auto;
+        overflow: visible;
+    }
+    .future-header-compact h2 {
+        margin: 0 0 4px;
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    #futureBaseLine { font-size: 13px; color: var(--muted); }
+    .future-chart-card {
+        position: relative;
+        height: 280px;
+        background: var(--panel);
+        border-radius: 16px;
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-float);
+        padding: 10px 12px 8px;
+        box-sizing: border-box;
+    }
+    .future-chart-card canvas {
+        position: absolute;
+        inset: 8px;
+        width: calc(100% - 16px) !important;
+        height: calc(100% - 16px) !important;
+    }
+    .future-sim-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: var(--panel);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-float);
+    }
+    .future-sim-card .sim-value-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    .future-sim-card .sim-range {
+        display: block;
+        width: 100%;
+        height: 24px;
+        margin: 0;
+        cursor: pointer;
+    }
+    .future-sim-card .sim-growth-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+    }
+    .future-sim-card .sim-growth-input {
+        width: 56px;
+        height: 32px;
+        padding: 0 6px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        border-radius: 8px;
+    }
+    .future-sim-chip {
+        font-size: 13px;
+        font-weight: 800;
+        padding: 6px 12px;
+        border-radius: 10px;
+        background: var(--border-faint);
+        color: var(--accent);
+    }
+    .future-milestones {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+    #futureActionHub {
+        display: flex;
+        gap: 10px;
+    }
+    #futureActionHub button {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        border: none;
+        background: var(--panel);
+        box-shadow: var(--shadow-float);
+        color: var(--primary);
+        margin: 0;
+        min-height: 44px;
+        cursor: pointer;
+    }
+
+    /* --- INVESTIMENTI --- */
+    .invest-mobile-dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 4px 0 24px;
+        height: auto;
+        overflow: visible;
+    }
+    .invest-hero-card {
+        display: flex;
+        gap: 12px;
+        background: var(--panel);
+        border-radius: 16px;
+        padding: 18px 16px;
+        box-shadow: var(--shadow-float);
+    }
+    .invest-hero-stat {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    .invest-hero-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted-light);
+        text-transform: uppercase;
+    }
+    .invest-hero-value {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .invest-add-btn {
+        background: linear-gradient(135deg, var(--ia-color), var(--ia-indigo));
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        padding: 14px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        margin: 0;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+    }
+    .invest-asset-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .invest-asset-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 12px;
+        background: var(--panel);
+        border-radius: 16px;
+        box-shadow: var(--shadow-float);
+        cursor: pointer;
+    }
+}
+
+@media (min-width: 1200px) {
+    .invest-asset-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    #current-month-tab.active {
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) !important;
+    }
+    #current-month-tab .mobile-dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .invest-asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .future-milestones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

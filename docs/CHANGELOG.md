@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-10-15] - Desktop: stessa UI mobile, allargata
+
+### Completed Changes
+- **mese**: wrap `.mese-primary`; hub senza `hide-desktop`; `.month-head` nascosto ≥768; chart cap 260px; 4 macro; rail sticky form+registro.
+- **analisi/future/invest**: dashboard mobile visibili su desktop; cloni `hide-mobile hide-desktop`; canvas/lista unici (`futureChartCanvas`, `investAssetGrid`).
+- **css**: nuovo blocco `@media (min-width: 768px)` in coda; lock overflow@1200 sbloccato; media ≤767 intatto.
+- **cache**: `style.css?v=3.0`, `script.js?v=2.7`, SW `bilancio-pwa-v15`.
+
+### Status: COMPLETATO. Verifica 1280/1440 (due col, chart 260, 4 macro, form visibile) e 390 (bottom-nav, zero page-scroll, sheet apribile, rail nascosto).
+
 ## [2026-10-15] - Ecosistema spese condivise: popup, saldi, Salda
 
 ### Completed Changes

@@ -784,8 +784,10 @@ function switchTab(tabId) {
     updateActivePageSubtitle(tabId);
     if (tabId === 'history-tab') {
         try {
-            if (window.innerWidth < 768) { renderAnalisiMobile(); }
-            else { renderGlobalHistory(); renderTradingChart(); initChartToggle(); }
+            renderAnalisiMobile();
+            renderGlobalHistory();
+            renderTradingChart();
+            initChartToggle();
         } catch (e) { console.warn('[Analisi] render fallito:', e); }
     }
     if (tabId === 'future-tab') {
@@ -5747,8 +5749,7 @@ function calcInvestStats(asset, movements) {
 async function renderInvestments() {
     await loadInvestments();
     const grid = document.getElementById('investAssetGrid');
-    const desktopList = document.getElementById('investAssetListDesktop');
-    if (!grid && !desktopList) return;
+    if (!grid) return;
     const allMovements = [];
     for (const asset of currentInvestments) {
         const movs = await getInvestMovements(asset.id);
@@ -5810,18 +5811,10 @@ async function renderInvestments() {
     };
     const html = allMovements.map(({ asset, movements }) => renderCard(asset, movements)).join('');
     const empty = '<div class="invest-empty">Nessun asset. Premi "+" per crearne uno.</div>';
-    if (grid) {
-        grid.innerHTML = html || empty;
-        grid.querySelectorAll('.invest-asset-card').forEach(el => {
-            el.addEventListener('click', () => openInvestAssetPopup(parseInt(el.dataset.id)));
-        });
-    }
-    if (desktopList) {
-        desktopList.innerHTML = html || empty;
-        desktopList.querySelectorAll('.invest-asset-card').forEach(el => {
-            el.addEventListener('click', () => openInvestAssetPopup(parseInt(el.dataset.id)));
-        });
-    }
+    grid.innerHTML = html || empty;
+    grid.querySelectorAll('.invest-asset-card').forEach(el => {
+        el.addEventListener('click', () => openInvestAssetPopup(parseInt(el.dataset.id)));
+    });
 }
 
 function selectInvestType(btn) {
@@ -6875,8 +6868,7 @@ function futureChartLabels() {
 
 async function renderFutureChart() {
     await ensureChartJs();
-    const isMobile = window.innerWidth < 768;
-    const canvas = document.getElementById(isMobile ? 'futureChartCanvas' : 'futureChartCanvasD');
+    const canvas = document.getElementById('futureChartCanvas');
     if (!canvas || canvas.offsetParent === null) return; // tab nascosto: render al cambio tab
     const base = lastProjectionBase;
     if (!base || base.numMonths === 0) return;

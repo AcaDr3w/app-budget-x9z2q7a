@@ -1,5 +1,20 @@
 # Project Core Memory
 
+## DESKTOP = UI MOBILE ALLARGATA (2026-10-15)
+
+**Stato**: un solo albero visivo ≥768. La dashboard mobile (Mese/Analisi/Previsioni/Investimenti) è il canvas desktop; i cloni `.hide-mobile` poveri sono anche `.hide-desktop` (sempre nascosti).
+
+**Causa del “vuoto/rotto”**: due HTML per tab. Su desktop il grafico Mese non aveva cap nel media mobile (70/120px solo ≤767, più `.chart-card-single{max-height:140px}` globale) e `#mese-action-hub` era `hide-desktop`; il rail 3-colonne stava sotto il fold. Analisi/Future/Invest nascondevano le dashboard funzionanti e JS dipingeva canvas `display:none` (`futureChartCanvasD`).
+
+**Contratto ≥768** (media in coda a `style.css`, **non** si tocca `@media (max-width: 767px)`):
+- Body/container scrollano (override del lock `overflow:hidden` @1200).
+- Mese: griglia `mese-primary | rail`. Chart `.chart-container-box` 260px. 4 macro in riga (≥1024; 2 col sotto). `.month-head` nascosto. Hub Ricerca/IA/Condividi visibile. Rail: calendario + form Nuova voce + `#categoryGridDesktop` + `#entriesCard`.
+- Analisi: KPI/carousel/savings visibili + grafici grandi + tabella mesi. `renderAnalisiMobile` + `renderGlobalHistory` su ogni viewport.
+- Previsioni/Invest: `.future-mobile-dashboard` / `.invest-mobile-dashboard`. JS: solo `futureChartCanvas` e `investAssetGrid`.
+- Sheet/FAB/bottom-nav restano nascosti; `isDesktop()` continua a bloccare `openTransactionSheet`.
+
+**Cache**: `style.css?v=3.0`, `script.js?v=2.7`, SW `bilancio-pwa-v15`.
+
 ## SPESE CONDIVISE POPUP (2026-10-15)
 
 **Stato**: popup `#popup-spese-condivise` ridisegnato (resta popup, non bottomsheet). Salda nel footer del dettaglio, non in lista.
@@ -15,7 +30,7 @@
 
 **ID**: `sameId` / `findPersonById` / `findGroupById` su match people/gruppi/partecipanti. Dopo Salda: `loadPeopleGroups` + re-render dettaglio.
 
-**Cache**: `style.css?v=2.9`, `script.js?v=2.6`, SW `bilancio-pwa-v14`. Script: `js/ui-dialogs.js` prima di `script.js`.
+**Cache**: `style.css?v=3.0`, `script.js?v=2.7`, SW `bilancio-pwa-v15`. Script: `js/ui-dialogs.js` prima di `script.js`.
 
 ## 🔍 AUDIT DEBUG FUNZIONI (2026-10-15, COMPLETATO)
 
@@ -39,7 +54,7 @@
 - Id ancora assenti di proposito (UI tolta): `iaProviderSelect`, `futureCalMonthM`, `depositSavingsSelect`. Restano null-guarded.
 - `data-act` 63 distinti tutti risolvibili (2 in supabase-adapter.js: `handleLogin`/`handleSignup`). `genId` duplicata ma identica → innocuo.
 
-**PWA cache**: `CACHE_NAME = bilancio-pwa-v14`; `script.js?v=2.6`, `style.css?v=2.9`.
+**PWA cache**: `CACHE_NAME = bilancio-pwa-v15`; `script.js?v=2.7`, `style.css?v=3.0`.
 
 ## 🧹 CONFIG LOCALI STRUMENTI: SOLO SKILLS + MCP (2026-10-15)
 - **Politica repo**: gli strumenti usano la config GLOBALE (`~/.config/opencode/opencode.jsonc`, `~/.pi/agent/`). Localmente si tengono SOLO skills e MCP. Niente model/provider/lsp/permission/plugin in locale.

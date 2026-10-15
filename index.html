@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.9">
+    <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
 
@@ -114,6 +114,7 @@
      <!-- =================== TAB 1: MESE CORRENTE =================== -->
 <div id="current-month-tab" class="tab-content active">
 
+    <div class="mese-primary">
     <!-- CARD RIEPILOGO UNICA -->
     <div class="summary-card-single" id="mobileSummaryCard">
         <div class="summary-card-top">
@@ -258,11 +259,12 @@
 
           <input type="month" id="currentMonth" class="month-selector" style="display:none;" onchange="loadMonthData()" aria-label="Mese corrente">
 
-        <div id="mese-action-hub" class="hide-desktop">
-<button data-action="search"><span class="hub-icon">🔍</span><span class="hub-text">Ricerca Spese</span></button>
-            <button data-action="ia"><span class="hub-icon">🤖</span><span class="hub-text">Assistente I.A.</span></button>
-            <button data-action="condivise"><span class="hub-icon">👥</span><span class="hub-text">Condividi Budget</span></button>
+        <div id="mese-action-hub">
+            <button type="button" data-action="search"><span class="hub-icon">🔍</span><span class="hub-text">Ricerca Spese</span></button>
+            <button type="button" data-action="ia"><span class="hub-icon">🤖</span><span class="hub-text">Assistente I.A.</span></button>
+            <button type="button" data-action="condivise"><span class="hub-icon">👥</span><span class="hub-text">Condividi Budget</span></button>
         </div>
+    </div>
 
         <div id="popup-rendiconto" class="popup-overlay" data-act-close="closeRendicontoPopup">
             <div class="popup-panel rendiconto-panel" role="dialog" aria-modal="true" aria-labelledby="popupTitle" data-act-stop="1">
@@ -512,7 +514,7 @@
     <div id="history-tab" class="tab-content hidden">
 
         <!-- DESKTOP IA CARD (hidden on mobile) -->
-        <div class="card ia-insight-card hide-mobile">
+        <div class="card ia-insight-card hide-mobile hide-desktop">
             <h2 class="collapsible" data-act="toggleSection" data-args='["iaHistorySection"]' data-el>🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
@@ -522,7 +524,7 @@
         </div>
 
         <!-- MOBILE: HEADER + SELEZIONE PERIODO (hidden on desktop) -->
-        <div class="analisi-header-row hide-desktop">
+        <div class="analisi-header-row">
             <h2 class="analisi-title">Analisi</h2>
             <select id="analysisPeriod" class="analisi-period-select" aria-label="Periodo analisi">
                 <option value="3m">Ultimi 3 mesi</option>
@@ -533,7 +535,7 @@
         </div>
 
         <!-- MOBILE: AI INSIGHT CARD (hidden on desktop) -->
-              <div class="ai-insight-card hide-desktop" id="aiInsightCard" role="button" tabindex="0" data-act="onAiInsightCardTap">
+              <div class="ai-insight-card" id="aiInsightCard" role="button" tabindex="0" data-act="onAiInsightCardTap">
             <span class="ai-insight-icon" aria-hidden="true">✨</span>
             <span class="ai-insight-marquee">
                 <span class="ai-insight-track">
@@ -548,7 +550,7 @@
         </div>
 
         <!-- MOBILE: KPI — swipeable row (hidden on desktop) -->
-        <div class="kpi-swipe hide-desktop">
+        <div class="kpi-swipe">
             <div class="kpi-card">
                 <div class="trend-label">Media Uscite</div>
                 <div class="trend-value" id="trendAvgValue">–</div>
@@ -567,9 +569,9 @@
         </div>
 
         <!-- MOBILE: CAROUSEL ANOMALIE + SINTESI RISPARMI (hidden on desktop) -->
-        <div class="anomaly-carousel hide-desktop" id="anomalyCarousel" aria-label="Anomalie di spesa"></div>
+        <div class="anomaly-carousel" id="anomalyCarousel" aria-label="Anomalie di spesa"></div>
 
-        <div class="savings-card hide-desktop" id="savingsCard">
+        <div class="savings-card" id="savingsCard">
             <div class="savings-header">Risparmi &amp; Investimenti</div>
             <div class="savings-metric">
                 <span class="savings-value" id="savRateValue">–</span>
@@ -677,8 +679,8 @@
 <!-- =================== TAB 3: FUTURO =================== -->
     <div id="future-tab" class="tab-content hidden">
 
-        <!-- DESKTOP: dashboard previsioni -->
-        <div class="hide-mobile">
+        <!-- DESKTOP LEGACY: nascosto, unica dashboard = future-mobile-dashboard -->
+        <div class="hide-mobile hide-desktop">
             <div class="card">
                 <h2>🔮 Previsioni</h2>
                 <div id="futureBaseLineD" style="font-size:12px;color:#475569;margin-bottom:12px;"></div>
@@ -726,7 +728,7 @@
         </div>
 
         <!-- MOBILE: Zero-Scroll Dashboard -->
-        <div class="hide-desktop future-mobile-dashboard">
+        <div class="future-mobile-dashboard">
             <div class="future-header-compact">
                 <h2>🔮 Previsioni</h2>
                 <div id="futureBaseLine"></div>
@@ -762,8 +764,8 @@
     <!-- =================== TAB INVESTIMENTI =================== -->
     <div id="investimenti-tab" class="tab-content hidden">
 
-        <!-- DESKTOP -->
-        <div class="hide-mobile">
+        <!-- DESKTOP LEGACY: nascosto, unica dashboard = invest-mobile-dashboard -->
+        <div class="hide-mobile hide-desktop">
             <div class="card">
                 <h2>💎 Investimenti & Asset</h2>
                 <p style="font-size:13px;color:#475569;margin-bottom:14px;">Gestisci i tuoi investimenti: immobili, trading, salvadanai e side business.</p>
@@ -773,7 +775,7 @@
         </div>
 
         <!-- MOBILE: Zero-Scroll Dashboard -->
-        <div class="hide-desktop invest-mobile-dashboard">
+        <div class="invest-mobile-dashboard">
             <div class="invest-hero-card">
                 <div class="invest-hero-stat">
                     <span class="invest-hero-label">Patrimonio</span>
@@ -1233,6 +1235,6 @@
     </div>
     <script src="js/supabase-adapter.js"></script>
     <script src="js/ui-dialogs.js"></script>
-    <script src="script.js?v=2.6"></script>
+    <script src="script.js?v=2.7"></script>
 </body>
 </html>
