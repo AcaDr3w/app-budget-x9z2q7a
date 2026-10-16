@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Insight centrati, IA accanto al mese, wipe completo
+
+### Completed Changes
+- **insight mese**: pill centrata sotto i KPI.
+- **assistente I.A.**: accanto al selettore mese; hub desktop nascosto; overlay, non pannello in pagina.
+- **avatar**: cerchio 36px (override `button` min-height/radius).
+- **wipe**: `resetTotalDB` include savings, investments, people/groups, debiti, shared, settings, outbox.
+- **analisi**: «Tocca per l'analisi IA del periodo» centrato, senza marquee.
+- **cache**: `style.css?v=3.7`, `script.js?v=2.14`, SW `bilancio-pwa-v22`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Registro sotto IA, no CSV/PDF, card tonde
 
 ### Completed Changes

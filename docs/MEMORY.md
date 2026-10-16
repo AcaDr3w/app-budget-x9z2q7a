@@ -14,7 +14,7 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.6`, `script.js?v=2.13`, SW `bilancio-pwa-v21`. Registro in `mese-col-main` (niente riga griglia sotto il rail). CSV/PDF rimossi.
+**Cache**: `style.css?v=3.7`, `script.js?v=2.14`, SW `bilancio-pwa-v22`. IA accanto al mese (overlay). `resetTotalDB` pulisce anche obiettivi, investimenti, debiti, condivise e outbox.
 
 ## DESKTOP LAYOUT v2 (2026-10-16)
 

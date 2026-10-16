@@ -1784,6 +1784,7 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     line-height: 1.4;
 }
 .summary-card-top { display: flex; align-items: center; justify-content: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border-faint); gap: 8px; }
+.month-nav-cluster { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .month-selector-badge { background: var(--surface-muted, #f8fafc); border: 1px solid var(--border-soft, #e2e8f0); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: var(--ink); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 button.month-nav-btn {
     width: 32px;
@@ -4634,13 +4635,22 @@ cursor: pointer;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
+button.avatar-circle.top-nav-avatar,
 .top-nav-avatar {
-    width: 36px;
-    height: 36px;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    padding: 0 !important;
+    margin: 0 !important;
     flex-shrink: 0;
     border: none;
+    border-radius: 50% !important;
+    overflow: hidden;
     font-family: inherit;
     font-size: 13px;
+    line-height: 1;
 }
 .top-nav-link {
     display: inline-flex;
@@ -5850,20 +5860,55 @@ cursor: pointer;
         cursor: pointer;
     }
     #history-tab .ai-insight-card {
-        display: flex;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 10px;
         width: 100%;
-        min-height: 48px;
+        min-height: 52px;
         border: none;
         background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(237,233,254,0.92));
         border-radius: 16px;
-        padding: 10px 14px;
-        text-align: left;
+        padding: 12px 16px;
+        text-align: center;
         cursor: pointer;
         box-shadow: var(--shadow-float);
-        margin: 0;
+        margin: 0 auto 4px;
         font-family: inherit;
+    }
+    #history-tab .ai-insight-marquee {
+        flex: none;
+        display: flex;
+        justify-content: center;
+        overflow: visible;
+        min-width: 0;
+    }
+    #history-tab .ai-insight-track {
+        animation: none;
+        width: auto;
+        max-width: 100%;
+        white-space: normal;
+        justify-content: center;
+    }
+    #history-tab .ai-insight-text {
+        padding-right: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ia-strong, #581c87);
+        white-space: normal;
+        text-align: center;
+    }
+    #history-tab .ai-insight-clone { display: none !important; }
+    #history-tab .ai-insight-icon {
+        width: 36px;
+        text-align: center;
+    }
+    #history-tab .ai-insight-meta {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        min-width: 36px;
     }
     #history-tab .kpi-swipe {
         display: grid;
@@ -6157,8 +6202,7 @@ cursor: pointer;
     #current-month-tab .center-panel,
     #current-month-tab #recentTransactionsSection,
     #current-month-tab .month-head,
-    #mese-action-hub [data-action="search"],
-    #mese-action-hub [data-action="condivise"] { display: none !important; }
+    #mese-action-hub { display: none !important; }
     #annualMonthAlert { grid-column: 1 / -1; }
     #iaNotesModal.popup-overlay { grid-column: 1 / -1; }
     #rendicontoCard {
@@ -6171,6 +6215,7 @@ cursor: pointer;
         background: #fff;
         border: 1px solid var(--border-soft);
         box-shadow: var(--shadow-float);
+        border-radius: 20px;
     }
     .cat-grid-empty {
         margin: 0;
@@ -6189,19 +6234,22 @@ cursor: pointer;
         overflow: hidden;
     }
     #current-month-tab .summary-card-single {
+        display: flex;
+        flex-direction: column;
         padding: 16px 16px 14px;
     }
     #current-month-tab #heroInsightPill {
-        width: auto !important;
-        align-self: stretch;
+        width: fit-content !important;
+        max-width: 100%;
         display: flex !important;
         align-items: center;
+        justify-content: center;
         gap: 10px;
-        margin: 12px 2px 2px;
-        padding: 11px 16px !important;
+        margin: 12px auto 2px;
+        padding: 11px 18px !important;
         border-radius: 999px !important;
         box-shadow: 0 1px 2px rgba(88, 28, 135, 0.08);
-        text-align: left;
+        text-align: center;
     }
     #current-month-tab .hero-insight-icon {
         flex-shrink: 0;
@@ -6324,12 +6372,7 @@ cursor: pointer;
         flex: none !important;
     }
     #mese-action-hub {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        gap: 8px;
-        padding: 0;
-        margin: 0;
+        display: none !important;
     }
     #mese-action-hub button {
         flex-direction: row;
@@ -6355,13 +6398,35 @@ cursor: pointer;
         flex-shrink: 0;
     }
     #current-month-tab .summary-card-top {
-        display: flex;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
         align-items: center;
-        justify-content: center;
         gap: 10px;
         padding: 4px 0 12px;
         margin-bottom: 8px;
         border-bottom: 1px solid var(--border-soft);
+    }
+    #current-month-tab .month-nav-cluster {
+        grid-column: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    #current-month-tab .hero-ia-btn {
+        grid-column: 3;
+        justify-self: end;
+        width: auto !important;
+        min-height: 40px;
+        margin: 0;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: var(--ia-bg-soft, #f3e8ff);
+        color: var(--ia-strong, #581c87) !important;
+        border: 1px solid var(--ia-faint, #c4b5fd);
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: none;
     }
     #current-month-tab .month-selector-badge {
         width: auto !important;
@@ -6469,28 +6534,27 @@ cursor: pointer;
         cursor: pointer;
     }
 
-    /* IA mese: pannello in pagina, non overlay */
+    /* IA mese: overlay dal tasto accanto al mese */
     #iaNotesModal.popup-overlay {
-        position: static !important;
-        inset: auto;
-        background: none;
-        backdrop-filter: none;
-        padding: 0;
+        position: fixed !important;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        padding: 24px;
         display: none;
-        z-index: auto;
-        grid-column: 1 / -1;
-        align-items: stretch;
+        z-index: 1200;
+        align-items: center;
+        justify-content: center;
+        grid-column: auto;
     }
     #iaNotesModal.popup-overlay.active {
-        display: block !important;
+        display: flex !important;
     }
     #iaNotesModal .ia-notes-panel,
     #iaNotesModal .popup-panel {
-        width: 100%;
-        max-width: none;
-        max-height: none;
+        width: min(560px, 100%);
+        max-height: min(85vh, 820px);
         margin: 0;
-        position: static;
+        overflow: auto;
     }
 
     /* --- ANALISI: sezioni titolate, IA in fondo --- */

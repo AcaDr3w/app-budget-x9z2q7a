@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=3.6">
+    <link rel="stylesheet" href="style.css?v=3.7">
 </head>
 <body>
 
@@ -118,12 +118,17 @@
     <!-- CARD RIEPILOGO UNICA -->
     <div class="summary-card-single" id="mobileSummaryCard">
         <div class="summary-card-top">
+            <div class="month-nav-cluster">
             <button type="button" class="month-nav-btn" id="heroPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
             <button type="button" class="month-selector-badge" id="heroMonthPill" aria-label="Seleziona mese">
                 <span id="heroMonthDisplay">AGOSTO 2026</span>
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
             <button type="button" class="month-nav-btn" id="heroNextMonth" aria-label="Mese successivo"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+            </div>
+            <button type="button" class="hero-ia-btn hide-mobile" data-act="openIaNotesModal" aria-label="Assistente I.A.">
+                <span aria-hidden="true">🤖</span> Assistente I.A.
+            </button>
         </div>
         <div class="summary-card-bottom">
             <div class="summary-col col-entrate clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["entrate"]'>
@@ -978,7 +983,7 @@
                 <h3 class="danger-title">⚠️ Zona Pericolo</h3>
                 <div class="popup-body">
                     <div class="danger-zone-box">
-                        <p class="danger-zone-text">Elimina definitivamente tutti i dati: spese, entrate, categorie e scadenze. Consigliato un backup prima di procedere.</p>
+                        <p class="danger-zone-text">Elimina definitivamente tutti i dati: spese, entrate, categorie, scadenze, obiettivi, investimenti, debiti e spese condivise. Consigliato un backup prima di procedere.</p>
                         <button class="btn-action btn-danger-full" data-act="resetTotalDB">🗑️ Elimina tutti i dati</button>
                     </div>
                 </div>
@@ -1247,6 +1252,6 @@
     </div>
     <script src="js/supabase-adapter.js"></script>
     <script src="js/ui-dialogs.js"></script>
-    <script src="script.js?v=2.13"></script>
+    <script src="script.js?v=2.14"></script>
 </body>
 </html>

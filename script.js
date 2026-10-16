@@ -5066,8 +5066,7 @@ function openIaNotesModal() {
     const modal = document.getElementById('iaNotesModal');
     if (!modal) return;
     modal.classList.add('active');
-    if (!isDesktop()) document.body.classList.add('popup-open');
-    if (isDesktop()) modal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.body.classList.add('popup-open');
     const currentMonth = document.getElementById('currentMonth').value;
     if (currentMonth) {
         const totals = { income: 0, planned: 0, actual: 0 };
@@ -5901,7 +5900,7 @@ async function renderInvestments() {
         `;
     };
     const html = allMovements.map(({ asset, movements }) => renderCard(asset, movements)).join('');
-    const empty = '<div class="invest-empty">Nessun asset. Premi "+" per crearne uno.</div>';
+    const empty = '<div class="invest-empty">' + (isDesktop() ? 'Nessun asset. Usa il form a destra per crearne uno.' : 'Nessun asset. Premi "+" per crearne uno.') + '</div>';
     grid.innerHTML = html || empty;
     grid.querySelectorAll('.invest-asset-card').forEach(el => {
         el.addEventListener('click', () => openInvestAssetPopup(parseInt(el.dataset.id)));
@@ -7735,7 +7734,27 @@ async function resetCurrentMonth() {
 async function resetTotalDB() {
     if (!confirm("⚠️ ATTENZIONE: Vuoi azzerare l'INTERO database? Perderai tutto lo storico.")) return;
     if (!confirm("Sei ASSOLUTAMENTE sicuro? Non si può tornare indietro senza un backup.")) return;
-    await db.categories.clear(); await db.annualDeadlines.clear(); await db.income.clear(); await db.expenses.clear(); await db.months.clear();
+    const userScoped = [
+        db.categories, db.annualDeadlines, db.income, db.expenses, db.months,
+        db.savingsGoals, db.settings, db.syncState, db.investments, db.investmentMovements,
+        db.people, db.groups, db.groupInvites, db.groupMembers, db.sharedExpenseSplits, db.receiptJobs
+    ];
+    for (const table of userScoped) {
+        if (table && typeof table.clear === 'function') await table.clear();
+    }
+    // Tables without user_id on the adapter: delete only the rows we can see (RLS).
+    for (const table of [db.sharedExpenses, db.sharedExpenseParticipants, db.sharedDebts]) {
+        if (!table || typeof table.toArray !== 'function') continue;
+        const rows = await table.toArray();
+        for (const row of rows) {
+            if (row && row.id != null) await table.delete(row.id);
+        }
+    }
+    if (typeof clearAllOutboxes === 'function') clearAllOutboxes();
+    try { localStorage.removeItem('user_macro_categories'); } catch (e) { /* ignore */ }
+    Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith('eb_outbox_')) localStorage.removeItem(k);
+    });
     alert("Database azzerato."); location.reload();
 }
 
