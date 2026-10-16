@@ -8061,10 +8061,15 @@ const quickAdd = {
 const voiceExpense = { rec: null, listening: false, busy: false };
 const VOICE_CAT_ALIASES = {
     alimentari: 'Alimentari', cibo: 'Alimentari', supermercato: 'Alimentari',
-    bar: 'Bar', caffe: 'Bar', delivery: 'Delivery',
+    spesa: 'Alimentari', farelaspesa: 'Alimentari',
+    coop: 'Alimentari', esselunga: 'Alimentari', lidl: 'Alimentari',
+    conad: 'Alimentari', eurospin: 'Alimentari', carrefour: 'Alimentari',
+    bar: 'Bar', caffe: 'Bar', cappuccino: 'Bar',
+    delivery: 'Delivery', pizzeria: 'Delivery', pizza: 'Delivery',
     benzina: 'Carburante', gasolio: 'Carburante', carburante: 'Carburante',
     affitto: 'Mutuo/Affitto', mutuo: 'Mutuo/Affitto'
 };
+const VOICE_GROCERY_RE = /\b(spesa|supermercat|alimentari|coop|esselunga|lidl|conad|eurospin|carrefour|penny|discount)\b/i;
 
 function quickAddAngle(x, y) {
     return Math.atan2(quickAdd.origin.y - y, x - quickAdd.origin.x) * 180 / Math.PI;
@@ -8117,7 +8122,9 @@ function renderQuickAddItems(items) {
             <span>${item.label}</span>
         </button>`;
     }).join('');
-    if (hint) hint.textContent = quickAdd.state.level === 'macros' ? 'Scegli una macro' : 'Scegli la categoria';
+    if (hint) hint.textContent = quickAdd.state.level === 'macros'
+        ? 'Tocca il microfono e parla, o scegli una categoria'
+        : 'Scegli la categoria';
     highlightQuickAdd(-1);
 }
 
@@ -8128,7 +8135,13 @@ function highlightQuickAdd(idx) {
     });
     const hint = document.getElementById('quickAddHint');
     const item = idx >= 0 ? quickAdd.state.items[idx] : null;
-    if (hint) hint.textContent = item ? item.label : (quickAdd.state.level === 'macros' ? 'Scegli una macro' : 'Scegli la categoria');
+    if (hint) {
+        hint.textContent = item
+            ? item.label
+            : (quickAdd.state.level === 'macros'
+                ? 'Tocca il microfono e parla, o scegli una categoria'
+                : 'Scegli la categoria');
+    }
 }
 
 function openQuickAddRadial(level, macro) {
@@ -8189,9 +8202,24 @@ function matchVoiceCategory(raw) {
     if (exact) return exact;
     const inc = names.find(n => {
         const nk = normalizeVoiceKey(n);
-        return nk.length >= 3 && (nk.includes(key) || key.includes(nk));
+        if (nk === 'varie' || nk.length < 3) return false;
+        return nk.includes(key) || key.includes(nk);
     });
     return inc || null;
+}
+
+function isGroceryTalk(transcript) {
+    return VOICE_GROCERY_RE.test(String(transcript || ''));
+}
+
+function resolveVoiceCategory(candidate, transcript) {
+    const names = allUserCategoryNames();
+    const alimentari = names.find(n => normalizeVoiceKey(n) === 'alimentari') || matchVoiceCategory('Alimentari');
+    const matched = matchVoiceCategory(candidate);
+    if (isGroceryTalk(transcript) && alimentari) {
+        if (!matched || normalizeVoiceKey(matched) === 'varie') return alimentari;
+    }
+    return matched || null;
 }
 
 function formatSheetAmount(n) {
@@ -8209,7 +8237,8 @@ function parseVoiceExpenseLocal(transcript) {
     const names = allUserCategoryNames().slice().sort((a, b) => b.length - a.length);
     for (const n of names) {
         const nk = normalizeVoiceKey(n);
-        if (nk.length >= 3 && tNorm.includes(nk)) { category = n; break; }
+        if (nk === 'varie' || nk.length < 3) continue;
+        if (tNorm.includes(nk)) { category = n; break; }
     }
     if (!category) {
         for (const [alias, cat] of Object.entries(VOICE_CAT_ALIASES)) {
@@ -8220,17 +8249,32 @@ function parseVoiceExpenseLocal(transcript) {
         }
     }
     const note = t.replace(amountRe, '').replace(/\b(euro|eur|€)\b/gi, '').trim();
+    if (!category) category = resolveVoiceCategory(null, t);
     return { amount, category, type: planned ? 'planned' : 'actual', note, date: null };
 }
 
 async function parseVoiceExpenseLLM(transcript, local) {
-    const cats = allUserCategoryNames().join(', ');
-    const system = 'Sei un parser di spese per un\'app di bilancio italiana. Rispondi SOLO con JSON valido, nessun testo extra. Schema: {"amount":number,"category":string,"type":"actual"|"planned","note":string,"date":string|null}. amount = importo in euro. category = copia esatta di una categoria utente se possibile. type = actual se già spesa, planned se prevista/da pagare. note = dettaglio breve. date = YYYY-MM-DD solo se detta, altrimenti null. Categorie: ' + cats;
-    const content = await invokeAI('Trascrizione: "' + transcript + '"', system);
+    const cats = allUserCategoryNames();
+    const system = [
+        'Parser spese italiano. Rispondi SOLO con JSON, nessun testo extra.',
+        'Schema: {"amount":number,"category":string,"type":"actual"|"planned","note":string,"date":string|null}',
+        'category DEVE essere una stringa IDENTICA a una voce di categorie[] (copia esatta).',
+        '"spesa", "fare la spesa", "supermercato", "coop", "esselunga", "lidl", "conad" = Alimentari se presente.',
+        'NON usare Varie se un\'altra categoria è plausibile.',
+        'Esempi: "10 euro su spesa" -> Alimentari; "12,50 al bar" -> Bar; "20 benzina" -> Carburante.',
+        'type=actual salvo "prevista"/"da pagare". date YYYY-MM-DD solo se detta, altrimenti null.'
+    ].join(' ');
+    const user = JSON.stringify({
+        testo: transcript,
+        importo_locale: local.amount || null,
+        categoria_locale: local.category || null,
+        categorie: cats
+    });
+    const content = await invokeAI(user, system);
     const parsed = parseAIJson(content);
     if (!parsed || parsed.analisi_completa) return local;
     const amount = Number(parsed.amount) > 0 ? Number(parsed.amount) : local.amount;
-    const category = matchVoiceCategory(parsed.category) || local.category;
+    const category = resolveVoiceCategory(parsed.category, transcript) || local.category;
     const type = parsed.type === 'planned' ? 'planned' : (local.type || 'actual');
     const note = parsed.note != null ? String(parsed.note) : (local.note || '');
     const date = (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) ? parsed.date : null;
@@ -8295,8 +8339,21 @@ async function processVoiceTranscript(text) {
     if (hint) hint.textContent = 'Capisco…';
     try {
         let cmd = parseVoiceExpenseLocal(spoken);
-        if (!cmd.amount || !cmd.category) {
-            try { cmd = await parseVoiceExpenseLLM(spoken, cmd); } catch (e) { console.warn('[voce] LLM', e); }
+        try {
+            const llm = await parseVoiceExpenseLLM(spoken, cmd);
+            const groceryLock = isGroceryTalk(spoken);
+            cmd = {
+                amount: cmd.amount || llm.amount,
+                category: groceryLock
+                    ? (resolveVoiceCategory(cmd.category || llm.category, spoken))
+                    : (resolveVoiceCategory(llm.category, spoken) || resolveVoiceCategory(cmd.category, spoken)),
+                type: llm.type || cmd.type,
+                note: (llm.note && String(llm.note).trim()) || cmd.note,
+                date: llm.date || cmd.date
+            };
+        } catch (e) {
+            console.warn('[voce] LLM', e);
+            cmd.category = resolveVoiceCategory(cmd.category, spoken);
         }
         if (!cmd.amount) {
             showToast('Non ho capito l\'importo', true);
@@ -8391,8 +8448,7 @@ function setupQuickAddRadial() {
     const arc = document.getElementById('quickAddArc');
     if (!fab) return;
 
-    const clearHold = () => {
-        if (quickAdd.holdTimer) { clearTimeout(quickAdd.holdTimer); quickAdd.holdTimer = null; }
+    const clearDwell = () => {
         if (quickAdd.dwellTimer) { clearTimeout(quickAdd.dwellTimer); quickAdd.dwellTimer = null; }
         quickAdd.dwellKey = '';
     };
@@ -8414,69 +8470,91 @@ function setupQuickAddRadial() {
         }
     };
 
+    let ptrId = null;
+    let startX = 0;
+    let startY = 0;
+    let startOpen = false;
+    let handledTap = false;
+
     fab.addEventListener('pointerdown', (e) => {
         if (e.button != null && e.button !== 0) return;
         if (isDesktop()) return;
-        e.preventDefault();
+        ptrId = e.pointerId;
+        handledTap = false;
         quickAdd.dragging = false;
-        clearHold();
+        clearDwell();
+        startOpen = quickAdd.state.open;
+        startX = e.clientX;
+        startY = e.clientY;
         const r = fab.getBoundingClientRect();
         quickAdd.origin.x = r.left + r.width / 2;
         quickAdd.origin.y = r.top + r.height / 2;
         try { fab.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-        quickAdd.holdTimer = setTimeout(() => {
-            if (!quickAdd.state.open) openQuickAddRadial('macros');
-        }, QUICK_ADD_HOLD_MS);
     });
 
     fab.addEventListener('pointermove', (e) => {
-        if (!fab.hasPointerCapture || !fab.hasPointerCapture(e.pointerId)) {
-            if (e.buttons === 0) return;
-        }
-        const slop = Math.hypot(e.clientX - quickAdd.origin.x, e.clientY - quickAdd.origin.y);
-        if (!quickAdd.state.open && slop > 14) {
+        if (ptrId == null || e.pointerId !== ptrId) return;
+        if (!quickAdd.state.open) return;
+        const slop = Math.hypot(e.clientX - startX, e.clientY - startY);
+        if (slop > 24) {
             quickAdd.dragging = true;
-            clearHold();
-            const r = fab.getBoundingClientRect();
-            quickAdd.origin.x = r.left + r.width / 2;
-            quickAdd.origin.y = r.top + r.height / 2;
-            openQuickAddRadial('macros');
-        }
-        if (quickAdd.state.open) {
-            if (slop > 10) quickAdd.dragging = true;
+            try { fab.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
             track(e.clientX, e.clientY);
         }
     });
 
-    const endPointer = (e) => {
-        const wasOpen = quickAdd.state.open;
+    const finishPointer = (e) => {
+        if (ptrId == null || (e && e.pointerId !== ptrId && e.type !== 'click')) return;
+        const slop = e ? Math.hypot(e.clientX - startX, e.clientY - startY) : 0;
         const dragging = quickAdd.dragging;
-        clearHold();
-        try { if (fab.hasPointerCapture(e.pointerId)) fab.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        const wasOpen = startOpen;
+        ptrId = null;
+        clearDwell();
+        try { if (e && e.pointerId != null) fab.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+
         if (voiceExpense.listening) {
             try { if (voiceExpense.rec) voiceExpense.rec.stop(); } catch (err) { /* ignore */ }
+            handledTap = true;
             return;
         }
-        if (voiceExpense.busy) return;
+        if (voiceExpense.busy) {
+            handledTap = true;
+            return;
+        }
         if (!wasOpen) {
             openQuickAddRadial('macros');
+            handledTap = true;
             return;
         }
-        if (quickAdd.state.hot >= 0) {
+        if (quickAdd.state.hot >= 0 && dragging) {
             confirmQuickAddHot();
+            handledTap = true;
             return;
         }
-        if (dragging) {
+        if (dragging && slop > 40) {
             closeQuickAddRadial();
+            handledTap = true;
             return;
         }
         startVoiceExpense();
+        handledTap = true;
     };
 
-    fab.addEventListener('pointerup', endPointer);
+    fab.addEventListener('pointerup', finishPointer);
     fab.addEventListener('pointercancel', () => {
-        clearHold();
-        if (quickAdd.dragging) closeQuickAddRadial();
+        ptrId = null;
+        clearDwell();
+        quickAdd.dragging = false;
+    });
+    fab.addEventListener('click', (e) => {
+        if (isDesktop()) return;
+        if (handledTap) {
+            handledTap = false;
+            return;
+        }
+        if (voiceExpense.listening || voiceExpense.busy) return;
+        if (!quickAdd.state.open) openQuickAddRadial('macros');
+        else startVoiceExpense();
     });
     fab.addEventListener('contextmenu', (e) => e.preventDefault());
 

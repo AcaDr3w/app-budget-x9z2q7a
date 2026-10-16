@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Fix tap + e smistamento «spesa» → Alimentari
+
+### Completed Changes
+- **gesto**: tap apre il radial; niente hold da 180ms (apriva e al sollevamento chiudeva). Capture solo per non perdere il pointerup. Click di fallback. Hit area 72px (il cerchio era 10px sopra il tap).
+- **categorie**: alias «spesa»/supermercato → Alimentari; LLM riceve `{testo, categorie[]}`; lock grocery se l'llm risponde Varie.
+- **hint**: «Tocca il microfono e parla, o scegli una categoria».
+- **cache**: `style.css?v=3.10`, `script.js?v=2.18`, SW `v26`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Spesa vocale dal + mobile
 
 ### Completed Changes

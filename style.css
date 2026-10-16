@@ -2114,6 +2114,12 @@ button.month-nav-btn {
         color: #fff !important;
         align-self: center;
         justify-self: center;
+        min-width: 72px !important;
+        min-height: 72px !important;
+        margin-top: -18px;
+        padding-top: 18px !important;
+        padding-bottom: 4px !important;
+        touch-action: manipulation;
     }
     .bottom-nav .nav-item.nav-item-add .nav-quick-add {
         width: 56px;
@@ -2127,7 +2133,7 @@ button.month-nav-btn {
         border: 3px solid #fff;
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.32);
         pointer-events: none;
-        transform: translateY(-10px);
+        transform: translateY(-12px);
     }
     .bottom-nav .nav-item.nav-item-add i {
         color: #fff !important;
