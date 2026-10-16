@@ -14,7 +14,9 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.8`, `script.js?v=2.15`, `supabase-adapter.js?v=1.1`, SW `bilancio-pwa-v23`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+**Cache**: `style.css?v=3.8`, `script.js?v=2.16`, `supabase-adapter.js?v=1.2`, SW `bilancio-pwa-v24`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+
+**Ghost spese condivise (2026-10-16)**: `shared_debts` non ha policy DELETE. Wipe/delete lasciavano debiti `open` e `syncSharedDebts` (init + online) ricreava le spese a ogni refresh (toast «N debito/i da saldare aggiunti»). Fix: cancel via UPDATE (`status=cancelled`) su delete/wipe; non rematerializzare se la spesa condivisa è assente o se l'ho creata io; outbox non re-accoda i put riusciti; tombstone locale su delete. Migration `007_shared_debts_delete.sql`.
 
 ## DESKTOP LAYOUT v2 (2026-10-16)
 

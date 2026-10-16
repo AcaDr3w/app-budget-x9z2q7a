@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Ghost: debiti ricreano le spese a ogni refresh
+
+### Completed Changes
+- **causa**: `shared_debts` senza policy DELETE; `syncSharedDebts` rimaterializza le spese da debiti `open` (toast visibile).
+- **fix JS**: cancel debito con UPDATE `cancelled` su delete/wipe; skip rematerialize se source assente o `created_by` = me; tombstone locale.
+- **outbox**: i put riusciti non restano in coda (prima venivano ri-upsertati).
+- **SQL**: `migrations/007_shared_debts_delete.sql`.
+- **cache**: `script.js?v=2.16`, adapter `?v=1.2`, SW `v24`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Scroll desktop + ghost spese condivise
 
 ### Completed Changes

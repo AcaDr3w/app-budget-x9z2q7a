@@ -1970,8 +1970,16 @@ async function syncSharedDebts() {
                         .map(e => `${e.desc}|${e.month}|${e.planned}`)
                 );
             }
+            const sharedById = new Map((await db.sharedExpenses.toArray()).map(se => [String(se.id), se]));
             let newExpensesCreated = 0;
             for (const d of openForMe) {
+                if (typeof window.isTombstoned === 'function' && window.isTombstoned('shared_debts', d.id)) continue;
+                const src = sharedById.get(String(d.expense_id));
+                if (!src) {
+                    await cancelSharedDebt(d);
+                    continue;
+                }
+                if (window.supabaseUser && String(src.created_by) === String(window.supabaseUser.id)) continue;
                 const key = hasDebtIdColumn ? String(d.id) : `${d.creditor_name}|${month}|${Number(d.amount) || 0}`;
                 if (existingKeys.has(key)) continue;
                 if (!month) continue;
@@ -2020,6 +2028,14 @@ async function markDebtSettled(debtId) {
     const d = debts.find(x => String(x.id) === String(debtId));
     if (!d || d.status === 'settled') return;
     await db.sharedDebts.update(d.id, { status: 'settled' });
+}
+
+// shared_debts has no DELETE RLS policy — UPDATE is allowed for both sides.
+async function cancelSharedDebt(d) {
+    if (!d || d.id == null) return;
+    if (typeof window.tombstone === 'function') window.tombstone('shared_debts', d.id);
+    try { await db.sharedDebts.update(d.id, { status: 'cancelled' }); } catch (e) { /* ignore */ }
+    try { await db.sharedDebts.delete(d.id); } catch (e) { /* ignore */ }
 }
 
 async function copyInviteLink(groupId) {
@@ -4457,12 +4473,15 @@ async function deleteSharedRecordsForExpense(expenseId) {
     const sharedRows = (await db.sharedExpenses.toArray()).filter(se => String(se.expense_id) === String(expenseId));
     const parts = await db.sharedExpenseParticipants.toArray();
     const debts = await db.sharedDebts.toArray();
+    const seIds = new Set(sharedRows.map(se => String(se.id)));
+    for (const d of debts) {
+        if (seIds.has(String(d.expense_id)) || String(d.expense_id) === String(expenseId)) {
+            await cancelSharedDebt(d);
+        }
+    }
     for (const se of sharedRows) {
         for (const p of parts.filter(x => sameId(x.shared_expense_id, se.id))) {
             await db.sharedExpenseParticipants.delete(p.id);
-        }
-        for (const d of debts.filter(x => String(x.expense_id) === String(se.id) || String(x.expense_id) === String(expenseId))) {
-            await db.sharedDebts.delete(d.id);
         }
         await db.sharedExpenses.delete(se.id);
     }
@@ -4474,13 +4493,19 @@ async function deleteSharedRecordsForExpense(expenseId) {
 
 async function deleteEntry(type, id) {
     if (type === 'income') {
-        currentData.income = currentData.income.filter(i => i.id !== id);
+        currentData.income = currentData.income.filter(i => String(i.id) !== String(id));
         await db.income.delete(id);
     } else {
-        currentData.expenses = currentData.expenses.filter(i => i.id !== id);
+        const doomed = currentData.expenses.find(i => String(i.id) === String(id));
+        currentData.expenses = currentData.expenses.filter(i => String(i.id) !== String(id));
         await db.expenses.delete(id);
+        if (doomed && doomed.debtId) {
+            const debts = await db.sharedDebts.toArray();
+            const d = debts.find(x => String(x.id) === String(doomed.debtId));
+            if (d) await cancelSharedDebt(d);
+        }
         await deleteSharedRecordsForExpense(id);
-        if (editingExpenseId === id) {
+        if (String(editingExpenseId) === String(id)) {
             editingExpenseId = null;
             const saveBtn = document.querySelector('#formPaneSpesa [data-act="addExpense"]');
             if (saveBtn) saveBtn.textContent = 'Registra Spesa';
@@ -7837,6 +7862,12 @@ async function resetCurrentMonth() {
 async function resetTotalDB() {
     if (!confirm("⚠️ ATTENZIONE: Vuoi azzerare l'INTERO database? Perderai tutto lo storico.")) return;
     if (!confirm("Sei ASSOLUTAMENTE sicuro? Non si può tornare indietro senza un backup.")) return;
+    if (typeof abortOutboxFlush === 'function') abortOutboxFlush();
+    if (typeof clearAllOutboxes === 'function') clearAllOutboxes();
+    try {
+        const debts = await db.sharedDebts.toArray();
+        for (const d of debts) await cancelSharedDebt(d);
+    } catch (e) { console.warn('[wipe] cancel debts', e); }
     const userScoped = [
         db.categories, db.annualDeadlines, db.income, db.expenses, db.months,
         db.savingsGoals, db.settings, db.syncState, db.investments, db.investmentMovements,
@@ -7845,7 +7876,6 @@ async function resetTotalDB() {
     for (const table of userScoped) {
         if (table && typeof table.clear === 'function') await table.clear();
     }
-    // Tables without user_id on the adapter: delete only the rows we can see (RLS).
     for (const table of [db.sharedExpenses, db.sharedExpenseParticipants, db.sharedDebts]) {
         if (!table || typeof table.toArray !== 'function') continue;
         const rows = await table.toArray();
@@ -7853,11 +7883,11 @@ async function resetTotalDB() {
             if (row && row.id != null) await table.delete(row.id);
         }
     }
-    if (typeof clearAllOutboxes === 'function') clearAllOutboxes();
     try { localStorage.removeItem('user_macro_categories'); } catch (e) { /* ignore */ }
     Object.keys(localStorage).forEach((k) => {
         if (k.startsWith('eb_outbox_')) localStorage.removeItem(k);
     });
+    currentData = { income: [], expenses: [] };
     alert("Database azzerato."); location.reload();
 }
 

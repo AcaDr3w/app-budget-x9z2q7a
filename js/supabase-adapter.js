@@ -40,22 +40,40 @@ function dropFromOutbox(tableName, id) {
         localStorage.setItem(qKey, JSON.stringify(q.filter(keep)));
     } catch (e) { /* ignore */ }
 }
+function tombKey(tableName) { return 'eb_tomb_' + tableName; }
+function readTomb(tableName) {
+    try { return new Set(JSON.parse(localStorage.getItem(tombKey(tableName)) || '[]') || []); }
+    catch (e) { return new Set(); }
+}
+function addTomb(tableName, id) {
+    if (id == null) return;
+    const s = readTomb(tableName);
+    s.add(String(id));
+    try { localStorage.setItem(tombKey(tableName), JSON.stringify([...s])); } catch (e) {}
+}
+function isTombstoned(tableName, id) {
+    return id != null && readTomb(tableName).has(String(id));
+}
 function clearAllOutboxes() {
     for (const t of Object.keys(DB_ACCESSOR)) {
         clearOutbox(t);
     }
     console.log('[OUTBOX] Tutte le code outbox pulite');
 }
+function abortOutboxFlush() { outboxFlushGen++; }
 window.readOutbox = readOutbox;
 window.writeOutbox = writeOutbox;
 window.flushOutbox = flushOutbox;
 window.clearOutbox = clearOutbox;
 window.clearAllOutboxes = clearAllOutboxes;
+window.tombstone = addTomb;
+window.isTombstoned = isTombstoned;
+window.abortOutboxFlush = abortOutboxFlush;
 
 function enqueueOutbox(tableName, item) {
-    const queue = readOutbox(tableName);
     const pk = item && item.__id ? String(item.__id) : String(item && item.id ? item.id : Date.now());
-    // Deduplication: replace existing item with same primary key, otherwise append
+    if (isTombstoned(tableName, pk)) return;
+    const queue = readOutbox(tableName);
     const existingIdx = queue.findIndex(i => i && String(i.__id || i.id || Date.now()) === pk);
     if (existingIdx >= 0) {
         queue[existingIdx] = item;
@@ -76,53 +94,49 @@ const DB_ACCESSOR = {
     shared_expenses: 'sharedExpenses', shared_expense_participants: 'sharedExpenseParticipants',
     shared_debts: 'sharedDebts', receipt_jobs: 'receiptJobs'
 };
+let outboxFlushGen = 0;
+let outboxFlushBusy = false;
 async function flushOutbox() {
-    if (!window.supabaseUser) return;
-    let isFlushing = false;
-    for (const tableName of Object.keys(DB_ACCESSOR)) {
-        if (isFlushing) break;
-        const queue = readOutbox(tableName);
-        if (!queue.length) continue;
-        const table = window.db[DB_ACCESSOR[tableName]];
-        const failed = [];
-        for (const item of queue) {
-            if (isFlushing) break;
-            let retryCount = (item && item.__retries) ? Number(item.__retries) : 0;
-            const error = (item && item.__update)
-                ? await table._update(item.__id, item.__changes)
-                : await table._upsert(item);
-            if (error) {
-                retryCount++;
-                // Se fallisce ripetutamente (>= 3 tentativi), quarantena invece di re-infinito retry
-                if (retryCount >= 3) {
-                    // Sposta in quarantena locale per rimuoverlo dalla coda attiva
-                    const qKey = 'eb_outbox_quarantine_' + tableName;
-                    let qQueue = [];
-                    try { qQueue = JSON.parse(localStorage.getItem(qKey) || '[]') || []; } catch (e) { qQueue = []; }
-                    // Aggiungi metadati di fallimento se non presenti
-                    const failedItem = { ...item, __retries: retryCount, __failed: true };
-                    qQueue.push(failedItem);
-                    writeOutbox(tableName, queue.filter(i => i !== item));
-                    writeOutbox(qKey, qQueue);
-                    console.warn('[OUTBOX] ' + tableName + ': elemento quarantena dopo ' + retryCount + ' fallimenti', failedItem);
-                } else {
-                    // Altrimenti incrementa il contatore e rimette in coda
-                    const updatedItem = { ...item, __retries: retryCount };
-                    failed.push(updatedItem);
+    if (!window.supabaseUser || outboxFlushBusy) return;
+    const gen = outboxFlushGen;
+    outboxFlushBusy = true;
+    try {
+        for (const tableName of Object.keys(DB_ACCESSOR)) {
+            if (gen !== outboxFlushGen) return;
+            const queue = readOutbox(tableName);
+            if (!queue.length) continue;
+            const table = window.db[DB_ACCESSOR[tableName]];
+            if (!table) continue;
+            const failed = [];
+            for (const item of queue) {
+                if (gen !== outboxFlushGen) return;
+                const itemId = item && (item.__id != null ? item.__id : item.id);
+                if (itemId != null && isTombstoned(tableName, itemId)) continue;
+                let retryCount = (item && item.__retries) ? Number(item.__retries) : 0;
+                const error = (item && item.__update)
+                    ? await table._update(item.__id, item.__changes)
+                    : await table._upsert(item);
+                if (error) {
+                    retryCount++;
+                    if (retryCount >= 3) {
+                        const qKey = 'eb_outbox_quarantine_' + tableName;
+                        let qQueue = [];
+                        try { qQueue = JSON.parse(localStorage.getItem(qKey) || '[]') || []; } catch (e) { qQueue = []; }
+                        qQueue.push({ ...item, __retries: retryCount, __failed: true });
+                        try { localStorage.setItem(qKey, JSON.stringify(qQueue)); } catch (e) {}
+                        console.warn('[OUTBOX] ' + tableName + ': elemento quarantena dopo ' + retryCount + ' fallimenti');
+                    } else {
+                        failed.push({ ...item, __retries: retryCount });
+                    }
                 }
-            } else {
-                // Successo: resetta il contatore retry se era stato marcato
-                if (item && item.__retries) {
-                    const qKey = 'eb_outbox_quarantine_' + tableName;
-                    let qQueue = [];
-                    try { qQueue = JSON.parse(localStorage.getItem(qKey) || '[]') || []; } catch (e) { qQueue = []; }
-                    writeOutbox(qKey, qQueue.filter(i => i !== item));
-                }
-                failed.push(item);
+                // Success leaves the item out of `failed` so it is dropped from the outbox.
             }
+            if (gen !== outboxFlushGen) return;
+            writeOutbox(tableName, failed);
+            console.log('[OUTBOX] ' + tableName + ': flush (' + (queue.length - failed.length) + ' ok, ' + failed.length + ' ancora in coda)');
         }
-        writeOutbox(tableName, failed);
-        console.log('[OUTBOX] ' + tableName + ': flush (' + (queue.length - failed.length) + ' ok, ' + failed.length + ' ancora in coda/quarantena)');
+    } finally {
+        outboxFlushBusy = false;
     }
 }
 window.addEventListener('online', flushOutbox);
@@ -141,16 +155,20 @@ class SupabaseTable {
     }
 
     _mergeOutbox(rows, filter) {
-        const queue = readOutbox(this.tableName);
-        if (!queue.length) return rows;
         const pk = this._pk();
-        const byId = new Map(rows.map(r => [String(r[pk]), r]));
+        const tombs = readTomb(this.tableName);
+        const alive = (rows || []).filter(r => r && !tombs.has(String(r[pk])));
+        const queue = readOutbox(this.tableName);
+        if (!queue.length) return alive;
+        const byId = new Map(alive.map(r => [String(r[pk]), r]));
         for (const item of queue) {
             if (filter && !filter(item)) continue;
             if (item && item.__update) {
+                if (tombs.has(String(item.__id))) continue;
                 const existing = byId.get(String(item.__id));
                 if (existing) Object.assign(existing, item.__changes);
             } else if (item && item[pk] != null) {
+                if (tombs.has(String(item[pk]))) continue;
                 byId.set(String(item[pk]), item);
             }
         }
@@ -219,6 +237,7 @@ class SupabaseTable {
     }
 
     async get(id) {
+        if (isTombstoned(this.tableName, id)) return null;
         const outboxHit = readOutbox(this.tableName).find(i => i && !i.__update && String(i[this._pk()]) === String(id));
         if (outboxHit) return this._mapOut(outboxHit);
         if (!window.supabaseUser) return null;
@@ -257,17 +276,14 @@ class SupabaseTable {
         if (!window.supabaseUser) return { message: 'utente non autenticato' };
         let payload = this._mapIn(changes);
         payload = Object.fromEntries(Object.entries(payload).filter(([, v]) => v != null));
-        let query = this._uidEq(supabaseClient.from(this.tableName).update(payload));
-        
-        if (this.tableName === 'months') {
-            query = query.eq('month_id', id);
-        } else if (this.tableName === 'categories') {
-            query = query.eq('name', id);
-        } else {
-            query = query.eq(this.primaryKey, id);
+        const pk = this.tableName === 'months' ? 'month_id' : this.tableName === 'categories' ? 'name' : this.primaryKey;
+        let lastError = null;
+        for (const val of this._idVariants(id)) {
+            const { error } = await this._uidEq(supabaseClient.from(this.tableName).update(payload)).eq(pk, val);
+            if (!error) return null;
+            lastError = error;
         }
-        const { error } = await query;
-        return error;
+        return lastError;
     }
 
     async update(id, changes) {
@@ -278,25 +294,26 @@ class SupabaseTable {
         }
     }
 
+    _idVariants(id) {
+        const out = [id];
+        if (id == null) return out;
+        const s = String(id);
+        if (s !== String(out[0])) out.push(s);
+        else if (typeof id !== 'string') out.push(s);
+        const n = Number(id);
+        if (!Number.isNaN(n) && n !== id) out.push(n);
+        return out;
+    }
+
     async delete(id) {
         dropFromOutbox(this.tableName, id);
+        addTomb(this.tableName, id);
         if (!window.supabaseUser) return;
-        let query = this._uidEq(supabaseClient.from(this.tableName).delete());
-        
-        if (this.tableName === 'months') {
-            query = query.eq('month_id', id);
-        } else if (this.tableName === 'categories') {
-            query = query.eq('name', id);
-        } else {
-            query = query.eq(this.primaryKey, id);
+        const pk = this.tableName === 'months' ? 'month_id' : this.tableName === 'categories' ? 'name' : this.primaryKey;
+        for (const val of this._idVariants(id)) {
+            const { error } = await this._uidEq(supabaseClient.from(this.tableName).delete()).eq(pk, val);
+            if (error) console.error('[DB] delete fallito su ' + this.tableName + ':', error);
         }
-        let { error } = await query;
-        if (error && id != null && typeof id !== 'string') {
-            query = this._uidEq(supabaseClient.from(this.tableName).delete()).eq(this.primaryKey, String(id));
-            const retry = await query;
-            error = retry.error;
-        }
-        if (error) console.error('[DB] delete fallito su ' + this.tableName + ':', error);
     }
 
     async clear() {
