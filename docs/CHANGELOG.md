@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Desktop: layout a pannelli, categorie al centro, meno popup
+
+### Completed Changes
+- **mese**: griglia categorie (`#categoryGridDesktop`) nel canvas centrale; rail solo form+registro; ricerca e IA inline.
+- **analisi**: card IA storica visibile in pagina; tap insight non apre il modal su desktop.
+- **previsioni**: pianificatore scadenze + IA affiancati al grafico; niente bottom sheet.
+- **investimenti**: form “Nuovo Asset” sempre in colonna; dettaglio asset in pagina.
+- **cache**: `style.css?v=3.1`, `script.js?v=2.8`, SW `bilancio-pwa-v16`.
+
+### Status: COMPLETATO. Verifica 1280: categorie fuori dal rail, IA static, search focus registro, Previsioni 2 col, Invest form visibile. 390: hide-mobile, sheet ok, zero page-scroll.
+
 ## [2026-10-15] - Desktop: stessa UI mobile, allargata
 
 ### Completed Changes

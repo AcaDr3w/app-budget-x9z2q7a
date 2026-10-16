@@ -6057,3 +6057,195 @@ cursor: pointer;
     .invest-asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .future-milestones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ===== DESKTOP LAYOUT v2: categorie al centro, pannelli inline, meno popup ===== */
+@media (min-width: 768px) {
+    .container { max-width: 1600px; }
+
+    #sheetOverlay, #bottomSheet,
+    #incomeSheetOverlay, #incomeBottomSheet,
+    #futureSheetOverlay, #futureBottomSheet { display: none !important; }
+
+    /* --- MESE: canvas | rail (form+registro). Categorie nel canvas, non nel rail. --- */
+    #current-month-tab.active {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) 360px !important;
+        grid-template-areas:
+            "hero rail"
+            "ia rail" !important;
+        gap: 20px 24px !important;
+        align-items: start;
+    }
+    #current-month-tab .mese-primary { grid-area: hero; }
+    #current-month-tab .main-layout {
+        grid-area: rail !important;
+        grid-column: auto !important;
+        grid-row: auto !important;
+        max-height: calc(100dvh - 80px);
+        top: 68px;
+    }
+    #current-month-tab .center-panel { display: none !important; }
+    #rendicontoCard {
+        display: block !important;
+        margin: 4px 0 0;
+        padding: 16px 18px;
+        overflow: visible;
+        max-height: none;
+        flex: none;
+    }
+    #rendicontoCard .pane-title {
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 12px;
+    }
+    #categoryGridDesktop,
+    .category-grid-desktop {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+        gap: 12px;
+        overflow: visible !important;
+        max-height: none !important;
+        flex: none !important;
+    }
+    #mese-action-hub {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 8px;
+        padding: 0;
+    }
+    #mese-action-hub button {
+        flex-direction: row;
+        min-height: 44px;
+        width: auto;
+        padding: 8px 14px;
+        border-radius: 12px;
+        gap: 8px;
+    }
+    #mese-action-hub button .hub-text { font-size: 13px; -webkit-line-clamp: 1; }
+
+    /* IA mese: pannello in pagina, non overlay */
+    #iaNotesModal.popup-overlay {
+        position: static !important;
+        inset: auto;
+        background: none;
+        backdrop-filter: none;
+        padding: 0;
+        display: none;
+        z-index: auto;
+        grid-area: ia;
+        align-items: stretch;
+    }
+    #iaNotesModal.popup-overlay.active {
+        display: block !important;
+    }
+    #iaNotesModal .ia-notes-panel,
+    #iaNotesModal .popup-panel {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        position: static;
+    }
+
+    /* --- ANALISI: IA inline, grafici a piena larghezza --- */
+    #history-tab .ia-history-inline .collapsible-content { display: block !important; }
+    #history-tab .ia-history-inline { margin-bottom: 4px; }
+    #history-tab #chartsCard { grid-column: 1 / -1; }
+
+    /* --- PREVISIONI: chart | scadenze+IA --- */
+    #future-tab.active {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+        gap: 20px 24px;
+        align-items: start;
+    }
+    #future-tab .hide-desktop { display: none !important; }
+    #futureActionHub { display: none !important; }
+    .future-desktop-extras {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: sticky;
+        top: 68px;
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .future-desktop-extras .card { margin-bottom: 0; }
+    .future-desktop-extras h2 {
+        margin: 0 0 12px;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .future-dl-caption {
+        margin: 14px 0 6px;
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+    /* --- INVESTIMENTI: griglia | form sempre visibile --- */
+    #investimenti-tab.active {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 20px 24px;
+        align-items: start;
+    }
+    #investimenti-tab .invest-mobile-dashboard { grid-column: 1; }
+    #investimenti-tab .invest-add-btn { display: none; }
+    #investAddPopup.popup-overlay {
+        position: static !important;
+        inset: auto;
+        background: none;
+        backdrop-filter: none;
+        padding: 0;
+        display: block !important;
+        z-index: auto;
+        grid-column: 2;
+        grid-row: 1;
+        align-items: stretch;
+    }
+    #investAddPopup .popup-panel {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        position: static;
+    }
+    #investAddPopup .popup-close { display: none; }
+    #investAssetPopup.popup-overlay.active {
+        position: static !important;
+        inset: auto;
+        background: none;
+        backdrop-filter: none;
+        padding: 0;
+        display: block !important;
+        z-index: auto;
+        grid-column: 1 / -1;
+        align-items: stretch;
+    }
+    #investAssetPopup.popup-overlay.active .popup-panel {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        position: static;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    #future-tab.active,
+    #investimenti-tab.active {
+        grid-template-columns: 1fr;
+    }
+    .future-desktop-extras,
+    #current-month-tab .main-layout {
+        position: static;
+        max-height: none;
+    }
+    #investAddPopup.popup-overlay {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}

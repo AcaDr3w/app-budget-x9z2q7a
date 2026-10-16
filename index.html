@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 
@@ -232,6 +232,12 @@
                 <span class="macro-values" id="budgetLabel-svago_altro">€0 / €0</span>
             </div>
         </div>
+    </div>
+
+    <!-- Desktop: microcategorie al centro (non nel rail) -->
+    <div class="card comp-card hide-mobile" id="rendicontoCard">
+        <div class="pane-title">Categorie &amp; Budget <span class="pane-hint">Clicca una card per filtrare il registro</span></div>
+        <div id="categoryGridDesktop" class="category-grid-desktop"></div>
     </div>
 
     <div id="recentTransactionsSection" style="margin-top:8px;">
@@ -470,18 +476,9 @@
 
             </div>
 
-            <!-- CENTER PANEL -->
+            <!-- CENTER PANEL: mobile micro-grid only -->
             <div class="layout-column center-panel">
-
-                <!-- CATEGORY GRID (MOBILE ONLY) -->
                 <div id="categoryGridContainer" class="category-grid-mobile hide-desktop"></div>
-
-                <!-- GRIGLIA MICROCATEGORIE + RISPARMIO -->
-                <div class="card comp-card hide-mobile" id="rendicontoCard">
-                    <div class="pane-title">📊 Categorie & Budget <span class="pane-hint">Tocca una card per filtrare il registro</span></div>
-                    <div id="categoryGridDesktop" class="category-grid-desktop"></div>
-                </div>
-
             </div>
 
             <!-- RIGHT PANEL -->
@@ -501,8 +498,8 @@
                     </div>
                 </div>
 
-                <!-- IA + NOTE QUICK CARD -->
-                <div class="card comp-card hide-mobile ia-quick-card">
+                <!-- IA + NOTE: su desktop il pannello #iaNotesModal è inline -->
+                <div class="card comp-card hide-mobile hide-desktop ia-quick-card">
                     <button type="button" class="ia-month-trigger ia-quick-trigger" data-act="openIaNotesModal"><i class="fas fa-robot" aria-hidden="true"></i> IA &amp; Note del Mese</button>
                 </div>
 
@@ -513,8 +510,8 @@
     <!-- =================== TAB 2: STORICO PLURIMENSILE =================== -->
     <div id="history-tab" class="tab-content hidden">
 
-        <!-- DESKTOP IA CARD (hidden on mobile) -->
-        <div class="card ia-insight-card hide-mobile hide-desktop">
+        <!-- DESKTOP: IA storica inline (niente popup) -->
+        <div class="card ia-history-inline hide-mobile">
             <h2 class="collapsible" data-act="toggleSection" data-args='["iaHistorySection"]' data-el>🧠 Analisi Storica I.A. Multimese</h2>
             <div class="collapsible-content" id="iaHistorySection">
                 <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
@@ -710,21 +707,6 @@
                 <div id="futureMilestonesD" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
             </div>
 
-            <div class="card">
-                <h2>📅 Pianificatore Scadenze</h2>
-                <div id="dlFormWrap-d"></div>
-                <div style="margin:14px 0 6px;font-size:12px;color:#64748b;">Scadenze registrate:</div>
-                <div id="annualDeadlinesList"></div>
-            </div>
-
-            <div class="card ia-future-card">
-                <h2>🤖 Analisi IA Futura</h2>
-                <p style="font-size:12px;color:#475569;margin-bottom:12px;">
-                    L'IA analizza la sostenibilità delle spese previste nei prossimi 12 mesi (scadenze e rate) rispetto al trend di risparmio.
-                </p>
-                <button class="btn-ia" id="btnFutureIA" data-act="runFuturePredictionIA">🤖 Genera Analisi Futura</button>
-                <div id="iaFutureResponse" class="ia-response-box"></div>
-            </div>
         </div>
 
         <!-- MOBILE: Zero-Scroll Dashboard -->
@@ -753,9 +735,24 @@
             <div id="futureMilestonesM" class="future-milestones"></div>
 
             <div id="futureActionHub">
-                <button data-action="simula">⚡ Simula</button>
-                <button data-action="scadenze">🗓️ Scadenze</button>
-                <button data-action="ia">🤖 IA Futura</button>
+                <button type="button" data-action="simula">⚡ Simula</button>
+                <button type="button" data-action="scadenze">🗓️ Scadenze</button>
+                <button type="button" data-action="ia">🤖 IA Futura</button>
+            </div>
+        </div>
+
+        <div class="future-desktop-extras hide-mobile">
+            <div class="card" id="futureDesktopScadenze">
+                <h2>Pianificatore scadenze</h2>
+                <div id="dlFormWrap-d"></div>
+                <div class="future-dl-caption">Scadenze registrate</div>
+                <div id="annualDeadlinesList"></div>
+            </div>
+            <div class="card ia-future-card" id="futureDesktopIa">
+                <h2>Analisi IA futura</h2>
+                <p class="comp-hint">Sostenibilità delle spese previste nei prossimi 12 mesi rispetto al risparmio.</p>
+                <button class="btn-ia" id="btnFutureIA" data-act="runFuturePredictionIA">Genera analisi futura</button>
+                <div id="iaFutureResponse" class="ia-response-box"></div>
             </div>
         </div>
 
@@ -1235,6 +1232,6 @@
     </div>
     <script src="js/supabase-adapter.js"></script>
     <script src="js/ui-dialogs.js"></script>
-    <script src="script.js?v=2.7"></script>
+    <script src="script.js?v=2.8"></script>
 </body>
 </html>

@@ -1,5 +1,17 @@
 # Project Core Memory
 
+## DESKTOP LAYOUT v2 (2026-10-16)
+
+**Stato**: desktop non è più la UI mobile stirata. ≥768 è un layout Operate a pannelli: centro = contenuto, destra = inserimento. I popup restano solo dove serve focus (rendiconto, condivise, settings).
+
+**Mese**: `#rendicontoCard` / `#categoryGridDesktop` nel canvas (`.mese-primary`), non nel rail. Rail = calendario + form + registro. Hub Ricerca → focus `#searchInput` (niente `#searchPopup`). Hub IA → `#iaNotesModal` inline (`position:static`). CSS ≤767 intatto; `#rendicontoCard` resta `hide-mobile`.
+
+**Altri tab**: Analisi IA storica inline (`.ia-history-inline`, niente `iaModal` al tap). Previsioni: `.future-desktop-extras` (scadenze `#dlFormWrap-d` + IA `#iaFutureResponse`) a fianco del chart; `#futureActionHub` nascosto; `openFutureSheet` scrolla il pannello. Investimenti: `#investAddPopup` sempre visibile a destra; dettaglio asset inline sotto, non overlay.
+
+**JS**: `isDesktop()` continua a bloccare lo sheet. `openSearchPopup` / hub IA / `openFutureSheet` / `openInvestAddSheet` / `onAiInsightCardTap` hanno ramo desktop.
+
+**Cache**: `style.css?v=3.1`, `script.js?v=2.8`, SW `bilancio-pwa-v16`.
+
 ## DESKTOP = UI MOBILE ALLARGATA (2026-10-15)
 
 **Stato**: un solo albero visivo ≥768. La dashboard mobile (Mese/Analisi/Previsioni/Investimenti) è il canvas desktop; i cloni `.hide-mobile` poveri sono anche `.hide-desktop` (sempre nascosti).
@@ -13,7 +25,7 @@
 - Previsioni/Invest: `.future-mobile-dashboard` / `.invest-mobile-dashboard`. JS: solo `futureChartCanvas` e `investAssetGrid`.
 - Sheet/FAB/bottom-nav restano nascosti; `isDesktop()` continua a bloccare `openTransactionSheet`.
 
-**Cache**: `style.css?v=3.0`, `script.js?v=2.7`, SW `bilancio-pwa-v15`.
+**Cache**: `style.css?v=3.1`, `script.js?v=2.8`, SW `bilancio-pwa-v16`.
 
 ## SPESE CONDIVISE POPUP (2026-10-15)
 
@@ -30,7 +42,7 @@
 
 **ID**: `sameId` / `findPersonById` / `findGroupById` su match people/gruppi/partecipanti. Dopo Salda: `loadPeopleGroups` + re-render dettaglio.
 
-**Cache**: `style.css?v=3.0`, `script.js?v=2.7`, SW `bilancio-pwa-v15`. Script: `js/ui-dialogs.js` prima di `script.js`.
+**Cache**: `style.css?v=3.1`, `script.js?v=2.8`, SW `bilancio-pwa-v16`. Script: `js/ui-dialogs.js` prima di `script.js`.
 
 ## 🔍 AUDIT DEBUG FUNZIONI (2026-10-15, COMPLETATO)
 
@@ -54,7 +66,7 @@
 - Id ancora assenti di proposito (UI tolta): `iaProviderSelect`, `futureCalMonthM`, `depositSavingsSelect`. Restano null-guarded.
 - `data-act` 63 distinti tutti risolvibili (2 in supabase-adapter.js: `handleLogin`/`handleSignup`). `genId` duplicata ma identica → innocuo.
 
-**PWA cache**: `CACHE_NAME = bilancio-pwa-v15`; `script.js?v=2.7`, `style.css?v=3.0`.
+**PWA cache**: `CACHE_NAME = bilancio-pwa-v16`; `script.js?v=2.8`, `style.css?v=3.1`.
 
 ## 🧹 CONFIG LOCALI STRUMENTI: SOLO SKILLS + MCP (2026-10-15)
 - **Politica repo**: gli strumenti usano la config GLOBALE (`~/.config/opencode/opencode.jsonc`, `~/.pi/agent/`). Localmente si tengono SOLO skills e MCP. Niente model/provider/lsp/permission/plugin in locale.

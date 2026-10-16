@@ -4839,6 +4839,13 @@ async function renderExpenseList(type, month) {
 // POPUP RICERCA (mobile)
 // =====================================================================
 function openSearchPopup() {
+    if (isDesktop()) {
+        const input = document.getElementById('searchInput');
+        const card = document.getElementById('entriesCard');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (input) { input.focus(); input.select(); }
+        return;
+    }
     const popup = document.getElementById('searchPopup');
     if (!popup) return;
     popup.classList.add('active');
@@ -4986,7 +4993,8 @@ function openIaNotesModal() {
     const modal = document.getElementById('iaNotesModal');
     if (!modal) return;
     modal.classList.add('active');
-    document.body.classList.add('popup-open');
+    if (!isDesktop()) document.body.classList.add('popup-open');
+    if (isDesktop()) modal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     const currentMonth = document.getElementById('currentMonth').value;
     if (currentMonth) {
         const totals = { income: 0, planned: 0, actual: 0 };
@@ -5101,7 +5109,10 @@ async function runIaMonthAnalysis() {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
         if (btn.dataset.action === 'search') openSearchPopup();
-        else if (btn.dataset.action === 'ia') openIaMonthPopup();
+        else if (btn.dataset.action === 'ia') {
+            if (isDesktop()) openIaNotesModal();
+            else openIaMonthPopup();
+        }
         else if (btn.dataset.action === 'condivise') openCondivisePopup();
     });
 })();
@@ -5837,7 +5848,11 @@ function openInvestAddSheet() {
     const initialCapitalInput = document.getElementById('investNewInitialCapital');
     if (initialCapitalInput) { initialCapitalInput.value = ''; }
     document.getElementById('investAddPopup').classList.add('active');
-    document.body.classList.add('popup-open');
+    if (!isDesktop()) document.body.classList.add('popup-open');
+    else {
+        const name = document.getElementById('investNewName');
+        if (name) name.focus();
+    }
 }
 
 function closeInvestAddPopup(event) {
@@ -5902,9 +5917,9 @@ function openInvestAssetPopup(id) {
     const info = ASSET_TYPES[asset.type] || { icon: '💎', label: asset.type, color: '#64748b' };
     document.getElementById('investPopupTitle').textContent = `${info.icon} ${asset.name}`;
     document.getElementById('investMovementForm').style.display = 'none';
-    document.getElementById('investAddPopup').classList.remove('active');
+    if (!isDesktop()) document.getElementById('investAddPopup').classList.remove('active');
     document.getElementById('investAssetPopup').classList.add('active');
-    document.body.classList.add('popup-open');
+    if (!isDesktop()) document.body.classList.add('popup-open');
     renderInvestAssetDetail(asset);
 }
 
@@ -6670,6 +6685,18 @@ function resetInsightBanner() {
 }
 
 function onAiInsightCardTap() {
+    if (isDesktop()) {
+        const section = document.getElementById('iaHistorySection');
+        if (section) {
+            section.classList.add('show');
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        const cached = loadInsightCache(getInsightPeriodKey());
+        const inline = document.getElementById('iaHistoryResponse');
+        if (cached && inline) { inline.style.display = 'block'; inline.innerText = cached.analisi_completa; }
+        generateInsightCard();
+        return;
+    }
     openIaModal();
     const cached = loadInsightCache(getInsightPeriodKey());
     const respBox = document.getElementById('iaHistoryResponseModal');
@@ -7019,6 +7046,11 @@ function toggleFutureSimRow() {
 // BOTTOM SHEET PREVISIONI (MOBILE)
 // =====================================================================
 function openFutureSheet(action) {
+    if (isDesktop()) {
+        const target = action === 'ia' ? document.getElementById('futureDesktopIa') : document.getElementById('futureDesktopScadenze');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+    }
     const overlay = document.getElementById('futureSheetOverlay');
     const sheet = document.getElementById('futureBottomSheet');
     const title = document.getElementById('futureSheetTitle');
