@@ -1133,6 +1133,8 @@ if (overlay && sheet && title) {
             // Reset inputs
             if (amountInput) amountInput.value = '';
         }
+        const sheetNoteEl = document.getElementById('sheetNote');
+        if (sheetNoteEl) sheetNoteEl.value = prefillNote != null ? prefillNote : '';
         
         // Reset date to today
         if (sheetDate) {
@@ -3630,7 +3632,8 @@ function setupToggleType() {
 }
 
 // Save transaction from bottom sheet
-async function saveTransactionFromSheet() {
+async function saveTransactionFromSheet(opts) {
+    const silent = !!(opts && opts.silent);
     const month = document.getElementById('currentMonth').value;
     const sheetDate = document.getElementById('sheetDate');
     const sheetNote = document.getElementById('sheetNote');
@@ -3639,8 +3642,8 @@ async function saveTransactionFromSheet() {
     const amount = getSheetAmount();
     
     if (amount <= 0) {
-        alert('Inserisci un importo maggiore di zero');
-        return;
+        if (!silent) alert('Inserisci un importo maggiore di zero');
+        return null;
     }
     
     const date = sheetDate?.value || new Date().toISOString().slice(0, 10);
@@ -3669,8 +3672,8 @@ async function saveTransactionFromSheet() {
         editingExpenseId = null;
         closeTransactionSheet();
         await updateUI();
-        showToast('Spesa aggiornata', false);
-        return;
+        if (!silent) showToast('Spesa aggiornata', false);
+        return originalExp.id;
     }
 
     const sharedToggle = document.getElementById('sharedToggle');
@@ -3686,7 +3689,7 @@ async function saveTransactionFromSheet() {
         splitRes = computeSharedSplits(sharedSplitState, amount);
         if (splitRes.error) {
             showToast(splitRes.error, true);
-            return;
+            return null;
         }
         const meId = getSharedMeId();
         const meRec = splitRes.records.find(r => r.personId === meId) || splitRes.records[0];
@@ -3748,7 +3751,7 @@ async function saveTransactionFromSheet() {
             if (r.error) {
                 currentData.expenses.pop();
                 showToast(r.error, true);
-                return;
+                return null;
             }
         }
 
@@ -3758,11 +3761,13 @@ async function saveTransactionFromSheet() {
 
         closeTransactionSheet();
         updateUI();
-        showToast('Spesa aggiunta', false);
+        if (!silent) showToast('Spesa aggiunta', false);
+        return exp.id;
     } catch (err) {
         console.error('[DB] Error adding expense from sheet:', err);
         showToast('Errore salvataggio', true);
         currentData.expenses.pop();
+        return null;
     }
 }
 
@@ -8028,6 +8033,8 @@ function closeAccountDrawer() {
 }
 
 function closeQuickAddRadial() {
+    stopVoiceExpense();
+    setQuickAddFabMode('plus');
     const radial = document.getElementById('quickAddRadial');
     if (radial) {
         radial.classList.remove('open');
@@ -8049,6 +8056,14 @@ const quickAdd = {
     dwellTimer: null,
     dwellKey: '',
     dragging: false
+};
+
+const voiceExpense = { rec: null, listening: false, busy: false };
+const VOICE_CAT_ALIASES = {
+    alimentari: 'Alimentari', cibo: 'Alimentari', supermercato: 'Alimentari',
+    bar: 'Bar', caffe: 'Bar', delivery: 'Delivery',
+    benzina: 'Carburante', gasolio: 'Carburante', carburante: 'Carburante',
+    affitto: 'Mutuo/Affitto', mutuo: 'Mutuo/Affitto'
 };
 
 function quickAddAngle(x, y) {
@@ -8130,8 +8145,232 @@ function openQuickAddRadial(level, macro) {
     radial.hidden = false;
     radial.classList.add('open');
     document.body.classList.add('radial-open');
+    setQuickAddFabMode(voiceExpense.listening ? 'listening' : 'mic');
     const items = level === 'micros' ? quickAddMicroItems(macro) : quickAddMacroItems();
     renderQuickAddItems(items);
+}
+
+function setQuickAddFabMode(mode) {
+    const fab = document.getElementById('navQuickAdd');
+    const disc = fab && fab.querySelector('.nav-quick-add');
+    const icon = disc && disc.querySelector('i');
+    if (!disc || !icon) return;
+    disc.classList.toggle('is-mic', mode !== 'plus');
+    disc.classList.toggle('is-listening', mode === 'listening');
+    icon.className = mode === 'plus' ? 'fas fa-plus' : 'fas fa-microphone';
+    if (fab) {
+        const label = mode === 'listening' ? 'Sto ascoltando' : (mode === 'mic' ? 'Aggiungi spesa con la voce' : 'Aggiungi spesa');
+        fab.setAttribute('aria-label', label);
+    }
+}
+
+function speechRecognitionCtor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function stopVoiceExpense() {
+    voiceExpense.listening = false;
+    if (voiceExpense.rec) {
+        try { voiceExpense.rec.onresult = null; voiceExpense.rec.onerror = null; voiceExpense.rec.onend = null; } catch (e) { /* ignore */ }
+        try { voiceExpense.rec.abort(); } catch (e) { /* ignore */ }
+        voiceExpense.rec = null;
+    }
+}
+
+function normalizeVoiceKey(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+}
+
+function matchVoiceCategory(raw) {
+    const names = allUserCategoryNames();
+    const key = normalizeVoiceKey(raw);
+    if (!key) return null;
+    const exact = names.find(n => normalizeVoiceKey(n) === key);
+    if (exact) return exact;
+    const inc = names.find(n => {
+        const nk = normalizeVoiceKey(n);
+        return nk.length >= 3 && (nk.includes(key) || key.includes(nk));
+    });
+    return inc || null;
+}
+
+function formatSheetAmount(n) {
+    return (Math.round(Number(n) * 100) / 100).toFixed(2).replace('.', ',');
+}
+
+function parseVoiceExpenseLocal(transcript) {
+    const t = String(transcript || '').trim();
+    const planned = /\b(previst[aeio]|da pagare)\b/i.test(t);
+    const amountRe = /(?:€\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur)?|(?:€|euro|eur)\s*(\d+(?:[.,]\d{1,2})?)/i;
+    const m = t.match(amountRe);
+    const amount = m ? parseAmountInput(m[1] || m[2]) : 0;
+    let category = null;
+    const tNorm = normalizeVoiceKey(t);
+    const names = allUserCategoryNames().slice().sort((a, b) => b.length - a.length);
+    for (const n of names) {
+        const nk = normalizeVoiceKey(n);
+        if (nk.length >= 3 && tNorm.includes(nk)) { category = n; break; }
+    }
+    if (!category) {
+        for (const [alias, cat] of Object.entries(VOICE_CAT_ALIASES)) {
+            if (tNorm.includes(normalizeVoiceKey(alias))) {
+                category = matchVoiceCategory(cat) || cat;
+                break;
+            }
+        }
+    }
+    const note = t.replace(amountRe, '').replace(/\b(euro|eur|€)\b/gi, '').trim();
+    return { amount, category, type: planned ? 'planned' : 'actual', note, date: null };
+}
+
+async function parseVoiceExpenseLLM(transcript, local) {
+    const cats = allUserCategoryNames().join(', ');
+    const system = 'Sei un parser di spese per un\'app di bilancio italiana. Rispondi SOLO con JSON valido, nessun testo extra. Schema: {"amount":number,"category":string,"type":"actual"|"planned","note":string,"date":string|null}. amount = importo in euro. category = copia esatta di una categoria utente se possibile. type = actual se già spesa, planned se prevista/da pagare. note = dettaglio breve. date = YYYY-MM-DD solo se detta, altrimenti null. Categorie: ' + cats;
+    const content = await invokeAI('Trascrizione: "' + transcript + '"', system);
+    const parsed = parseAIJson(content);
+    if (!parsed || parsed.analisi_completa) return local;
+    const amount = Number(parsed.amount) > 0 ? Number(parsed.amount) : local.amount;
+    const category = matchVoiceCategory(parsed.category) || local.category;
+    const type = parsed.type === 'planned' ? 'planned' : (local.type || 'actual');
+    const note = parsed.note != null ? String(parsed.note) : (local.note || '');
+    const date = (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) ? parsed.date : null;
+    return { amount, category, type, note, date };
+}
+
+function showVoiceUndoToast(expenseId, cmd) {
+    document.querySelectorAll('.voice-undo-toast').forEach(el => el.remove());
+    const toast = document.createElement('div');
+    toast.className = 'voice-undo-toast';
+    const label = document.createElement('span');
+    label.textContent = fmtEPlain(cmd.amount, 2) + ' · ' + cmd.category;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Annulla';
+    btn.addEventListener('click', async () => {
+        toast.remove();
+        await deleteEntry('expense', expenseId);
+        showToast('Spesa annullata', false);
+    });
+    toast.appendChild(label);
+    toast.appendChild(btn);
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        if (!toast.parentNode) return;
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+async function commitVoiceExpense(cmd, transcript) {
+    closeQuickAddRadial();
+    editingExpenseId = null;
+    sheetSelectedCategory = cmd.category;
+    sheetTransactionType = cmd.type === 'planned' ? 'planned' : 'actual';
+    const amountInput = document.getElementById('amountInput');
+    if (amountInput) amountInput.value = formatSheetAmount(cmd.amount);
+    const sheetDate = document.getElementById('sheetDate');
+    if (sheetDate) sheetDate.value = cmd.date || new Date().toISOString().slice(0, 10);
+    const sheetNote = document.getElementById('sheetNote');
+    if (sheetNote) sheetNote.value = (cmd.note || '').trim() || transcript;
+    const sharedToggle = document.getElementById('sharedToggle');
+    if (sharedToggle) sharedToggle.checked = false;
+    const recToggle = document.getElementById('recurringToggle');
+    if (recToggle) recToggle.checked = false;
+    document.querySelectorAll('#bottomSheet .toggle-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === sheetTransactionType);
+    });
+    const id = await saveTransactionFromSheet({ silent: true });
+    if (id) showVoiceUndoToast(id, cmd);
+}
+
+async function processVoiceTranscript(text) {
+    const spoken = String(text || '').trim();
+    if (!spoken) {
+        showToast('Non ho sentito. Riprova.', true);
+        return;
+    }
+    voiceExpense.busy = true;
+    setQuickAddFabMode('listening');
+    const hint = document.getElementById('quickAddHint');
+    if (hint) hint.textContent = 'Capisco…';
+    try {
+        let cmd = parseVoiceExpenseLocal(spoken);
+        if (!cmd.amount || !cmd.category) {
+            try { cmd = await parseVoiceExpenseLLM(spoken, cmd); } catch (e) { console.warn('[voce] LLM', e); }
+        }
+        if (!cmd.amount) {
+            showToast('Non ho capito l\'importo', true);
+            return;
+        }
+        if (!cmd.category) {
+            closeQuickAddRadial();
+            openTransactionSheet('Spese', formatSheetAmount(cmd.amount), spoken);
+            const amountInput = document.getElementById('amountInput');
+            if (amountInput) amountInput.value = formatSheetAmount(cmd.amount);
+            const sheetNote = document.getElementById('sheetNote');
+            if (sheetNote) sheetNote.value = spoken;
+            return;
+        }
+        await commitVoiceExpense(cmd, spoken);
+    } finally {
+        voiceExpense.busy = false;
+        if (quickAdd.state.open) setQuickAddFabMode(voiceExpense.listening ? 'listening' : 'mic');
+        else setQuickAddFabMode('plus');
+    }
+}
+
+function startVoiceExpense() {
+    if (isDesktop() || voiceExpense.busy) return;
+    const Ctor = speechRecognitionCtor();
+    if (!Ctor) {
+        showToast('La voce funziona su Chrome (Android)', true);
+        return;
+    }
+    stopVoiceExpense();
+    const rec = new Ctor();
+    rec.lang = 'it-IT';
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.continuous = false;
+    voiceExpense.rec = rec;
+    voiceExpense.listening = true;
+    setQuickAddFabMode('listening');
+    const hint = document.getElementById('quickAddHint');
+    if (hint) hint.textContent = 'Parla… es. 10 euro in alimentari';
+    rec.onresult = (e) => {
+        let interim = '', finalTxt = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) finalTxt += t;
+            else interim += t;
+        }
+        if (hint) hint.textContent = (finalTxt || interim || 'Parla…').trim();
+        if (finalTxt.trim()) {
+            try { rec.stop(); } catch (err) { /* ignore */ }
+            voiceExpense.listening = false;
+            processVoiceTranscript(finalTxt.trim());
+        }
+    };
+    rec.onerror = (e) => {
+        voiceExpense.listening = false;
+        setQuickAddFabMode(quickAdd.state.open ? 'mic' : 'plus');
+        if (e.error === 'not-allowed') showToast('Permesso microfono negato', true);
+        else if (e.error === 'no-speech') { if (hint) hint.textContent = 'Non ho sentito. Riprova.'; }
+        else if (e.error !== 'aborted') showToast('Ascolto non riuscito', true);
+    };
+    rec.onend = () => {
+        voiceExpense.listening = false;
+        voiceExpense.rec = null;
+        if (!voiceExpense.busy) setQuickAddFabMode(quickAdd.state.open ? 'mic' : 'plus');
+    };
+    try {
+        rec.start();
+    } catch (err) {
+        voiceExpense.listening = false;
+        voiceExpense.rec = null;
+        setQuickAddFabMode('mic');
+        showToast('Microfono non disponibile', true);
+    }
 }
 
 function confirmQuickAddHot() {
@@ -8214,6 +8453,11 @@ function setupQuickAddRadial() {
         const dragging = quickAdd.dragging;
         clearHold();
         try { if (fab.hasPointerCapture(e.pointerId)) fab.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        if (voiceExpense.listening) {
+            try { if (voiceExpense.rec) voiceExpense.rec.stop(); } catch (err) { /* ignore */ }
+            return;
+        }
+        if (voiceExpense.busy) return;
         if (!wasOpen) {
             openQuickAddRadial('macros');
             return;
@@ -8222,7 +8466,11 @@ function setupQuickAddRadial() {
             confirmQuickAddHot();
             return;
         }
-        if (dragging) closeQuickAddRadial();
+        if (dragging) {
+            closeQuickAddRadial();
+            return;
+        }
+        startVoiceExpense();
     };
 
     fab.addEventListener('pointerup', endPointer);

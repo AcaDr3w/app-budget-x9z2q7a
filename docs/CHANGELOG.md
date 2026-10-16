@@ -1,5 +1,16 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Spesa vocale dal + mobile
+
+### Completed Changes
+- **FAB**: radial aperto → icona microfono; secondo tap ascolta (pulse rosso).
+- **STT**: Web Speech `it-IT`; Safari iOS avvisa di usare Chrome.
+- **parse**: locale (importo + categoria) poi LLM JSON via `invokeAI`.
+- **save**: `saveTransactionFromSheet({silent})` + toast Annulla 5s; se manca la categoria apre lo sheet.
+- **cache**: `style.css?v=3.9`, `script.js?v=2.17`, SW `v25`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Ghost: debiti ricreano le spese a ogni refresh
 
 ### Completed Changes
