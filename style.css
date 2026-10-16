@@ -1756,17 +1756,17 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     width: 100%;
     margin-top: 8px;
     text-align: left;
-    border: 1px solid var(--border-faint, #e2e8f0);
-    background: var(--surface-muted, #f8fafc);
+    border: 1px solid var(--ia-faint);
+    background: var(--ia-bg-soft);
     border-radius: 12px;
-    padding: 8px 10px;
+    padding: 10px 14px;
     cursor: pointer;
 }
 #heroInsightPill .hero-insight-text {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--ink);
-    line-height: 1.35;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ia-strong);
+    line-height: 1.4;
 }
 .summary-card-top { display: flex; align-items: center; justify-content: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border-faint); }
 .month-selector-badge { background: var(--surface-muted, #f8fafc); border: 1px solid var(--border-soft, #e2e8f0); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: var(--ink); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
@@ -2422,10 +2422,8 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
         display: flex;
         align-items: center;
         gap: clamp(6px, 1.8vw, 10px);
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: var(--ia-bg-soft);
+        border: 1px solid var(--ia-faint);
         border-radius: 16px;
         padding: clamp(6px, 1.6vh, 10px) clamp(10px, 2.6vw, 14px);
         min-height: 0;
@@ -2435,9 +2433,9 @@ th { background-color: var(--surface-muted); color: var(--primary); font-weight:
     .hero-insight-pill:active { transform: scale(0.98); }
     .hero-insight-pill:focus-visible { outline: 2px solid rgba(0, 0, 0, 0.35); outline-offset: 2px; }
     .hero-insight-text {
-        font-size: clamp(10.5px, 3vw, 12.5px);
-        color: var(--ink-strong);
-        font-weight: 500;
+        font-size: clamp(12px, 3.2vw, 14px);
+        color: var(--ia-strong);
+        font-weight: 700;
         line-height: 1.35;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -6092,7 +6090,44 @@ cursor: pointer;
         overflow: visible;
         max-height: none;
         flex: none;
+        background: #fff;
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-float);
     }
+    .cat-grid-empty {
+        margin: 0;
+        padding: 16px 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted-mid);
+        text-align: center;
+    }
+    #current-month-tab .summary-card-single,
+    #current-month-tab .chart-card-single {
+        background: #fff;
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-float);
+    }
+    #current-month-tab .macro-card-white {
+        background: #fff !important;
+        border: 1px solid var(--border-soft) !important;
+        box-shadow: var(--shadow-float);
+    }
+    #current-month-tab .comp-card {
+        background: #fff;
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-float);
+    }
+    #heroInsightPill {
+        background: var(--ia-bg-soft) !important;
+        border: 1px solid var(--ia-faint) !important;
+    }
+    #heroInsightPill .hero-insight-text {
+        color: var(--ia-strong) !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+    .pane-hint { color: var(--muted-mid); }
     #rendicontoCard .pane-title {
         font-size: 15px;
         font-weight: 800;

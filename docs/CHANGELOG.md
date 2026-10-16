@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Desktop: contrasto insight IA e card visibili
+
+### Completed Changes
+- **insight**: `#heroInsightPill` viola chiaro + testo `--ia-strong` 14px/700 (il messaggio rotante si legge).
+- **card desktop**: bordo `--border-soft` su summary, grafico, macro, rail, `#rendicontoCard`.
+- **categorie**: se `userCategories` è vuoto, la griglia usa le macro; empty state se non c’è nulla.
+- **cache**: `style.css?v=3.2`, `script.js?v=2.9`, SW `bilancio-pwa-v17`.
+
+### Status: COMPLETATO. Push su origin/main per GitHub Pages.
+
 ## [2026-10-16] - Desktop: layout a pannelli, categorie al centro, meno popup
 
 ### Completed Changes

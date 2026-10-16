@@ -4488,7 +4488,15 @@ function renderCategoryGridDesktop(catSums) {
     if (!grid) return;
 
     grid.innerHTML = '';
-    const sorted = [...userCategories].sort();
+    let cats = [...userCategories];
+    if (!cats.length) {
+        cats = Object.values(userMacroCategories || {}).flat().filter(Boolean);
+    }
+    const sorted = [...new Set(cats)].sort();
+    if (!sorted.length) {
+        grid.innerHTML = '<p class="cat-grid-empty">Nessuna categoria. Aggiungile da account → Categorie.</p>';
+        return;
+    }
 
     sorted.forEach(cat => {
         const pVal = catSums[cat]?.planned || 0;
