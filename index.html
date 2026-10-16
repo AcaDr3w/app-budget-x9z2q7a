@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=3.4">
+    <link rel="stylesheet" href="style.css?v=3.6">
 </head>
 <body>
 
@@ -114,7 +114,7 @@
      <!-- =================== TAB 1: MESE CORRENTE =================== -->
 <div id="current-month-tab" class="tab-content active">
 
-    <div class="mese-primary">
+    <div class="mese-primary mese-col-main">
     <!-- CARD RIEPILOGO UNICA -->
     <div class="summary-card-single" id="mobileSummaryCard">
         <div class="summary-card-top">
@@ -143,21 +143,9 @@
             </div>
         </div>
         <button type="button" id="heroInsightPill" class="hero-insight-pill" aria-label="Insight del mese">
+            <span class="hero-insight-icon" aria-hidden="true">💡</span>
             <span class="hero-insight-text">Inizia a registrare spese ed entrate</span>
         </button>
-    </div>
-
-    <!-- SEZIONE GRAFICO PROGRESSO SPESA MESE CORRENTE -->
-    <div class="chart-card-single" id="macroBudgetChartCard">
-        <div class="chart-card-header">
-            <span class="chart-title">PROGRESSO SPESA MESE CORRENTE</span>
-            <span class="chart-total-pct" id="macroChartTotalPct">0%</span>
-        </div>
-        <div class="chart-metrics" id="macroChartMetrics"></div>
-        <div class="chart-legend" id="macroChartLegend"></div>
-        <div class="chart-container-box" id="macroChartContainerBox">
-            <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa mese corrente"></canvas>
-        </div>
     </div>
 
     <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
@@ -275,6 +263,128 @@
             <button type="button" data-action="ia"><span class="hub-icon">🤖</span><span class="hub-text">Assistente I.A.</span></button>
             <button type="button" data-action="condivise" class="hub-condivise"><span class="hub-icon">👥</span><span class="hub-text">Condividi Budget</span></button>
         </div>
+
+                <div class="card comp-card hide-mobile" id="entriesCard">
+                    <div class="pane-title" id="listTitle">📋 Registro Spese</div>
+                    <div class="day-filter-chip" id="dayFilterChip" hidden>
+                        <span id="dayFilterLabel">Giorno selezionato</span>
+                        <button type="button" class="day-filter-clear" data-act="clearDateFilter">✕ Togli filtro giorno</button>
+                    </div>
+                    <div class="search-bar-container">
+                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()" aria-label="Cerca spesa">
+                        <button class="btn-clear-filters" id="btnClearAllFilters" data-act="clearAllFilters">✕ Togli filtri</button>
+                    </div>
+                    <div id="entriesList" style="padding-bottom: 10px;"></div>
+                </div>
+
+    </div><!-- /mese-col-main -->
+
+    <div class="mese-col-rail">
+        <!-- LEFTPANEL: FORMS A TAB (ENTRATA | SPESA | CONDIVISE) -->
+                <div class="card comp-card hide-mobile" id="nuovaVoceCard">
+                    <div class="pane-title">➕ Nuova Voce</div>
+                    <div class="form-tabs" role="tablist" aria-label="Form di inserimento">
+                        <button type="button" class="form-tab" data-formtab="entrata" data-act="switchFormTab" data-args='["entrata"]'>💰 Entrata</button>
+                        <button type="button" class="form-tab active" data-formtab="spesa" data-act="switchFormTab" data-args='["spesa"]'>💳 Spesa</button>
+                        <button type="button" class="form-tab" data-formtab="condivise" data-act="switchFormTab" data-args='["condivise"]'>👥 Condivise</button>
+                    </div>
+
+                    <div class="form-pane" id="formPaneEntrata">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label for="incDate">Data</label><input type="date" id="incDate"></div>
+                            <div class="input-group"><label for="incDesc">Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
+                        </div>
+                        <div class="input-group"><label for="incAmount">Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
+                        <button class="btn-entrate" data-act="addIncome">Registra Entrata</button>
+                    </div>
+
+                    <div class="form-pane active" id="formPaneSpesa">
+                        <div class="adv-section exp-type-row">
+                            <span class="shared-field-label">Tipo voce</span>
+                            <div class="split-method-pills">
+                                <button type="button" class="split-pill" data-exp-type="planned" data-act="setExpenseTypePill" data-el>📌 Prevista</button>
+                                <button type="button" class="split-pill active" data-exp-type="actual" data-act="setExpenseTypePill" data-el>💸 Sostenuta</button>
+                            </div>
+                        </div>
+                        <div class="grid-inputs">
+                            <div class="input-group"><label for="expDate">Data</label><input type="date" id="expDate"></div>
+                            <div class="input-group"><label for="expenseCategory">Categoria</label><select id="expenseCategory"></select></div>
+                        </div>
+                        <div class="input-group"><label for="expDesc">Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
+                        <div class="grid-inputs">
+                            <div class="input-group"><label for="expPlanned">Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
+                            <div class="input-group"><label for="expActual">Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="expShared">Quota a tuo carico % (opzionale)</label>
+                            <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
+                        </div>
+                        <div class="recurring-toggle-wrapper">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="recurringToggleDesktop" aria-label="Ripeti ogni mese">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Ripeti ogni mese</span>
+                        </div>
+                        <div class="recurring-until-container" id="recurringUntilContainerDesktop">
+                            <input type="month" id="recurringUntilDesktop" class="recurring-until-input" aria-label="Ripeti fino a">
+                            <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
+                        </div>
+
+                        <details class="form-advanced">
+                            <summary>⚙️ Opzioni avanzate</summary>
+                            <div class="form-advanced-body">
+                                <p class="comp-hint" style="margin:0 0 8px;">Prevista evidenzia Stima; Sostenuta evidenzia Pagato.</p>
+                                <div class="shared-toggle-wrapper">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="sharedToggleDesktop" aria-label="Spesa condivisa">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="toggle-label">Spesa condivisa</span>
+                                </div>
+                                <div class="shared-panel" id="sharedPanelDesktop">
+                                    <div class="shared-person-row">
+                                        <select id="sharedPersonDesktop" style="flex:1;"></select>
+                                        <button type="button" class="btn-plus-solid" id="btnNewPersonDesktop" title="Nuova persona">➕</button>
+                                    </div>
+                                    <div class="preset-grid" id="sharedPresetsDesktop">
+                                        <button type="button" class="preset-card active" data-preset="p1">🟢 Hai pagato tu, dividi equamente</button>
+                                        <button type="button" class="preset-card" data-preset="p2">🔵 Per conto di <b class="preset-friend">…</b></button>
+                                        <button type="button" class="preset-card" data-preset="p3">🟡 <b class="preset-friend">…</b> ha pagato, dividi equamente</button>
+                                        <button type="button" class="preset-card" data-preset="p4">🔴 <b class="preset-friend">…</b> ha pagato per te</button>
+                                    </div>
+                                    <button type="button" class="btn-advanced" id="btnAdvancedSplitDesktop">⚙️ Personalizza quote (% / €)</button>
+                                    <div class="shared-detail-fields" id="sharedDetailFieldsDesktop"></div>
+                                </div>
+                            </div>
+                        </details>
+                        <button class="btn-spesa" data-act="addExpense">Registra Spesa</button>
+                    </div>
+
+                    <div class="form-pane" id="formPaneCondivise">
+                        <p class="comp-hint">Gestisci debiti e crediti con persone o gruppi.</p>
+                        <button class="btn-spesa btn-violet" data-act="openCondivisePopup">Apri Saldi & Gruppi</button>
+                    </div>
+                </div>
+
+        <!-- SEZIONE GRAFICO: su desktop nel rail; su mobile order lo riporta sotto il riepilogo -->
+        <div class="chart-card-single" id="macroBudgetChartCard">
+            <div class="chart-card-header">
+                <span class="chart-title">PROGRESSO SPESA MESE CORRENTE</span>
+                <span class="chart-total-pct" id="macroChartTotalPct">0%</span>
+            </div>
+            <div class="chart-metrics" id="macroChartMetrics"></div>
+            <div class="chart-legend" id="macroChartLegend"></div>
+            <div class="chart-container-box" id="macroChartContainerBox">
+                <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa mese corrente"></canvas>
+            </div>
+        </div>
+
+                <!-- LEFTPANEL: CALENDARIO COMPATTO -->
+                <div class="card comp-card hide-mobile" id="calendarCard">
+                    <div class="pane-title">📅 Calendario <span class="pane-hint">Clicca un giorno per filtrare il registro</span></div>
+                    <div class="calendar-grid" id="calendarGridCompact"></div>
+                </div>
     </div>
 
         <div id="popup-rendiconto" class="popup-overlay" data-act-close="closeRendicontoPopup">
@@ -385,100 +495,6 @@
         <div class="main-layout">
             <!-- LEFT PANEL -->
             <div class="layout-column left-panel">
-
-                <!-- LEFTPANEL: CALENDARIO COMPATTO -->
-                <div class="card comp-card hide-mobile" id="calendarCard">
-                    <div class="pane-title">📅 Calendario <span class="pane-hint">Clicca un giorno per filtrare il registro</span></div>
-                    <div class="calendar-grid" id="calendarGridCompact"></div>
-                </div>
-
-                <!-- LEFTPANEL: FORMS A TAB (ENTRATA | SPESA | CONDIVISE) -->
-                <div class="card comp-card hide-mobile" id="nuovaVoceCard">
-                    <div class="pane-title">➕ Nuova Voce</div>
-                    <div class="form-tabs" role="tablist" aria-label="Form di inserimento">
-                        <button type="button" class="form-tab" data-formtab="entrata" data-act="switchFormTab" data-args='["entrata"]'>💰 Entrata</button>
-                        <button type="button" class="form-tab active" data-formtab="spesa" data-act="switchFormTab" data-args='["spesa"]'>💳 Spesa</button>
-                        <button type="button" class="form-tab" data-formtab="condivise" data-act="switchFormTab" data-args='["condivise"]'>👥 Condivise</button>
-                    </div>
-
-                    <div class="form-pane" id="formPaneEntrata">
-                        <div class="grid-inputs">
-                            <div class="input-group"><label for="incDate">Data</label><input type="date" id="incDate"></div>
-                            <div class="input-group"><label for="incDesc">Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
-                        </div>
-                        <div class="input-group"><label for="incAmount">Somma (€)</label><input type="number" id="incAmount" step="0.01" placeholder="0.00"></div>
-                        <button class="btn-entrate" data-act="addIncome">Registra Entrata</button>
-                    </div>
-
-                    <div class="form-pane active" id="formPaneSpesa">
-                        <div class="adv-section exp-type-row">
-                            <span class="shared-field-label">Tipo voce</span>
-                            <div class="split-method-pills">
-                                <button type="button" class="split-pill" data-exp-type="planned" data-act="setExpenseTypePill" data-el>📌 Prevista</button>
-                                <button type="button" class="split-pill active" data-exp-type="actual" data-act="setExpenseTypePill" data-el>💸 Sostenuta</button>
-                            </div>
-                        </div>
-                        <div class="grid-inputs">
-                            <div class="input-group"><label for="expDate">Data</label><input type="date" id="expDate"></div>
-                            <div class="input-group"><label for="expenseCategory">Categoria</label><select id="expenseCategory"></select></div>
-                        </div>
-                        <div class="input-group"><label for="expDesc">Nota</label><input type="text" id="expDesc" placeholder="Es. Conad..."></div>
-                        <div class="grid-inputs">
-                            <div class="input-group"><label for="expPlanned">Stima (€)</label><input type="number" id="expPlanned" step="0.01" placeholder="0.00"></div>
-                            <div class="input-group"><label for="expActual">Pagato (€)</label><input type="number" id="expActual" step="0.01" placeholder="0.00"></div>
-                        </div>
-                        <div class="input-group">
-                            <label for="expShared">Quota a tuo carico % (opzionale)</label>
-                            <input type="number" id="expShared" step="1" placeholder="Es. 50 per dividere a metà">
-                        </div>
-                        <div class="recurring-toggle-wrapper">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="recurringToggleDesktop" aria-label="Ripeti ogni mese">
-                                <span class="toggle-slider"></span>
-                            </label>
-                            <span class="toggle-label">Ripeti ogni mese</span>
-                        </div>
-                        <div class="recurring-until-container" id="recurringUntilContainerDesktop">
-                            <input type="month" id="recurringUntilDesktop" class="recurring-until-input" aria-label="Ripeti fino a">
-                            <span class="recurring-hint">Facoltativo: scegli il mese, altrimenti lascia vuoto per ripetere ogni mese</span>
-                        </div>
-
-                        <details class="form-advanced">
-                            <summary>⚙️ Opzioni avanzate</summary>
-                            <div class="form-advanced-body">
-                                <p class="comp-hint" style="margin:0 0 8px;">Prevista evidenzia Stima; Sostenuta evidenzia Pagato.</p>
-                                <div class="shared-toggle-wrapper">
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="sharedToggleDesktop" aria-label="Spesa condivisa">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                    <span class="toggle-label">Spesa condivisa</span>
-                                </div>
-                                <div class="shared-panel" id="sharedPanelDesktop">
-                                    <div class="shared-person-row">
-                                        <select id="sharedPersonDesktop" style="flex:1;"></select>
-                                        <button type="button" class="btn-plus-solid" id="btnNewPersonDesktop" title="Nuova persona">➕</button>
-                                    </div>
-                                    <div class="preset-grid" id="sharedPresetsDesktop">
-                                        <button type="button" class="preset-card active" data-preset="p1">🟢 Hai pagato tu, dividi equamente</button>
-                                        <button type="button" class="preset-card" data-preset="p2">🔵 Per conto di <b class="preset-friend">…</b></button>
-                                        <button type="button" class="preset-card" data-preset="p3">🟡 <b class="preset-friend">…</b> ha pagato, dividi equamente</button>
-                                        <button type="button" class="preset-card" data-preset="p4">🔴 <b class="preset-friend">…</b> ha pagato per te</button>
-                                    </div>
-                                    <button type="button" class="btn-advanced" id="btnAdvancedSplitDesktop">⚙️ Personalizza quote (% / €)</button>
-                                    <div class="shared-detail-fields" id="sharedDetailFieldsDesktop"></div>
-                                </div>
-                            </div>
-                        </details>
-                        <button class="btn-spesa" data-act="addExpense">Registra Spesa</button>
-                    </div>
-
-                    <div class="form-pane" id="formPaneCondivise">
-                        <p class="comp-hint">Gestisci debiti e crediti con persone o gruppi.</p>
-                        <button class="btn-spesa btn-violet" data-act="openCondivisePopup">Apri Saldi & Gruppi</button>
-                    </div>
-                </div>
-
             </div>
 
             <!-- CENTER PANEL: mobile micro-grid only -->
@@ -488,30 +504,10 @@
 
             <!-- RIGHT PANEL -->
             <div class="layout-column right-panel">
-
-                <!-- REGISTRO SPESE -->
-                <div class="card comp-card hide-mobile" id="entriesCard">
-                    <div class="pane-title" id="listTitle">📋 Registro Spese</div>
-                    <div class="day-filter-chip" id="dayFilterChip" hidden>
-                        <span id="dayFilterLabel">Giorno selezionato</span>
-                        <button type="button" class="day-filter-clear" data-act="clearDateFilter">✕ Togli filtro giorno</button>
-                    </div>
-                    <div class="search-bar-container">
-                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()" aria-label="Cerca spesa">
-                        <button class="btn-clear-filters" id="btnClearAllFilters" data-act="clearAllFilters">✕ Togli filtri</button>
-                    </div>
-                    <div id="entriesList" style="padding-bottom: 10px;"></div>
-                    <div class="grid-inputs" style="margin-bottom: 0;">
-                        <button class="btn-csv" data-act="exportCSV">📥 CSV</button>
-                        <button class="btn-csv btn-violet" data-act="exportPDF">📄 PDF</button>
-                    </div>
-                </div>
-
                 <!-- IA + NOTE: su desktop il pannello #iaNotesModal è inline -->
                 <div class="card comp-card hide-mobile hide-desktop ia-quick-card">
                     <button type="button" class="ia-month-trigger ia-quick-trigger" data-act="openIaNotesModal"><i class="fas fa-robot" aria-hidden="true"></i> IA &amp; Note del Mese</button>
                 </div>
-
             </div>
         </div>
     </div>
@@ -584,6 +580,7 @@
         </section>
 
         <section class="analisi-block analisi-block-savings">
+        <h3 class="analisi-section-title hide-mobile">Risparmi e investimenti</h3>
         <div class="savings-card" id="savingsCard">
             <div class="savings-header">Risparmi &amp; Investimenti</div>
             <div class="savings-metric">
@@ -1250,6 +1247,6 @@
     </div>
     <script src="js/supabase-adapter.js"></script>
     <script src="js/ui-dialogs.js"></script>
-    <script src="script.js?v=2.11"></script>
+    <script src="script.js?v=2.13"></script>
 </body>
 </html>

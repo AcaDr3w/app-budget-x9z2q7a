@@ -1,5 +1,25 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Registro sotto IA, no CSV/PDF, card tonde
+
+### Completed Changes
+- **vuoto IA–registro**: `#entriesCard` è nella colonna sinistra, subito dopo Assistente I.A. (non più `grid-row:2` sotto il rail).
+- **export**: rimossi tasti CSV/PDF e le funzioni `exportCSV` / `exportPDF` / `ensureHtml2Pdf`.
+- **radius**: card mese e progresso spesa a 20px; insight I.A. a pill staccata dal bordo.
+- **cache**: `style.css?v=3.6`, `script.js?v=2.13`, SW `bilancio-pwa-v21`.
+
+### Status: COMPLETATO.
+
+## [2026-10-16] - Desktop: niente vuoto centrale, macro e record
+
+### Completed Changes
+- **vuoto**: `mese-col-main` è una colonna flex (non condivide le righe col form).
+- **macro**: 4 badge con tinta pastello, icona in tile, progress più leggibile.
+- **analisi**: titolo «Risparmi e investimenti» come le altre sezioni; record in 3 colonne centrate.
+- **cache**: `style.css?v=3.5`, `script.js?v=2.12`, SW `bilancio-pwa-v20`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Desktop Mese v3 + refactor Analisi
 
 ### Completed Changes
