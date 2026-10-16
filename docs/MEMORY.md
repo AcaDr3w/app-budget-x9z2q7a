@@ -1,5 +1,21 @@
 # Project Core Memory
 
+## DESKTOP LAYOUT v3 (2026-10-16)
+
+**Stato**: la pagina desktop scrolla (niente lock overflow). Mese usa `display:contents` + grid areas.
+
+**Mese desktop**:
+- Centro: selettore mese (frecce), KPI, macro, Categorie & Budget, Assistente I.A., registro + cerca.
+- Destra: Nuova voce (tab Spesa + Sostenuta di default) → grafico progresso → calendario in basso.
+- Click categoria → `startExpenseForCategory` (tab Spesa, categoria, focus Pagato).
+- Click giorno calendario → filtra registro (ritoccare lo stesso giorno o «Togli filtro giorno» toglie il filtro).
+- Hub: nascosti Ricerca e Condividi (la cerca è sul registro; Condivise è nel form).
+- CSS ≤767 intatto.
+
+**Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
+
+**Cache**: `style.css?v=3.4`, `script.js?v=2.11`, SW `bilancio-pwa-v19`.
+
 ## DESKTOP LAYOUT v2 (2026-10-16)
 
 **Stato**: desktop non è più la UI mobile stirata. ≥768 è un layout Operate a pannelli: centro = contenuto, destra = inserimento. I popup restano solo dove serve focus (rendiconto, condivise, settings).

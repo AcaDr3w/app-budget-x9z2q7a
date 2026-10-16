@@ -16,7 +16,7 @@
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=3.3">
+    <link rel="stylesheet" href="style.css?v=3.4">
 </head>
 <body>
 
@@ -118,10 +118,12 @@
     <!-- CARD RIEPILOGO UNICA -->
     <div class="summary-card-single" id="mobileSummaryCard">
         <div class="summary-card-top">
+            <button type="button" class="month-nav-btn" id="heroPrevMonth" aria-label="Mese precedente"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
             <button type="button" class="month-selector-badge" id="heroMonthPill" aria-label="Seleziona mese">
                 <span id="heroMonthDisplay">AGOSTO 2026</span>
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
+            <button type="button" class="month-nav-btn" id="heroNextMonth" aria-label="Mese successivo"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
         </div>
         <div class="summary-card-bottom">
             <div class="summary-col col-entrate clickable" role="button" tabindex="0" data-act="openRendicontoPopup" data-args='["entrate"]'>
@@ -151,6 +153,7 @@
             <span class="chart-title">PROGRESSO SPESA MESE CORRENTE</span>
             <span class="chart-total-pct" id="macroChartTotalPct">0%</span>
         </div>
+        <div class="chart-metrics" id="macroChartMetrics"></div>
         <div class="chart-legend" id="macroChartLegend"></div>
         <div class="chart-container-box" id="macroChartContainerBox">
             <canvas id="macroChartCanvas" role="img" aria-label="Grafico progresso spesa mese corrente"></canvas>
@@ -158,6 +161,7 @@
     </div>
 
     <div id="annualMonthAlert" class="annual-deadline-box" style="display:none;"></div>
+    <div class="mese-macros-block">
     <h3 class="recent-transactions-title" style="margin-top:10px;">CATEGORIE PRINCIPALI</h3>
     <div class="mobile-dashboard-grid">
         <!-- Casa -->
@@ -233,10 +237,11 @@
             </div>
         </div>
     </div>
+    </div>
 
     <!-- Desktop: microcategorie al centro (non nel rail) -->
     <div class="card comp-card hide-mobile" id="rendicontoCard">
-        <div class="pane-title">Categorie &amp; Budget <span class="pane-hint">Clicca una card per filtrare il registro</span></div>
+        <div class="pane-title">Categorie &amp; Budget <span class="pane-hint">Clicca una card per aprire Nuova voce → Spesa</span></div>
         <div id="categoryGridDesktop" class="category-grid-desktop"></div>
     </div>
 
@@ -268,7 +273,7 @@
         <div id="mese-action-hub">
             <button type="button" data-action="search"><span class="hub-icon">🔍</span><span class="hub-text">Ricerca Spese</span></button>
             <button type="button" data-action="ia"><span class="hub-icon">🤖</span><span class="hub-text">Assistente I.A.</span></button>
-            <button type="button" data-action="condivise"><span class="hub-icon">👥</span><span class="hub-text">Condividi Budget</span></button>
+            <button type="button" data-action="condivise" class="hub-condivise"><span class="hub-icon">👥</span><span class="hub-text">Condividi Budget</span></button>
         </div>
     </div>
 
@@ -382,21 +387,21 @@
             <div class="layout-column left-panel">
 
                 <!-- LEFTPANEL: CALENDARIO COMPATTO -->
-                <div class="card comp-card hide-mobile">
-                    <div class="pane-title">📅 Calendario</div>
+                <div class="card comp-card hide-mobile" id="calendarCard">
+                    <div class="pane-title">📅 Calendario <span class="pane-hint">Clicca un giorno per filtrare il registro</span></div>
                     <div class="calendar-grid" id="calendarGridCompact"></div>
                 </div>
 
                 <!-- LEFTPANEL: FORMS A TAB (ENTRATA | SPESA | CONDIVISE) -->
-                <div class="card comp-card hide-mobile">
+                <div class="card comp-card hide-mobile" id="nuovaVoceCard">
                     <div class="pane-title">➕ Nuova Voce</div>
                     <div class="form-tabs" role="tablist" aria-label="Form di inserimento">
-                        <button type="button" class="form-tab active" data-formtab="entrata" data-act="switchFormTab" data-args='["entrata"]'>💰 Entrata</button>
-                        <button type="button" class="form-tab" data-formtab="spesa" data-act="switchFormTab" data-args='["spesa"]'>💳 Spesa</button>
+                        <button type="button" class="form-tab" data-formtab="entrata" data-act="switchFormTab" data-args='["entrata"]'>💰 Entrata</button>
+                        <button type="button" class="form-tab active" data-formtab="spesa" data-act="switchFormTab" data-args='["spesa"]'>💳 Spesa</button>
                         <button type="button" class="form-tab" data-formtab="condivise" data-act="switchFormTab" data-args='["condivise"]'>👥 Condivise</button>
                     </div>
 
-                    <div class="form-pane active" id="formPaneEntrata">
+                    <div class="form-pane" id="formPaneEntrata">
                         <div class="grid-inputs">
                             <div class="input-group"><label for="incDate">Data</label><input type="date" id="incDate"></div>
                             <div class="input-group"><label for="incDesc">Causale</label><input type="text" id="incDesc" placeholder="Es. Stipendio..."></div>
@@ -405,7 +410,14 @@
                         <button class="btn-entrate" data-act="addIncome">Registra Entrata</button>
                     </div>
 
-                    <div class="form-pane" id="formPaneSpesa">
+                    <div class="form-pane active" id="formPaneSpesa">
+                        <div class="adv-section exp-type-row">
+                            <span class="shared-field-label">Tipo voce</span>
+                            <div class="split-method-pills">
+                                <button type="button" class="split-pill" data-exp-type="planned" data-act="setExpenseTypePill" data-el>📌 Prevista</button>
+                                <button type="button" class="split-pill active" data-exp-type="actual" data-act="setExpenseTypePill" data-el>💸 Sostenuta</button>
+                            </div>
+                        </div>
                         <div class="grid-inputs">
                             <div class="input-group"><label for="expDate">Data</label><input type="date" id="expDate"></div>
                             <div class="input-group"><label for="expenseCategory">Categoria</label><select id="expenseCategory"></select></div>
@@ -434,14 +446,7 @@
                         <details class="form-advanced">
                             <summary>⚙️ Opzioni avanzate</summary>
                             <div class="form-advanced-body">
-                                <div class="adv-section">
-                                    <span class="shared-field-label">Tipo voce</span>
-                                    <div class="split-method-pills">
-                                        <button type="button" class="split-pill active" data-exp-type="planned" data-act="setExpenseTypePill" data-el>📌 Prevista</button>
-                                        <button type="button" class="split-pill" data-exp-type="actual" data-act="setExpenseTypePill" data-el>💸 Sostenuta</button>
-                                    </div>
-                                    <p class="comp-hint" style="margin:6px 0 0;">Evidenzia il campo complementare: Prevista → Stima, Sostenuta → Pagato.</p>
-                                </div>
+                                <p class="comp-hint" style="margin:0 0 8px;">Prevista evidenzia Stima; Sostenuta evidenzia Pagato.</p>
                                 <div class="shared-toggle-wrapper">
                                     <label class="toggle-switch">
                                         <input type="checkbox" id="sharedToggleDesktop" aria-label="Spesa condivisa">
@@ -487,9 +492,13 @@
                 <!-- REGISTRO SPESE -->
                 <div class="card comp-card hide-mobile" id="entriesCard">
                     <div class="pane-title" id="listTitle">📋 Registro Spese</div>
+                    <div class="day-filter-chip" id="dayFilterChip" hidden>
+                        <span id="dayFilterLabel">Giorno selezionato</span>
+                        <button type="button" class="day-filter-clear" data-act="clearDateFilter">✕ Togli filtro giorno</button>
+                    </div>
                     <div class="search-bar-container">
                         <input type="text" id="searchInput" class="search-input" placeholder="🔍 Cerca spesa, categoria, data..." oninput="handleSearch()" aria-label="Cerca spesa">
-                        <button class="btn-clear-filters" id="btnClearAllFilters" data-act="clearAllFilters">✕ Filtri</button>
+                        <button class="btn-clear-filters" id="btnClearAllFilters" data-act="clearAllFilters">✕ Togli filtri</button>
                     </div>
                     <div id="entriesList" style="padding-bottom: 10px;"></div>
                     <div class="grid-inputs" style="margin-bottom: 0;">
@@ -512,10 +521,10 @@
 
         <!-- DESKTOP: IA storica inline (niente popup) -->
         <div class="card ia-history-inline hide-mobile">
-            <h2 class="collapsible" data-act="toggleSection" data-args='["iaHistorySection"]' data-el>🧠 Analisi Storica I.A. Multimese</h2>
+            <h2 class="analisi-section-title">Analisi I.A. del periodo</h2>
             <div class="collapsible-content" id="iaHistorySection">
-                <p style="font-size: 12px; margin-bottom: 10px; color:#475569;">L'IA analizzerà tutti i mesi archiviati per trovare sforamenti ricorrenti e punti deboli.</p>
-                <button class="btn-ia" id="btnHistoryIA" data-act="runHistoryAnalysisIA">🔍 Genera Resoconto Storico</button>
+                <p class="analisi-section-copy">L'IA legge i mesi archiviati e segnala sforamenti ricorrenti e punti deboli.</p>
+                <button class="btn-ia" id="btnHistoryIA" data-act="runHistoryAnalysisIA">Genera resoconto storico</button>
                 <div id="iaHistoryResponse" class="ia-response-box"></div>
             </div>
         </div>
@@ -531,6 +540,8 @@
             </select>
         </div>
 
+        <section class="analisi-block analisi-block-kpi">
+        <h3 class="analisi-section-title hide-mobile">Panoramica del periodo</h3>
         <!-- MOBILE: AI INSIGHT CARD (hidden on desktop) -->
               <div class="ai-insight-card" id="aiInsightCard" role="button" tabindex="0" data-act="onAiInsightCardTap">
             <span class="ai-insight-icon" aria-hidden="true">✨</span>
@@ -564,10 +575,15 @@
                 <div class="trend-delta trend-flat" id="budgetDiffDelta"></div>
             </div>
         </div>
+        </section>
 
+        <section class="analisi-block analisi-block-signals">
+        <h3 class="analisi-section-title hide-mobile">Segnali e anomalie</h3>
         <!-- MOBILE: CAROUSEL ANOMALIE + SINTESI RISPARMI (hidden on desktop) -->
         <div class="anomaly-carousel" id="anomalyCarousel" aria-label="Anomalie di spesa"></div>
+        </section>
 
+        <section class="analisi-block analisi-block-savings">
         <div class="savings-card" id="savingsCard">
             <div class="savings-header">Risparmi &amp; Investimenti</div>
             <div class="savings-metric">
@@ -585,9 +601,10 @@
                 <div class="savings-target-label" id="savTargetLabel">Target 20%</div>
             </div>
         </div>
+        </section>
 
         <div class="card" id="recordsHubContainer">
-            <h2 class="hide-mobile">🏆 Hub dei Record Personali</h2>
+            <h2 class="analisi-section-title hide-mobile">Record personali</h2>
             <div class="records-hub-scroll">
                 <div class="record-card record-card-violet">
                     <div class="record-label">Mese d'Oro</div>
@@ -605,12 +622,13 @@
         </div>
 
         <div class="card" id="chartsCard">
+            <h2 class="analisi-section-title hide-mobile">Andamento nel tempo</h2>
             <div class="chart-toggle-pill">
                 <button class="chart-toggle-btn active" data-chart="bars">📊 Storico Barrette</button>
                 <button class="chart-toggle-btn" data-chart="line">📈 Andamento Linee</button>
             </div>
             <div class="chart-panel active" id="chartPanelBars">
-                <h2 class="hide-mobile">📊 Andamento Storico Plurimensile</h2>
+                <h2 class="hide-mobile hide-desktop">📊 Andamento Storico Plurimensile</h2>
                 <div class="large-chart-container"><canvas id="historyBarChart" role="img" aria-label="Grafico storico barrette delle spese"></canvas></div>
             </div>
             <div class="chart-panel" id="chartPanelLine">
@@ -621,8 +639,8 @@
         </div>
 
         <!-- DESKTOP TABLE (hidden on mobile) -->
-        <div class="card hide-mobile">
-            <h2>📋 Registro Mesi Archiviati</h2>
+        <div class="card hide-mobile" id="analisiArchiveCard">
+            <h2 class="analisi-section-title">Mesi archiviati</h2>
             <div class="table-responsive">
                 <table>
                     <thead><tr>
@@ -1232,6 +1250,6 @@
     </div>
     <script src="js/supabase-adapter.js"></script>
     <script src="js/ui-dialogs.js"></script>
-    <script src="script.js?v=2.10"></script>
+    <script src="script.js?v=2.11"></script>
 </body>
 </html>

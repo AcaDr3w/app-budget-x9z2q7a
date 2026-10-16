@@ -1,5 +1,17 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Desktop Mese v3 + refactor Analisi
+
+### Completed Changes
+- **scroll**: html/body/container/tab `overflow:visible` ≥768 (niente lock viewport).
+- **mese**: categorie su; registro al centro con cerca; form Spesa+Sostenuta in alto a destra; grafico nel rail; calendario in basso (filtra per giorno, chip per togliere).
+- **click categoria**: apre Nuova voce → Spesa con categoria e focus su Pagato.
+- **hub**: Condividi e Ricerca nascosti su desktop.
+- **analisi**: sezioni titolate, griglia 2 col, IA in fondo.
+- **cache**: `style.css?v=3.4`, `script.js?v=2.11`, SW `bilancio-pwa-v19`.
+
+### Status: COMPLETATO. Verifica browser 1440 Mese+Analisi e 390 mobile.
+
 ## [2026-10-16] - Insight IA: override `button { color: white }`
 
 ### Completed Changes

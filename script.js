@@ -483,6 +483,8 @@ function setupMonthNavigation() {
     const input = document.getElementById('currentMonth');
     const prevBtn = document.getElementById('btnPrevMonth');
     const nextBtn = document.getElementById('btnNextMonth');
+    const heroPrev = document.getElementById('heroPrevMonth');
+    const heroNext = document.getElementById('heroNextMonth');
     if (!pill || !input) return;
 
     const openPicker = () => {
@@ -506,6 +508,8 @@ function setupMonthNavigation() {
     };
     if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(-1); });
     if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(1); });
+    if (heroPrev) heroPrev.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(-1); });
+    if (heroNext) heroNext.addEventListener('click', (e) => { e.stopPropagation(); shiftMonth(1); });
 }
 
 // =====================================================================
@@ -652,6 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTablistA11y();
     setupInlineActions();
     setupQuickAddRadial();
+    switchFormTab('spesa');
+    setExpenseTypePill(document.querySelector('#formPaneSpesa [data-exp-type="actual"]'));
     loadMonthData();
 });
 
@@ -2524,7 +2530,9 @@ function getDesktopSharedTotal() {
 }
 
 function setExpenseTypePill(el) {
-    document.querySelectorAll('.form-advanced [data-exp-type]').forEach(p => p.classList.toggle('active', p === el));
+    if (!el) el = document.querySelector('#formPaneSpesa [data-exp-type="actual"]');
+    if (!el) return;
+    document.querySelectorAll('#formPaneSpesa [data-exp-type]').forEach(p => p.classList.toggle('active', p === el));
     const type = el.dataset.expType;
     const stima = document.getElementById('expPlanned');
     const pagato = document.getElementById('expActual');
@@ -4058,15 +4066,27 @@ document.addEventListener('DOMContentLoaded', () => {
     setupFutureSwipeToClose();
 });
 
+function allUserCategoryNames() {
+    let cats = [...(userCategories || [])];
+    if (!cats.length) {
+        cats = Object.values(userMacroCategories || {}).flat().filter(Boolean);
+    }
+    return [...new Set(cats)].sort();
+}
+
 function renderCategoriesDropdown() {
     const select = document.getElementById('expenseCategory');
     if (!select) return;
+    const current = select.value;
     select.innerHTML = '';
-    const sorted = [...userCategories].sort();
-    sorted.forEach(cat => {
+    allUserCategoryNames().forEach(cat => {
         const icon = getCatIcon(cat);
-        let opt = document.createElement('option'); opt.value = cat; opt.innerText = `${icon} ${cat}`; select.appendChild(opt);
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.innerText = `${icon} ${cat}`;
+        select.appendChild(opt);
     });
+    if (current && [...select.options].some(o => o.value === current)) select.value = current;
 }
 
 function renderCategorySettings() {
@@ -4488,11 +4508,7 @@ function renderCategoryGridDesktop(catSums) {
     if (!grid) return;
 
     grid.innerHTML = '';
-    let cats = [...userCategories];
-    if (!cats.length) {
-        cats = Object.values(userMacroCategories || {}).flat().filter(Boolean);
-    }
-    const sorted = [...new Set(cats)].sort();
+    const sorted = allUserCategoryNames();
     if (!sorted.length) {
         grid.innerHTML = '<p class="cat-grid-empty">Nessuna categoria. Aggiungile da account → Categorie.</p>';
         return;
@@ -4529,7 +4545,7 @@ function renderCategoryGridDesktop(catSums) {
             <span class="cat-grid-vals">${hasActivity ? fmtE(aVal) : '—'} <span style="color:#94a3b8;">/</span> <b class="${over ? 'over-budget' : ''}">${hasActivity ? fmtE(pVal) : '—'}</b></span>
             ${over ? `<span class="cat-grid-diff diff-minus">⚠ Sforato di ${fmtE(aVal - pVal)}</span>` : ''}
         `;
-        card.onclick = () => filterByCategory(cat);
+        card.onclick = () => startExpenseForCategory(cat);
         grid.appendChild(card);
     });
 }
@@ -4596,6 +4612,7 @@ async function updateUI() {
 }
 
 function renderEntriesList() {
+    updateDayFilterChip();
     const btnClear = document.getElementById('btnClearAllFilters');
     if (btnClear) btnClear.style.display = (selectedFilterDate || selectedFilterCategory || searchQuery !== "") ? 'inline-block' : 'none';
 
@@ -4704,7 +4721,7 @@ function renderCalendar() {
     for (let i=0; i<firstDayIndex; i++) { let e = document.createElement('div'); e.className = 'calendar-day empty'; grid.appendChild(e); }
     let cursor = new Date(range.start);
     while (cursor <= range.end) {
-        const ds = cursor.toISOString().slice(0,10);
+        const ds = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
         const hasPlanned = plannedDates.has(ds);
         const hasDeadline = monthWideDeadline || deadlineDates.has(ds) || recurringDeadline;
         const isHighlight = hasPlanned || hasDeadline;
@@ -4720,12 +4737,60 @@ function renderCalendar() {
 // =====================================================================
 function scrollToRegistry() {
     const card = document.getElementById('entriesCard');
-    const panel = card ? card.closest('.layout-column') : null;
-    if (panel && isDesktop()) panel.scrollTo({ top: 0, behavior: 'smooth' });
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     else document.getElementById('listTitle')?.scrollIntoView({ behavior: 'smooth' });
 }
 function filterByCategory(cat) { selectedFilterCategory = cat; selectedFilterDate = null; scrollToRegistry(); updateUI(); }
-function filterByDate(ds) { selectedFilterDate = ds; selectedFilterCategory = null; scrollToRegistry(); updateUI(); }
+function filterByDate(ds) {
+    selectedFilterDate = (selectedFilterDate === ds) ? null : ds;
+    selectedFilterCategory = null;
+    scrollToRegistry();
+    updateUI();
+}
+function clearDateFilter() {
+    selectedFilterDate = null;
+    updateUI();
+}
+function formatFilterDay(ds) {
+    if (!ds) return '';
+    const [y, m, d] = ds.split('-').map(Number);
+    const months = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    return `${d} ${months[(m || 1) - 1] || ''} ${y}`;
+}
+function updateDayFilterChip() {
+    const chip = document.getElementById('dayFilterChip');
+    const label = document.getElementById('dayFilterLabel');
+    const title = document.getElementById('listTitle');
+    if (chip) {
+        const on = !!selectedFilterDate;
+        chip.hidden = !on;
+        if (label) label.textContent = on ? `Filtro: ${formatFilterDay(selectedFilterDate)}` : '';
+    }
+    if (title) title.textContent = selectedFilterDate ? `📋 Spese del ${formatFilterDay(selectedFilterDate)}` : '📋 Registro Spese';
+}
+function startExpenseForCategory(cat) {
+    switchFormTab('spesa');
+    renderCategoriesDropdown();
+    const sel = document.getElementById('expenseCategory');
+    if (sel && cat) {
+        if (![...sel.options].some(o => o.value === cat)) {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.innerText = `${getCatIcon(cat)} ${cat}`;
+            sel.appendChild(opt);
+        }
+        sel.value = cat;
+    }
+    const actualPill = document.querySelector('#formPaneSpesa [data-exp-type="actual"]');
+    if (actualPill) setExpenseTypePill(actualPill);
+    const form = document.getElementById('nuovaVoceCard');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const amount = document.getElementById('expActual');
+    if (amount) {
+        amount.focus();
+        amount.select();
+    }
+}
 let searchDebounceTimer = null;
 function handleSearch() {
     searchQuery = document.getElementById('searchInput').value.toLowerCase();
@@ -5228,11 +5293,18 @@ async function renderMacroBudgetChart() {
             ? Math.round((totalSostenute / totalPreviste) * 100) + '%'
             : '';
     }
+    const metricsEl = document.getElementById('macroChartMetrics');
+    if (metricsEl) {
+        metricsEl.innerHTML =
+            `<div class="chart-metric chart-metric-entrate"><span>Entrate</span><b>${fmtE(totalEntrate, 0)}</b></div>` +
+            `<div class="chart-metric chart-metric-previste"><span>Previste</span><b>${fmtE(totalPreviste, 0)}</b></div>` +
+            `<div class="chart-metric chart-metric-sostenute"><span>Sostenute</span><b>${fmtE(totalSostenute, 0)}</b></div>`;
+    }
     if (legendEl) {
         legendEl.innerHTML =
             `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.entrate};"></span><span class="chart-legend-label">Entrate</span>` +
-            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.previste};"></span><span class="chart-legend-label">Spese Previste</span>` +
-            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.sostenute};"></span><span class="chart-legend-label">Spese Sostenute</span>`;
+            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.previste};"></span><span class="chart-legend-label">Previste</span>` +
+            `<span class="chart-legend-dot" style="background:${MESE_CHART_COLORS.sostenute};"></span><span class="chart-legend-label">Sostenute</span>`;
     }
 
     let chartRendered = false;
@@ -5247,7 +5319,7 @@ async function renderMacroBudgetChart() {
                     backgroundColor: colors,
                     borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
                     borderSkipped: false,
-                    barThickness: 22
+                    barThickness: isDesktop() ? 28 : 22
                 }]
             },
             options: {
