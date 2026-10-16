@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Insight IA: override `button { color: white }`
+
+### Completed Changes
+- **causa**: `#heroInsightPill` è un `<button>`, la regola globale `button { color: white }` rendeva il messaggio rotante bianco su fondo chiaro.
+- **fix**: colore `--ia-strong` (`#581c87`) e fondo `--ia-bg-soft` con `!important` sul pulsante e sullo span, anche nel media mobile.
+- **cache**: `style.css?v=3.3`, `script.js?v=2.10`, SW `bilancio-pwa-v18`.
+
+### Status: COMPLETATO. Push origin/main + verifica GitHub Pages.
+
 ## [2026-10-16] - Desktop: contrasto insight IA e card visibili
 
 ### Completed Changes

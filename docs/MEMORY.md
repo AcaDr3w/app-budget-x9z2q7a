@@ -10,7 +10,7 @@
 
 **JS**: `isDesktop()` continua a bloccare lo sheet. `openSearchPopup` / hub IA / `openFutureSheet` / `openInvestAddSheet` / `onAiInsightCardTap` hanno ramo desktop.
 
-**Cache**: `style.css?v=3.2`, `script.js?v=2.9`, SW `bilancio-pwa-v17`. Insight hero: fondo `--ia-bg-soft`, testo `--ia-strong` 700. Griglia categorie: fallback da `userMacroCategories` se `userCategories` è vuoto.
+**Cache**: `style.css?v=3.3`, `script.js?v=2.10`, SW `bilancio-pwa-v18`. Insight hero: `button{color:white}` override su `#heroInsightPill` con `--ia-strong` `!important`. Griglia categorie: fallback da `userMacroCategories` se `userCategories` è vuoto.
 
 ## DESKTOP = UI MOBILE ALLARGATA (2026-10-15)
 
@@ -25,7 +25,7 @@
 - Previsioni/Invest: `.future-mobile-dashboard` / `.invest-mobile-dashboard`. JS: solo `futureChartCanvas` e `investAssetGrid`.
 - Sheet/FAB/bottom-nav restano nascosti; `isDesktop()` continua a bloccare `openTransactionSheet`.
 
-**Cache**: `style.css?v=3.2`, `script.js?v=2.9`, SW `bilancio-pwa-v17`. Insight hero: fondo `--ia-bg-soft`, testo `--ia-strong` 700. Griglia categorie: fallback da `userMacroCategories` se `userCategories` è vuoto.
+**Cache**: `style.css?v=3.3`, `script.js?v=2.10`, SW `bilancio-pwa-v18`. Insight hero: `button{color:white}` override su `#heroInsightPill` con `--ia-strong` `!important`. Griglia categorie: fallback da `userMacroCategories` se `userCategories` è vuoto.
 
 ## SPESE CONDIVISE POPUP (2026-10-15)
 
@@ -42,7 +42,7 @@
 
 **ID**: `sameId` / `findPersonById` / `findGroupById` su match people/gruppi/partecipanti. Dopo Salda: `loadPeopleGroups` + re-render dettaglio.
 
-**Cache**: `style.css?v=3.2`, `script.js?v=2.9`, SW `bilancio-pwa-v17`. Insight hero: fondo `--ia-bg-soft`, testo `--ia-strong` 700. Griglia categorie: fallback da `userMacroCategories` se `userCategories` è vuoto. Script: `js/ui-dialogs.js` prima di `script.js`.
+**Cache**: `style.css?v=3.3`, `script.js?v=2.10`, SW `bilancio-pwa-v18`. Insight hero: `button{color:white}` override su `#heroInsightPill` con `--ia-strong` `!important`. Griglia categorie: fallback da `userMacroCategories` se `userCategories` è vuoto. Script: `js/ui-dialogs.js` prima di `script.js`.
 
 ## 🔍 AUDIT DEBUG FUNZIONI (2026-10-15, COMPLETATO)
 
@@ -66,7 +66,7 @@
 - Id ancora assenti di proposito (UI tolta): `iaProviderSelect`, `futureCalMonthM`, `depositSavingsSelect`. Restano null-guarded.
 - `data-act` 63 distinti tutti risolvibili (2 in supabase-adapter.js: `handleLogin`/`handleSignup`). `genId` duplicata ma identica → innocuo.
 
-**PWA cache**: `CACHE_NAME = bilancio-pwa-v17`; `script.js?v=2.9`, `style.css?v=3.2`.
+**PWA cache**: `CACHE_NAME = bilancio-pwa-v18`; `script.js?v=2.10`, `style.css?v=3.3`.
 
 ## 🧹 CONFIG LOCALI STRUMENTI: SOLO SKILLS + MCP (2026-10-15)
 - **Politica repo**: gli strumenti usano la config GLOBALE (`~/.config/opencode/opencode.jsonc`, `~/.pi/agent/`). Localmente si tengono SOLO skills e MCP. Niente model/provider/lsp/permission/plugin in locale.
