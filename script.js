@@ -1103,6 +1103,10 @@ let sheetTransactionType = 'actual'; // 'actual' for Sostenuta, 'planned' for Pr
 let editingExpenseId = null;
 
 function openTransactionSheet(categoryName, prefillAmount, prefillNote) {
+    if (isDesktop()) {
+        startExpenseForCategory(categoryName);
+        return;
+    }
     console.log("Card cliccata:", categoryName);
     sheetSelectedCategory = categoryName;
     sheetTransactionType = 'actual';
@@ -1228,6 +1232,40 @@ function closeTransactionSheet() {
     resetSharedSplitState();
 }
 
+function fillDesktopExpenseForm(exp) {
+    switchFormTab('spesa');
+    renderCategoriesDropdown();
+    const sel = document.getElementById('expenseCategory');
+    if (sel && exp.category) {
+        if (![...sel.options].some(o => o.value === exp.category)) {
+            const opt = document.createElement('option');
+            opt.value = exp.category;
+            opt.innerText = `${getCatIcon(exp.category)} ${exp.category}`;
+            sel.appendChild(opt);
+        }
+        sel.value = exp.category;
+    }
+    const dateEl = document.getElementById('expDate');
+    if (dateEl && exp.date) dateEl.value = exp.date;
+    const descEl = document.getElementById('expDesc');
+    if (descEl) descEl.value = exp.desc || '';
+    const plannedEl = document.getElementById('expPlanned');
+    if (plannedEl) plannedEl.value = exp.planned ? String(exp.planned) : '';
+    const actualEl = document.getElementById('expActual');
+    if (actualEl) actualEl.value = exp.actual ? String(exp.actual) : '';
+    const sharedEl = document.getElementById('expShared');
+    if (sharedEl) sharedEl.value = exp.sharedPercentage ? String(exp.sharedPercentage) : '';
+    const type = isOpenPlanned(exp) ? 'planned' : 'actual';
+    const pill = document.querySelector('#formPaneSpesa [data-exp-type="' + type + '"]');
+    if (pill) setExpenseTypePill(pill);
+    const btn = document.querySelector('#formPaneSpesa [data-act="addExpense"]');
+    if (btn) btn.textContent = 'Salva modifiche';
+    const form = document.getElementById('nuovaVoceCard');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const focusEl = type === 'planned' ? plannedEl : actualEl;
+    if (focusEl) { focusEl.focus(); focusEl.select(); }
+}
+
 function editExpense(id) {
     const exp = currentData.expenses.find(e => e.id === id);
     if (!exp) return;
@@ -1235,6 +1273,10 @@ function editExpense(id) {
     editingExpenseId = id;
     sheetSelectedCategory = exp.category;
     sheetTransactionType = isOpenPlanned(exp) ? 'planned' : 'actual';
+    if (isDesktop()) {
+        fillDesktopExpenseForm(exp);
+        return;
+    }
 
     const overlay = document.getElementById('sheetOverlay');
     const sheet = document.getElementById('bottomSheet');
@@ -4280,6 +4322,35 @@ async function addExpense() {
     let shared = parseFloat(document.getElementById('expShared').value) || 0;
     if (planned === 0 && actual === 0) { showToast('Inserisci Stima o Pagato', true); return; }
 
+    if (editingExpenseId) {
+        const idx = currentData.expenses.findIndex(e => e.id === editingExpenseId);
+        if (idx !== -1) {
+            const original = currentData.expenses[idx];
+            original.date = date;
+            original.month = (date || month).slice(0, 7);
+            original.category = cat;
+            original.desc = desc;
+            original.planned = planned;
+            original.actual = actual;
+            original.sharedPercentage = shared;
+            currentData.expenses[idx] = original;
+            await db.expenses.put(original);
+            editingExpenseId = null;
+            document.getElementById('expDesc').value = '';
+            document.getElementById('expPlanned').value = '';
+            document.getElementById('expActual').value = '';
+            document.getElementById('expShared').value = '';
+            const saveBtn = document.querySelector('#formPaneSpesa [data-act="addExpense"]');
+            if (saveBtn) saveBtn.textContent = 'Registra Spesa';
+            resetExpenseAdvancedForm();
+            updateUI();
+            checkDatabaseHealth();
+            showToast('Spesa aggiornata', false);
+            return;
+        }
+        editingExpenseId = null;
+    }
+
     // Split con persona (parity col bottom sheet mobile)
     const sharedToggle = document.getElementById('sharedToggleDesktop');
     const isShared = sharedToggle?.checked;
@@ -4382,9 +4453,39 @@ async function payExpense(id) {
         opt.classList.toggle('active', opt.dataset.type === 'actual');
     });
 }
+async function deleteSharedRecordsForExpense(expenseId) {
+    const sharedRows = (await db.sharedExpenses.toArray()).filter(se => String(se.expense_id) === String(expenseId));
+    const parts = await db.sharedExpenseParticipants.toArray();
+    const debts = await db.sharedDebts.toArray();
+    for (const se of sharedRows) {
+        for (const p of parts.filter(x => sameId(x.shared_expense_id, se.id))) {
+            await db.sharedExpenseParticipants.delete(p.id);
+        }
+        for (const d of debts.filter(x => String(x.expense_id) === String(se.id) || String(x.expense_id) === String(expenseId))) {
+            await db.sharedDebts.delete(d.id);
+        }
+        await db.sharedExpenses.delete(se.id);
+    }
+    const splits = await db.sharedExpenseSplits.toArray();
+    for (const s of splits.filter(x => String(x.expenseId) === String(expenseId))) {
+        await db.sharedExpenseSplits.delete(s.id);
+    }
+}
+
 async function deleteEntry(type, id) {
-    if (type === 'income') { currentData.income = currentData.income.filter(i => i.id !== id); await db.income.delete(id); }
-    else { currentData.expenses = currentData.expenses.filter(i => i.id !== id); await db.expenses.delete(id); }
+    if (type === 'income') {
+        currentData.income = currentData.income.filter(i => i.id !== id);
+        await db.income.delete(id);
+    } else {
+        currentData.expenses = currentData.expenses.filter(i => i.id !== id);
+        await db.expenses.delete(id);
+        await deleteSharedRecordsForExpense(id);
+        if (editingExpenseId === id) {
+            editingExpenseId = null;
+            const saveBtn = document.querySelector('#formPaneSpesa [data-act="addExpense"]');
+            if (saveBtn) saveBtn.textContent = 'Registra Spesa';
+        }
+    }
     updateUI(); checkDatabaseHealth();
 }
 
@@ -4801,8 +4902,10 @@ function clearAllFilters() { selectedFilterDate = null; selectedFilterCategory =
 function switchFormTab(name) {
     if (!name) return;
     const cap = name.charAt(0).toUpperCase() + name.slice(1);
-    document.querySelectorAll('.layout-column.left-panel .form-tab').forEach(t => t.classList.toggle('active', t.dataset.formtab === name));
-    document.querySelectorAll('.layout-column.left-panel .form-pane').forEach(p => p.classList.toggle('active', p.id === 'formPane' + cap));
+    const root = document.getElementById('nuovaVoceCard') || document.querySelector('.layout-column.left-panel');
+    if (!root) return;
+    root.querySelectorAll('.form-tab').forEach(t => t.classList.toggle('active', t.dataset.formtab === name));
+    root.querySelectorAll('.form-pane').forEach(p => p.classList.toggle('active', p.id === 'formPane' + cap));
 }
 function switchIaNotesTab(name) {
     if (!name) return;

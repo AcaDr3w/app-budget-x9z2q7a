@@ -22,7 +22,23 @@ function writeOutbox(tableName, items) {
 }
 function clearOutbox(tableName) {
     try { localStorage.removeItem(outboxKey(tableName)); } catch (e) {}
+    try { localStorage.removeItem('eb_outbox_quarantine_' + tableName); } catch (e) {}
     console.log('[OUTBOX] ' + tableName + ': cleared');
+}
+function dropFromOutbox(tableName, id) {
+    const sid = String(id);
+    const keep = (i) => {
+        if (!i) return false;
+        if (i.__id != null && String(i.__id) === sid) return false;
+        if (i.id != null && String(i.id) === sid) return false;
+        return true;
+    };
+    try {
+        writeOutbox(tableName, readOutbox(tableName).filter(keep));
+        const qKey = 'eb_outbox_quarantine_' + tableName;
+        const q = JSON.parse(localStorage.getItem(qKey) || '[]') || [];
+        localStorage.setItem(qKey, JSON.stringify(q.filter(keep)));
+    } catch (e) { /* ignore */ }
 }
 function clearAllOutboxes() {
     for (const t of Object.keys(DB_ACCESSOR)) {
@@ -58,7 +74,7 @@ const DB_ACCESSOR = {
     people: 'people', groups: 'groups', group_invites: 'groupInvites',
     group_members: 'groupMembers', shared_expense_splits: 'sharedExpenseSplits',
     shared_expenses: 'sharedExpenses', shared_expense_participants: 'sharedExpenseParticipants',
-    shared_debts: 'sharedDebts'
+    shared_debts: 'sharedDebts', receipt_jobs: 'receiptJobs'
 };
 async function flushOutbox() {
     if (!window.supabaseUser) return;
@@ -263,6 +279,7 @@ class SupabaseTable {
     }
 
     async delete(id) {
+        dropFromOutbox(this.tableName, id);
         if (!window.supabaseUser) return;
         let query = this._uidEq(supabaseClient.from(this.tableName).delete());
         
@@ -273,14 +290,27 @@ class SupabaseTable {
         } else {
             query = query.eq(this.primaryKey, id);
         }
-        const { error } = await query;
-        if (error) console.error(error);
+        let { error } = await query;
+        if (error && id != null && typeof id !== 'string') {
+            query = this._uidEq(supabaseClient.from(this.tableName).delete()).eq(this.primaryKey, String(id));
+            const retry = await query;
+            error = retry.error;
+        }
+        if (error) console.error('[DB] delete fallito su ' + this.tableName + ':', error);
     }
 
     async clear() {
+        clearOutbox(this.tableName);
         if (!window.supabaseUser) return;
         const { error } = await this._uidEq(supabaseClient.from(this.tableName).delete());
-        if (error) console.error(error);
+        if (error) {
+            console.error('[DB] clear fallito su ' + this.tableName + ':', error);
+            const rows = await this.toArray();
+            for (const row of rows) {
+                const pk = this._pk();
+                if (row && row[pk] != null) await this.delete(row[pk]);
+            }
+        }
     }
 
     async count() {
@@ -300,9 +330,14 @@ class SupabaseTable {
     }
 
     async bulkDelete(ids) {
-        if (!window.supabaseUser || !ids.length) return;
+        if (!ids || !ids.length) return;
+        ids.forEach((id) => dropFromOutbox(this.tableName, id));
+        if (!window.supabaseUser) return;
         const { error } = await this._uidEq(supabaseClient.from(this.tableName).delete().in(this.primaryKey, ids));
-        if (error) console.error(error);
+        if (error) {
+            console.error(error);
+            for (const id of ids) await this.delete(id);
+        }
     }
 
     where(field) {

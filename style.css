@@ -6145,6 +6145,14 @@ button.avatar-circle.top-nav-avatar,
         overflow: visible !important;
         overflow-x: hidden !important;
     }
+    html { overflow-y: auto !important; }
+    body.sheet-open {
+        overflow: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        touch-action: auto !important;
+        overscroll-behavior: auto !important;
+    }
     .container { max-width: 1600px; }
 
     #sheetOverlay, #bottomSheet,

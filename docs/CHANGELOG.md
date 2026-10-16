@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-10-16] - Scroll desktop + ghost spese condivise
+
+### Completed Changes
+- **scroll**: click su una spesa non apre più lo sheet mobile nascosto; `body.sheet-open` su desktop non blocca più overflow.
+- **ghost**: `delete`/`clear`/`bulkDelete` tolgono la voce dall'outbox; delete spesa cancella anche shared_expenses/participants/debts.
+- **form**: `switchFormTab` punta a `#nuovaVoceCard`; edit desktop = «Salva modifiche».
+- **cache**: `style.css?v=3.8`, `script.js?v=2.15`, adapter `?v=1.1`, SW `v23`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Insight centrati, IA accanto al mese, wipe completo
 
 ### Completed Changes

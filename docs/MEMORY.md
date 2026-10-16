@@ -14,7 +14,7 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.7`, `script.js?v=2.14`, SW `bilancio-pwa-v22`. IA accanto al mese (overlay). `resetTotalDB` pulisce anche obiettivi, investimenti, debiti, condivise e outbox.
+**Cache**: `style.css?v=3.8`, `script.js?v=2.15`, `supabase-adapter.js?v=1.1`, SW `bilancio-pwa-v23`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
 
 ## DESKTOP LAYOUT v2 (2026-10-16)
 
