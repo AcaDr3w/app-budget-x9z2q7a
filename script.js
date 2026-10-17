@@ -7987,8 +7987,9 @@ function checkPushNotifications() {
 // ACCOUNT DRAWER + QUICK-ADD RADIAL
 // =====================================================================
 const QUICK_ADD_MACROS = ['casa', 'cibo', 'veicoli', 'svago_altro'];
-const QUICK_ADD_HOLD_MS = 180;
-const QUICK_ADD_DWELL_MS = 160;
+	const QUICK_ADD_HOLD_MS = 180;
+	const QUICK_ADD_DWELL_MS = 160;
+	const QUICK_ADD_ARC_LIFT = 56;
 
 function syncAccountHeader() {
     const nameEl = document.getElementById('headerUserName');
@@ -8172,7 +8173,8 @@ function openQuickAddRadial(level, macro) {
     syncQuickAddNavClearance();
     const r = fab.getBoundingClientRect();
     quickAdd.origin.x = r.left + r.width / 2;
-    quickAdd.origin.y = r.top + r.height / 2;
+    // Lift the fan above the nav so Casa/Svago are not clipped by the bar.
+    quickAdd.origin.y = r.top + r.height / 2 - QUICK_ADD_ARC_LIFT;
     quickAdd.state.open = true;
     quickAdd.state.level = level;
     quickAdd.state.macro = macro || null;

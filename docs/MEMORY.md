@@ -14,13 +14,13 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.13`, `script.js?v=2.20`, `supabase-adapter.js?v=1.3`, SW `bilancio-pwa-v29`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+**Cache**: `style.css?v=3.13`, `script.js?v=2.21`, `supabase-adapter.js?v=1.3`, SW `bilancio-pwa-v30`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
 
 **Impeccable pass (2026-10-17)**: colorize AA (nav/placeholder/muted ≥4.5:1), typeset label ≥11px, outline Mese `h1`→`h2` sezioni, niente side-tab su `.card h2`, distill `#rendicontoCard` senza chrome doppio, harden `button{color:inherit}` + CTA `#fff` + `#receiptPreview` data-URI, barre su `transform:scaleX(--fill)`. Desktop ≥768 e mobile ≤767 restano layout distinti.
 
 **Login / registrazione (2026-10-17)**: schermata auth allineata alla shell (marca chart-line, CTA `--accent`, tab Accedi/Registrati). `signUp` con `emailRedirectTo` = origin+path; senza sessione → pannello «Controlla la mail»; `resend({type:'signup'})`; errori Supabase in italiano; conferma password in registrazione. Toggle display flex/none dell'`#authModal` invariato. Serve Confirm email ON in Supabase e Redirect URL della GitHub Pages.
 
-**Voce sul + mobile (2026-10-17)**: il cerchio + è centrato in altezza nella bottom nav (niente lift `translateY`). Primo tap apre il radial e mostra `fa-microphone` (font-weight 900). Secondo tap avvia lo STT: overlay dimming si ferma sopra la nav (`--nav-clearance`), nav z-index sopra il radial, tap sul dismiss coincidente col FAB non chiude. Safari iOS: Chrome Android. Desktop invariato.
+**Voce sul + mobile (2026-10-17)**: il cerchio + è centrato in altezza nella bottom nav (niente lift `translateY`). Primo tap apre il radial e mostra `fa-microphone` (font-weight 900). L’arco delle 4 icone è alzato di 56px (`QUICK_ADD_ARC_LIFT`) così Casa/Svago non finiscono sotto la nav. Secondo tap avvia lo STT: overlay dimming si ferma sopra la nav (`--nav-clearance`), nav z-index sopra il radial, tap sul dismiss coincidente col FAB non chiude. Safari iOS: Chrome Android. Desktop invariato.
 
 **Ghost spese condivise (2026-10-16)**: `shared_debts` non ha policy DELETE. Wipe/delete lasciavano debiti `open` e `syncSharedDebts` (init + online) ricreava le spese a ogni refresh (toast «N debito/i da saldare aggiunti»). Fix: cancel via UPDATE (`status=cancelled`) su delete/wipe; non rematerializzare se la spesa condivisa è assente o se l'ho creata io; outbox non re-accoda i put riusciti; tombstone locale su delete. Migration `007_shared_debts_delete.sql`.
 

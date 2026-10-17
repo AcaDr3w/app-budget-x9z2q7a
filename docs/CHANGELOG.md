@@ -1,5 +1,13 @@
 # Session Logs & Progress
 
+## [2026-10-17] - Radial + : icone alzate sopra la nav
+
+### Completed Changes
+- **layout**: l’arco Casa/Cibo/Veicoli/Svago sale di 56px rispetto al centro del + (`QUICK_ADD_ARC_LIFT`). Il cerchio + resta centrato nella bottom nav.
+- **cache**: `script.js?v=2.21`, SW `v30`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-17] - Impeccable: colorize, typeset, layout, distill, harden, polish
 
 ### Completed Changes
