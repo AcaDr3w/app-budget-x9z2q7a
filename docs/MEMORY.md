@@ -14,7 +14,9 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.13`, `script.js?v=2.21`, `supabase-adapter.js?v=1.3`, SW `bilancio-pwa-v30`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+**Cache**: `style.css?v=3.13`, `script.js?v=2.22`, `supabase-adapter.js?v=1.3`, SW `bilancio-pwa-v31`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+
+**Voce → LLM (2026-10-17)**: `parseVoiceExpenseLLM` manda il testo parlato più l’elenco live delle categorie utente (nomi esatti da `userMacroCategories`). L’LLM deve copiare una di quelle stringhe. Alias Lidl/spesa non puntano più a un «Alimentari» fisso: cercano la categoria reale (nome con alimentari/spesa/cibo, altrimenti la prima del macro Cibo).
 
 **Impeccable pass (2026-10-17)**: colorize AA (nav/placeholder/muted ≥4.5:1), typeset label ≥11px, outline Mese `h1`→`h2` sezioni, niente side-tab su `.card h2`, distill `#rendicontoCard` senza chrome doppio, harden `button{color:inherit}` + CTA `#fff` + `#receiptPreview` data-URI, barre su `transform:scaleX(--fill)`. Desktop ≥768 e mobile ≤767 restano layout distinti.
 

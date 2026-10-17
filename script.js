@@ -4136,11 +4136,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function allUserCategoryNames() {
-    let cats = [...(userCategories || [])];
-    if (!cats.length) {
-        cats = Object.values(userMacroCategories || {}).flat().filter(Boolean);
-    }
-    return [...new Set(cats)].sort();
+    const fromFlat = userCategories || [];
+    const fromMacro = Object.values(userMacroCategories || {}).flat().filter(Boolean);
+    return [...new Set([...fromFlat, ...fromMacro].filter(Boolean))].sort();
 }
 
 function renderCategoriesDropdown() {
@@ -8066,16 +8064,13 @@ const quickAdd = {
 };
 
 const voiceExpense = { rec: null, listening: false, busy: false };
-const VOICE_CAT_ALIASES = {
-    alimentari: 'Alimentari', cibo: 'Alimentari', supermercato: 'Alimentari',
-    spesa: 'Alimentari', farelaspesa: 'Alimentari',
-    coop: 'Alimentari', esselunga: 'Alimentari', lidl: 'Alimentari',
-    conad: 'Alimentari', eurospin: 'Alimentari', carrefour: 'Alimentari',
-    bar: 'Bar', caffe: 'Bar', cappuccino: 'Bar',
-    delivery: 'Delivery', pizzeria: 'Delivery', pizza: 'Delivery',
-    benzina: 'Carburante', gasolio: 'Carburante', carburante: 'Carburante',
-    affitto: 'Mutuo/Affitto', mutuo: 'Mutuo/Affitto'
-};
+const VOICE_HINT_GROUPS = [
+    { aliases: ['alimentari', 'cibo', 'supermercato', 'spesa', 'farelaspesa', 'coop', 'esselunga', 'lidl', 'conad', 'eurospin', 'carrefour', 'penny', 'discount'], hints: ['alimentari', 'spesa', 'cibo', 'supermercato'] },
+    { aliases: ['bar', 'caffe', 'cappuccino'], hints: ['bar'] },
+    { aliases: ['delivery', 'pizzeria', 'pizza'], hints: ['delivery', 'pizza'] },
+    { aliases: ['benzina', 'gasolio', 'carburante', 'pieno'], hints: ['carburante', 'benzina'] },
+    { aliases: ['affitto', 'mutuo'], hints: ['affitto', 'mutuo'] }
+];
 const VOICE_GROCERY_RE = /\b(spesa|supermercat|alimentari|coop|esselunga|lidl|conad|eurospin|carrefour|penny|discount)\b/i;
 
 function quickAddAngle(x, y) {
@@ -8231,16 +8226,45 @@ function matchVoiceCategory(raw) {
     return inc || null;
 }
 
+function findCategoryByHints(hints) {
+    const names = allUserCategoryNames();
+    const keys = (hints || []).map(normalizeVoiceKey).filter(k => k.length >= 3);
+    if (!keys.length) return null;
+    for (const n of names) {
+        const nk = normalizeVoiceKey(n);
+        if (!nk || nk === 'varie') continue;
+        if (keys.some(h => nk === h)) return n;
+    }
+    for (const n of names) {
+        const nk = normalizeVoiceKey(n);
+        if (!nk || nk === 'varie' || nk.length < 3) continue;
+        if (keys.some(h => nk.includes(h) || h.includes(nk))) return n;
+    }
+    return null;
+}
+
+function categoryInMacro(name, macro) {
+    return ((userMacroCategories && userMacroCategories[macro]) || []).includes(name);
+}
+
+function groceryCategoryName() {
+    const fromHints = findCategoryByHints(['alimentari', 'spesa', 'cibo', 'supermercato']);
+    if (fromHints) return fromHints;
+    const cibo = ((userMacroCategories && userMacroCategories.cibo) || []).filter(Boolean);
+    return cibo[0] || null;
+}
+
 function isGroceryTalk(transcript) {
     return VOICE_GROCERY_RE.test(String(transcript || ''));
 }
 
 function resolveVoiceCategory(candidate, transcript) {
-    const names = allUserCategoryNames();
-    const alimentari = names.find(n => normalizeVoiceKey(n) === 'alimentari') || matchVoiceCategory('Alimentari');
     const matched = matchVoiceCategory(candidate);
-    if (isGroceryTalk(transcript) && alimentari) {
-        if (!matched || normalizeVoiceKey(matched) === 'varie') return alimentari;
+    const grocery = groceryCategoryName();
+    if (isGroceryTalk(transcript) && grocery) {
+        if (matched && categoryInMacro(matched, 'cibo')) return matched;
+        if (!matched || normalizeVoiceKey(matched) === 'varie') return grocery;
+        return grocery;
     }
     return matched || null;
 }
@@ -8264,9 +8288,9 @@ function parseVoiceExpenseLocal(transcript) {
         if (tNorm.includes(nk)) { category = n; break; }
     }
     if (!category) {
-        for (const [alias, cat] of Object.entries(VOICE_CAT_ALIASES)) {
-            if (tNorm.includes(normalizeVoiceKey(alias))) {
-                category = matchVoiceCategory(cat) || cat;
+        for (const group of VOICE_HINT_GROUPS) {
+            if (group.aliases.some(a => tNorm.includes(normalizeVoiceKey(a)))) {
+                category = findCategoryByHints(group.hints);
                 break;
             }
         }
@@ -8281,18 +8305,23 @@ async function parseVoiceExpenseLLM(transcript, local) {
     const system = [
         'Parser spese italiano. Rispondi SOLO con JSON, nessun testo extra.',
         'Schema: {"amount":number,"category":string,"type":"actual"|"planned","note":string,"date":string|null}',
-        'category DEVE essere una stringa IDENTICA a una voce di categorie[] (copia esatta).',
-        '"spesa", "fare la spesa", "supermercato", "coop", "esselunga", "lidl", "conad" = Alimentari se presente.',
-        'NON usare Varie se un\'altra categoria è plausibile.',
-        'Esempi: "10 euro su spesa" -> Alimentari; "12,50 al bar" -> Bar; "20 benzina" -> Carburante.',
+        'category DEVE essere la copia ESATTA di una riga in "Categorie dell\'utente" (stessi spazi e maiuscole). Vietato inventare nomi.',
+        'Scegli la categoria più affine al testo parlato: supermercato/Lidl/Conad/spesa → quella che parla di alimentari, cibo o spesa SE esiste nella lista; benzina → carburante se c\'è; bar → bar se c\'è.',
+        'NON usare Varie/Altro se un\'altra categoria della lista è plausibile.',
         'type=actual salvo "prevista"/"da pagare". date YYYY-MM-DD solo se detta, altrimenti null.'
     ].join(' ');
-    const user = JSON.stringify({
-        testo: transcript,
-        importo_locale: local.amount || null,
-        categoria_locale: local.category || null,
-        categorie: cats
-    });
+    const catLines = cats.length ? cats.map(c => '- ' + c).join('\n') : '- (nessuna)';
+    const user = [
+        'Testo parlato: ' + JSON.stringify(transcript),
+        '',
+        'Categorie dell\'utente (scegline UNA, copia esatta):',
+        catLines,
+        '',
+        'Importo già letto in locale: ' + (local.amount > 0 ? String(local.amount) : 'sconosciuto'),
+        'Categoria già letta in locale: ' + (local.category || 'sconosciuta'),
+        '',
+        'Rispondi solo JSON.'
+    ].join('\n');
     const content = await invokeAI(user, system);
     const parsed = parseAIJson(content);
     if (!parsed || parsed.analisi_completa) return local;

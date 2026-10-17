@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-10-17] - Voce: LLM riceve le categorie reali dell'utente
+
+### Completed Changes
+- **prompt**: il messaggio utente elenca tutte le categorie attuali; l’LLM deve copiarne una esatta (niente «Alimentari» hardcoded).
+- **match**: Lidl/spesa/supermercato si agganciano alla categoria che esiste davvero (nome tipo alimentari/spesa/cibo, o prima voce del macro Cibo).
+- **cache**: `script.js?v=2.22`, SW `v31`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-17] - Radial + : icone alzate sopra la nav
 
 ### Completed Changes
