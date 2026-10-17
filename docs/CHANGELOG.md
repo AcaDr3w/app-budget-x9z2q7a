@@ -1,5 +1,15 @@
 # Session Logs & Progress
 
+## [2026-10-17] - + mobile centrato + secondo tap registra
+
+### Completed Changes
+- **layout**: cerchio + allineato al centro verticale della bottom nav (`align-self: stretch` + flex, niente `translateY`).
+- **microfono**: `innerHTML` con `fas fa-microphone` e `font-weight: 900` (Solid); prima `font-weight: 500` rendeva il glifo vuoto.
+- **secondo tap**: overlay dismiss non copre più la nav (`--nav-clearance` = altezza reale); `body.radial-open` alza z-index della nav/FAB; tap sul dismiss sopra il FAB avvia lo STT invece di chiudere.
+- **cache**: `style.css?v=3.11`, `script.js?v=2.19`, SW `v27`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-16] - Fix tap + e smistamento «spesa» → Alimentari
 
 ### Completed Changes

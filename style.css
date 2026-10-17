@@ -212,6 +212,8 @@ body.popup-open {
 .quick-add-dismiss {
     position: absolute;
     inset: 0;
+    /* JS sets --nav-clearance to the real bottom-nav height (includes safe-area). */
+    bottom: var(--nav-clearance, calc(72px + env(safe-area-inset-bottom, 0px)));
     border: none;
     background: rgba(15, 23, 42, 0.28);
     pointer-events: auto;
@@ -286,10 +288,20 @@ body.popup-open {
     pointer-events: none;
     white-space: nowrap;
 }
-#navQuickAdd { touch-action: none; }
+#navQuickAdd { touch-action: manipulation; }
 body.drawer-open,
 body.radial-open {
     overflow: hidden !important;
+}
+body.radial-open .bottom-nav {
+    z-index: 10030 !important;
+}
+body.radial-open #navQuickAdd {
+    z-index: 10040 !important;
+    pointer-events: auto !important;
+}
+body.radial-open .bottom-nav .nav-item:not(.nav-item-add) {
+    pointer-events: none;
 }
 @media (min-width: 768px) {
     .quick-add-radial { display: none !important; }
@@ -2109,21 +2121,26 @@ button.month-nav-btn {
     .bottom-nav .nav-item:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: -2px; border-radius: 12px !important; }
     .bottom-nav .nav-item.nav-item-add {
         flex: none !important;
+        flex-direction: row !important;
         position: relative;
-        z-index: 2;
+        z-index: 3;
         color: #fff !important;
-        align-self: center;
+        align-self: stretch;
         justify-self: center;
-        min-width: 72px !important;
-        min-height: 72px !important;
-        margin-top: -18px;
-        padding-top: 18px !important;
-        padding-bottom: 4px !important;
+        min-width: 56px !important;
+        min-height: 0 !important;
+        height: 100%;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         touch-action: manipulation;
     }
     .bottom-nav .nav-item.nav-item-add .nav-quick-add {
-        width: 56px;
-        height: 56px;
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
         border-radius: 50%;
         background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
         color: #fff;
@@ -2133,12 +2150,18 @@ button.month-nav-btn {
         border: 3px solid #fff;
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.32);
         pointer-events: none;
-        transform: translateY(-12px);
+        transform: none;
     }
     .bottom-nav .nav-item.nav-item-add i {
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+        font-style: normal !important;
         color: #fff !important;
-        font-size: 20px !important;
-        font-weight: 500 !important;
+        font-size: 18px !important;
+        line-height: 1 !important;
+        display: inline-block !important;
+        width: 1em;
+        text-align: center;
     }
     .bottom-nav .nav-item.nav-item-add:focus-visible {
         outline: none !important;

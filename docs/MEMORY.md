@@ -14,9 +14,9 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.10`, `script.js?v=2.18`, `supabase-adapter.js?v=1.2`, SW `bilancio-pwa-v26`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+**Cache**: `style.css?v=3.11`, `script.js?v=2.19`, `supabase-adapter.js?v=1.2`, SW `bilancio-pwa-v27`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
 
-**Voce sul + mobile (2026-10-16)**: tap `#navQuickAdd` apre il radial (niente hold: il hold+drag chiudeva il menu). Hit area 72px. Secondo tap = microfono. Parser locale + LLM sempre con lista categorie JSON; «spesa»/supermercato → Alimentari, mai Varie. Toast Annulla 5s. Safari iOS: Chrome Android. Desktop invariato.
+**Voce sul + mobile (2026-10-17)**: il cerchio + è centrato in altezza nella bottom nav (niente lift `translateY`). Primo tap apre il radial e mostra `fa-microphone` (font-weight 900). Secondo tap avvia lo STT: overlay dimming si ferma sopra la nav (`--nav-clearance`), nav z-index sopra il radial, tap sul dismiss coincidente col FAB non chiude. Safari iOS: Chrome Android. Desktop invariato.
 
 **Ghost spese condivise (2026-10-16)**: `shared_debts` non ha policy DELETE. Wipe/delete lasciavano debiti `open` e `syncSharedDebts` (init + online) ricreava le spese a ogni refresh (toast «N debito/i da saldare aggiunti»). Fix: cancel via UPDATE (`status=cancelled`) su delete/wipe; non rematerializzare se la spesa condivisa è assente o se l'ho creata io; outbox non re-accoda i put riusciti; tombstone locale su delete. Migration `007_shared_debts_delete.sql`.
 

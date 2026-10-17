@@ -8144,11 +8144,26 @@ function highlightQuickAdd(idx) {
     }
 }
 
+function syncQuickAddNavClearance() {
+    const nav = document.getElementById('bottomNav');
+    const radial = document.getElementById('quickAddRadial');
+    if (!nav || !radial) return;
+    radial.style.setProperty('--nav-clearance', Math.ceil(nav.getBoundingClientRect().height) + 'px');
+}
+
+function fabContainsPoint(x, y) {
+    const fab = document.getElementById('navQuickAdd');
+    if (!fab) return false;
+    const r = fab.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
 function openQuickAddRadial(level, macro) {
     if (isDesktop()) return;
     const radial = document.getElementById('quickAddRadial');
     const fab = document.getElementById('navQuickAdd');
     if (!radial || !fab) return;
+    syncQuickAddNavClearance();
     const r = fab.getBoundingClientRect();
     quickAdd.origin.x = r.left + r.width / 2;
     quickAdd.origin.y = r.top + r.height / 2;
@@ -8166,11 +8181,11 @@ function openQuickAddRadial(level, macro) {
 function setQuickAddFabMode(mode) {
     const fab = document.getElementById('navQuickAdd');
     const disc = fab && fab.querySelector('.nav-quick-add');
-    const icon = disc && disc.querySelector('i');
-    if (!disc || !icon) return;
+    if (!disc) return;
     disc.classList.toggle('is-mic', mode !== 'plus');
     disc.classList.toggle('is-listening', mode === 'listening');
-    icon.className = mode === 'plus' ? 'fas fa-plus' : 'fas fa-microphone';
+    const iconClass = mode === 'plus' ? 'fas fa-plus' : 'fas fa-microphone';
+    disc.innerHTML = '<i class="' + iconClass + '" aria-hidden="true"></i>';
     if (fab) {
         const label = mode === 'listening' ? 'Sto ascoltando' : (mode === 'mic' ? 'Aggiungi spesa con la voce' : 'Aggiungi spesa');
         fab.setAttribute('aria-label', label);
@@ -8557,6 +8572,25 @@ function setupQuickAddRadial() {
         else startVoiceExpense();
     });
     fab.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    const dismiss = document.querySelector('#quickAddRadial .quick-add-dismiss');
+    if (dismiss) {
+        dismiss.addEventListener('pointerdown', (e) => {
+            if (!quickAdd.state.open || !fabContainsPoint(e.clientX, e.clientY)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (voiceExpense.listening) {
+                try { if (voiceExpense.rec) voiceExpense.rec.stop(); } catch (err) { /* ignore */ }
+                return;
+            }
+            if (!voiceExpense.busy) startVoiceExpense();
+        }, true);
+        dismiss.addEventListener('click', (e) => {
+            if (!fabContainsPoint(e.clientX, e.clientY)) return;
+            e.preventDefault();
+            e.stopPropagation();
+        }, true);
+    }
 
     if (arc) {
         arc.addEventListener('click', (e) => {
