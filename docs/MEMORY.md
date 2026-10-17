@@ -14,7 +14,11 @@
 
 **Analisi desktop**: sezioni titolate (Panoramica, Segnali, Risparmi, Record, Andamento, I.A., Mesi archiviati); IA in fondo.
 
-**Cache**: `style.css?v=3.11`, `script.js?v=2.19`, `supabase-adapter.js?v=1.2`, SW `bilancio-pwa-v27`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+**Cache**: `style.css?v=3.13`, `script.js?v=2.20`, `supabase-adapter.js?v=1.3`, SW `bilancio-pwa-v29`. Click spesa su desktop riempie Nuova voce (niente sheet-open). Delete toglie anche outbox + record condivisi.
+
+**Impeccable pass (2026-10-17)**: colorize AA (nav/placeholder/muted ≥4.5:1), typeset label ≥11px, outline Mese `h1`→`h2` sezioni, niente side-tab su `.card h2`, distill `#rendicontoCard` senza chrome doppio, harden `button{color:inherit}` + CTA `#fff` + `#receiptPreview` data-URI, barre su `transform:scaleX(--fill)`. Desktop ≥768 e mobile ≤767 restano layout distinti.
+
+**Login / registrazione (2026-10-17)**: schermata auth allineata alla shell (marca chart-line, CTA `--accent`, tab Accedi/Registrati). `signUp` con `emailRedirectTo` = origin+path; senza sessione → pannello «Controlla la mail»; `resend({type:'signup'})`; errori Supabase in italiano; conferma password in registrazione. Toggle display flex/none dell'`#authModal` invariato. Serve Confirm email ON in Supabase e Redirect URL della GitHub Pages.
 
 **Voce sul + mobile (2026-10-17)**: il cerchio + è centrato in altezza nella bottom nav (niente lift `translateY`). Primo tap apre il radial e mostra `fa-microphone` (font-weight 900). Secondo tap avvia lo STT: overlay dimming si ferma sopra la nav (`--nav-clearance`), nav z-index sopra il radial, tap sul dismiss coincidente col FAB non chiude. Safari iOS: Chrome Android. Desktop invariato.
 
@@ -173,7 +177,7 @@
 - **Meccanica**: MutationObserver su `class` di tutto il body; selettore overlay attivo = `.popup-overlay.active, #sheetOverlay.open, #incomeSheetOverlay.open, #futureSheetOverlay.open`; `focusScope()` per i sheet risolve il fratello tramite `SHEET_MAP` (overlay→sheet: `sheetOverlay`→`bottomSheet`, ecc. — il focus trap agisce sugli elementi DENTRO lo sheet, gli overlay sono vuoti). Flag `data-a11yFocused` su ogni overlay; ripulito su TUTTI i contenitori quando nulla è aperto (mai lasciare il flag su un overlay chiuso o il focus non parte alla riapertura).
 - **Esc**: popup → click sul `.popup-close` interno; sheet → `click()` sull'overlay (tutti e 3 gli overlay hanno click-to-close bindato).
 - **`#monthSelectorPill` è ora un `<button>` VERO** (era `div[role=button]` con 2 button annidati — invalido). Le frecce ‹ › vivono FUORI nel `.month-selector-group` (flex 1 1 100%, gap 6). Pill = `flex:1; margin-bottom:0` nel gruppo (larghezza invariata su mobile). `border:none; font-family:inherit` obbligatori sui button custom.
-- **Auth modal**: stili inline → classi `.auth-*`; `display:none` in CSS, JS toggla `style.display='flex'|'none'` (supabase-adapter.js) — NON toccare il toggle.
+- **Auth modal**: classi `.auth-*`; `display:none` in CSS, JS toggla `style.display='flex'|'none'` (supabase-adapter.js) — NON toccare il toggle. Tab login/signup + pannello verifica mail (`data-mode`).
 - **html2pdf è lazy**: rimosso dal `<head>`; `ensureHtml2Pdf()` inietta il bundle on-demand in `exportPDF()`. supabase-js e chart.js hanno `defer`.
 - **reduced-motion** (style.css, fine file): marquee fermo, transizioni annullate SOLO per movimento spaziale (anomaly-track, sheet/overlay/popup, sheet-slider, dragging). Niente kill globale delle transizioni.
 - **`.box-sostenuto` = `rgba(185,28,28,.96)`** (bianco ≈5.9:1, WCAG AA). Vecchio rosso #e74c3c NON ripristinare.

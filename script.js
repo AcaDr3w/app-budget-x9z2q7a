@@ -1081,6 +1081,12 @@ function getCategoryColor(catName) {
     return CATEGORY_COLORS[index];
 }
 
+function setBarFill(el, pct) {
+    if (!el) return;
+    const n = Math.max(0, Math.min(100, Number(pct) || 0));
+    el.style.setProperty('--fill', String(n / 100));
+}
+
 function getCategoryCardBg(catName) {
     const color = getCategoryColor(catName);
     const r = parseInt(color.slice(1, 3), 16);
@@ -3374,7 +3380,7 @@ async function renderMacroBudgetBadge(macroGroup) {
     container.innerHTML = `
         <div class="macro-budget-badge">
             <span class="badge-label">Speso: <b>${fmtEPlain(actual, 0)}</b> su ${fmtEPlain(previsti, 0)} previsti</span>
-            <div class="badge-progress"><div class="badge-progress-bar" style="width: ${pct}%;${barColor ? ' background-color:' + barColor + ';' : ''}"></div></div>
+            <div class="badge-progress"><div class="badge-progress-bar" style="--fill: ${pct / 100};${barColor ? ' background-color:' + barColor + ';' : ''}"></div></div>
         </div>
     `;
 }
@@ -3461,7 +3467,7 @@ function renderMicroCategoriesGrid(macroGroup) {
             <span class="cat-name">${cat}</span>
             <span class="cat-speso">${fmtEPlain(aVal, 0)}</span>
             <div class="cat-progress-track">
-                <div class="cat-progress-bar" style="width: ${perc}%; background-color: ${barColor};"></div>
+                <div class="cat-progress-bar" style="--fill: ${perc / 100}; background-color: ${barColor};"></div>
             </div>
         `;
         card.addEventListener('click', () => slideToInputView(cat));
@@ -3875,7 +3881,7 @@ function clearReceiptPreview() {
     receiptJobId = null;
     const wrap = document.getElementById('receiptPreviewWrap');
     const img = document.getElementById('receiptPreview');
-    if (img) img.removeAttribute('src');
+    if (img) img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     if (wrap) wrap.style.display = 'none';
     if (receiptObjectUrl) { URL.revokeObjectURL(receiptObjectUrl); receiptObjectUrl = null; }
     receiptPending = false;
@@ -4623,7 +4629,7 @@ const card = document.createElement('div');
             <div class="category-card-icon">${icon}</div>
             <div class="category-card-name">${cat}</div>
             <div class="category-progress-bar">
-                <div class="category-progress-fill ${barClass}" style="width: ${pct}%"></div>
+                <div class="category-progress-fill ${barClass}" style="--fill: ${pct / 100}"></div>
             </div>
         `;
         card.onclick = () => openTransactionSheet(cat);
@@ -5355,7 +5361,7 @@ async function renderMacroCards() {
         // Aggiorna la barra di progresso e il badge %
         if (fill) {
             const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
-            fill.style.width = pct + '%';
+            setBarFill(fill, pct);
             // Rimuovi classi vecchie
             fill.classList.remove('fill-warn', 'fill-over');
             if (planned > 0 && actual > planned) fill.classList.add('fill-over');
@@ -5862,7 +5868,7 @@ async function renderSavingsGoals() {
                 </div>
             </div>
             <div style="height: 12px; background: #e2e8f0; border-radius: 10px; overflow:hidden; margin-bottom:8px;">
-                <div style="width: ${pct}%; height: 100%; background: ${isComplete ? '#10b981' : '#3b82f6'}; transition: width 0.3s;"></div>
+                <div style="width:100%; height: 100%; background: ${isComplete ? '#10b981' : '#3b82f6'}; transform: scaleX(${pct / 100}); transform-origin: left center; transition: transform 0.5s;"></div>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px; font-size:13px; color:#334155;">
                 <span>Avanzamento: <strong>${pct.toFixed(1)}%</strong></span>
@@ -6020,7 +6026,7 @@ async function renderInvestments() {
                     <div class="invest-card-type">${info.label}</div>
                     ${isGoal ? `
                         <div class="invest-progress-track">
-                            <div class="invest-progress-bar" style="width:${pct}%;background:${info.color};"></div>
+                            <div class="invest-progress-bar" style="--fill:${pct / 100};background:${info.color};"></div>
                         </div>
                         <div class="invest-progress-label">${fmtEPlain(stats.currentValue,0)} / ${fmtEPlain(asset.targetAmount,0)}</div>
                     ` : ''}
@@ -6172,7 +6178,7 @@ async function renderInvestAssetDetail(asset) {
         ${isGoal ? `
             <div style="margin-top:8px;">
                 <div class="invest-progress-track" style="height:10px;">
-                    <div class="invest-progress-bar" style="width:${pct}%;background:${info.color};height:100%;"></div>
+                    <div class="invest-progress-bar" style="--fill:${pct / 100};background:${info.color};height:100%;"></div>
                 </div>
                 <div style="font-size:11px;color:#64748b;text-align:center;margin-top:4px;">${fmtEPlain(stats.currentValue,0)} / ${fmtEPlain(asset.targetAmount,0)} (${pct.toFixed(0)}%)</div>
             </div>
@@ -6706,7 +6712,7 @@ async function renderSavingsSummary(periodSet, spendTot) {
         rateEl.textContent = '–';
         cfEl.textContent = '–';
         cfEl.classList.remove('positive', 'negative');
-        barEl.style.width = '0%';
+        setBarFill(barEl, 0);
         barEl.classList.remove('on-target');
         labelEl.textContent = 'Nessun dato nel periodo';
         return;
@@ -6719,7 +6725,7 @@ async function renderSavingsSummary(periodSet, spendTot) {
     cfEl.classList.toggle('positive', cf >= 0);
     cfEl.classList.toggle('negative', cf < 0);
     const fill = Math.min(100, Math.max(0, (tasso / target) * 100));
-    barEl.style.width = fill + '%';
+    setBarFill(barEl, fill);
     barEl.classList.toggle('on-target', tasso >= target);
     labelEl.textContent = tasso >= target ? `Target ${target}% · In linea` : (tasso > 0 ? `Target ${target}% · Sotto target` : `Target ${target}% · Nessun accantonamento`);
 }

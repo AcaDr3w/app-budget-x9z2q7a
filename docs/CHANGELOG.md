@@ -1,5 +1,27 @@
 # Session Logs & Progress
 
+## [2026-10-17] - Impeccable: colorize, typeset, layout, distill, harden, polish
+
+### Completed Changes
+- **colorize**: `--muted`/`--muted-light`/`--accent-nav-inactive`/`--text-secondary` portati a contrasto AA; placeholder e label nav usano token scuri (≥4.5:1).
+- **typeset**: label nav, KPI, titoli sezione e barre progresso ≥11px (desktop e mobile).
+- **layout**: Mese `CATEGORIE PRINCIPALI` / `ULTIME TRANSAZIONI` da `h3` a `h2`; `.card h2` senza `border-left`; traguardi/ledger a 1px.
+- **distill**: `#rendicontoCard` senza card-in-card; `.card-glass` senza padding/ombra interna.
+- **harden**: `button { color: inherit }` e `color:#fff` sui CTA pieni; `#receiptPreview` con pixel trasparente (anche in `clearReceiptPreview`).
+- **optimize**: barre su `transform: scaleX(var(--fill))` invece di `width`.
+- **cache**: `style.css?v=3.13`, `script.js?v=2.20`, SW `v29`. Layout desktop e mobile restano distinti.
+
+### Status: COMPLETATO.
+
+## [2026-10-17] - Login allineato all'app + verifica email
+
+### Completed Changes
+- **UI**: schermata auth con marca Bilancio Pro, tab Accedi/Registrati, CTA blu `--accent`, mostra/nascondi password, conferma password in signup, pannello «Controlla la mail».
+- **Supabase**: `signUp` con `emailRedirectTo`; se non arriva sessione si chiede la conferma mail; `resend` signup; errori in italiano (`email not confirmed`, credenziali, account già esistente).
+- **cache**: `style.css?v=3.12`, `supabase-adapter.js?v=1.3`, SW `v28`.
+
+### Status: COMPLETATO.
+
 ## [2026-10-17] - + mobile centrato + secondo tap registra
 
 ### Completed Changes

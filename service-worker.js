@@ -1,5 +1,5 @@
 // Service Worker - Dashboard Bilancio Personale PWA
-const CACHE_NAME = 'bilancio-pwa-v27';
+const CACHE_NAME = 'bilancio-pwa-v29';
 const URLS_TO_CACHE = [
   './',
   './index.html',

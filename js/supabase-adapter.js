@@ -444,6 +444,186 @@ window.db = {
 };
 
 // Autenticazione Auth Modal Logic
+let authBusy = false;
+let pendingConfirmEmail = '';
+
+function authRedirectUrl() {
+    const path = (location.pathname || '/').replace(/index\.html$/i, '');
+    return location.origin + path;
+}
+
+function mapAuthError(error) {
+    const raw = String((error && (error.message || error.error_description || error.msg)) || error || '');
+    const m = raw.toLowerCase();
+    if (m.includes('invalid login')) return 'Email o password non corretti.';
+    if (m.includes('email not confirmed')) return 'Conferma prima la mail: apri il link che ti abbiamo inviato.';
+    if (m.includes('already registered') || m.includes('already been registered')) return 'Esiste già un account con questa email. Accedi.';
+    if (m.includes('at least 6')) return 'La password deve avere almeno 6 caratteri.';
+    if (m.includes('invalid format') || m.includes('invalid email') || m.includes('unable to validate email')) return 'Inserisci un\'email valida.';
+    if (m.includes('signup is disabled')) return 'La registrazione non è disponibile in questo momento.';
+    if (m.includes('rate limit') || m.includes('over_email')) return 'Troppi tentativi. Riprova tra un minuto.';
+    if (m.includes('user not found')) return 'Nessun account con questa email.';
+    return raw || 'Qualcosa è andato storto. Riprova.';
+}
+
+function setAuthMessage(text, isOk, targetId) {
+    const el = document.getElementById(targetId || 'authMessage');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('is-ok', !!isOk && !!text);
+}
+
+function setAuthBusy(busy) {
+    authBusy = !!busy;
+    const btn = document.getElementById('authSubmit');
+    if (btn) {
+        btn.disabled = authBusy;
+        const mode = (document.getElementById('authModal') || {}).dataset.mode;
+        btn.textContent = authBusy ? 'Un attimo…' : (mode === 'signup' ? 'Crea account' : 'Accedi');
+    }
+    document.querySelectorAll('#authModal [data-act="resendAuthEmail"]').forEach((b) => { b.disabled = authBusy; });
+}
+
+function readAuthEmail() {
+    return ((document.getElementById('authEmail') || {}).value || pendingConfirmEmail || '').trim();
+}
+
+window.setAuthMode = (mode) => {
+    const modal = document.getElementById('authModal');
+    if (!modal) return;
+    const next = (mode === 'signup' || mode === 'check') ? mode : 'login';
+    modal.dataset.mode = next;
+    const confirmWrap = document.getElementById('authConfirmWrap');
+    const checkBlock = document.getElementById('authCheckBlock');
+    const formBlock = modal.querySelector('.auth-form-block');
+    const lead = document.getElementById('authLead');
+    const submit = document.getElementById('authSubmit');
+    const pw = document.getElementById('authPassword');
+    const tabLogin = document.getElementById('authTabLogin');
+    const tabSignup = document.getElementById('authTabSignup');
+    const resend = document.getElementById('authResendBtn');
+    const isSignup = next === 'signup';
+    const isCheck = next === 'check';
+    if (confirmWrap) confirmWrap.hidden = !isSignup;
+    if (checkBlock) checkBlock.hidden = !isCheck;
+    if (formBlock) formBlock.hidden = isCheck;
+    if (lead) lead.hidden = isCheck;
+    if (tabLogin) {
+        tabLogin.classList.toggle('active', next === 'login');
+        tabLogin.setAttribute('aria-selected', next === 'login' ? 'true' : 'false');
+    }
+    if (tabSignup) {
+        tabSignup.classList.toggle('active', isSignup);
+        tabSignup.setAttribute('aria-selected', isSignup ? 'true' : 'false');
+    }
+    if (submit) submit.textContent = isSignup ? 'Crea account' : 'Accedi';
+    if (pw) pw.autocomplete = isSignup ? 'new-password' : 'current-password';
+    if (resend) resend.hidden = true;
+    setAuthMessage('');
+    setAuthMessage('', false, 'authCheckMessage');
+    if (!isCheck) {
+        const emailEl = document.getElementById('authEmail');
+        if (emailEl && !emailEl.value) emailEl.focus();
+        else if (pw) pw.focus();
+    }
+};
+
+window.toggleAuthPassword = () => {
+    const pw = document.getElementById('authPassword');
+    const btn = document.getElementById('authPwToggle');
+    if (!pw || !btn) return;
+    const show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    btn.setAttribute('aria-label', show ? 'Nascondi password' : 'Mostra password');
+    btn.innerHTML = '<i class="fas ' + (show ? 'fa-eye-slash' : 'fa-eye') + '" aria-hidden="true"></i>';
+};
+
+window.handleLogin = async () => {
+    if (authBusy) return;
+    const email = readAuthEmail();
+    const password = (document.getElementById('authPassword') || {}).value || '';
+    if (!email || !password) {
+        setAuthMessage('Inserisci email e password.');
+        return;
+    }
+    setAuthBusy(true);
+    setAuthMessage('');
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    setAuthBusy(false);
+    if (!error) return;
+    const mapped = mapAuthError(error);
+    setAuthMessage(mapped);
+    const resend = document.getElementById('authResendBtn');
+    if (resend) {
+        const needsConfirm = /email not confirmed/i.test(error.message || '');
+        resend.hidden = !needsConfirm;
+        if (needsConfirm) pendingConfirmEmail = email;
+    }
+};
+
+window.handleSignup = async () => {
+    if (authBusy) return;
+    const email = ((document.getElementById('authEmail') || {}).value || '').trim();
+    const password = (document.getElementById('authPassword') || {}).value || '';
+    const confirm = (document.getElementById('authPasswordConfirm') || {}).value || '';
+    if (!email || !password) {
+        setAuthMessage('Inserisci email e password.');
+        return;
+    }
+    if (password.length < 6) {
+        setAuthMessage('La password deve avere almeno 6 caratteri.');
+        return;
+    }
+    if (password !== confirm) {
+        setAuthMessage('Le due password non coincidono.');
+        return;
+    }
+    setAuthBusy(true);
+    setAuthMessage('');
+    const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: authRedirectUrl() }
+    });
+    setAuthBusy(false);
+    if (error) {
+        setAuthMessage(mapAuthError(error));
+        return;
+    }
+    const identities = (data && data.user && data.user.identities) || null;
+    if (data && data.user && Array.isArray(identities) && identities.length === 0) {
+        window.setAuthMode('login');
+        setAuthMessage('Esiste già un account con questa email. Accedi.');
+        return;
+    }
+    if (data && data.session) return;
+    pendingConfirmEmail = email;
+    const mailEl = document.getElementById('authCheckEmail');
+    if (mailEl) mailEl.textContent = email;
+    window.setAuthMode('check');
+    setAuthMessage('Se non arriva, controlla lo spam.', true, 'authCheckMessage');
+};
+
+window.resendAuthEmail = async () => {
+    if (authBusy) return;
+    const email = readAuthEmail();
+    if (!email) {
+        setAuthMessage('Inserisci la tua email, poi riprova.');
+        return;
+    }
+    setAuthBusy(true);
+    const { error } = await supabaseClient.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: authRedirectUrl() }
+    });
+    setAuthBusy(false);
+    const target = document.getElementById('authModal')?.dataset.mode === 'check' ? 'authCheckMessage' : 'authMessage';
+    if (error) setAuthMessage(mapAuthError(error), false, target);
+    else setAuthMessage('Link inviato. Controlla la casella (e lo spam).', true, target);
+};
+
 window.addEventListener('DOMContentLoaded', () => {
     supabaseClient.auth.onAuthStateChange((event, session) => {
         if (session) {
@@ -463,21 +643,20 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('mainAppWrapper').style.display = 'none';
         }
     });
+
+    const form = document.getElementById('authForm');
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const mode = (document.getElementById('authModal') || {}).dataset.mode;
+            if (mode === 'signup') window.handleSignup();
+            else window.handleLogin();
+        });
+    }
+
+    const hash = (location.hash || '').replace(/^#/, '');
+    const query = (location.search || '').replace(/^\?/, '');
+    const params = new URLSearchParams(hash + (hash && query ? '&' : '') + query);
+    const errDesc = params.get('error_description') || params.get('error');
+    if (errDesc) setAuthMessage(mapAuthError({ message: decodeURIComponent(errDesc.replace(/\+/g, ' ')) }));
 });
-
-window.handleLogin = async () => {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    const msg = document.getElementById('authMessage');
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) msg.innerText = error.message;
-};
-
-window.handleSignup = async () => {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    const msg = document.getElementById('authMessage');
-    const { error } = await supabaseClient.auth.signUp({ email, password });
-    if (error) msg.innerText = error.message;
-    else msg.innerText = "Controlla la tua email per confermare la registrazione!";
-};
