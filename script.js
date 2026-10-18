@@ -62,6 +62,11 @@ function isOpenPlanned(e) {
     return !!e && (e.planned || 0) > 0 && (e.actual || 0) === 0 && e.settled !== true;
 }
 
+let sheetSaveInFlight = false;
+let categoryToEdit = null;
+let catSettingsOpenMacro = 'casa';
+const VARIE_CAT = 'Varie';
+
 function openPlannedAmount(e) {
     return isOpenPlanned(e) ? (e.planned || 0) : 0;
 }
@@ -98,10 +103,11 @@ function showToast(msg, isError = false) {
     const toast = document.createElement('div');
     toast.innerText = msg;
     toast.style.cssText = `
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        position: fixed; bottom: calc(var(--nav-h-mobile, 72px) + 12px); left: 50%; transform: translateX(-50%);
         background: ${isError ? '#ef4444' : '#10b981'}; color: white;
         padding: 10px 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        font-size: 14px; z-index: 10000; font-weight: bold; opacity: 0; transition: opacity 0.3s;
+        font-size: 14px; z-index: 11050; font-weight: bold; opacity: 0; transition: opacity 0.3s;
+        pointer-events: none;
     `;
     document.body.appendChild(toast);
     setTimeout(() => toast.style.opacity = '1', 10);
@@ -1275,7 +1281,7 @@ function fillDesktopExpenseForm(exp) {
 }
 
 function editExpense(id) {
-    const exp = currentData.expenses.find(e => e.id === id);
+    const exp = (currentData.expenses || []).find(e => sameId(e.id, id));
     if (!exp) return;
 
     editingExpenseId = id;
@@ -3644,9 +3650,13 @@ async function saveTransactionFromSheet(opts) {
     const sheetDate = document.getElementById('sheetDate');
     const sheetNote = document.getElementById('sheetNote');
     const saveBtn = document.getElementById('saveTransactionBtn');
-    
+    if (sheetSaveInFlight) return null;
+    sheetSaveInFlight = true;
+    if (saveBtn) saveBtn.disabled = true;
+
     const amount = getSheetAmount();
-    
+
+    try {
     if (amount <= 0) {
         if (!silent) alert('Inserisci un importo maggiore di zero');
         return null;
@@ -3657,8 +3667,11 @@ async function saveTransactionFromSheet(opts) {
 
     if (editingExpenseId) {
         // EDIT MODE
-        const originalIdx = currentData.expenses.findIndex(e => e.id === editingExpenseId);
-        if (originalIdx === -1) { editingExpenseId = null; return; }
+        const originalIdx = currentData.expenses.findIndex(e => sameId(e.id, editingExpenseId));
+        if (originalIdx === -1) {
+            editingExpenseId = null;
+            return;
+        }
 
         const originalExp = currentData.expenses[originalIdx];
         const originalType = isOpenPlanned(originalExp) ? 'planned' : 'actual';
@@ -3766,7 +3779,7 @@ async function saveTransactionFromSheet(opts) {
         }
 
         closeTransactionSheet();
-        updateUI();
+        await updateUI();
         if (!silent) showToast('Spesa aggiunta', false);
         return exp.id;
     } catch (err) {
@@ -3774,6 +3787,10 @@ async function saveTransactionFromSheet(opts) {
         showToast('Errore salvataggio', true);
         currentData.expenses.pop();
         return null;
+    }
+    } finally {
+        sheetSaveInFlight = false;
+        if (saveBtn) saveBtn.disabled = false;
     }
 }
 
@@ -4161,6 +4178,11 @@ function renderCategorySettings() {
     keys.forEach(key => {
         const ul = document.getElementById('catList-' + key);
         const count = document.getElementById('count-' + key);
+        const group = document.querySelector('#settingsPopup-categorie .macro-group[data-macro="' + key + '"]');
+        const header = group ? group.querySelector('[data-macro-toggle]') : null;
+        const open = catSettingsOpenMacro === key;
+        if (group) group.classList.toggle('is-collapsed', !open);
+        if (header) header.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (!ul) return;
         ul.innerHTML = '';
         const cats = userMacroCategories[key] || [];
@@ -4171,30 +4193,80 @@ function renderCategorySettings() {
             ul.appendChild(empty);
         } else {
             cats.forEach(name => {
+                const locked = name === VARIE_CAT;
                 const li = document.createElement('li');
+                li.className = 'cat-row' + (locked ? ' is-locked' : '');
                 li.innerHTML = `<button type="button" class="cat-edit-btn">${getCatIcon(name)} ${name}</button>
-                    <button type="button" class="cat-del-btn" aria-label="Elimina ${name}">🗑️</button>`;
+                    <button type="button" class="cat-del-btn" ${locked ? 'disabled' : ''} aria-label="${locked ? 'Varie non si elimina' : 'Elimina ' + name}">${locked ? '—' : '✕'}</button>`;
                 li.querySelector('.cat-edit-btn').addEventListener('click', () => editCategory(name));
-                li.querySelector('.cat-del-btn').addEventListener('click', () => deleteCategory(name));
+                const del = li.querySelector('.cat-del-btn');
+                if (!locked) del.addEventListener('click', () => deleteCategory(name));
                 ul.appendChild(li);
             });
         }
-        if (count) count.textContent = cats.length;
+        if (count) count.textContent = String(cats.length);
     });
 }
 
 function setupCategoryForm() {
+    const form = document.getElementById('catComposer');
+    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); saveCategory(); });
     const btn = document.getElementById('btnSaveCategory');
     if (btn) btn.addEventListener('click', saveCategory);
-    const input = document.getElementById('newCatName');
-    if (input) {
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveCategory();
-            }
+    const cancel = document.getElementById('btnCancelCategory');
+    if (cancel) cancel.addEventListener('click', resetCategoryComposer);
+    document.querySelectorAll('#settingsPopup-categorie [data-macro-toggle]').forEach(header => {
+        header.addEventListener('click', () => {
+            const key = header.getAttribute('data-macro-toggle');
+            catSettingsOpenMacro = catSettingsOpenMacro === key ? '' : key;
+            renderCategorySettings();
         });
+    });
+}
+
+function resetCategoryComposer() {
+    categoryToEdit = null;
+    const input = document.getElementById('newCatName');
+    if (input) input.value = '';
+    const btn = document.getElementById('btnSaveCategory');
+    if (btn) {
+        btn.textContent = 'Aggiungi';
+        btn.style.background = '';
     }
+    const cancel = document.getElementById('btnCancelCategory');
+    if (cancel) cancel.hidden = true;
+    const status = document.getElementById('catComposerStatus');
+    if (status) {
+        status.hidden = true;
+        status.textContent = '';
+    }
+    const composer = document.getElementById('catComposer');
+    if (composer) composer.classList.remove('is-editing');
+    const pickerBtn = document.getElementById('emojiPickerBtn');
+    if (pickerBtn) pickerBtn.textContent = '🍀';
+}
+
+function categoryNameExists(name, except) {
+    const lower = String(name || '').trim().toLowerCase();
+    if (!lower) return false;
+    return (userCategories || []).some(c => c !== except && String(c).toLowerCase() === lower);
+}
+
+async function listExpensesByCategory(cat) {
+    const all = await db.expenses.toArray();
+    return (all || []).filter(e => e && e.category === cat);
+}
+
+async function ensureVarieCategory() {
+    const key = 'svago_altro';
+    if (!userMacroCategories[key]) userMacroCategories[key] = [];
+    if (!userMacroCategories[key].includes(VARIE_CAT)) {
+        userMacroCategories[key].push(VARIE_CAT);
+    }
+    if (!categoryIconMap[VARIE_CAT]) categoryIconMap[VARIE_CAT] = DEFAULT_ICONS[VARIE_CAT] || '📦';
+    await db.categories.put({ name: VARIE_CAT, macro: key, icon: categoryIconMap[VARIE_CAT] });
+    rebuildUserCategories();
+    saveMacroToLocalStorage();
 }
 
 // =====================================================================
@@ -4241,34 +4313,55 @@ function editCategory(cat) {
     const pickerBtn = document.getElementById('emojiPickerBtn');
     if (pickerBtn) pickerBtn.textContent = getCatIcon(cat);
     const btn = document.getElementById('btnSaveCategory');
-    if(btn) {
-        btn.innerText = 'Salva';
+    if (btn) {
+        btn.textContent = 'Salva';
         btn.style.background = '#f59e0b';
     }
+    const cancel = document.getElementById('btnCancelCategory');
+    if (cancel) cancel.hidden = false;
+    const status = document.getElementById('catComposerStatus');
+    if (status) {
+        status.hidden = false;
+        status.textContent = 'Stai modificando «' + cat + '»';
+    }
+    const composer = document.getElementById('catComposer');
+    if (composer) composer.classList.add('is-editing');
+    catSettingsOpenMacro = macro;
+    renderCategorySettings();
+    document.getElementById('newCatName')?.focus();
 }
 
 async function saveCategory() {
     const input = document.getElementById('newCatName');
-    const name = input.value.trim();
-    if (!name) return;
+    const name = (input?.value || '').trim();
     const macroSelect = document.getElementById('newCatMacro');
     const macro = normalizeMacroKey(macroSelect ? macroSelect.value : 'svago_altro');
+    const editing = categoryToEdit;
+    if (!name) {
+        showToast('Scrivi il nome della categoria', true);
+        input?.focus();
+        return;
+    }
     
     try {
-        if (categoryToEdit) {
-            if (name !== categoryToEdit && userCategories.includes(name)) {
-                alert('Categoria già esistente.'); return;
+        if (editing) {
+            if (name !== editing && categoryNameExists(name, editing)) {
+                showToast('Categoria già esistente.', true);
+                return;
             }
-            if (name !== categoryToEdit) {
-                const allExp = await db.expenses.where('category').equals(categoryToEdit).toArray();
-                for (let e of allExp) { await db.expenses.update(e.id, {category: name}); }
-                currentData.expenses.forEach(e => { if (e.category === categoryToEdit) e.category = name; });
-                delete categoryIconMap[categoryToEdit];
-                await db.categories.delete(categoryToEdit);
+            if (name !== editing) {
+                const allExp = await listExpensesByCategory(editing);
+                for (const e of allExp) {
+                    e.category = name;
+                    await db.expenses.put(e);
+                }
+                currentData.expenses.forEach(e => { if (e.category === editing) e.category = name; });
+                delete categoryIconMap[editing];
+                await db.categories.delete(editing);
             }
             for (const key of MACRO_CANONICAL) {
                 if (userMacroCategories[key]) {
-                    userMacroCategories[key] = userMacroCategories[key].filter(c => c !== categoryToEdit && c !== name);
+                    userMacroCategories[key] = userMacroCategories[key].filter(c => c !== editing && c !== name);
                 }
             }
             if (!userMacroCategories[macro]) userMacroCategories[macro] = [];
@@ -4276,15 +4369,8 @@ async function saveCategory() {
             const chosenEmoji = document.getElementById('emojiPickerBtn')?.textContent || '';
             categoryIconMap[name] = chosenEmoji || categoryIconMap[name] || MACRO_ICON[macro] || '🍀';
             await db.categories.put({name, macro, icon: categoryIconMap[name]});
-            
-            categoryToEdit = null;
-            const btn = document.getElementById('btnSaveCategory');
-            if(btn) {
-                btn.innerText = 'Aggiungi';
-                btn.style.background = 'var(--accent)';
-            }
         } else {
-            if (userCategories.includes(name)) {
+            if (categoryNameExists(name)) {
                 showToast('Categoria già esistente.', true);
                 return;
             }
@@ -4297,17 +4383,39 @@ async function saveCategory() {
         rebuildUserCategories();
         saveMacroToLocalStorage();
         await updateGlobalVersion();
-        input.value = '';
+        catSettingsOpenMacro = macro;
+        resetCategoryComposer();
         renderCategoriesDropdown();
         renderCategorySettings();
         updateUI();
+        showToast(editing ? 'Categoria aggiornata' : 'Categoria aggiunta', false);
     } catch (err) {
         console.error('[DB] Errore salvataggio categoria:', err);
         showToast('Errore nel salvare la categoria', true);
     }
 }
 async function deleteCategory(cat) {
-    if (!confirm(`Eliminare "${cat}"?`)) return;
+    if (cat === VARIE_CAT) {
+        showToast('«Varie» non si elimina: ci finiscono le spese delle categorie rimosse.', true);
+        return;
+    }
+    const linked = await listExpensesByCategory(cat);
+    const n = linked.length;
+    const message = n
+        ? 'Eliminare «' + cat + '»?\n\n' + n + (n === 1 ? ' spesa passerà' : ' spese passeranno') + ' in «Varie» e resterà nello storico.'
+        : 'Eliminare «' + cat + '»? Non ci sono spese collegate.';
+    const ok = typeof window.showConfirmDialog === 'function'
+        ? await showConfirmDialog({ title: 'Elimina categoria', message, okLabel: 'Elimina', cancelLabel: 'Annulla', danger: true })
+        : confirm(message);
+    if (!ok) return;
+    if (n) {
+        await ensureVarieCategory();
+        for (const e of linked) {
+            e.category = VARIE_CAT;
+            await db.expenses.put(e);
+        }
+        currentData.expenses.forEach(e => { if (e.category === cat) e.category = VARIE_CAT; });
+    }
     for (const key of MACRO_CANONICAL) {
         if (userMacroCategories[key]) {
             userMacroCategories[key] = userMacroCategories[key].filter(c => c !== cat);
@@ -4315,11 +4423,16 @@ async function deleteCategory(cat) {
     }
     delete categoryIconMap[cat];
     await db.categories.delete(cat);
+    if (categoryToEdit === cat) resetCategoryComposer();
     rebuildUserCategories();
     saveMacroToLocalStorage();
+    await updateGlobalVersion();
+    catSettingsOpenMacro = n ? 'svago_altro' : catSettingsOpenMacro;
     renderCategoriesDropdown();
     renderCategorySettings();
     updateUI();
+    if (n) showToast(n === 1 ? '1 spesa spostata in «Varie»' : n + ' spese spostate in «Varie»', false);
+    else showToast('Categoria eliminata', false);
 }
 
 // =====================================================================
@@ -4348,7 +4461,7 @@ async function addExpense() {
     if (planned === 0 && actual === 0) { showToast('Inserisci Stima o Pagato', true); return; }
 
     if (editingExpenseId) {
-        const idx = currentData.expenses.findIndex(e => e.id === editingExpenseId);
+        const idx = currentData.expenses.findIndex(e => sameId(e.id, editingExpenseId));
         if (idx !== -1) {
             const original = currentData.expenses[idx];
             original.date = date;
@@ -4470,13 +4583,22 @@ function resetExpenseAdvancedForm() {
     resetSharedSplitState();
 }
 async function payExpense(id) {
-    const exp = currentData.expenses.find(i => i.id === id);
-    if (!exp) return;
-    editExpense(id);
-    sheetTransactionType = 'actual';
-    document.querySelectorAll('#bottomSheet .toggle-option').forEach(opt => {
-        opt.classList.toggle('active', opt.dataset.type === 'actual');
-    });
+    const exp = (currentData.expenses || []).find(i => sameId(i.id, id));
+    if (!exp) {
+        showToast('Spesa non trovata', true);
+        return;
+    }
+    if (!isOpenPlanned(exp)) {
+        showToast('Già saldata', false);
+        return;
+    }
+    const amount = Number(exp.planned) || 0;
+    if (amount <= 0) return;
+    exp.actual = amount;
+    exp.settled = true;
+    await db.expenses.put(exp);
+    await updateUI();
+    showToast('Spesa saldata', false);
 }
 async function deleteSharedRecordsForExpense(expenseId) {
     const sharedRows = (await db.sharedExpenses.toArray()).filter(se => String(se.expense_id) === String(expenseId));
@@ -4801,8 +4923,8 @@ function renderEntriesList() {
                     <span class="val-s ${isPending ? 'val-pending' : ''}">${exp.actual > 0 ? fmtE(exp.actual) : (isPending ? '⏳ Da pagare' : '—')}</span>
                 </div>
                 <div class="reg-actions">
-                    ${isPending ? `<button class="btn-action btn-pay" data-act="payExpense" data-args='[${exp.id}]'>Paga</button>` : ''}
-                    <button class="btn-del" data-act="deleteEntry" data-args='["expense",${exp.id}]'>🗑</button>
+                    ${isPending ? `<button class="btn-action btn-pay" data-act="payExpense" data-args='${JSON.stringify([String(exp.id)])}'>Paga</button>` : ''}
+                    <button class="btn-del" data-act="deleteEntry" data-args='${JSON.stringify(["expense", String(exp.id)])}'>🗑</button>
                 </div>
             </span>`;
         row.style.cursor = 'pointer';
@@ -5229,7 +5351,10 @@ function closeIaNotesModal(event) {
 function openSettingsPopup(name) {
     const pop = document.getElementById('settingsPopup-' + name);
     if (!pop) return;
-    if (name === 'categorie') renderCategorySettings();
+    if (name === 'categorie') {
+        resetCategoryComposer();
+        renderCategorySettings();
+    }
     pop.classList.add('active');
     document.body.classList.add('popup-open');
 }

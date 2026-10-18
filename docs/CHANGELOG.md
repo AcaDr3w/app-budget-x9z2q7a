@@ -1,5 +1,25 @@
 # Session Logs & Progress
 
+## [2026-10-18] - Categorie impostazioni: add/rename/delete + UI
+
+### Completed Changes
+- **composer**: campo Aggiungi fisso in alto (non più sotto le quattro liste).
+- **accordion**: un macro aperto alla volta, meno scroll.
+- **rename**: tap sul nome, stato «Stai modificando», Annulla.
+- **delete**: le spese passano in «Varie» (hint in conferma e toast); «Varie» non si elimina.
+- **cache**: `style.css?v=3.14`, `script.js?v=2.23`, SW `v32`.
+
+### Status: COMPLETATO.
+
+## [2026-10-18] - Spese previste: lock sul Salva e Paga che salda
+
+### Completed Changes
+- **mobile save**: un solo put in volo; tap ripetuti ignorati.
+- **Paga**: `actual = planned`, `settled = true`, toast «Spesa saldata»; id con `sameId`.
+- **toast**: `z-index: 11050`, sopra la bottom nav.
+
+### Status: COMPLETATO.
+
 ## [2026-10-17] - Voce: LLM riceve le categorie reali dell'utente
 
 ### Completed Changes

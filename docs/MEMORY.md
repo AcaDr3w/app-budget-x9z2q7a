@@ -1,5 +1,19 @@
 # Project Core Memory
 
+## CATEGORIE IN IMPOSTAZIONI (2026-10-18)
+
+**Stato**: in Impostazioni → Categorie si aggiunge, rinomina ed elimina. Composer fisso in alto (nome + gruppo + Aggiungi). Macro ad accordion (una aperta). Tap sul nome = modifica visibile con Annulla. Elimina conferma; se ci sono spese, vanno in «Varie» (non eliminabile) e resta lo storico. Toast su add/rename/delete.
+
+**Causa «non aggiunge»**: form sotto 4 liste aperte + `button{width:100%}` + nessun toast. Delete non riassegnava le spese.
+
+**Cache**: `style.css?v=3.14`, `script.js?v=2.23`, SW `bilancio-pwa-v32`.
+
+## SPESE PREVISTE: SALVA + PAGA (2026-10-18)
+
+**Stato**: Salva dallo sheet mobile è a invio singolo (`sheetSaveInFlight`, bottone disabled). Toast sopra nav/sheet (`z-index: 11050`). **Paga** scrive `actual = planned` e `settled = true` (non apre più solo l’editor). Match id con `sameId`; `data-args` in JSON stringa.
+
+**Cache**: `style.css?v=3.14`, `script.js?v=2.23`, SW `v32`.
+
 ## DESKTOP LAYOUT v3 (2026-10-16)
 
 **Stato**: la pagina desktop scrolla (niente lock overflow). Mese usa `display:contents` + grid areas.
