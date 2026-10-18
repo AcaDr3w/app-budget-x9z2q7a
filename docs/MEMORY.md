@@ -1,12 +1,20 @@
 # Project Core Memory
 
+## CATEGORIE POPUP SCROLL + TOAST OFFLINE (2026-10-18)
+
+**Layout**: il popup Categorie tagliava Casa (9 voci, ~5 visibili) e non scrollava. Causa: `.popup-panel`/`overflow:hidden` + `.macro-group` flex-shrink + altezza auto sul pannello (lo scroller interno non partiva). Fix: altezza definita `min(92dvh,760px)` (mobile quasi fullscreen), `.cat-settings-body` `flex:1 1 0%` + `overflow-y:auto`, gruppi `flex:0 0 auto`.
+
+**Toast rosso «Salvataggio offline» all’apertura mobile**: `enqueueOutbox` tostava a ogni put fallito. All’avvio `syncUserMacroToDB` + `loadMonthData` e iOS PWA con `navigator.onLine===false` sparavano il rosso. Fix: `__outboxSilent=true` dal load fino a fine `initApp`; toast solo se voce **nuova**, non silent, e `navigator.onLine===false`.
+
+**Cache**: `style.css?v=3.16`, `script.js?v=2.25`, `supabase-adapter.js?v=1.5`, SW `bilancio-pwa-v34`.
+
 ## CATEGORIE IN IMPOSTAZIONI (2026-10-18)
 
 **Stato**: in Impostazioni → Categorie si aggiunge, rinomina ed elimina. Composer fisso in alto (nome + gruppo + Aggiungi). Macro ad accordion (una aperta). Tap sul nome = modifica visibile con Annulla. Elimina conferma; se ci sono spese, vanno in «Varie» (non eliminabile) e resta lo storico. Toast su add/rename/delete.
 
 **Causa «non aggiunge»**: form sotto 4 liste aperte + `button{width:100%}` + nessun toast. Delete non riassegnava le spese.
 
-**Cache**: `style.css?v=3.14`, `script.js?v=2.23`, SW `bilancio-pwa-v32`.
+**Cache**: `style.css?v=3.16`, `script.js?v=2.25`, SW `bilancio-pwa-v34`.
 
 ## SPESE PREVISTE: SALVA + PAGA (2026-10-18)
 

@@ -100,6 +100,9 @@ async function updateGlobalVersion() {
 // TOAST NOTIFICATIONS
 // =====================================================================
 function showToast(msg, isError = false) {
+    // #region agent log
+    if (isError) fetch('http://127.0.0.1:7256/ingest/02bac997-4982-44cc-8c49-5e6564760a96',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1efbf6'},body:JSON.stringify({sessionId:'1efbf6',runId:'post-fix',hypothesisId:'H5',location:'script.js:showToast',message:'error-toast',data:{msg:String(msg),online:typeof navigator!=='undefined'?navigator.onLine:null,silent:!!window.__outboxSilent,vw:window.innerWidth},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const toast = document.createElement('div');
     toast.innerText = msg;
     toast.style.cssText = `
@@ -5357,6 +5360,19 @@ function openSettingsPopup(name) {
     }
     pop.classList.add('active');
     document.body.classList.add('popup-open');
+    // #region agent log
+    if (name === 'categorie') {
+        requestAnimationFrame(() => {
+            const panel = pop.querySelector('.cat-settings-panel');
+            const bodyEl = pop.querySelector('.cat-settings-body');
+            const casa = pop.querySelector('.macro-group[data-macro="casa"]');
+            const cs = bodyEl ? getComputedStyle(bodyEl) : null;
+            const ps = panel ? getComputedStyle(panel) : null;
+            const gs = casa ? getComputedStyle(casa) : null;
+            fetch('http://127.0.0.1:7256/ingest/02bac997-4982-44cc-8c49-5e6564760a96',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1efbf6'},body:JSON.stringify({sessionId:'1efbf6',runId:'post-fix',hypothesisId:'H1',location:'script.js:openSettingsPopup',message:'cat-settings-layout',data:{vw:window.innerWidth,vh:window.innerHeight,panelH:panel&&panel.clientHeight,panelCssH:ps&&ps.height,panelMax:ps&&ps.maxHeight,panelOverflow:ps&&ps.overflow,bodyClient:bodyEl&&bodyEl.clientHeight,bodyScroll:bodyEl&&bodyEl.scrollHeight,canScroll:!!(bodyEl&&bodyEl.scrollHeight>bodyEl.clientHeight+1),overflowY:cs&&cs.overflowY,casaH:casa&&casa.clientHeight,casaScroll:casa&&casa.scrollHeight,casaFlex:gs&&gs.flex,casaOverflow:gs&&gs.overflow,casaCount:casa?casa.querySelectorAll('li').length:0},timestamp:Date.now()})}).catch(()=>{});
+        });
+    }
+    // #endregion
 }
 function closeSettingsPopup(event) {
     if (event && event.target !== event.currentTarget) return;

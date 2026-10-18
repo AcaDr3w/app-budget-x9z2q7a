@@ -610,10 +610,31 @@ justify-content: center;
 .macro-group-empty { padding: 14px; font-size: 12px; color: var(--muted-light); text-align: center; }
 
 /* ===== SETTINGS: categorie (composer fisso + accordion) ===== */
+#settingsPopup-categorie.popup-overlay {
+    padding: 12px;
+}
 #settingsPopup-categorie .cat-settings-panel {
     width: min(520px, 100%);
-    max-height: min(88vh, 740px);
+    /* definite height so .cat-settings-body can shrink and scroll */
+    height: min(92dvh, 760px);
+    max-height: min(92dvh, 760px);
+    min-height: 0;
     gap: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+@media (max-width: 767px) {
+    #settingsPopup-categorie.popup-overlay {
+        padding: 8px;
+        align-items: flex-end;
+    }
+    #settingsPopup-categorie .cat-settings-panel {
+        width: 100%;
+        height: calc(100dvh - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 20px 20px 12px 12px;
+    }
 }
 #settingsPopup-categorie .cat-settings-lead {
     margin: 0 28px 0 0;
@@ -687,9 +708,18 @@ justify-content: center;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    padding-bottom: 8px;
 }
 #settingsPopup-categorie .macro-group {
     margin-bottom: 0;
+    flex: 0 0 auto;
 }
 #settingsPopup-categorie .macro-group-header {
     width: 100%;

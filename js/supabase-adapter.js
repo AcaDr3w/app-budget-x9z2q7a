@@ -6,6 +6,8 @@ window.supabaseClient = supabaseClient;
 
 // Global user state for the adapter
 window.supabaseUser = null;
+// Mute offline toast until initApp finishes (PWA often reports offline at first paint).
+window.__outboxSilent = true;
 
 // =====================================================================
 // OUTBOX: dati non sincronizzabili (rete/colonne mancanti) vengono
@@ -81,7 +83,15 @@ function enqueueOutbox(tableName, item) {
         queue.push(item);
     }
     writeOutbox(tableName, queue);
-    console.log('[OUTBOX] ' + tableName + ': ' + (existingIdx >= 0 ? 'aggiornato' : 'aggiunto') + ' voce (coda ' + queue.length + ')');
+    const isNew = existingIdx < 0;
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : null;
+    const silent = !!window.__outboxSilent;
+    const willToast = !silent && isNew && online === false;
+    console.log('[OUTBOX] ' + tableName + ': ' + (isNew ? 'aggiunto' : 'aggiornato') + ' voce (coda ' + queue.length + ')');
+    // #region agent log
+    fetch('http://127.0.0.1:7256/ingest/02bac997-4982-44cc-8c49-5e6564760a96',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1efbf6'},body:JSON.stringify({sessionId:'1efbf6',runId:'post-fix',hypothesisId:'H4',location:'supabase-adapter.js:enqueueOutbox',message:'outbox-enqueue',data:{tableName,isNew,online,silent,willToast,queue:queue.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (!willToast) return;
     if (typeof showToast === 'function') showToast('⚠️ Salvataggio offline: dati in coda', true);
 }
 const DB_ACCESSOR = {
@@ -634,7 +644,8 @@ window.addEventListener('DOMContentLoaded', () => {
             if (window.initApp) {
                 if (!window.appInitialized) {
                     window.appInitialized = true;
-                    initApp(); 
+                    window.__outboxSilent = true;
+                    Promise.resolve(initApp()).finally(() => { window.__outboxSilent = false; });
                 }
             }
         } else {

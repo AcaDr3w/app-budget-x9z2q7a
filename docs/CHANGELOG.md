@@ -1,5 +1,14 @@
 # Session Logs & Progress
 
+## [2026-10-18] - Categorie: scroll nel popup + niente toast offline finto
+
+### Completed Changes
+- **scroll**: pannello Categorie con altezza definita; lista `overflow-y:auto`; gruppi non si comprimono. Composer fisso. Mobile sheet quasi fullscreen.
+- **toast**: outbox silenzioso fino a fine init; rosso solo se davvero offline su un salvataggio nuovo.
+- **cache**: `style.css?v=3.16`, `script.js?v=2.25`, `supabase-adapter.js?v=1.5`, SW `v34`.
+
+### Status: IN VERIFICA su GitHub Pages (hard refresh / riaprire la PWA).
+
 ## [2026-10-18] - Categorie impostazioni: add/rename/delete + UI
 
 ### Completed Changes
