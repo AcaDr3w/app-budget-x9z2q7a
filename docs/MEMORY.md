@@ -6,7 +6,7 @@
 
 **Toast rosso «Salvataggio offline» all’apertura mobile**: `enqueueOutbox` tostava a ogni put fallito. All’avvio `syncUserMacroToDB` + `loadMonthData` e iOS PWA con `navigator.onLine===false` sparavano il rosso. Fix: `__outboxSilent=true` dal load fino a fine `initApp`; toast solo se voce **nuova**, non silent, e `navigator.onLine===false`.
 
-**Cache**: `style.css?v=3.16`, `script.js?v=2.25`, `supabase-adapter.js?v=1.5`, SW `bilancio-pwa-v34`.
+**Cache**: `style.css?v=3.17`, `script.js?v=2.26`, `supabase-adapter.js?v=1.6`, SW `bilancio-pwa-v35`.
 
 ## CATEGORIE IN IMPOSTAZIONI (2026-10-18)
 
@@ -14,7 +14,7 @@
 
 **Causa «non aggiunge»**: form sotto 4 liste aperte + `button{width:100%}` + nessun toast. Delete non riassegnava le spese.
 
-**Cache**: `style.css?v=3.16`, `script.js?v=2.25`, SW `bilancio-pwa-v34`.
+**Cache**: `style.css?v=3.17`, `script.js?v=2.26`, SW `bilancio-pwa-v35`.
 
 ## SPESE PREVISTE: SALVA + PAGA (2026-10-18)
 
